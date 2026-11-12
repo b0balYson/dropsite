@@ -1,6 +1,9 @@
 package client
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // User is an account as returned by the API.
 type User struct {
@@ -60,6 +63,9 @@ type Site struct {
 	CreatedAt     time.Time  `json:"created_at"`
 	UpdatedAt     time.Time  `json:"updated_at"`
 	CurrentDeploy *Deploy    `json:"current_deploy"`
+	Noindex       bool       `json:"noindex"`
+	Protected     bool       `json:"protected"`
+	ExpiresAt     *time.Time `json:"expires_at"`
 }
 
 // SiteItem is the compact site object used in lists.
@@ -109,8 +115,27 @@ type CreateSiteRequest struct {
 // UpdateSiteRequest is the body of PATCH /sites/{ref}. A nil field is left
 // unchanged; Slug pointing at "" removes the slug.
 type UpdateSiteRequest struct {
-	Title *string `json:"title,omitempty"`
-	Slug  *string `json:"slug,omitempty"`
+	Title     *string `json:"title,omitempty"`
+	Slug      *string `json:"slug,omitempty"`
+	Noindex   *bool   `json:"noindex,omitempty"`
+	Protected *bool   `json:"protected,omitempty"`
+	Password  *string `json:"password,omitempty"`
+	// ExpiresAt, when set, is sent as an RFC 3339 time or, with a nil At,
+	// as null (remove the expiry).
+	ExpiresAt *Expiry `json:"expires_at,omitempty"`
+}
+
+// Expiry is a requested site expiry; a nil At removes it.
+type Expiry struct {
+	At *time.Time
+}
+
+// MarshalJSON encodes the time or null.
+func (e Expiry) MarshalJSON() ([]byte, error) {
+	if e.At == nil {
+		return []byte("null"), nil
+	}
+	return json.Marshal(e.At.UTC().Format(time.RFC3339))
 }
 
 // DeployResult is returned by deploy and rollback.
