@@ -53,6 +53,9 @@ type deployDTO struct {
 	CreatedAt time.Time `json:"created_at"`
 	CreatedBy string    `json:"created_by"`
 	Current   bool      `json:"current"`
+	// PreviewURL is the release's own address (wildcard TLS mode, ready
+	// releases only); null otherwise.
+	PreviewURL *string `json:"preview_url"`
 }
 
 type siteDTO struct {
@@ -155,18 +158,19 @@ func toLimits(l domain.Limits) limitsDTO {
 	}
 }
 
-func toDeploy(d domain.Deploy, currentID *string) deployDTO {
+func toDeploy(d domain.Deploy, currentID *string, previewURL string) deployDTO {
 	return deployDTO{
 		ID: d.ID, SiteID: d.SiteID, Source: string(d.Source), SizeBytes: d.SizeBytes,
 		FileCount: d.FileCount, Status: string(d.Status), CreatedAt: utc(d.CreatedAt),
 		CreatedBy: idString(d.CreatedBy), Current: currentID != nil && *currentID == d.ID,
+		PreviewURL: optional(previewURL),
 	}
 }
 
-func toDeploys(ds []domain.Deploy, currentID *string) []deployDTO {
+func toDeploys(ds []domain.Deploy, currentID *string, previewURL func(domain.Deploy) string) []deployDTO {
 	out := make([]deployDTO, 0, len(ds))
 	for _, d := range ds {
-		out = append(out, toDeploy(d, currentID))
+		out = append(out, toDeploy(d, currentID, previewURL(d)))
 	}
 	return out
 }
@@ -186,7 +190,7 @@ func toSite(v service.SiteView) siteDTO {
 		CreatedAt: utc(v.Site.CreatedAt), UpdatedAt: utc(v.Site.UpdatedAt),
 	}
 	if v.Current != nil {
-		d := toDeploy(*v.Current, &v.Current.ID)
+		d := toDeploy(*v.Current, &v.Current.ID, v.CurrentPreviewURL)
 		s.CurrentDeploy = &d
 	}
 	return s
@@ -207,8 +211,17 @@ func toSiteItems(rows []service.SiteSummaryView) []siteItemDTO {
 func toDeployResult(res service.DeployResult) deployResultDTO {
 	return deployResultDTO{
 		DeployID: res.Deploy.ID, URL: res.Site.URL, URLs: nonNil(res.Site.URLs),
-		Deploy: toDeploy(res.Deploy, res.Site.Site.CurrentDeployID), Site: toSite(res.Site),
+		Deploy: toDeploy(res.Deploy, res.Site.Site.CurrentDeployID, resultPreview(res)), Site: toSite(res.Site),
 	}
+}
+
+// resultPreview is the preview of the deploy in a publish or rollback result;
+// that deploy is the site's current one, whose preview the view carries.
+func resultPreview(res service.DeployResult) string {
+	if res.Site.Current != nil && res.Site.Current.ID == res.Deploy.ID {
+		return res.Site.CurrentPreviewURL
+	}
+	return ""
 }
 
 func toToken(t domain.Token) tokenDTO {
