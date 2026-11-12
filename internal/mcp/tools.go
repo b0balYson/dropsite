@@ -72,26 +72,43 @@ func writes(title string, destructive, idempotent bool) *sdk.ToolAnnotations {
 }
 
 func (t tools) register(s *sdk.Server, o Options) {
+	registerGuide(s)
 	sdk.AddTool(s, &sdk.Tool{Name: "list_sites", Annotations: readOnly("List sites"),
-		Description: "List the user's dropsite sites with their addresses."}, t.listSites)
+		Description: "List the user's dropsite sites with names, links and current versions. Call it first " +
+			"whenever the user talks about \"my site\" or gives a link, to find which site they mean; if several " +
+			"fit, show their names and links and ask. Rules for working with sites: get_guide."}, t.listSites)
 	sdk.AddTool(s, &sdk.Tool{Name: "create_site", Annotations: writes("Create site", false, false),
-		Description: "Create an empty site and return its address. Publish content into it afterwards."}, t.createSite)
+		Description: "Create an empty site and return its link, optionally with a memorable address (slug). " +
+			"Usually not needed: deploy_files without site creates and publishes a new site in one step. Use it " +
+			"when the user wants an address reserved before the content is ready."}, t.createSite)
 	sdk.AddTool(s, &sdk.Tool{Name: "get_site", Annotations: readOnly("Get site"),
-		Description: "Get one site: addresses and the release being served."}, t.getSite)
+		Description: "Get one site: its name, every link (primary first) and the version being served. Show the " +
+			"user the primary link."}, t.getSite)
 	sdk.AddTool(s, &sdk.Tool{Name: "set_slug", Annotations: writes("Set address", false, true),
-		Description: "Set, change or remove (empty slug) the memorable address of a site, e.g. promo-may.<domain>."}, t.setSlug)
-	sdk.AddTool(s, &sdk.Tool{Name: "list_deploys", Annotations: readOnly("List releases"),
-		Description: "List the releases of a site, newest first, marking the current one."}, t.listDeploys)
-	sdk.AddTool(s, &sdk.Tool{Name: "rollback", Annotations: writes("Roll back", false, false),
-		Description: "Switch a site to an earlier release (the previous one when deploy_id is empty)."}, t.rollback)
+		Description: "Set, change or remove (empty slug) the memorable address of a site, e.g. coffee-river." +
+			"<base domain>. The random address keeps working. If the label is taken, suggest variants. Tell the " +
+			"user the new link; it may need a minute to open the first time."}, t.setSlug)
+	sdk.AddTool(s, &sdk.Tool{Name: "list_deploys", Annotations: readOnly("List versions"),
+		Description: "List the versions (releases) of a site, newest first, marking the one being served, with " +
+			"date, origin and, when enabled, a preview link of each version. Use it when the user asks about " +
+			"earlier versions; describe them by date and origin, not by ID."}, t.listDeploys)
+	sdk.AddTool(s, &sdk.Tool{Name: "rollback", Annotations: writes("Restore version", false, false),
+		Description: "Serve an earlier version of a site again: the previous one when deploy_id is empty " +
+			"(\"bring back the previous version\"), or the chosen one. Instant, deletes nothing, and can be undone " +
+			"the same way. Reply with the link."}, t.rollback)
 	sdk.AddTool(s, &sdk.Tool{Name: "delete_site", Annotations: writes("Delete site", true, true),
-		Description: "Delete a site and all its releases; its addresses stop working. Only after the user " +
-			"explicitly confirmed: pass the site's slug or ID again in confirm."}, t.deleteSite)
+		Description: "Delete a site with all its versions; its links stop working and this cannot be undone. " +
+			"Only after the user explicitly confirmed the deletion of this site: tell them which site (name and " +
+			"link) will be deleted, wait for yes, then pass the site's slug or ID again in confirm."}, t.deleteSite)
 	if o.Files {
 		sdk.AddTool(s, &sdk.Tool{Name: "deploy_files", Annotations: writes("Publish files", false, false),
-			Description: "Publish a small static site from files passed by value (at most 1 MB in total) and " +
-				"return its link. Creates a new site when site is omitted. index.html is required at the root. " +
-				"For bigger sites tell the user to publish with the dropsite CLI or Claude Desktop."}, t.deployFiles)
+			Description: "Publish a whole static site from files passed by value (at most 1 MB in total) and " +
+				"return its link. Without site it creates a new site (name it with title); with site it replaces " +
+				"all files of that site (to change a few files of an existing site use update_site_files when " +
+				"available). index.html is required at the root. Ship every image, font and script with the site " +
+				"(no CDNs or hotlinks; see get_guide topic assets). Bigger sites: upload sessions (begin_upload) " +
+				"when available, otherwise the dropsite web interface or CLI. Reply \"Your site is live: <link>\"."},
+			t.deployFiles)
 	}
 	if o.Folder {
 		sdk.AddTool(s, &sdk.Tool{Name: "deploy_folder", Annotations: writes("Publish folder", false, false),

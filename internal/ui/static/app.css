@@ -1020,10 +1020,44 @@ input.input, select.input { height: 2.75rem; }
 .connect-code.is-expired .code { opacity: 0.45; }
 .connect-code.is-expired [data-copy] { visibility: hidden; }
 
-.connect-chat > * + * { margin-top: var(--s-4); }
-.connect-chat .step__num { display: block; }
 .chat-steps { display: grid; gap: var(--s-5); }
-@media (min-width: 48rem) { .chat-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-6); } }
+@media (min-width: 48rem) { .chat-steps { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--s-5) var(--s-6); } }
+.steps-small .code { margin-block: var(--s-2); }
+/* The chat comes first; the computer command is the second, quieter step. */
+.connect-hero--next { border-top: 0; }
+@media (min-width: 60rem) {
+  .connect-hero--next .connect-hero__intro .step__num { font-size: var(--t-xl); letter-spacing: 0; }
+}
+.connect-use > * + * { margin-top: var(--s-4); }
+.connect-use .step__num { display: block; }
+.phrases { display: grid; gap: var(--s-3); }
+@media (min-width: 48rem) { .phrases { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3) var(--s-5); } }
+.phrases li {
+  padding: var(--s-3) var(--s-4);
+  background: var(--c-surface);
+  border: var(--rule-thin) solid var(--c-hair);
+  border-left: 4px solid var(--c-current);
+  font-size: var(--t-md);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+.phrases .phrases__admin { border-left-color: var(--c-ink); }
+.phrases__tag {
+  display: inline-block;
+  margin-right: var(--s-2);
+  padding: 0 var(--s-2);
+  border: var(--rule-thin) solid var(--c-ink);
+  border-radius: var(--r-sm);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  vertical-align: 0.15em;
+}
+.connect-self { padding-top: var(--s-4); border-top: var(--rule-thin) solid var(--c-hair); }
+.connect-self > * + * { margin-top: var(--s-3); }
+.connect-self__list { display: grid; gap: var(--s-2); padding-left: 1.25rem; list-style: disc; font-size: var(--t-sm); color: var(--c-ink-2); max-width: 70ch; }
 .chat-steps__col { padding-top: var(--s-3); border-top: var(--rule-thin) solid var(--c-hair); min-width: 0; }
 .chat-steps__col > * + * { margin-top: var(--s-3); }
 .chat-steps__title { font-size: var(--t-md); font-weight: 700; letter-spacing: -0.01em; }

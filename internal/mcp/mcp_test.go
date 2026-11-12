@@ -151,7 +151,7 @@ func TestToolsOverInMemoryTransport(t *testing.T) {
 		}
 	}
 	sort.Strings(names)
-	want := "create_site delete_site deploy_files get_site list_deploys list_sites rollback set_slug"
+	want := "create_site delete_site deploy_files get_guide get_site list_deploys list_sites rollback set_slug"
 	if strings.Join(names, " ") != want {
 		t.Fatalf("tools: %v", names)
 	}

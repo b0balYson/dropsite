@@ -2,13 +2,13 @@
 
 [Русская версия](README.ru.md)
 
-Self-hosted publishing of static sites. A marketer builds a landing page with an AI assistant, says "publish it" or drops a zip into the web interface, and gets an HTTPS link on a subdomain of your domain in seconds. No VPS per site, no git, no DevOps.
+Self-hosted publishing of static sites. A marketer asks ChatGPT or Claude "make a coffee shop site and publish it", or drops a zip into the web interface, and gets an HTTPS link on a subdomain of your domain in seconds; later changes, visit statistics, form requests and passwords are plain requests in the same chat. No VPS per site, no git, no DevOps.
 
 - One server. Build from source and start: `docker compose up -d --build --wait`.
 - Archive in, HTTPS link out. Every site gets a random address such as `k3f9x2m7qa.example.site` and an optional readable one such as `promo-may.example.site`.
 - Every publish is an immutable release: switch and roll back instantly, with zero failed requests during the switch.
 - Each user sees and changes only their own sites. Admins manage users, all sites, limits and the audit log.
-- Publish from the web interface, the `dropsite` CLI, the HTTP API, or an AI assistant (Claude Code, Codex) through the CLI.
+- Manage sites from a chat (ChatGPT, claude.ai, Claude Desktop, Claude Code) connected once, or from the web interface, the `dropsite` CLI and the HTTP API.
 - Sites keep working while the control service is stopped or being upgraded.
 
 dropsite serves finished static files only (HTML, CSS, JS, images). It does not build projects or run server code.
@@ -65,11 +65,41 @@ For a team, set `ADMIN_BIND_IP` to the server address in a private overlay netwo
 
 Then: **Users → create user**, send them the invite link (valid 72 hours); they set a password and publish.
 
+## Sites from a chat
+
+The main way to use dropsite is a chat. Connect it once to ChatGPT, claude.ai, Claude Desktop or Claude Code, then ask in plain words; the assistant builds or changes the site, publishes it and answers with a working link. Nobody needs to know file formats, commands or server details.
+
+1. **Connect once.** On the **Connect AI** page of the web interface copy the address `https://api.<BASE_DOMAIN>/mcp` and follow the short steps for your chat (ChatGPT: developer mode → create an app; claude.ai and Claude Desktop: Settings → Connectors → Add custom connector; Claude Code: `claude mcp add --transport http dropsite <address>`). When the dropsite page opens, press **Connect** on the Connect AI page and enter the one-time code; the password is never asked for.
+2. **Ask.** For example:
+
+| English | Русский |
+| --- | --- |
+| "Make a coffee shop site and publish it" | «Сделай сайт кофейни и опубликуй» |
+| "Change the photos and prices on my site" | «Измени фотографии и цены на моём сайте» |
+| "Show visits for the week" | «Покажи посещаемость за неделю» |
+| "Show the latest requests" | «Покажи последние заявки» |
+| "Send requests to Telegram" | «Присылай заявки в Telegram» |
+| "Close the site with a password" | «Закрой сайт паролем» |
+| "Bring back the previous version" | «Верни предыдущую версию» |
+| Administrator: "Put this placeholder on the root domain" | Администратор: «Поставь эту заглушку на корневой домен» |
+
+A change from a new chat works too: the assistant reads the current files of the site from the server, changes what was asked and publishes a new version (the previous one stays available for rollback). Sites it builds carry their own images and fonts (no CDNs or hotlinked photos), are sized for phones first and load fast. Before deleting or replacing anything it asks for confirmation.
+
+What stays with people:
+
+- connecting a chat the first time (the Connect AI page);
+- DNS records of an own domain, which the user creates at their domain provider with the values the assistant gives, and the administrator's approval of that domain;
+- confirming a delivery channel: pressing Start in Telegram or reading the code from the e-mail;
+- installation settings (Telegram bot, mail server, users, limits), which an administrator sets in the web interface. Through a chat even an administrator manages only their own sites; the only installation-level action is the root domain.
+
+How the assistant learns the rules (server instructions, the `get_guide` tool, tool descriptions) and what each chat supports: [docs/ai-clients.md](docs/ai-clients.md).
+
 ## Publishing
 
+- **Chat (main path):** see [Sites from a chat](#sites-from-a-chat). Each call of the chat tools carries about 1 MB; bigger sites go up in an upload session that ends in one release.
 - **Web interface:** create a site, drag a zip or tar.gz onto it.
-- **AI assistants on a computer (one command):** on the **Connect AI** page press **Connect**. It shows a one-time code (10 minutes) inside a ready command for macOS/Linux and for Windows. The command installs the CLI, signs in with the code and runs `dropsite setup`, which connects every assistant it finds: the publish skill for **Claude Code**, **Codex** and **Cursor**, and a local MCP server for **Claude Desktop**. Then say "publish this site".
-- **ChatGPT and claude.ai:** add a custom connector with the address `https://api.<BASE_DOMAIN>/mcp`. When the dropsite page opens, enter a connect code from the **Connect AI** page; the password is never asked for. Custom MCP connectors in ChatGPT need developer mode and are not available on every plan; check the current terms at [help.openai.com](https://help.openai.com/). Connected apps are listed on the **Connect AI** page and can be disconnected there. Details: [docs/ai-clients.md](docs/ai-clients.md).
+- **AI assistants on a computer (one command, optional):** on the **Connect AI** page press **Connect**. It shows a one-time code (10 minutes) inside a ready command for macOS/Linux and for Windows. The command installs the CLI, signs in with the code and runs `dropsite setup`, which connects every assistant it finds: the publish skill for **Claude Code**, **Codex** and **Cursor**, and a local MCP server for **Claude Desktop**. Then say "publish this site".
+- **Chat connector details:** the connector address is `https://api.<BASE_DOMAIN>/mcp`. When the dropsite page opens, enter a connect code from the **Connect AI** page; the password is never asked for. Custom MCP connectors in ChatGPT need developer mode and are not available on every plan; check the current terms at [help.openai.com](https://help.openai.com/). Connected apps are listed on the **Connect AI** page and can be disconnected there. Details: [docs/ai-clients.md](docs/ai-clients.md).
 - **CLI by hand:** `dropsite login --server https://api.<BASE_DOMAIN> --code <code>` (or `--token` with a key from the collapsed "Manual access keys" section), then `dropsite deploy ./dist`. The first run creates a site and remembers it in `.dropsite.json`; later runs update it. A folder with secret-looking files (`.env*`, keys, credentials) is refused with their list; `--skip-sensitive` leaves them out, `--include-sensitive` publishes them.
 - **HTTP API and MCP:** `https://api.<BASE_DOMAIN>/api/v1` with a bearer token ([docs/api-contract.md](docs/api-contract.md), `/api/v1/openapi.json`); the MCP endpoint `https://api.<BASE_DOMAIN>/mcp` accepts the same API tokens or OAuth tokens.
 

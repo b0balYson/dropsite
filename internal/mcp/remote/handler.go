@@ -27,12 +27,6 @@ const maxBodyBytes = 2 << 20
 
 const actorKey = "actor"
 
-// instructions are sent to chat clients on initialize.
-const instructions = "Publish static websites (HTML, CSS, JS, images) to the user's " + brand.DisplayName +
-	" server and manage them. To publish, call deploy_files with every file of the site " +
-	"(index.html at the root, at most 1 MB in total); it returns the link to give to the user. " +
-	"Never delete a site unless the user explicitly asked and confirmed."
-
 // Options wires the handler into the public listener.
 type Options struct {
 	// ClientIP returns the client address resolved by the API middleware.
@@ -62,7 +56,7 @@ func New(svc *service.Service, o Options) http.Handler {
 			return r.RemoteAddr
 		}
 	}
-	server := mcp.NewServer(brand.Version, resolver(svc, o.Logger), mcp.Options{Files: true, Forms: true, Instructions: instructions})
+	server := mcp.NewServer(brand.Version, resolver(svc, o.Logger), mcp.Options{Files: true, Forms: true, Instructions: mcp.Instructions})
 	stream := sdk.NewStreamableHTTPHandler(func(*http.Request) *sdk.Server { return server },
 		&sdk.StreamableHTTPOptions{Stateless: true, JSONResponse: true, MaxRequestBodyBytes: maxBodyBytes})
 	verify := func(ctx context.Context, token string, r *http.Request) (*auth.TokenInfo, error) {
