@@ -94,11 +94,17 @@ func (f *FS) Reconcile(ctx context.Context, desired []SiteLayout, keep Retained)
 	if err := f.reconcileSites(ctx, want, kept, &rep); err != nil {
 		return rep, err
 	}
-	// Flags before links, so a newly linked host is never served unflagged.
-	if err := f.reconcileFlags(ctx, desiredFlags(desired), &rep); err != nil {
+	// Missing markers before links, so a newly linked host is never served
+	// unflagged; extra markers only after stray links are gone, so a stray
+	// link to a protected site is never served without its marker.
+	flags := desiredFlags(desired)
+	if err := f.addMissingFlags(ctx, flags, &rep); err != nil {
 		return rep, err
 	}
 	if err := f.reconcileHosts(ctx, hosts, &rep); err != nil {
+		return rep, err
+	}
+	if err := f.removeExtraFlags(ctx, flags, &rep); err != nil {
 		return rep, err
 	}
 	rep.sort()
