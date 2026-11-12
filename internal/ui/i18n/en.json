@@ -281,6 +281,7 @@
   "err.no_previous_deploy": "There is no earlier release to roll back to.",
   "err.token_name_invalid": "The key name must be one line of at most {max} characters.",
   "err.setting_invalid": "The value of “{key}” is not allowed. Check the limits next to the field.",
+  "err.counter_id_invalid": "Invalid counter ID. Yandex Metrica takes a 4–12 digit number, GA4 an ID like G-XXXXXXXX. Do not paste the tracking code: dropsite adds it itself.",
   "err.archive_unsupported_format": "This file is neither zip nor tar.gz. Compress the site's files into a zip archive and upload it.",
   "err.archive_corrupt": "The archive is damaged or the upload was interrupted. Create the archive again and re-upload it.",
   "err.archive_too_large": "The site is too large: the limit is {limit}. Shrink images and videos or remove files you do not need.",

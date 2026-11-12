@@ -9,6 +9,7 @@ import (
 
 	"github.com/b0balYson/dropsite/internal/config"
 	"github.com/b0balYson/dropsite/internal/domain"
+	"github.com/b0balYson/dropsite/internal/tracking"
 )
 
 // Setting keys an administrator may override.
@@ -19,6 +20,9 @@ const (
 	SettingMaxSitesPerUser = "max_sites_per_user"
 	SettingKeepReleases    = "keep_releases"
 	SettingReservedSlugs   = "reserved_slugs"
+	// Global analytics counters, added to every site at its next release.
+	SettingCounterMetrika = "counter_metrika_id"
+	SettingCounterGA4     = "counter_ga4_id"
 )
 
 // SettingKeys lists overridable settings in display order.
@@ -31,6 +35,7 @@ type effectiveSettings struct {
 	limits   domain.Limits
 	reserved domain.ReservedSlugs
 	extra    []string // admin-defined reserved slugs
+	counters domain.Counters
 	raw      map[string]string
 }
 
@@ -41,6 +46,8 @@ type Settings struct {
 	EnvReserved   []string // from RESERVED_SLUGS
 	Builtin       []string
 	Overridden    map[string]bool
+	// Counters are the global analytics IDs added to every site.
+	Counters domain.Counters
 }
 
 func (s *Service) settings(ctx context.Context) (*effectiveSettings, error) {
@@ -79,7 +86,13 @@ func (s *Service) buildSettings(raw map[string]string) *effectiveSettings {
 		l.KeepReleases = int(v)
 	}
 	extra := splitSlugs(raw[SettingReservedSlugs])
+	counters, err := tracking.Normalize(domain.Counters{MetrikaID: raw[SettingCounterMetrika], GA4ID: raw[SettingCounterGA4]})
+	if err != nil {
+		s.log.Warn("ignoring invalid global counter setting", "err", err)
+		counters = domain.Counters{}
+	}
 	return &effectiveSettings{
+		counters: counters,
 		limits:   l,
 		reserved: domain.NewReservedSlugs(s.cfg.BaseDomain, s.cfg.APIHost, s.cfg.ReservedSlugs, extra),
 		extra:    extra,
@@ -134,6 +147,7 @@ func (s *Service) GetSettings(ctx context.Context, a Actor) (Settings, error) {
 		EnvReserved:   s.cfg.ReservedSlugs,
 		Builtin:       domain.BuiltinReservedSlugs,
 		Overridden:    over,
+		Counters:      eff.counters,
 	}, nil
 }
 
@@ -146,7 +160,9 @@ type SettingsUpdate struct {
 	MaxSitesPerUser *int64
 	KeepReleases    *int64
 	ReservedSlugs   *[]string
-	Reset           []string
+	// Counters replaces both global counter IDs; an empty ID removes it.
+	Counters *domain.Counters
+	Reset    []string
 }
 
 func invalidSetting(key, msg string) error {
@@ -185,6 +201,14 @@ func (u SettingsUpdate) values() (map[string]string, error) {
 		}
 		out[SettingReservedSlugs] = strings.Join(list, ",")
 	}
+	if u.Counters != nil {
+		c, err := tracking.Normalize(*u.Counters)
+		if err != nil {
+			return nil, err
+		}
+		out[SettingCounterMetrika] = c.MetrikaID
+		out[SettingCounterGA4] = c.GA4ID
+	}
 	return out, nil
 }
 
@@ -196,6 +220,12 @@ func (s *Service) UpdateSettings(ctx context.Context, a Actor, u SettingsUpdate)
 	vals, err := u.values()
 	if err != nil {
 		return Settings{}, err
+	}
+	for _, k := range []string{SettingCounterMetrika, SettingCounterGA4} {
+		if v, ok := vals[k]; ok && v == "" {
+			delete(vals, k)
+			u.Reset = append(u.Reset, k)
+		}
 	}
 	cur, err := s.settings(ctx)
 	if err != nil {
