@@ -89,6 +89,24 @@ The installation sends at most 8 deliveries at a time, at most 2 per site and 1 
 
 **Download CSV** exports up to 10 000 newest submissions (and at most 64 MB; a larger export ends at the last whole row). Columns: `created_at`, `form`, `host`, then one column per field name — the 100 most frequent names of the export — and, if some names did not get a column, `_other` with the remaining fields of the row as a JSON object. Cells starting with `=`, `+`, `-` or `@` get a leading apostrophe so spreadsheets do not run them as formulas.
 
+## From a chat assistant
+
+The remote MCP server (`https://api.<BASE_DOMAIN>/mcp`, see [ai-clients.md](ai-clients.md)) gives ChatGPT, claude.ai and other MCP clients the same powers as the site's forms screen, with the same permission checks and limits:
+
+| Tool | What it does |
+| --- | --- |
+| `get_form_settings` | Altcha flag, form names with submissions, the `/_form/<name>` address of the site, a ready HTML form (`form_snippet`, with `_hp` and the Altcha widget), whether Telegram and e-mail are set up on the server, the link to the forms screen |
+| `set_form_settings` | turns **Require Altcha** on or off |
+| `list_submissions` | newest first; filters `form`, `days` (last N days by the server clock), `since`/`until` (`YYYY-MM-DD` in UTC, `until` includes the whole day, or RFC 3339), `query` (text in field values; case-insensitive for Latin letters only); `limit` up to 100 and `cursor` for the next page; delivery state per channel in plain words |
+| `export_submissions` | the same CSV as **Download CSV** returned as text: at most 1000 rows and 256 KB (default 200 rows, 100 KB), cut at a whole row; when truncated, the answer points to the forms screen for the full file |
+| `list_channels` | channels with their state in plain words (waiting for confirmation, active, off, paused) |
+| `add_channel` | Telegram without a chat ID returns the bot link the user must open and press *Start*; with a chat ID or for e-mail a 6-digit code is sent and the assistant asks the user for it; a webhook returns its signing secret once |
+| `verify_channel` | confirms a channel with the code |
+| `set_channel_enabled` | turns a channel off or on (on also resumes a paused webhook) |
+| `delete_channel`, `rotate_channel_secret` | need `confirm` with the channel's ID or address after the user agreed |
+
+Nothing is bypassed: 10 channels per site, 10 new channels per user per hour, 3 confirmation codes per recipient per day, 5 code attempts. If Telegram or e-mail is not set up on the installation, `add_channel` answers `channel_unavailable` and the assistant tells the user that the administrator must set it up. Installation settings (bot token, SMTP, retention) are not available through MCP. The local `dropsite mcp` server has no form tools.
+
 ## For administrators
 
 **Settings → Form submissions**:
