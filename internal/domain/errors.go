@@ -83,6 +83,9 @@ const (
 	CodeArchiveNoIndex     = "archive_no_index"
 	CodeArchiveEmpty       = "archive_empty"
 
+	// CodeSecretsFound rejects a release whose files contain secret keys.
+	CodeSecretsFound = "secrets_found"
+
 	// Site forms: intake, delivery channels and their settings.
 	CodeFormInvalid         = "form_invalid"
 	CodeFormEmpty           = "form_empty"

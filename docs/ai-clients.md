@@ -92,6 +92,8 @@ Because the assistant can be steered by content it reads, `deploy_folder` is gua
 
 `dropsite deploy` applies the same secret-file check (not the folder check): it stops and lists the files unless `--skip-sensitive` (leave them out) or `--include-sensitive` (publish them, when they really are public) is given.
 
+Independently of file names, the server refuses every publication whose files contain secret keys (`secrets_found`, with `path:line (kind)` for each hit and never the key itself; see `docs/api-contract.md`). This applies to the web interface, the CLI, the API and both MCP servers alike; `--include-sensitive` and `skip_sensitive_files` do not override it. Public keys meant for web pages (Supabase anon, Stripe `pk_`) are accepted.
+
 ## Remote MCP: tools and rights
 
 The remote server offers every chat tool. A whole small site is published in one call with `deploy_files` (instead of the local `deploy_folder`): `files` is an array of `{path, content, encoding}` (`utf8` or `base64`), at most 16 MB decoded in total; omit `site` to create a new site. Larger sites go up in an upload session where the server offers one; otherwise the error recommends the web interface, the CLI or Claude Desktop. Releases published this way have the source `mcp`.

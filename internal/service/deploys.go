@@ -113,6 +113,10 @@ func (s *Service) publish(ctx context.Context, a Actor, site domain.Site, upload
 		s.discard(site.ID, id)
 		return domain.Deploy{}, err
 	}
+	if err := checkSecrets(ctx, staging); err != nil {
+		s.discard(site.ID, id)
+		return domain.Deploy{}, err
+	}
 	set, err := s.countersFor(ctx, site.ID)
 	if err != nil {
 		s.discard(site.ID, id)

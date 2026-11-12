@@ -346,6 +346,7 @@
   "err.archive_bad_name": "A file name in the archive is not allowed: “{path}”. Rename the file (no control characters or duplicates) and create the archive again.",
   "err.archive_no_index": "There is no index.html at the root of the archive — it is the site's home page. Put index.html at the root of the archive (not in a subfolder) and upload again. The site still shows the previous version.",
   "err.archive_empty": "The archive is empty. Add the site's files to it, including index.html.",
+  "err.secrets_found": "The site was not published: its files contain secret keys that must never be public ({count}): {found}. Remove them, keep only public keys (for example the Supabase anon key or a Stripe pk_ key) on the site and replace the exposed keys in the services they come from. The site still shows the previous version.",
   "users.revoke_tokens": "Revoke keys",
   "users.tokens_revoked": "Revoked {count} access keys of {email}. Tools and assistants can no longer publish on their behalf.",
   "audit.action.user.tokens_revoke": "All user keys revoked",
