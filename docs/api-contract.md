@@ -34,8 +34,11 @@ Domain   Hostname + {site_id, site_title, owner_id, owner_email}
 DNSCheck {hostname, verdict, addresses[], cname|null, expected[]}
                                                 verdict: points_here | points_elsewhere | no_records | failed | unknown
 Deploy   {id, site_id, source, size_bytes, file_count, status, created_at, created_by, current, preview_url|null}
-Site     {id, title, url, urls[], slug|null, hostnames[], owner_id, created_at, updated_at, current_deploy: Deploy|null}
-SiteItem {id, title, url, urls[], slug|null, owner_id, owner_email, last_deploy_at|null, size_bytes, created_at, updated_at}
+Site     {id, title, url, urls[], slug|null, hostnames[], owner_id, created_at, updated_at, current_deploy: Deploy|null,
+          noindex, protected, expires_at|null}
+SiteItem {id, title, url, urls[], slug|null, owner_id, owner_email, last_deploy_at|null, size_bytes, created_at, updated_at,
+          noindex, protected, expires_at|null}
+LimitOverrides {max_site_bytes|null, max_file_bytes|null, max_files|null, max_sites_per_user|null, keep_releases|null}
 Token    {id, name, prefix, created_at, last_used_at|null, expires_at|null, revoked_at|null}
 Audit    {id, actor_id|null, actor_email, action, target, meta{}, ip, created_at}
 List     {items[], total}
@@ -59,7 +62,7 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 | `GET /sites` | `?limit&offset` | `List<SiteItem>` (own sites) |
 | `POST /sites` | `{title, slug?}` | `201 Site` |
 | `GET /sites/{ref}` | | `Site` |
-| `PATCH /sites/{ref}` | `{title?, slug?}`; `slug: ""` or `null` removes it | `Site` |
+| `PATCH /sites/{ref}` | `{title?, slug?, noindex?, protected?, password?, expires_at?}`; `slug: ""` or `null` removes it | `Site` |
 | `DELETE /sites/{ref}` | | `204` |
 | `POST /sites/{ref}/deploys` | `multipart/form-data`, field `archive` (zip or tar.gz) | `201 {deploy_id, url, urls[], deploy: Deploy, site: Site}` |
 | `GET /sites/{ref}/deploys` | | `List<Deploy>` (newest first) |
@@ -83,7 +86,8 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 | `DELETE /tokens/{id}` | | `204` |
 | `GET /admin/users` | `?q&status&limit&offset` | `List<User + site_count>` |
 | `POST /admin/users` | `{email, role?}` | `201 {user: User, invite_url, invite_expires_at}` |
-| `PATCH /admin/users/{id}` | `{blocked: bool}` or `{reissue_invite: true}` | `{user: User, invite_url?, invite_expires_at?}` |
+| `GET /admin/users/{id}` | | `{user: User, limits: Limits, limit_overrides: LimitOverrides}` |
+| `PATCH /admin/users/{id}` | `{blocked: bool}`, `{reissue_invite: true}` or `{limits: LimitOverrides}` | `{user: User, invite_url?, invite_expires_at?, limits?, limit_overrides?}` |
 | `GET /admin/sites` | `?q&limit&offset` | `List<SiteItem>` (all sites) |
 | `POST /admin/sites/{ref}/apex` | | `Site` |
 | `DELETE /admin/sites/{ref}/apex` | | `Site` |
@@ -107,5 +111,12 @@ External domains (see `docs/external-domains.md`): `hostname` is normalised (low
 `GET /sites/{ref}/stats` counts page views of HTML pages from the sites access log (bots and assets excluded), by UTC day; `days` lists every day of the period ending today, oldest first, including days without views. `visitors` is the approximate number of unique visitors of a day (hash of IP and User-Agent with a daily salt); the total is the sum of daily values. In `top_referrers` an empty `name` is a direct visit; in both tops `*` stands for everything beyond the rows stored per day (500 pages, 200 referrers). Statistics lag behind by up to one collection interval (`STATS_INTERVAL`, default one minute).
 
 `preview_url` is the address that serves exactly this release, `https://p-<deploy id>-<site id>.<BASE_DOMAIN>/` (with `X-Robots-Tag: noindex`). It is set only when the installation runs with `TLS_MODE=wildcard` and the release is `ready`; otherwise it is `null` (see `docs/tls.md`).
+
+## Site access and limits
+
+- `noindex: true` makes every response of the site carry `X-Robots-Tag: noindex, nofollow`.
+- `password` (10–256 bytes) protects the site or changes its password; it is stored as an argon2id hash and never returned. `protected: true` without `password` is accepted only when the site already has one (otherwise `400 site_password_required`); `protected: false` removes protection and must not come with `password`. Changing or removing the password signs every visitor out.
+- `expires_at` is an RFC 3339 time in the future, at most 10 years ahead (`400 expiry_invalid` otherwise); `null` removes it. Within a minute after it passes the site is soft-deleted (`site.expire` in the audit log) and purged 7 days later.
+- `limits` in `PATCH /admin/users/{id}` replaces the user's personal overrides; a missing or `null` field inherits the global value, `{}` resets all. Effective limits follow user override → admin setting → environment → default; `GET /me` returns them. Deploy size limits and release pruning use the limits of the site's owner.
 
 Site forms (see `docs/forms.md`): a webhook channel returns its signing `secret` only on creation and rotation; a Telegram channel created without `target` returns a binding `link` (`https://t.me/<bot>?start=<code>`). Telegram channels with a chat ID and e-mail channels start `pending` and become `active` after `verify` with the code sent to them (30 minutes, 5 attempts; `channel_code_invalid`). Other codes: `channel_invalid`, `channel_unavailable` (Telegram or SMTP not configured, or the code could not be sent), `channel_limit_reached` (10 per site, 403), `telegram_token_invalid`, `setting_invalid`. In `PATCH /admin/forms/settings` a missing field keeps the value and an empty string clears it; the bot token and SMTP password are never returned. Visitor endpoints on site hosts (`POST /_form/<name>`, `GET /_form/challenge`, `GET /_dropsite/altcha.js`) are not part of API v1.

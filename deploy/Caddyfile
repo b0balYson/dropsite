@@ -138,8 +138,23 @@ http:// {
 		not path_regexp ^/\.well-known(/[^./][^/]*)*/?$
 	}
 	# Paths reserved for the platform; other /_* paths (e.g. /_next/) are
-	# ordinary site files.
-	@reserved path /_form /_form/* /_dropsite /_dropsite/*
+	# ordinary site files. /_dropsite/* is served by control (visitor login of
+	# protected sites, the Altcha widget script); of /_form/* only the routes
+	# below reach control, the rest answers 404.
+	@reserved path /_form /_form/*
+	@platform path /_dropsite /_dropsite/*
+
+	# Per-host flags: control creates and removes marker files, Caddy only
+	# checks them (no reload). Without a trailing "/" try_files matches
+	# regular files only. {re.site.1} is set inside "handle @site".
+	@noindex file {
+		root /data/flags/noindex
+		try_files /{re.site.1}
+	}
+	@protected file {
+		root /data/flags/protected
+		try_files /{re.site.1}
+	}
 
 	# Release preview addresses (wildcard mode, see internal/domain
 	# PreviewLabel) are never indexed. The pattern cannot match a slug:
@@ -155,25 +170,45 @@ http:// {
 		# asset Cache-Control instead of no-cache.
 		route {
 			# STAGE2-FLAGS
+			# The login page comes first: it must be reachable without access.
+			# Its own X-Robots-Tag is dropped and set here, so the header is
+			# never doubled with the @preview/@noindex ones.
+			header @platform X-Robots-Tag "noindex, nofollow"
+			reverse_proxy @platform control:8080 {
+				header_down -X-Robots-Tag
+			}
 
-			# Site forms: control answers POST /_form/<name>, the Altcha
-			# challenge and the widget script. Every other /_form and
-			# /_dropsite request stays 404 below. Form bodies are capped here
-			# too (control enforces the same 64 KiB). Kept after the flags so
-			# that a protected site also protects its forms.
+			# Set before anything answers, so redirects, the login redirect
+			# and files all carry it. "header" replaces the @preview value.
+			header @noindex X-Robots-Tag "noindex, nofollow"
+
+			# Open sites never reach control. For protected ones control
+			# answers 2xx (serve), 302 to the login page, or an error; if it
+			# is down the proxy error ends in handle_errors (503 page), so
+			# nothing of the site is served: 404.html and 200.html are below.
+			forward_auth @protected control:8081 {
+				uri /internal/auth-check
+			}
+
+			# Site forms: control answers POST /_form/<name> and the Altcha
+			# challenge (the widget script is /_dropsite/altcha.js above).
+			# Every other /_form request is 404 below. Form bodies are capped
+			# here too (control enforces the same 64 KiB). After forward_auth
+			# on purpose: a protected site accepts forms only from visitors
+			# who signed in to it.
 			@formPost {
 				method POST
 				path /_form/*
 			}
-			@formAssets {
+			@formChallenge {
 				method GET HEAD
-				path /_form/challenge /_dropsite/altcha.js
+				path /_form/challenge
 			}
 			request_body @formPost {
 				max_size 64KiB
 			}
 			reverse_proxy @formPost control:8080
-			reverse_proxy @formAssets control:8080
+			reverse_proxy @formChallenge control:8080
 
 			error @hidden 404
 			error @reserved 404
@@ -212,6 +247,17 @@ http:// {
 		handle @site {
 			# root must be its own directive before the file matcher below.
 			root * /data/by-host/{re.site.1}
+			header @noindex X-Robots-Tag "noindex, nofollow"
+
+			# 5xx on a site address comes only from the proxies above, that
+			# is, control is unreachable: a protected site fails closed.
+			@unavailable expression {err.status_code} in [502, 503, 504]
+			handle @unavailable {
+				header Cache-Control no-store
+				header Content-Type "text/html; charset=utf-8"
+				header Retry-After 30
+				respond `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Temporarily unavailable</title></head><body><main><h1>Temporarily unavailable</h1><p>This site cannot be opened right now. Please try again in a minute.</p><p lang="ru">Сайт временно недоступен. Попробуйте открыть его через минуту.</p></main></body></html>` 503
+			}
 
 			@custom404 {
 				expression {err.status_code} == 404

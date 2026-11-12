@@ -15,6 +15,8 @@ type SiteLayout struct {
 	CurrentDeployID *string // nil: current points at the shared empty directory
 	Hostnames       []string
 	ReadyDeployIDs  []string
+	Noindex         bool // every hostname carries the noindex marker
+	Protected       bool // every hostname carries the protected marker
 	// Previews are by-host entries pointing at a release directory instead
 	// of current (wildcard TLS mode only); empty otherwise.
 	Previews []Preview
@@ -40,6 +42,8 @@ type ReconcileReport struct {
 	LinkedHosts     []string // by-host entries created or repointed
 	UnlinkedHosts   []string // by-host entries removed
 	FixedCurrent    []string // sites whose current link was created or repointed
+	SetFlags        []string // "<flag>/<hostname>" markers created or repaired
+	ClearedFlags    []string // "<flag>/<hostname>" markers removed
 	// MissingCurrent lists sites whose CurrentDeployID has no release
 	// directory on disk; their current points at the empty directory. Unlike
 	// the other fields it is reported on every call while the mismatch with
@@ -53,13 +57,14 @@ type ReconcileReport struct {
 // Empty reports whether the report contains no changes and no anomalies.
 func (r ReconcileReport) Empty() bool {
 	return len(r.RemovedTemp)+len(r.RemovedReleases)+len(r.RemovedSites)+
-		len(r.LinkedHosts)+len(r.UnlinkedHosts)+len(r.FixedCurrent)+len(r.MissingCurrent)+len(r.MissingPreviews) == 0
+		len(r.LinkedHosts)+len(r.UnlinkedHosts)+len(r.FixedCurrent)+len(r.MissingCurrent)+len(r.MissingPreviews)+
+		len(r.SetFlags)+len(r.ClearedFlags) == 0
 }
 
 func (r *ReconcileReport) sort() {
 	for _, s := range []*[]string{
 		&r.RemovedTemp, &r.RemovedReleases, &r.RemovedSites, &r.LinkedHosts,
-		&r.UnlinkedHosts, &r.FixedCurrent, &r.MissingCurrent, &r.MissingPreviews,
+		&r.UnlinkedHosts, &r.FixedCurrent, &r.MissingCurrent, &r.MissingPreviews, &r.SetFlags, &r.ClearedFlags,
 	} {
 		slices.Sort(*s)
 	}
@@ -68,7 +73,7 @@ func (r *ReconcileReport) sort() {
 // Reconcile brings the disk in line with the database (desired). It removes
 // staging directories and temporary links, releases unknown to desired,
 // sites that are neither desired nor retained, and stray by-host entries; it
-// repairs current and by-host links. Invalid input is rejected before
+// repairs current and by-host links and the per-host flag markers. Invalid input is rejected before
 // anything on disk is touched. A second call in a row changes nothing.
 func (f *FS) Reconcile(ctx context.Context, desired []SiteLayout, keep Retained) (ReconcileReport, error) {
 	var rep ReconcileReport
@@ -87,6 +92,10 @@ func (f *FS) Reconcile(ctx context.Context, desired []SiteLayout, keep Retained)
 		return rep, err
 	}
 	if err := f.reconcileSites(ctx, want, kept, &rep); err != nil {
+		return rep, err
+	}
+	// Flags before links, so a newly linked host is never served unflagged.
+	if err := f.reconcileFlags(ctx, desiredFlags(desired), &rep); err != nil {
 		return rep, err
 	}
 	if err := f.reconcileHosts(ctx, hosts, &rep); err != nil {

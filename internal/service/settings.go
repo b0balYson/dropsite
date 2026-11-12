@@ -119,7 +119,7 @@ func splitSlugs(v string) []string {
 	return out
 }
 
-// Limits returns the effective limits for a user.
+// Limits returns the global effective limits (without per-user overrides).
 func (s *Service) Limits(ctx context.Context) (domain.Limits, error) {
 	eff, err := s.settings(ctx)
 	if err != nil {

@@ -93,9 +93,18 @@ A site can also open on the owner's domain, such as `promo.example.com`: add it 
 | Custom 404 | `404.html` at the root is served with status 404 |
 | Single-page apps | `200.html` at the root is served with status 200 for any unknown path |
 | Hidden files | any path segment starting with a dot is 404, except `/.well-known/` |
-| Reserved | `/_form/` and `/_dropsite/` belong to the platform |
+| Reserved | `/_form/` and `/_dropsite/` belong to the platform (`/_dropsite/login` is the password page of protected sites) |
 | Caching | HTML `no-cache`; other files `public, max-age=3600` |
 
+### Access: search engines, password, lifetime
+
+The **Access** block of a site (also `PATCH /api/v1/sites/{ref}`) controls who sees it and for how long. Changes apply at once, without restarting anything.
+
+- **Hide from search engines** (`noindex`): every response of the site, including errors, carries `X-Robots-Tag: noindex, nofollow`.
+- **Password** (`protected`): visitors see a neutral sign-in page with the site title, enter the password and stay signed in on that address for 7 days. Changing the password or removing protection signs everybody out. The password is stored as an argon2id hash; wrong attempts are limited to 10 per 15 minutes per IP and 100 per site. Open sites never contact `control`; protected ones are checked on every request, and while `control` is down they show a "temporarily unavailable" page instead of the content.
+- **Lifetime** (`expires_at`, CLI `--expires 7d`): after the last day the site stops opening within a minute and is deleted 7 days later, like a deleted site. The interface warns 3 days ahead.
+
+Details: [docs/site-access.md](docs/site-access.md).
 ## Forms and submissions
 
 Any published site can receive form submissions without a third-party service: point a form at `/_form/<name>` on the same site.
@@ -149,7 +158,7 @@ In this mode every release also gets its own preview address `https://p-<release
 | `API_HOST` | no | `api.<BASE_DOMAIN>` | Host of the public API |
 | `TLS_MODE` | no | `ondemand` | `ondemand` or `wildcard`; wildcard is set by `compose.wildcard.yml` |
 | `CF_API_TOKEN` | wildcard only | — | Cloudflare token with `Zone.DNS:Edit`, passed to Caddy only |
-| `MAX_SITE_BYTES`, `MAX_FILE_BYTES`, `MAX_FILES`, `MAX_SITES_PER_USER`, `KEEP_RELEASES` | no | 50 MB, 20 MB, 2000, 10, 5 | Limits; admins can override them in the interface |
+| `MAX_SITE_BYTES`, `MAX_FILE_BYTES`, `MAX_FILES`, `MAX_SITES_PER_USER`, `KEEP_RELEASES` | no | 50 MB, 20 MB, 2000, 10, 5 | Limits; admins can override them globally (Settings) and per user (Users → Limits): user → admin setting → environment → default |
 | `RESERVED_SLUGS` | no | | Extra forbidden slugs, comma separated |
 | `MAX_DOMAINS_PER_SITE` | no | `5` | Own domains per site, 1–100 |
 | `SERVER_IPS` | no | addresses of `BASE_DOMAIN` | Public IPs of the server, comma separated: DNS target shown to owners and used by the domain DNS check |

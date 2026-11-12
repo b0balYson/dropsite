@@ -97,4 +97,4 @@ Limits: 20 submissions per IP in 10 minutes, 200 per site per hour, 60 Altcha pu
 
 Environment (rarely needed): `TELEGRAM_API_URL` (Bot API address for a proxy), `FORM_WEBHOOK_ALLOW_CIDRS` (private networks webhooks may reach, plain `http://` allowed there; test stacks only).
 
-Caddy forwards only `POST /_form/*` (body capped at 64 KiB), `GET /_form/challenge` and `GET /_dropsite/altcha.js` to `control`; while `control` is down forms answer 502 and sites keep working. These requests are not counted as page views in the statistics.
+Caddy forwards `POST /_form/*` (body capped at 64 KiB) and `GET /_form/challenge` to `control` after the password check of protected sites: a password-protected site accepts forms only from visitors who signed in to it. `/_dropsite/altcha.js` is served like the rest of `/_dropsite/*` and needs no sign-in. While `control` is down forms answer 502 and sites keep working. These requests are not counted as page views in the statistics.

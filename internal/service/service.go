@@ -81,6 +81,10 @@ type Service struct {
 	dns          *dnscheck.Checker
 	ipCache      serverIPCache
 
+	visitorIPLimit   *ratelimit.Window
+	visitorSiteLimit *ratelimit.Window
+	visitorMu        sync.Mutex
+	visitorKeySet    *visitorKeySet
 	formState
 }
 
@@ -112,7 +116,10 @@ func New(d Deps) *Service {
 		tokenLimit:   ratelimit.New(FailedTokensPerIP, FailedLoginsWindow).WithClock(now),
 		hasher:       newPasswordHasher(),
 		dns:          dnscheck.New(d.Resolver, dnscheck.DefaultTimeout),
-		formState:    newFormState(d, now),
+
+		visitorIPLimit:   ratelimit.New(VisitorFailuresPerIP, VisitorFailuresWindow).WithClock(now),
+		visitorSiteLimit: ratelimit.New(VisitorFailuresPerSite, VisitorFailuresWindow).WithClock(now),
+		formState:        newFormState(d, now),
 	}
 }
 
@@ -172,6 +179,9 @@ func (s *Service) APIURL() string {
 	}
 	return "https://" + s.cfg.APIHost
 }
+
+// Now is the service clock (UTC), for adapters that show relative times.
+func (s *Service) Now() time.Time { return s.now() }
 
 // Config exposes the immutable configuration to adapters.
 func (s *Service) Config() *config.Config { return s.cfg }

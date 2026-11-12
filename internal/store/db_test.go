@@ -71,7 +71,7 @@ func TestOpenAppliesSkippedMigration(t *testing.T) {
 	}
 	for _, q := range []string{
 		"DROP TABLE form_deliveries", "DROP TABLE form_submissions", "DROP TABLE form_channels",
-		"DROP TABLE form_site_settings", "DROP TABLE form_altcha_used", "DELETE FROM schema_migrations WHERE version = 5",
+		"DROP TABLE form_site_settings", "DROP TABLE form_altcha_used", "DELETE FROM schema_migrations WHERE version = 9",
 	} {
 		if _, err := db.Writer().ExecContext(ctx, q); err != nil {
 			t.Fatal(err)

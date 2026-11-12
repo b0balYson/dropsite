@@ -76,6 +76,9 @@ type siteDTO struct {
 	CreatedAt     time.Time     `json:"created_at"`
 	UpdatedAt     time.Time     `json:"updated_at"`
 	CurrentDeploy *deployDTO    `json:"current_deploy"`
+	Noindex       bool          `json:"noindex"`
+	Protected     bool          `json:"protected"`
+	ExpiresAt     *time.Time    `json:"expires_at"`
 }
 
 type siteItemDTO struct {
@@ -90,6 +93,9 @@ type siteItemDTO struct {
 	SizeBytes    int64      `json:"size_bytes"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
+	Noindex      bool       `json:"noindex"`
+	Protected    bool       `json:"protected"`
+	ExpiresAt    *time.Time `json:"expires_at"`
 }
 
 type deployResultDTO struct {
@@ -119,6 +125,41 @@ type inviteDTO struct {
 	User            userDTO    `json:"user"`
 	InviteURL       string     `json:"invite_url,omitempty"`
 	InviteExpiresAt *time.Time `json:"invite_expires_at,omitempty"`
+	Limits          *limitsDTO `json:"limits,omitempty"`
+	LimitOverrides  *overrides `json:"limit_overrides,omitempty"`
+}
+
+// overrides are personal limits; null inherits the global value.
+type overrides struct {
+	MaxSiteBytes    *int64 `json:"max_site_bytes"`
+	MaxFileBytes    *int64 `json:"max_file_bytes"`
+	MaxFiles        *int64 `json:"max_files"`
+	MaxSitesPerUser *int64 `json:"max_sites_per_user"`
+	KeepReleases    *int64 `json:"keep_releases"`
+}
+
+type userDetailDTO struct {
+	User           userDTO   `json:"user"`
+	Limits         limitsDTO `json:"limits"`
+	LimitOverrides overrides `json:"limit_overrides"`
+}
+
+func toOverrides(o domain.LimitOverrides) overrides {
+	return overrides{
+		MaxSiteBytes: o.MaxSiteBytes, MaxFileBytes: o.MaxFileBytes, MaxFiles: o.MaxFiles,
+		MaxSitesPerUser: o.MaxSitesPerUser, KeepReleases: o.KeepReleases,
+	}
+}
+
+func (o overrides) domain() domain.LimitOverrides {
+	return domain.LimitOverrides{
+		MaxSiteBytes: o.MaxSiteBytes, MaxFileBytes: o.MaxFileBytes, MaxFiles: o.MaxFiles,
+		MaxSitesPerUser: o.MaxSitesPerUser, KeepReleases: o.KeepReleases,
+	}
+}
+
+func toUserDetail(ul service.UserLimits) userDetailDTO {
+	return userDetailDTO{User: toUser(ul.User), Limits: toLimits(ul.Effective), LimitOverrides: toOverrides(ul.Overrides)}
 }
 
 type auditDTO struct {
@@ -202,6 +243,7 @@ func toSite(v service.SiteView) siteDTO {
 		ID: v.Site.ID, Title: v.Site.Title, URL: v.URL, URLs: nonNil(v.URLs), Slug: optional(v.Slug),
 		Hostnames: toHostnames(v.Hostnames), OwnerID: idString(v.OwnerID),
 		CreatedAt: utc(v.Site.CreatedAt), UpdatedAt: utc(v.Site.UpdatedAt),
+		Noindex: v.Site.Noindex, Protected: v.Site.Protected, ExpiresAt: utcPtr(v.Site.ExpiresAt),
 	}
 	if v.Current != nil {
 		d := toDeploy(*v.Current, &v.Current.ID, v.CurrentPreviewURL)
@@ -217,6 +259,7 @@ func toSiteItems(rows []service.SiteSummaryView) []siteItemDTO {
 			ID: r.ID, Title: r.Title, URL: r.URL, URLs: nonNil(r.URLs), Slug: optional(r.Slug),
 			OwnerID: idString(r.OwnerID), OwnerEmail: r.OwnerEmail, LastDeployAt: utcPtr(r.LastDeployAt),
 			SizeBytes: r.SizeBytes, CreatedAt: utc(r.CreatedAt), UpdatedAt: utc(r.UpdatedAt),
+			Noindex: r.Noindex, Protected: r.Protected, ExpiresAt: utcPtr(r.ExpiresAt),
 		})
 	}
 	return out

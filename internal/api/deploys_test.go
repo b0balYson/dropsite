@@ -69,7 +69,7 @@ func TestDeployStreamingOversize(t *testing.T) {
 	h := newHarness(t, smallLimits()...)
 	_, tok := h.user("bob@pp.test")
 	site := h.createSite(tok, "Site", "")
-	limit, err := h.env.Svc.UploadLimit(t.Context())
+	limit, err := h.env.Svc.UploadLimit(t.Context(), h.env.Admin, site.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

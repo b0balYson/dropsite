@@ -17,6 +17,7 @@ import (
 	"github.com/b0balYson/dropsite/internal/brand"
 	"github.com/b0balYson/dropsite/internal/config"
 	"github.com/b0balYson/dropsite/internal/service"
+	"github.com/b0balYson/dropsite/internal/siteauth"
 	"github.com/b0balYson/dropsite/internal/storage"
 	"github.com/b0balYson/dropsite/internal/store"
 	"github.com/b0balYson/dropsite/internal/ui"
@@ -73,13 +74,15 @@ func build(ctx context.Context, cfg *config.Config, log *slog.Logger) (*app, err
 	return &app{
 		cfg: cfg, log: log, db: db, svc: svc,
 		public: api.New(svc, log),
-		intern: internalHandler(svc),
+		intern: internalHandler(svc, log),
 		admin:  ui.New(svc, log),
 	}, nil
 }
 
-func internalHandler(svc *service.Service) http.Handler {
+func internalHandler(svc *service.Service, log *slog.Logger) http.Handler {
 	mux := http.NewServeMux()
+	// Caddy's forward_auth for sites carrying the protected marker.
+	mux.Handle("/internal/auth-check", siteauth.AuthCheck(svc, log))
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), healthTimeout)
 		defer cancel()
@@ -137,6 +140,10 @@ func (a *app) run(ctx context.Context) error {
 	})
 	g.Go(func() error {
 		a.svc.RunStats(gctx, a.cfg.StatsInterval)
+		return nil
+	})
+	g.Go(func() error {
+		a.svc.RunExpiry(gctx, service.ExpiryCheckInterval)
 		return nil
 	})
 	g.Go(func() error {
