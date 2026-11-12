@@ -54,7 +54,9 @@ const refPage = `<html><head><title>Ref</title>
 <body><header>Top</header><section><h1>Secret headline</h1></section></body></html>`
 
 func refPages() *fakePages {
-	html := func(s string) sitefetch.Document { return sitefetch.Document{ContentType: "text/html", Data: []byte(s)} }
+	html := func(s string) sitefetch.Document {
+		return sitefetch.Document{ContentType: "text/html", Data: []byte(s)}
+	}
 	css := func(s string) sitefetch.Document { return sitefetch.Document{ContentType: "text/css", Data: []byte(s)} }
 	return &fakePages{
 		redirects: map[string]string{"https://ref.example/": "https://www.ref.example/"},
