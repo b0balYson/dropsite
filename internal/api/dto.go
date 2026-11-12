@@ -87,24 +87,28 @@ type siteDTO struct {
 	Noindex       bool          `json:"noindex"`
 	Protected     bool          `json:"protected"`
 	ExpiresAt     *time.Time    `json:"expires_at"`
+	WorkspaceID   *string       `json:"workspace_id"`
+	WorkspaceName *string       `json:"workspace_name"`
 }
 
 type siteItemDTO struct {
-	ID           string        `json:"id"`
-	Title        string        `json:"title"`
-	URL          string        `json:"url"`
-	URLs         []string      `json:"urls"`
-	Slug         *string       `json:"slug"`
-	OwnerID      string        `json:"owner_id"`
-	OwnerEmail   string        `json:"owner_email"`
-	Hostnames    []hostnameDTO `json:"hostnames"`
-	LastDeployAt *time.Time    `json:"last_deploy_at"`
-	SizeBytes    int64         `json:"size_bytes"`
-	CreatedAt    time.Time     `json:"created_at"`
-	UpdatedAt    time.Time     `json:"updated_at"`
-	Noindex      bool          `json:"noindex"`
-	Protected    bool          `json:"protected"`
-	ExpiresAt    *time.Time    `json:"expires_at"`
+	ID            string        `json:"id"`
+	Title         string        `json:"title"`
+	URL           string        `json:"url"`
+	URLs          []string      `json:"urls"`
+	Slug          *string       `json:"slug"`
+	OwnerID       string        `json:"owner_id"`
+	OwnerEmail    string        `json:"owner_email"`
+	Hostnames     []hostnameDTO `json:"hostnames"`
+	LastDeployAt  *time.Time    `json:"last_deploy_at"`
+	SizeBytes     int64         `json:"size_bytes"`
+	CreatedAt     time.Time     `json:"created_at"`
+	UpdatedAt     time.Time     `json:"updated_at"`
+	Noindex       bool          `json:"noindex"`
+	Protected     bool          `json:"protected"`
+	ExpiresAt     *time.Time    `json:"expires_at"`
+	WorkspaceID   *string       `json:"workspace_id"`
+	WorkspaceName *string       `json:"workspace_name"`
 }
 
 type deployResultDTO struct {
@@ -186,6 +190,16 @@ type auditDTO struct {
 
 func idString(id int64) string { return strconv.FormatInt(id, 10) }
 
+// workspaceOf returns the workspace fields of a site (both null for a
+// personal site).
+func workspaceOf(id *int64, name string) (*string, *string) {
+	if id == nil {
+		return nil, nil
+	}
+	s := idString(*id)
+	return &s, &name
+}
+
 func utc(t time.Time) time.Time { return t.UTC().Truncate(time.Second) }
 
 func utcPtr(t *time.Time) *time.Time {
@@ -256,6 +270,7 @@ func toSite(v service.SiteView) siteDTO {
 		CreatedAt: utc(v.Site.CreatedAt), UpdatedAt: utc(v.Site.UpdatedAt),
 		Noindex: v.Site.Noindex, Protected: v.Site.Protected, ExpiresAt: utcPtr(v.Site.ExpiresAt),
 	}
+	s.WorkspaceID, s.WorkspaceName = workspaceOf(v.Site.WorkspaceID, v.WorkspaceName)
 	if v.Current != nil {
 		d := toDeploy(*v.Current, &v.Current.ID, v.CurrentPreviewURL)
 		s.CurrentDeploy = &d
@@ -266,7 +281,9 @@ func toSite(v service.SiteView) siteDTO {
 func toSiteItems(rows []service.SiteSummaryView) []siteItemDTO {
 	out := make([]siteItemDTO, 0, len(rows))
 	for _, r := range rows {
+		wsID, wsName := workspaceOf(r.WorkspaceID, r.WorkspaceName)
 		out = append(out, siteItemDTO{
+			WorkspaceID: wsID, WorkspaceName: wsName,
 			ID: r.ID, Title: r.Title, URL: r.URL, URLs: nonNil(r.URLs), Slug: optional(r.Slug),
 			OwnerID: idString(r.OwnerID), OwnerEmail: r.OwnerEmail, Hostnames: toHostnames(r.Hostnames),
 			LastDeployAt: utcPtr(r.LastDeployAt),

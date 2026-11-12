@@ -37,7 +37,11 @@ func (a *api) listSites(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	rows, total, err := a.svc.ListSites(r.Context(), actorFrom(r.Context()), p)
+	scope, err := siteScope(r.URL.Query().Get("workspace"))
+	if err != nil {
+		return err
+	}
+	rows, total, err := a.svc.ListSitesIn(r.Context(), actorFrom(r.Context()), scope, p)
 	if err != nil {
 		return err
 	}
@@ -46,8 +50,9 @@ func (a *api) listSites(w http.ResponseWriter, r *http.Request) error {
 }
 
 type createSiteRequest struct {
-	Title string `json:"title"`
-	Slug  string `json:"slug"`
+	Title       string `json:"title"`
+	Slug        string `json:"slug"`
+	WorkspaceID string `json:"workspace_id"`
 }
 
 func (a *api) createSite(w http.ResponseWriter, r *http.Request) error {
@@ -55,7 +60,11 @@ func (a *api) createSite(w http.ResponseWriter, r *http.Request) error {
 	if err := decodeJSON(w, r, &req); err != nil {
 		return err
 	}
-	v, err := a.svc.CreateSite(r.Context(), actorFrom(r.Context()), req.Title, req.Slug)
+	ws, err := workspaceField(req.WorkspaceID)
+	if err != nil {
+		return err
+	}
+	v, err := a.svc.CreateSiteIn(r.Context(), actorFrom(r.Context()), req.Title, req.Slug, ws)
 	if err != nil {
 		return err
 	}

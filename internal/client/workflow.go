@@ -21,9 +21,10 @@ const maxImage = 20 << 20
 
 // NewSiteRequest names a site created by a copy or from a template.
 type NewSiteRequest struct {
-	Title string `json:"title,omitempty"`
-	Slug  string `json:"slug,omitempty"`
-	Lang  string `json:"lang,omitempty"`
+	Title       string `json:"title,omitempty"`
+	Slug        string `json:"slug,omitempty"`
+	Lang        string `json:"lang,omitempty"`
+	WorkspaceID string `json:"workspace_id,omitempty"`
 }
 
 // Template is a built-in starter template.
