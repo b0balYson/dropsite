@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	goodToken = "pp_good"
+	goodToken = "ds_good"
 	userEmail = "dev@example.com"
 )
 
@@ -78,7 +78,7 @@ func (f *fakeServer) auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
 		f.requests = append(f.requests, r.Method+" "+r.URL.Path)
-		f.lastClient = r.Header.Get("X-Pushpage-Client")
+		f.lastClient = r.Header.Get("X-Dropsite-Client")
 		limited := f.rateLimit
 		f.mu.Unlock()
 		if limited {

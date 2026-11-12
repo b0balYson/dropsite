@@ -185,11 +185,11 @@ func TestDeleteInteractiveMissingSite(t *testing.T) {
 func TestUnauthorizedHint(t *testing.T) {
 	e := newTestEnv(t)
 	e.env[envServer] = e.srv.URL
-	e.env[envToken] = "pp_revoked"
+	e.env[envToken] = "ds_revoked"
 	for _, args := range [][]string{{"sites"}, {"deploys", "x"}, {"rollback", "x"}, {"delete", "x", "--yes"}} {
 		r := e.run(args...)
 		expectCode(t, r, 1)
-		expectContains(t, "stderr", r.stderr, "authentication required (unauthorized)", "pushpage login")
+		expectContains(t, "stderr", r.stderr, "authentication required (unauthorized)", "dropsite login")
 	}
 }
 
@@ -214,10 +214,10 @@ func TestVersionHelpAndUsage(t *testing.T) {
 
 	r = e.run("help")
 	expectCode(t, r, 0)
-	expectContains(t, "stdout", r.stdout, "deploy", "rollback", "PUSHPAGE_TOKEN")
+	expectContains(t, "stdout", r.stdout, "deploy", "rollback", "DROPSITE_TOKEN")
 	r = e.run("help", "rollback")
 	expectCode(t, r, 0)
-	expectContains(t, "stderr", r.stderr, "Usage: pushpage rollback")
+	expectContains(t, "stderr", r.stderr, "Usage: dropsite rollback")
 	expectCode(t, e.run("help", "nope"), 2)
 
 	r = e.run()

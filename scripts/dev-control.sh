@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # Runs control natively (no Docker) for UI and API development.
 # Data lives in .tools/devdata (sites volume and state); delete it to start over.
-#   UI:  http://127.0.0.1:18082   login admin@pushpage.localhost / local-dev-password
+#   UI:  http://127.0.0.1:18082   login admin@dropsite.localhost / local-dev-password
 #   API: http://127.0.0.1:18081/api/v1 (no Caddy in front)
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck source=/dev/null
 source "$root/scripts/dev-env.sh"
-data="${PUSHPAGE_DEV_DATA:-$root/.tools/devdata}"
+data="${DROPSITE_DEV_DATA:-$root/.tools/devdata}"
 mkdir -p "$data/sites" "$data/state"
-export BASE_DOMAIN="${BASE_DOMAIN:-pushpage.localhost}"
-export ADMIN_EMAIL="${ADMIN_EMAIL:-admin@pushpage.localhost}"
+export BASE_DOMAIN="${BASE_DOMAIN:-dropsite.localhost}"
+export ADMIN_EMAIL="${ADMIN_EMAIL:-admin@dropsite.localhost}"
 export ADMIN_PASSWORD="${ADMIN_PASSWORD:-local-dev-password}"
 export SITES_DIR="$data/sites" STATE_DIR="$data/state"
 export PUBLIC_ADDR="${PUBLIC_ADDR:-127.0.0.1:18081}"

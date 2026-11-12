@@ -19,7 +19,7 @@ func newTestClient(t *testing.T, h http.HandlerFunc, opts ...Option) *Client {
 	t.Helper()
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
-	return New(srv.URL+"/", "pp_secret", opts...)
+	return New(srv.URL+"/", "ds_secret", opts...)
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -33,11 +33,11 @@ func TestMeSendsAuthAndClientHeaders(t *testing.T) {
 		if r.URL.Path != "/api/v1/me" || r.Method != http.MethodGet {
 			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
 		}
-		if got := r.Header.Get("Authorization"); got != "Bearer pp_secret" {
+		if got := r.Header.Get("Authorization"); got != "Bearer ds_secret" {
 			t.Errorf("Authorization = %q", got)
 		}
-		if got := r.Header.Get("X-Pushpage-Client"); got != UserAgent() {
-			t.Errorf("X-Pushpage-Client = %q", got)
+		if got := r.Header.Get("X-Dropsite-Client"); got != UserAgent() {
+			t.Errorf("X-Dropsite-Client = %q", got)
 		}
 		if got := r.Header.Get("User-Agent"); got != UserAgent() {
 			t.Errorf("User-Agent = %q", got)
@@ -97,7 +97,7 @@ func TestSiteEndpoints(t *testing.T) {
 			}
 			writeJSON(w, 200, map[string]any{"deploy_id": "d1", "url": "https://x"})
 		case "GET /api/v1/tokens":
-			writeJSON(w, 200, map[string]any{"items": []any{map[string]any{"id": "t1", "prefix": "pp_ab"}}, "total": 1})
+			writeJSON(w, 200, map[string]any{"items": []any{map[string]any{"id": "t1", "prefix": "ds_ab"}}, "total": 1})
 		default:
 			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
 		}
@@ -137,7 +137,7 @@ func TestSiteEndpoints(t *testing.T) {
 	}
 	tokens, err := c.ListTokens(ctx)
 	must(t, err)
-	if tokens.Items[0].Prefix != "pp_ab" {
+	if tokens.Items[0].Prefix != "ds_ab" {
 		t.Fatalf("tokens = %+v", tokens)
 	}
 	if calls[0] != "GET /api/v1/sites?limit=10&offset=20" {

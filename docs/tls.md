@@ -22,7 +22,7 @@ As of 2026-08-05 (<https://letsencrypt.org/docs/rate-limits/>):
 
 Renewals through ARI do not count against these limits.
 
-What it means for pushpage: each address is one certificate. A site with a random address and a slug costs two, so a single installation can add roughly **25 new sites per week**. Changing a slug costs one more. The base domain root and the API host cost one each, once.
+What it means for dropsite: each address is one certificate. A site with a random address and a slug costs two, so a single installation can add roughly **25 new sites per week**. Changing a slug costs one more. The base domain root and the API host cost one each, once.
 
 Signs that you hit the limit:
 

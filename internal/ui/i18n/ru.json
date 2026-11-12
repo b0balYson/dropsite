@@ -111,7 +111,7 @@
   "connect.eyebrow": "Публикация из ИИ-ассистента",
   "connect.title": "Подключить ИИ",
   "connect.lede": "Настройте один раз — и публикуйте сайты фразой «опубликуй этот сайт» в Claude Code или Codex.",
-  "connect.install.title": "Установите программу pushpage",
+  "connect.install.title": "Установите программу dropsite",
   "connect.install.text": "Откройте терминал и вставьте команду для вашей системы.",
   "connect.install.unix": "macOS и Linux — Терминал",
   "connect.install.windows": "Windows — PowerShell",

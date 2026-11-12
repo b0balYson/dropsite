@@ -18,7 +18,7 @@ import (
 
 var (
 	csrfRe   = regexp.MustCompile(`name="_csrf" value="([^"]+)"`)
-	tokenRe  = regexp.MustCompile(`pp_[0-9A-Za-z]{43}`)
+	tokenRe  = regexp.MustCompile(`ds_[0-9A-Za-z]{43}`)
 	inviteRe = regexp.MustCompile(`/invite/([A-Za-z0-9_-]{43})`)
 )
 

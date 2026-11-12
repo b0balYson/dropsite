@@ -1,4 +1,4 @@
-# pushpage
+# dropsite
 
 [English version](README.md)
 
@@ -8,10 +8,10 @@ Self-hosted публикация статических сайтов. Марке
 - На входе архив, на выходе HTTPS-ссылка. Каждый сайт получает случайный адрес вида `k3f9x2m7qa.example.site` и по желанию читаемый, например `promo-may.example.site`.
 - Каждая публикация — неизменяемый релиз: переключение и откат мгновенные, без единого неудачного запроса.
 - Пользователь видит и меняет только свои сайты. Администратор управляет пользователями, всеми сайтами, лимитами и журналом.
-- Публикация из веб-интерфейса, CLI `pushpage`, HTTP API или ИИ-ассистента (Claude Code, Codex) через CLI.
+- Публикация из веб-интерфейса, CLI `dropsite`, HTTP API или ИИ-ассистента (Claude Code, Codex) через CLI.
 - Сайты продолжают работать, пока управляющий сервис остановлен или обновляется.
 
-pushpage раздаёт только готовую статику (HTML, CSS, JS, картинки). Сборку проектов и серверный код он не выполняет.
+dropsite раздаёт только готовую статику (HTML, CSS, JS, картинки). Сборку проектов и серверный код он не выполняет.
 
 ## Как устроено
 
@@ -35,7 +35,7 @@ pushpage раздаёт только готовую статику (HTML, CSS, J
 ### 3. Настройте и запустите
 
 ```bash
-mkdir pushpage && cd pushpage
+mkdir dropsite && cd dropsite
 base=https://raw.githubusercontent.com/b0balYson/dropsite/main/deploy
 curl -fsSLO "$base/docker-compose.yml" -fsSLO "$base/Caddyfile"
 curl -fsSL "$base/.env.example" -o .env
@@ -60,7 +60,7 @@ ssh -L 8082:127.0.0.1:8082 you@server
 ## Публикация
 
 - **Веб-интерфейс:** создайте сайт и перетащите на него zip или tar.gz.
-- **CLI:** на странице **Подключить ИИ** выпустите токен и выполните показанную команду `pushpage login`, затем `pushpage deploy ./dist`. Первый запуск создаёт сайт и запоминает его в `.pushpage.json`, следующие обновляют тот же сайт.
+- **CLI:** на странице **Подключить ИИ** выпустите токен и выполните показанную команду `dropsite login`, затем `dropsite deploy ./dist`. Первый запуск создаёт сайт и запоминает его в `.dropsite.json`, следующие обновляют тот же сайт.
 - **ИИ-ассистенты:** на странице **Подключить ИИ** есть готовые инструкции для Claude Code (`skills/claude-code/SKILL.md`) и Codex (`skills/codex/AGENTS.md`). Ассистент публикует через CLI.
 - **HTTP API:** `https://api.<BASE_DOMAIN>/api/v1`, Bearer-токен, см. [docs/api-contract.md](docs/api-contract.md) и `/api/v1/openapi.json`.
 
@@ -89,7 +89,7 @@ irm https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.ps
 | Своя 404 | `404.html` в корне отдаётся со статусом 404 |
 | SPA | `200.html` в корне отдаётся со статусом 200 на любой ненайденный путь |
 | Скрытые файлы | любой сегмент пути с точкой в начале — 404, кроме `/.well-known/` |
-| Зарезервировано | `/_form/` и `/_pushpage/` принадлежат платформе |
+| Зарезервировано | `/_form/` и `/_dropsite/` принадлежат платформе |
 | Кэш | HTML — `no-cache`, остальное — `public, max-age=3600` |
 
 ## Сертификаты и лимиты Let's Encrypt
@@ -139,7 +139,7 @@ Let's Encrypt выдаёт **50 новых сертификатов на зар�
 make tools        # Go и golangci-lint в .tools/ (ничего не ставится в систему)
 make test lint
 scripts/dev-control.sh   # control без Docker, интерфейс на http://127.0.0.1:18082
-make dev-up       # весь стек в Docker с локальным CA: https://<site>.pushpage.localhost:18443
+make dev-up       # весь стек в Docker с локальным CA: https://<site>.dropsite.localhost:18443
 make e2e
 ```
 

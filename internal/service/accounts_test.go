@@ -241,7 +241,7 @@ func TestTokens(t *testing.T) {
 	if _, err := e.svc.AuthenticateToken(ctx, tok2.Value, "7.7.7.7"); err == nil {
 		t.Fatal("revoked token must fail")
 	}
-	for _, bad := range []string{"", "garbage", "pp_" + strings.Repeat("x", 200)} {
+	for _, bad := range []string{"", "garbage", "ds_" + strings.Repeat("x", 200)} {
 		if _, err := e.svc.AuthenticateToken(ctx, bad, "8.8.8.8"); err == nil {
 			t.Fatalf("token %q must fail", bad)
 		}
@@ -255,9 +255,9 @@ func TestTokenBruteForceIsLimited(t *testing.T) {
 	e := newEnv(t)
 	ctx := context.Background()
 	for range FailedTokensPerIP {
-		_, _ = e.svc.AuthenticateToken(ctx, "pp_wrong", "9.9.9.9")
+		_, _ = e.svc.AuthenticateToken(ctx, "ds_wrong", "9.9.9.9")
 	}
-	_, err := e.svc.AuthenticateToken(ctx, "pp_wrong", "9.9.9.9")
+	_, err := e.svc.AuthenticateToken(ctx, "ds_wrong", "9.9.9.9")
 	if de := domain.AsError(err); de.Kind != domain.KindRateLimited {
 		t.Fatalf("want rate limited, got %v", err)
 	}

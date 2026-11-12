@@ -25,17 +25,17 @@ lint:
 
 build:
 	$(ENV) CGO_ENABLED=0 go build -trimpath -ldflags '$(LDFLAGS)' -o bin/control ./cmd/control
-	$(ENV) CGO_ENABLED=0 go build -trimpath -ldflags '$(LDFLAGS)' -o bin/pushpage ./cmd/pushpage
+	$(ENV) CGO_ENABLED=0 go build -trimpath -ldflags '$(LDFLAGS)' -o bin/dropsite ./cmd/dropsite
 
 cli-release:
 	@rm -rf dist && mkdir -p dist
 	@for p in $(CLI_PLATFORMS); do \
 		os=$${p%/*}; arch=$${p#*/}; ext=; [ "$$os" = windows ] && ext=.exe; \
 		$(ENV) CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -trimpath -ldflags '$(LDFLAGS)' \
-			-o dist/pushpage-$$os-$$arch$$ext ./cmd/pushpage; \
-		echo "dist/pushpage-$$os-$$arch$$ext"; \
+			-o dist/dropsite-$$os-$$arch$$ext ./cmd/dropsite; \
+		echo "dist/dropsite-$$os-$$arch$$ext"; \
 	done
-	@cd dist && shasum -a 256 pushpage-* > SHA256SUMS
+	@cd dist && shasum -a 256 dropsite-* > SHA256SUMS
 
 e2e:
 	$(ENV) go test -count=1 -timeout 20m -tags e2e ./test/e2e/...

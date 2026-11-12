@@ -8,7 +8,7 @@ The automated end-to-end test (`make e2e`) runs the whole stack with a local cer
 - [ ] A new user receives an invite, sets a password and signs in.
 - [ ] A new site uploaded as zip opens on `https://<random>.<domain>/` with a valid certificate (`curl -sI https://<random>.<domain>/` without `-k`).
 - [ ] After setting a slug the site opens on both addresses; a taken or reserved slug is rejected.
-- [ ] `pushpage deploy ./dist` prints a URL; running it again updates the same site.
+- [ ] `dropsite deploy ./dist` prints a URL; running it again updates the same site.
 - [ ] Rollback returns the previous content.
 - [ ] Binding the root shows the site on `https://<domain>/` with a valid certificate.
 - [ ] `https://api.<domain>/api/v1/openapi.json` opens with a valid certificate.

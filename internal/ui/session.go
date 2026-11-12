@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	sessionCookieName = "pp_session"
-	langCookieName    = "pp_lang"
+	sessionCookieName = "ds_session"
+	langCookieName    = "ds_lang"
 	langCookieMaxAge  = 365 * 24 * time.Hour
 )
 

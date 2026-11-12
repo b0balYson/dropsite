@@ -25,8 +25,8 @@ func TestStage1(t *testing.T) {
 	adminUI.login(adminEmail, adminPass)
 	admin := &api{s: s, token: adminUI.issueToken("e2e-admin")}
 
-	ann := createUser(t, s, admin, "ann@pushpage.localhost")
-	bob := createUser(t, s, admin, "bob@pushpage.localhost")
+	ann := createUser(t, s, admin, "ann@dropsite.localhost")
+	bob := createUser(t, s, admin, "bob@dropsite.localhost")
 
 	var siteID, siteHost string
 	t.Run("publish over the API and serve over HTTPS", func(t *testing.T) {
@@ -227,8 +227,8 @@ func hostSpoofing(t *testing.T, s *stack, host string) {
 }
 
 func cliDeploy(t *testing.T, s *stack, token string) {
-	bin := filepath.Join(t.TempDir(), "pushpage")
-	build := exec.CommandContext(s.ctx, "go", "build", "-o", bin, "./cmd/pushpage")
+	bin := filepath.Join(t.TempDir(), "dropsite")
+	build := exec.CommandContext(s.ctx, "go", "build", "-o", bin, "./cmd/dropsite")
 	build.Dir = repoRoot()
 	if out, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build cli: %v\n%s", err, out)
@@ -246,8 +246,8 @@ func cliDeploy(t *testing.T, s *stack, token string) {
 	_ = os.WriteFile(filepath.Join(dir, "dist", "index.html"), []byte("<h1>from cli</h1>"), 0o644)
 	env := append(os.Environ(),
 		"HOME="+t.TempDir(), "XDG_CONFIG_HOME="+t.TempDir(),
-		"PUSHPAGE_SERVER=https://"+apiHost+":"+httpsPort,
-		"PUSHPAGE_TOKEN="+token, "PUSHPAGE_CA_FILE="+ca)
+		"DROPSITE_SERVER=https://"+apiHost+":"+httpsPort,
+		"DROPSITE_TOKEN="+token, "DROPSITE_CA_FILE="+ca)
 	deploy := func() string {
 		cmd := exec.CommandContext(s.ctx, bin, "deploy", filepath.Join(dir, "dist"))
 		cmd.Env = env
@@ -255,7 +255,7 @@ func cliDeploy(t *testing.T, s *stack, token string) {
 		cmd.Stderr = &stderr
 		out, err := cmd.Output()
 		if err != nil {
-			t.Fatalf("pushpage deploy: %v\n%s", err, stderr.String())
+			t.Fatalf("dropsite deploy: %v\n%s", err, stderr.String())
 		}
 		return strings.TrimSpace(string(out))
 	}
@@ -265,7 +265,7 @@ func cliDeploy(t *testing.T, s *stack, token string) {
 		t.Fatalf("republish must print the same URL: %q vs %q", first, second)
 	}
 	s.expectBody(hostOf(first), "/", 200, "from cli")
-	if _, err := os.Stat(filepath.Join(dir, "dist", ".pushpage.json")); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, "dist", ".dropsite.json")); err != nil {
 		t.Fatal("cli must remember the site")
 	}
 }

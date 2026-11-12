@@ -55,7 +55,7 @@ func (e *testEnv) login() {
 }
 
 func (e *testEnv) configFile() string {
-	return filepath.Join(e.cfgDir, "pushpage", "config.json")
+	return filepath.Join(e.cfgDir, "dropsite", "config.json")
 }
 
 // siteDir creates a publishable directory with the given extra files.

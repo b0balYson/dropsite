@@ -32,11 +32,11 @@ func TestWriteTarGzRoundTrip(t *testing.T) {
 		"index.html":           page,
 		"css/app.css":          "body{}",
 		"Картинки/фото.png":    "png",
-		".pushpage.json":       `{"site":"x"}`,
+		".dropsite.json":       `{"site":"x"}`,
 		".git/HEAD":            "ref",
 		"node_modules/x/a.js":  "x",
 		"sub/.DS_Store":        "junk",
-		"sub/.pushpage.json":   "kept",
+		"sub/.dropsite.json":   "kept",
 		"deep/a/b/c/d/e/f.txt": "deep",
 	})
 	if err := os.Mkdir(filepath.Join(dir, "empty"), 0o700); err != nil {
@@ -59,7 +59,7 @@ func TestWriteTarGzRoundTrip(t *testing.T) {
 	want := map[string]string{
 		"index.html": page, "css/": "", "css/app.css": "body{}",
 		"Картинки/": "", "Картинки/фото.png": "png",
-		"sub/": "", "sub/.pushpage.json": "kept", "empty/": "",
+		"sub/": "", "sub/.dropsite.json": "kept", "empty/": "",
 		"deep/": "", "deep/a/": "", "deep/a/b/": "", "deep/a/b/c/": "", "deep/a/b/c/d/": "", "deep/a/b/c/d/e/": "", "deep/a/b/c/d/e/f.txt": "deep",
 	}
 	if tree := readTree(t, dest); !reflect.DeepEqual(tree, want) {

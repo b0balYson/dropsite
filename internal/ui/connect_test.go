@@ -12,15 +12,15 @@ import (
 	"github.com/b0balYson/dropsite/skills"
 )
 
-var loginCmdRe = regexp.MustCompile(`pushpage login --server https://api\.pp\.test --token (pp_[A-Za-z0-9]+)`)
+var loginCmdRe = regexp.MustCompile(`dropsite login --server https://api\.pp\.test --token (ds_[A-Za-z0-9]+)`)
 
 func TestConnectPage(t *testing.T) {
 	h := newHarness(t)
 	h.loginUser("alice@pp.test")
 	p := h.get("/connect")
 	wantStatus(t, p, http.StatusOK)
-	wantContains(t, p.body, installSh, installPs1, "~/.claude/skills/pushpage-publish/SKILL.md",
-		"Ключей пока нет", "pushpage-publish")
+	wantContains(t, p.body, installSh, installPs1, "~/.claude/skills/dropsite-publish/SKILL.md",
+		"Ключей пока нет", "dropsite-publish")
 	// Skill texts are shown escaped, not interpreted.
 	firstLine := strings.SplitN(skills.Codex, "\n", 2)[0]
 	wantContains(t, p.body, firstLine)

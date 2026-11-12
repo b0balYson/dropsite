@@ -96,7 +96,7 @@ func TestEveryProtectedRouteRequiresToken(t *testing.T) {
 				"basic":        withHeader("Authorization", "Basic YTpi"),
 				"empty bearer": withHeader("Authorization", "Bearer "),
 				"cookie only": func(r *http.Request) {
-					r.AddCookie(&http.Cookie{Name: "pp_session", Value: session})
+					r.AddCookie(&http.Cookie{Name: "ds_session", Value: session})
 					r.AddCookie(&http.Cookie{Name: "session", Value: h.adminToken})
 				},
 			} {
@@ -112,7 +112,7 @@ func TestEveryProtectedRouteRequiresToken(t *testing.T) {
 
 func TestInvalidRevokedAndBlockedTokens(t *testing.T) {
 	h := newHarness(t)
-	wantError(t, h.do(http.MethodGet, "/api/v1/me", "pp_not-a-real-token", nil), http.StatusUnauthorized, domain.CodeUnauthorized)
+	wantError(t, h.do(http.MethodGet, "/api/v1/me", "ds_not-a-real-token", nil), http.StatusUnauthorized, domain.CodeUnauthorized)
 	wantError(t, h.do(http.MethodGet, "/api/v1/me", "garbage", nil), http.StatusUnauthorized, domain.CodeUnauthorized)
 
 	carol, tok := h.user("carol@pp.test")
@@ -129,7 +129,7 @@ func TestTokenBruteForceIsRateLimited(t *testing.T) {
 	h := newHarness(t)
 	var rec *httptest.ResponseRecorder
 	for range 31 {
-		rec = h.do(http.MethodGet, "/api/v1/me", "pp_wrong", nil)
+		rec = h.do(http.MethodGet, "/api/v1/me", "ds_wrong", nil)
 	}
 	wantError(t, rec, http.StatusTooManyRequests, domain.CodeRateLimited)
 	if rec.Header().Get("Retry-After") == "" {

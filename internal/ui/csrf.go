@@ -13,7 +13,7 @@ import (
 const (
 	csrfField      = "_csrf"
 	csrfHeader     = "X-CSRF-Token"
-	anonCookieName = "pp_csrf"
+	anonCookieName = "ds_csrf"
 	anonTokenBytes = 32
 )
 

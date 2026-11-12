@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	prefix       = "pushpage-backup/"
+	prefix       = "dropsite-backup/"
 	manifestName = prefix + "manifest.json"
 	dbName       = prefix + "state.db"
 	sitesPrefix  = prefix + "sites/"

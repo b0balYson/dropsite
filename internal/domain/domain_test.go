@@ -108,7 +108,7 @@ func TestIDs(t *testing.T) {
 		t.Fatalf("bad deploy id %q", d)
 	}
 	tok := NewToken()
-	if !strings.HasPrefix(tok, "pp_") || len(tok) != 46 {
+	if !strings.HasPrefix(tok, "ds_") || len(tok) != 46 {
 		t.Fatalf("bad token %q", tok)
 	}
 	if TokenDisplayPrefix(tok) != tok[:9] {

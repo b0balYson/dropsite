@@ -15,7 +15,7 @@ The database is captured first, then the files. A publish that finishes in betwe
 Schedule it with cron and copy the file off the server, for example:
 
 ```cron
-15 3 * * * cd /opt/pushpage && docker compose exec -T control /control backup - > /var/backups/pushpage-$(date +\%F).tar.gz
+15 3 * * * cd /opt/dropsite && docker compose exec -T control /control backup - > /var/backups/dropsite-$(date +\%F).tar.gz
 ```
 
 ## Restore

@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	flashCookieName = "pp_flash"
+	flashCookieName = "ds_flash"
 	flashMaxAge     = time.Minute
 	flashMaxBytes   = 2048
 )

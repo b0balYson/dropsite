@@ -1,17 +1,17 @@
 #!/bin/sh
-# Install the pushpage CLI from GitHub Releases, without sudo.
+# Install the dropsite CLI from GitHub Releases, without sudo.
 #
 #   curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.sh | sh
 #
 # Environment:
-#   PUSHPAGE_VERSION        release tag to install (default: latest)
-#   PUSHPAGE_INSTALL_DIR    target directory (default: $HOME/.local/bin)
-#   PUSHPAGE_DOWNLOAD_BASE  where binaries and SHA256SUMS live (overrides the
+#   DROPSITE_VERSION        release tag to install (default: latest)
+#   DROPSITE_INSTALL_DIR    target directory (default: $HOME/.local/bin)
+#   DROPSITE_DOWNLOAD_BASE  where binaries and SHA256SUMS live (overrides the
 #                           GitHub URL; file:// and http:// work, for testing)
 set -eu
 
 REPO="b0balYson/dropsite"
-NAME="pushpage"
+NAME="dropsite"
 
 say() { printf '%s\n' "$*" >&2; }
 die() { say "install: $*"; exit 1; }
@@ -34,10 +34,10 @@ detect_arch() {
 }
 
 download_base() {
-	if [ -n "${PUSHPAGE_DOWNLOAD_BASE:-}" ]; then
-		echo "${PUSHPAGE_DOWNLOAD_BASE%/}"
-	elif [ -n "${PUSHPAGE_VERSION:-}" ] && [ "$PUSHPAGE_VERSION" != latest ]; then
-		echo "https://github.com/$REPO/releases/download/$PUSHPAGE_VERSION"
+	if [ -n "${DROPSITE_DOWNLOAD_BASE:-}" ]; then
+		echo "${DROPSITE_DOWNLOAD_BASE%/}"
+	elif [ -n "${DROPSITE_VERSION:-}" ] && [ "$DROPSITE_VERSION" != latest ]; then
+		echo "https://github.com/$REPO/releases/download/$DROPSITE_VERSION"
 	else
 		echo "https://github.com/$REPO/releases/latest/download"
 	fi
@@ -93,9 +93,9 @@ main() {
 	[ "$os" = windows ] && ext=".exe"
 	asset="$NAME-$os-$arch$ext"
 	base=$(download_base)
-	dir="${PUSHPAGE_INSTALL_DIR:-$HOME/.local/bin}"
+	dir="${DROPSITE_INSTALL_DIR:-$HOME/.local/bin}"
 
-	tmp=$(mktemp -d 2>/dev/null || mktemp -d -t pushpage)
+	tmp=$(mktemp -d 2>/dev/null || mktemp -d -t dropsite)
 	trap 'rm -rf "$tmp"' EXIT INT TERM
 
 	say "Downloading $asset from $base"
@@ -105,7 +105,7 @@ main() {
 
 	mkdir -p "$dir" || die "cannot create $dir"
 	chmod 0755 "$tmp/$asset"
-	mv -f "$tmp/$asset" "$dir/$NAME$ext" || die "cannot write to $dir (set PUSHPAGE_INSTALL_DIR)"
+	mv -f "$tmp/$asset" "$dir/$NAME$ext" || die "cannot write to $dir (set DROPSITE_INSTALL_DIR)"
 
 	say "Installed $("$dir/$NAME$ext" version 2>/dev/null || echo "$NAME") to $dir/$NAME$ext"
 	path_hint "$dir"

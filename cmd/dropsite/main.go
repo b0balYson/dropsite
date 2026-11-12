@@ -1,4 +1,4 @@
-// Command pushpage publishes a directory of static files to a pushpage server.
+// Command dropsite publishes a directory of static files to a dropsite server.
 package main
 
 import (

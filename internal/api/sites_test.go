@@ -27,7 +27,7 @@ func TestSiteLifecycle(t *testing.T) {
 	}
 
 	// Publish v1 and v2.
-	first := h.deploy(site.ID, tok, testenv.Zip(t, index("v1")), withHeader("X-Pushpage-Client", "cli/1.2.3"))
+	first := h.deploy(site.ID, tok, testenv.Zip(t, index("v1")), withHeader("X-Dropsite-Client", "cli/1.2.3"))
 	wantStatus(t, first, http.StatusCreated)
 	r1 := decodeAs[deployResultDTO](t, first)
 	if r1.DeployID == "" || r1.URL != "https://promo-may.pp.test/" || len(r1.URLs) != 2 ||

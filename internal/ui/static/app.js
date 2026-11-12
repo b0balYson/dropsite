@@ -1,4 +1,4 @@
-// Progressive enhancements for the pushpage interface: archive upload with
+// Progressive enhancements for the dropsite interface: archive upload with
 // progress and copy-to-clipboard buttons. Every page works without it.
 (function () {
   'use strict';

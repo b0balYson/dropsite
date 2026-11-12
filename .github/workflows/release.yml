@@ -25,7 +25,7 @@ jobs:
       - uses: softprops/action-gh-release@v3
         with:
           files: |
-            dist/pushpage-*
+            dist/dropsite-*
             dist/SHA256SUMS
           generate_release_notes: true
       - uses: docker/setup-qemu-action@v4
@@ -38,7 +38,7 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/${{ github.repository_owner }}/pushpage-control
+          images: ghcr.io/${{ github.repository_owner }}/dropsite-control
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}

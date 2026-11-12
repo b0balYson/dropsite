@@ -16,7 +16,7 @@ func TestTokens(t *testing.T) {
 	rec := h.do(http.MethodPost, "/api/v1/tokens", tok, `{"name":"laptop","expires_in_days":30}`)
 	wantStatus(t, rec, http.StatusCreated)
 	created := decodeAs[newTokenDTO](t, rec)
-	if !strings.HasPrefix(created.Value, "pp_") || created.Token.Name != "laptop" || created.Token.ExpiresAt == nil ||
+	if !strings.HasPrefix(created.Value, "ds_") || created.Token.Name != "laptop" || created.Token.ExpiresAt == nil ||
 		!created.Token.ExpiresAt.Equal(h.env.Clock.Now().Add(30*24*time.Hour)) || !strings.HasPrefix(created.Value, created.Token.Prefix) {
 		t.Fatalf("created %+v", created)
 	}

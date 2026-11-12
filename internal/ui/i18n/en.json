@@ -111,7 +111,7 @@
   "connect.eyebrow": "Publishing from an AI assistant",
   "connect.title": "Connect AI",
   "connect.lede": "Set it up once, then publish sites by saying “publish this site” in Claude Code or Codex.",
-  "connect.install.title": "Install the pushpage program",
+  "connect.install.title": "Install the dropsite program",
   "connect.install.text": "Open a terminal and paste the command for your system.",
   "connect.install.unix": "macOS and Linux — Terminal",
   "connect.install.windows": "Windows — PowerShell",

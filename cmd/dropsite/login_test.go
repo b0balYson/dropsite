@@ -40,13 +40,13 @@ func TestLoginSavesConfigAndLaterCommandsWork(t *testing.T) {
 	expectCode(t, r, 0)
 	expectContains(t, "stdout", r.stdout, "https://blog.sites.test", "Blog")
 	if e.srv.lastClient == "" || e.srv.lastClient[:4] != "cli/" {
-		t.Fatalf("X-Pushpage-Client = %q", e.srv.lastClient)
+		t.Fatalf("X-Dropsite-Client = %q", e.srv.lastClient)
 	}
 }
 
 func TestLoginInvalidTokenDoesNotSave(t *testing.T) {
 	e := newTestEnv(t)
-	r := e.run("login", "--server", e.srv.URL, "--token", "pp_bad")
+	r := e.run("login", "--server", e.srv.URL, "--token", "ds_bad")
 	expectCode(t, r, 1)
 	expectContains(t, "stderr", r.stderr, "rejected the token", "unauthorized")
 	if _, err := os.Stat(e.configFile()); !os.IsNotExist(err) {
@@ -58,7 +58,7 @@ func TestLoginInvalidTokenKeepsExistingConfig(t *testing.T) {
 	e := newTestEnv(t)
 	e.login()
 	before, _ := os.ReadFile(e.configFile())
-	expectCode(t, e.run("login", "--server", e.srv.URL, "--token", "pp_bad"), 1)
+	expectCode(t, e.run("login", "--server", e.srv.URL, "--token", "ds_bad"), 1)
 	after, _ := os.ReadFile(e.configFile())
 	if string(before) != string(after) {
 		t.Fatal("config changed after a failed login")
@@ -102,16 +102,16 @@ func TestLoginFromEnvWarnsAboutOverride(t *testing.T) {
 	e.env[envToken] = goodToken
 	r := e.run("login")
 	expectCode(t, r, 0)
-	expectContains(t, "stderr", r.stderr, "PUSHPAGE_TOKEN is set")
+	expectContains(t, "stderr", r.stderr, "DROPSITE_TOKEN is set")
 }
 
 func TestEnvOverridesConfig(t *testing.T) {
 	e := newTestEnv(t)
 	e.login()
-	e.env[envToken] = "pp_bad"
+	e.env[envToken] = "ds_bad"
 	r := e.run("sites")
 	expectCode(t, r, 1)
-	expectContains(t, "stderr", r.stderr, "pushpage login")
+	expectContains(t, "stderr", r.stderr, "dropsite login")
 
 	e.env[envToken] = goodToken
 	e.env[envServer] = "http://127.0.0.1:1" // unreachable: proves env server wins

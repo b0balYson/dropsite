@@ -3,16 +3,16 @@
 package brand
 
 // Name is the product name used in the CLI, UI, file names and token prefix.
-const Name = "pushpage"
+const Name = "dropsite"
 
 // DisplayName is the human-facing product name.
-const DisplayName = "Pushpage"
+const DisplayName = "Dropsite"
 
 // ProjectFile is the per-directory file the CLI writes to remember the site.
 const ProjectFile = "." + Name + ".json"
 
 // TokenPrefix starts every API token so it is recognisable in secret scanners.
-const TokenPrefix = "pp_"
+const TokenPrefix = "ds_"
 
 // ReservedPathPrefixes are URL path prefixes owned by the platform on every site.
 var ReservedPathPrefixes = []string{"/_form", "/_" + Name}

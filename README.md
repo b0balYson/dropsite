@@ -1,4 +1,4 @@
-# pushpage
+# dropsite
 
 [Русская версия](README.ru.md)
 
@@ -8,10 +8,10 @@ Self-hosted publishing of static sites. A marketer builds a landing page with an
 - Archive in, HTTPS link out. Every site gets a random address such as `k3f9x2m7qa.example.site` and an optional readable one such as `promo-may.example.site`.
 - Every publish is an immutable release: switch and roll back instantly, with zero failed requests during the switch.
 - Each user sees and changes only their own sites. Admins manage users, all sites, limits and the audit log.
-- Publish from the web interface, the `pushpage` CLI, the HTTP API, or an AI assistant (Claude Code, Codex) through the CLI.
+- Publish from the web interface, the `dropsite` CLI, the HTTP API, or an AI assistant (Claude Code, Codex) through the CLI.
 - Sites keep working while the control service is stopped or being upgraded.
 
-pushpage serves finished static files only (HTML, CSS, JS, images). It does not build projects or run server code.
+dropsite serves finished static files only (HTML, CSS, JS, images). It does not build projects or run server code.
 
 ## How it works
 
@@ -35,7 +35,7 @@ Use a domain (or a subdomain such as `sites.example.com`) that hosts **nothing e
 ### 3. Configure and start
 
 ```bash
-mkdir pushpage && cd pushpage
+mkdir dropsite && cd dropsite
 base=https://raw.githubusercontent.com/b0balYson/dropsite/main/deploy
 curl -fsSLO "$base/docker-compose.yml" -fsSLO "$base/Caddyfile"
 curl -fsSL "$base/.env.example" -o .env
@@ -60,7 +60,7 @@ Then: **Users → create user**, send them the invite link (valid 72 hours); the
 ## Publishing
 
 - **Web interface:** create a site, drag a zip or tar.gz onto it.
-- **CLI:** on the **Connect AI** page issue a token and run the shown `pushpage login` command, then `pushpage deploy ./dist`. The first run creates a site and remembers it in `.pushpage.json`; later runs update it.
+- **CLI:** on the **Connect AI** page issue a token and run the shown `dropsite login` command, then `dropsite deploy ./dist`. The first run creates a site and remembers it in `.dropsite.json`; later runs update it.
 - **AI assistants:** the **Connect AI** page has ready instructions for Claude Code (`skills/claude-code/SKILL.md`) and Codex (`skills/codex/AGENTS.md`). The assistant publishes through the CLI.
 - **HTTP API:** `https://api.<BASE_DOMAIN>/api/v1`, bearer token, see [docs/api-contract.md](docs/api-contract.md) and `/api/v1/openapi.json`.
 
@@ -89,7 +89,7 @@ irm https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.ps
 | Custom 404 | `404.html` at the root is served with status 404 |
 | Single-page apps | `200.html` at the root is served with status 200 for any unknown path |
 | Hidden files | any path segment starting with a dot is 404, except `/.well-known/` |
-| Reserved | `/_form/` and `/_pushpage/` belong to the platform |
+| Reserved | `/_form/` and `/_dropsite/` belong to the platform |
 | Caching | HTML `no-cache`; other files `public, max-age=3600` |
 
 ## TLS certificates and Let's Encrypt limits
@@ -139,7 +139,7 @@ More: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [doc
 make tools        # Go and golangci-lint into .tools/ (nothing system-wide)
 make test lint
 scripts/dev-control.sh   # run control natively, UI on http://127.0.0.1:18082
-make dev-up       # full stack in Docker with a local CA: https://<site>.pushpage.localhost:18443
+make dev-up       # full stack in Docker with a local CA: https://<site>.dropsite.localhost:18443
 make e2e
 ```
 

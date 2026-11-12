@@ -50,7 +50,7 @@ func listAllSites(ctx context.Context, c *client.Client) ([]client.SiteItem, err
 
 func (a *app) printSites(sites []client.SiteItem) error {
 	if len(sites) == 0 {
-		fmt.Fprintln(a.stderr, "No sites yet. Publish one with 'pushpage deploy <dir>'.")
+		fmt.Fprintln(a.stderr, "No sites yet. Publish one with 'dropsite deploy <dir>'.")
 		return nil
 	}
 	tw := newTable(a.stdout)

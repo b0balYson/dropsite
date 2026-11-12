@@ -199,9 +199,9 @@ func TestExtractSuccess(t *testing.T) {
 				tent{name: "node_modules/.bin/x", typ: tar.TypeSymlink, link: "/bin/sh"},
 				tent{name: ".git/config", body: strings.Repeat("x", 500)},
 				tent{name: "sub/.git/HEAD", body: "ref"},
-				tent{name: ".pushpage.json", body: "{}"},
-				tent{name: "sub/.pushpage.json", body: "{}"})
-		}, Limits{MaxFiles: 2, MaxTotalBytes: 100}, map[string]string{"index.html": page, "sub/": "", "sub/.pushpage.json": "{}"}},
+				tent{name: ".dropsite.json", body: "{}"},
+				tent{name: "sub/.dropsite.json", body: "{}"})
+		}, Limits{MaxFiles: 2, MaxTotalBytes: 100}, map[string]string{"index.html": page, "sub/": "", "sub/.dropsite.json": "{}"}},
 		{"unicode names", func(t *testing.T) string {
 			return makeZip(t, zent{name: "index.html", body: page}, zent{name: "Картинки/фото 1.png", body: "p"})
 		}, bigLimits, map[string]string{"index.html": page, "Картинки/": "", "Картинки/фото 1.png": "p"}},

@@ -25,12 +25,12 @@ import (
 )
 
 const (
-	project    = "pushpage-e2e"
-	baseDomain = "pushpage.localhost"
+	project    = "dropsite-e2e"
+	baseDomain = "dropsite.localhost"
 	httpsPort  = "18443"
 	httpPort   = "18080"
 	uiURL      = "http://127.0.0.1:18082"
-	adminEmail = "admin@pushpage.localhost"
+	adminEmail = "admin@dropsite.localhost"
 	adminPass  = "local-dev-password"
 )
 

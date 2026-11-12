@@ -1,17 +1,17 @@
-# Install the pushpage CLI on Windows from GitHub Releases, without admin rights.
+# Install the dropsite CLI on Windows from GitHub Releases, without admin rights.
 #
 #   irm https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.ps1 | iex
 #
 # Environment:
-#   PUSHPAGE_VERSION        release tag to install (default: latest)
-#   PUSHPAGE_INSTALL_DIR    target directory (default: %LOCALAPPDATA%\Programs\pushpage)
-#   PUSHPAGE_DOWNLOAD_BASE  where binaries and SHA256SUMS live (overrides the GitHub URL)
+#   DROPSITE_VERSION        release tag to install (default: latest)
+#   DROPSITE_INSTALL_DIR    target directory (default: %LOCALAPPDATA%\Programs\dropsite)
+#   DROPSITE_DOWNLOAD_BASE  where binaries and SHA256SUMS live (overrides the GitHub URL)
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
 $Repo = 'b0balYson/dropsite'
-$Name = 'pushpage'
+$Name = 'dropsite'
 
 function Get-Arch {
     $arch = $env:PROCESSOR_ARCHITEW6432
@@ -24,9 +24,9 @@ function Get-Arch {
 }
 
 function Get-DownloadBase {
-    if ($env:PUSHPAGE_DOWNLOAD_BASE) { return $env:PUSHPAGE_DOWNLOAD_BASE.TrimEnd('/') }
-    if ($env:PUSHPAGE_VERSION -and $env:PUSHPAGE_VERSION -ne 'latest') {
-        return "https://github.com/$Repo/releases/download/$($env:PUSHPAGE_VERSION)"
+    if ($env:DROPSITE_DOWNLOAD_BASE) { return $env:DROPSITE_DOWNLOAD_BASE.TrimEnd('/') }
+    if ($env:DROPSITE_VERSION -and $env:DROPSITE_VERSION -ne 'latest') {
+        return "https://github.com/$Repo/releases/download/$($env:DROPSITE_VERSION)"
     }
     return "https://github.com/$Repo/releases/latest/download"
 }
@@ -51,7 +51,7 @@ function Add-ToUserPath([string]$Dir) {
 
 $asset = "$Name-windows-$(Get-Arch).exe"
 $base = Get-DownloadBase
-$dir = if ($env:PUSHPAGE_INSTALL_DIR) { $env:PUSHPAGE_INSTALL_DIR } else { Join-Path $env:LOCALAPPDATA "Programs\$Name" }
+$dir = if ($env:DROPSITE_INSTALL_DIR) { $env:DROPSITE_INSTALL_DIR } else { Join-Path $env:LOCALAPPDATA "Programs\$Name" }
 $tmp = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
 New-Item -ItemType Directory -Path $tmp | Out-Null
 

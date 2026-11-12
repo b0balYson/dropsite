@@ -1,4 +1,4 @@
-// Command control is the pushpage server: API, UI, accounts and deploys.
+// Command control is the dropsite server: API, UI, accounts and deploys.
 //
 // Subcommands:
 //

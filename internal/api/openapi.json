@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Pushpage API",
+    "title": "Dropsite API",
     "version": "1",
     "description": "Publish static sites. Every endpoint except GET /openapi.json requires `Authorization: Bearer <token>`. Times are RFC 3339 in UTC. IDs are strings. Resources of other users and admin endpoints for non-admins answer 404."
   },
@@ -103,10 +103,10 @@
       "post": {
         "operationId": "deploySite",
         "summary": "Publish a zip or tar.gz archive as a new release",
-        "description": "The body may be at most max_site_bytes + max_files KiB + 1 MiB (plus multipart framing); larger bodies get 413 without being read fully. The source is `cli` when X-Pushpage-Client starts with `cli/`, otherwise `api`. At most 30 publications per user per hour.",
+        "description": "The body may be at most max_site_bytes + max_files KiB + 1 MiB (plus multipart framing); larger bodies get 413 without being read fully. The source is `cli` when X-Dropsite-Client starts with `cli/`, otherwise `api`. At most 30 publications per user per hour.",
         "parameters": [
           {
-            "name": "X-Pushpage-Client",
+            "name": "X-Dropsite-Client",
             "in": "header",
             "required": false,
             "schema": { "type": "string", "examples": ["cli/1.0.0"] }

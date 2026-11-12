@@ -15,7 +15,7 @@ const (
 	// on top of the archive size limit.
 	multipartOverhead = 64 << 10
 	archiveField      = "archive"
-	clientHeader      = "X-Pushpage-Client"
+	clientHeader      = "X-Dropsite-Client"
 	cliClientPrefix   = "cli/"
 )
 

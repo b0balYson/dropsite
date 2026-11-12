@@ -1,4 +1,4 @@
-// Package client is a typed HTTP client for the pushpage API v1
+// Package client is a typed HTTP client for the dropsite API v1
 // (see docs/api-contract.md).
 package client
 
@@ -28,7 +28,7 @@ const (
 	DefaultDeployHeaderTimeout = 10 * time.Minute
 
 	apiPrefix    = "/api/v1"
-	clientHeader = "X-Pushpage-Client"
+	clientHeader = "X-Dropsite-Client"
 	maxBody      = 16 << 20
 )
 
@@ -69,7 +69,7 @@ func New(server, token string, opts ...Option) *Client {
 // WithRootCAFile trusts the PEM certificates in file in addition to the
 // system roots (for installations behind a private certificate authority).
 func WithRootCAFile(file string) (Option, error) {
-	pem, err := os.ReadFile(file) //nolint:gosec // path comes from the user's own PUSHPAGE_CA_FILE
+	pem, err := os.ReadFile(file) //nolint:gosec // path comes from the user's own DROPSITE_CA_FILE
 	if err != nil {
 		return nil, fmt.Errorf("read CA file: %w", err)
 	}
@@ -102,7 +102,7 @@ func defaultHTTPClient() *http.Client {
 // Server returns the normalized server root the client talks to.
 func (c *Client) Server() string { return c.base }
 
-// UserAgent is sent as both User-Agent and X-Pushpage-Client.
+// UserAgent is sent as both User-Agent and X-Dropsite-Client.
 func UserAgent() string { return "cli/" + brand.Version }
 
 func (c *Client) endpoint(path string, q url.Values) string {

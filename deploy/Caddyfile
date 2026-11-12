@@ -104,7 +104,7 @@ https:// {
 	}
 	# Paths reserved for the platform; other /_* paths (e.g. /_next/) are
 	# ordinary site files.
-	@reserved path /_form /_form/* /_pushpage /_pushpage/*
+	@reserved path /_form /_form/* /_dropsite /_dropsite/*
 
 	handle @site {
 		root * /data/by-host/{re.site.1}

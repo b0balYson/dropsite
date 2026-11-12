@@ -1,11 +1,11 @@
 # Local development override. Publishes everything on 127.0.0.1 high ports:
-#   https://<site>.pushpage.localhost:18443/   sites (internal CA, curl -k)
+#   https://<site>.dropsite.localhost:18443/   sites (internal CA, curl -k)
 #   http://127.0.0.1:18082/                    admin UI
 #
 #   docker compose -f deploy/docker-compose.yml -f deploy/compose.local.yml \
 #     --env-file deploy/local.env up -d --build
 
-name: pushpage-local
+name: dropsite-local
 
 services:
   caddy:

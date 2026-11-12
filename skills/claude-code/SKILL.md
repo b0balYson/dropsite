@@ -1,22 +1,22 @@
 ---
-name: pushpage-publish
-description: Publish a folder of static files (HTML, CSS, JS, images) to the team's pushpage server and return a public HTTPS link. Use when the user asks to publish, deploy, share, upload or "put online" a landing page, site, prototype or HTML file built in this project, or asks for a link to it.
+name: dropsite-publish
+description: Publish a folder of static files (HTML, CSS, JS, images) to the team's dropsite server and return a public HTTPS link. Use when the user asks to publish, deploy, share, upload or "put online" a landing page, site, prototype or HTML file built in this project, or asks for a link to it.
 ---
 
-# Publish a static site with pushpage
+# Publish a static site with dropsite
 
-pushpage hosts finished static files. It does not build projects: if the project needs a build step (`npm run build`, `vite build`, `astro build`, `next build && next export`), run it first and publish the output folder.
+dropsite hosts finished static files. It does not build projects: if the project needs a build step (`npm run build`, `vite build`, `astro build`, `next build && next export`), run it first and publish the output folder.
 
 ## 1. Check the CLI and the login
 
 Run:
 
 ```bash
-pushpage version && pushpage sites --json >/dev/null && echo READY
+dropsite version && dropsite sites --json >/dev/null && echo READY
 ```
 
-- `command not found`: the CLI is not installed. Stop and tell the user to open the **Connect AI** page of their pushpage web interface and follow the install instructions there. Do not try to install it yourself.
-- An error that mentions `pushpage login` or `401`: there is no valid token. Stop and tell the user to issue a token on the **Connect AI** page and run the `pushpage login` command shown there in their own terminal. Never ask the user to paste a token into the chat.
+- `command not found`: the CLI is not installed. Stop and tell the user to open the **Connect AI** page of their dropsite web interface and follow the install instructions there. Do not try to install it yourself.
+- An error that mentions `dropsite login` or `401`: there is no valid token. Stop and tell the user to issue a token on the **Connect AI** page and run the `dropsite login` command shown there in their own terminal. Never ask the user to paste a token into the chat.
 
 ## 2. Find the folder to publish
 
@@ -31,11 +31,11 @@ Hidden files and `.git`, `node_modules`, `.DS_Store` are skipped automatically, 
 ## 3. Publish
 
 ```bash
-pushpage deploy <folder> --json
+dropsite deploy <folder> --json
 ```
 
-- The first run creates a new site and writes `.pushpage.json` into the folder. Later runs update the same site; keep that file.
-- To publish to an existing site, add `--site <id-or-slug>` (list them with `pushpage sites`).
+- The first run creates a new site and writes `.dropsite.json` into the folder. Later runs update the same site; keep that file.
+- To publish to an existing site, add `--site <id-or-slug>` (list them with `dropsite sites`).
 - `--title "<name>"` sets the site name on first publish.
 
 The JSON output has `url` (primary address), `urls` (all addresses) and `deploy_id`.
@@ -45,7 +45,7 @@ The JSON output has `url` (primary address), `urls` (all addresses) and `deploy_
 Tell the user the `url` as a clickable link, and mention that:
 
 - the page is live now; repeating the publish updates it in place;
-- `pushpage rollback <site>` restores the previous version if something broke;
+- `dropsite rollback <site>` restores the previous version if something broke;
 - a memorable address (slug such as `promo-may`) can be set in the web interface.
 
 ## Errors

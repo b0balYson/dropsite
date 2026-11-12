@@ -1,4 +1,4 @@
-# pushpage: self-hosted publishing of static sites.
+# dropsite: self-hosted publishing of static sites.
 #
 # Install: copy this file, Caddyfile and .env.example (as .env) into one
 # directory, fill in the four required variables and run:
@@ -7,7 +7,7 @@
 # Containers: caddy (serving and TLS), control (API, UI, deploys) and the
 # one-shot caddy-init. Volumes: sites, state, caddy_data.
 
-name: pushpage
+name: dropsite
 
 x-logging: &logging
   driver: json-file
@@ -78,8 +78,8 @@ services:
       context: ..
       dockerfile: deploy/Dockerfile
       args:
-        VERSION: ${PUSHPAGE_VERSION:-dev}
-    image: ghcr.io/b0balyson/pushpage-control:${PUSHPAGE_VERSION:-latest}
+        VERSION: ${DROPSITE_VERSION:-dev}
+    image: ghcr.io/b0balyson/dropsite-control:${DROPSITE_VERSION:-latest}
     restart: unless-stopped
     user: "65532:65532"
     read_only: true

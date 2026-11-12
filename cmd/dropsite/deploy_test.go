@@ -47,7 +47,7 @@ func TestDeployRepeatUpdatesSameSite(t *testing.T) {
 	if e.srv.siteCount() != 1 || len(e.srv.sites["site01"].Deploys) != 2 {
 		t.Fatalf("sites=%d deploys=%d", e.srv.siteCount(), len(e.srv.sites["site01"].Deploys))
 	}
-	if slices.Contains(e.srv.lastFiles, ".pushpage.json") {
+	if slices.Contains(e.srv.lastFiles, ".dropsite.json") {
 		t.Fatalf("project file was published: %v", e.srv.lastFiles)
 	}
 }
@@ -90,7 +90,7 @@ func TestDeployWithoutLogin(t *testing.T) {
 	e := newTestEnv(t)
 	r := e.run("deploy", siteDir(t, nil))
 	expectCode(t, r, 1)
-	expectContains(t, "stderr", r.stderr, "not logged in", "pushpage login")
+	expectContains(t, "stderr", r.stderr, "not logged in", "dropsite login")
 	if e.srv.requestCount() != 0 {
 		t.Fatal("unexpected requests")
 	}
@@ -149,7 +149,7 @@ func TestDeployExplicitSiteNotFound(t *testing.T) {
 	e.login()
 	r := e.run("deploy", siteDir(t, nil), "--site", "ghost")
 	expectCode(t, r, 1)
-	expectContains(t, "stderr", r.stderr, "site ghost", "pushpage sites")
+	expectContains(t, "stderr", r.stderr, "site ghost", "dropsite sites")
 	if e.srv.siteCount() != 0 {
 		t.Fatal("a site was created")
 	}
@@ -163,7 +163,7 @@ func TestDeployLinkedSiteDeleted(t *testing.T) {
 	expectCode(t, e.run("delete", "site01", "--yes"), 0)
 	r := e.run("deploy", dir)
 	expectCode(t, r, 1)
-	expectContains(t, "stderr", r.stderr, "site01 from .pushpage.json", "Delete .pushpage.json", "--site")
+	expectContains(t, "stderr", r.stderr, "site01 from .dropsite.json", "Delete .dropsite.json", "--site")
 	if e.srv.siteCount() != 0 {
 		t.Fatal("a new site was created silently")
 	}
@@ -187,10 +187,10 @@ func TestDeployLinkedToOtherServer(t *testing.T) {
 func TestDeployBadProjectFile(t *testing.T) {
 	e := newTestEnv(t)
 	e.login()
-	dir := siteDir(t, map[string]string{"index.html": "x", ".pushpage.json": "{}"})
+	dir := siteDir(t, map[string]string{"index.html": "x", ".dropsite.json": "{}"})
 	r := e.run("deploy", dir)
 	expectCode(t, r, 1)
-	expectContains(t, "stderr", r.stderr, "not a valid pushpage project file")
+	expectContains(t, "stderr", r.stderr, "not a valid dropsite project file")
 }
 
 func TestDeployCustomTitle(t *testing.T) {
@@ -247,7 +247,7 @@ func TestDeployUsage(t *testing.T) {
 	expectCode(t, e.run("deploy", "a", "b"), 2)
 	r := e.run("deploy", "-h")
 	expectCode(t, r, 0)
-	expectContains(t, "stderr", r.stderr, "Usage: pushpage deploy", "-site")
+	expectContains(t, "stderr", r.stderr, "Usage: dropsite deploy", "-site")
 }
 
 func TestDeployRateLimited(t *testing.T) {
