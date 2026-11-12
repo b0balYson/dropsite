@@ -32,7 +32,7 @@ var errNoFile = errors.New("no archive in the upload")
 // without buffering it in memory or on disk here.
 func (s *server) deploy(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	ref := r.PathValue("ref")
-	limit, err := s.svc.UploadLimit(r.Context())
+	limit, err := s.svc.UploadLimit(r.Context(), rc.actor, ref)
 	if err != nil {
 		s.deployFailed(w, r, rc, ref, err)
 		return

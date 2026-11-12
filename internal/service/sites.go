@@ -154,7 +154,7 @@ func (s *Service) CreateSite(ctx context.Context, a Actor, title, slug string) (
 			return SiteView{}, err
 		}
 	}
-	lim, err := s.Limits(ctx)
+	lim, err := s.LimitsFor(ctx, a.User.ID)
 	if err != nil {
 		return SiteView{}, err
 	}
@@ -174,8 +174,8 @@ func (s *Service) CreateSite(ctx context.Context, a Actor, title, slug string) (
 		return SiteView{}, fmt.Errorf("prepare site directory: %w", err)
 	}
 	for _, h := range hosts {
-		if err := s.files.LinkHost(h.Hostname, site.ID); err != nil {
-			return SiteView{}, fmt.Errorf("link host: %w", err)
+		if err := s.linkHost(ctx, site.ID, h.Hostname); err != nil {
+			return SiteView{}, err
 		}
 	}
 	s.audit(ctx, a, "site.create", siteTarget(site.ID), map[string]any{"title": title, "slug": slug})
@@ -206,15 +206,26 @@ func (s *Service) insertSite(ctx context.Context, a Actor, title, slug string) (
 	return domain.Site{}, nil, errors.New("could not allocate a unique site id")
 }
 
-// SiteUpdate changes a site; nil fields stay unchanged. An empty Slug removes it.
+// SiteUpdate changes a site; nil fields stay unchanged. An empty Slug removes
+// it. Password protects the site (or changes its password); Protected false
+// removes protection; Protected true without Password requires an existing one.
 type SiteUpdate struct {
-	Title *string
-	Slug  *string
+	Title     *string
+	Slug      *string
+	Noindex   *bool
+	Protected *bool
+	Password  *string
+	Expiry    *Expiry
 }
 
-// UpdateSite changes title and slug.
+// UpdateSite changes title, slug and access controls. Every field is
+// validated before anything is changed.
 func (s *Service) UpdateSite(ctx context.Context, a Actor, ref string, u SiteUpdate) (SiteView, error) {
 	site, err := s.resolveSite(ctx, a, ref)
+	if err != nil {
+		return SiteView{}, err
+	}
+	plan, err := s.planAccess(site, u)
 	if err != nil {
 		return SiteView{}, err
 	}
@@ -234,6 +245,9 @@ func (s *Service) UpdateSite(ctx context.Context, a Actor, ref string, u SiteUpd
 		if err := s.setSlug(ctx, a, site, *u.Slug); err != nil {
 			return SiteView{}, err
 		}
+	}
+	if err := s.applyAccess(ctx, a, site.ID, plan); err != nil {
+		return SiteView{}, err
 	}
 	site, err = s.repo.GetSite(ctx, site.ID)
 	if err != nil {
@@ -260,13 +274,13 @@ func (s *Service) setSlug(ctx context.Context, a Actor, site domain.Site, slug s
 		return nil // unchanged
 	}
 	if host != nil {
-		if err := s.files.LinkHost(host.Hostname, site.ID); err != nil {
-			return fmt.Errorf("link host: %w", err)
+		if err := s.linkHost(ctx, site.ID, host.Hostname); err != nil {
+			return err
 		}
 	}
 	if removed != "" {
-		if err := s.files.UnlinkHost(removed); err != nil {
-			return fmt.Errorf("unlink host: %w", err)
+		if err := s.unlinkHost(removed); err != nil {
+			return err
 		}
 	}
 	s.audit(ctx, a, "site.slug", siteTarget(site.ID), map[string]any{"slug": slug, "removed": removed})
@@ -320,6 +334,11 @@ func (s *Service) DeleteSite(ctx context.Context, a Actor, ref string) error {
 	if err != nil {
 		return err
 	}
+	return s.softDelete(ctx, a, site, "site.delete")
+}
+
+// softDelete marks the site deleted, then removes its addresses and markers.
+func (s *Service) softDelete(ctx context.Context, a Actor, site domain.Site, action string) error {
 	unlock := s.siteLocks.lock(site.ID)
 	defer unlock()
 	removed, err := s.repo.SoftDeleteSite(ctx, site.ID, s.now())
@@ -327,11 +346,11 @@ func (s *Service) DeleteSite(ctx context.Context, a Actor, ref string) error {
 		return err
 	}
 	for _, h := range removed {
-		if err := s.files.UnlinkHost(h); err != nil {
-			return fmt.Errorf("unlink host: %w", err)
+		if err := s.unlinkHost(h); err != nil {
+			return err
 		}
 	}
-	s.audit(ctx, a, "site.delete", siteTarget(site.ID), map[string]any{"title": site.Title, "hosts": removed})
+	s.audit(ctx, a, action, siteTarget(site.ID), map[string]any{"title": site.Title, "hosts": removed})
 	return nil
 }
 
@@ -349,7 +368,7 @@ func (s *Service) SetApex(ctx context.Context, a Actor, ref string) (SiteView, e
 	if err != nil {
 		return SiteView{}, err
 	}
-	if err := s.files.LinkHost(host.Hostname, site.ID); err != nil {
+	if err := s.linkHost(ctx, site.ID, host.Hostname); err != nil {
 		return SiteView{}, fmt.Errorf("link apex: %w", err)
 	}
 	s.audit(ctx, a, "site.apex.set", siteTarget(site.ID), map[string]any{"previous_site": prev})
@@ -370,7 +389,7 @@ func (s *Service) ClearApex(ctx context.Context, a Actor, ref string) (SiteView,
 		return SiteView{}, err
 	}
 	if removed != "" {
-		if err := s.files.UnlinkHost(removed); err != nil {
+		if err := s.unlinkHost(removed); err != nil {
 			return SiteView{}, fmt.Errorf("unlink apex: %w", err)
 		}
 		s.audit(ctx, a, "site.apex.clear", siteTarget(site.ID), nil)

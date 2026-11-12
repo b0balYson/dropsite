@@ -27,7 +27,7 @@ func tooLarge(limit int64) error {
 // deploy streams the multipart "archive" part straight into the service,
 // which spools it to a temporary file and enforces the size limit.
 func (a *api) deploy(w http.ResponseWriter, r *http.Request) error {
-	limit, err := a.svc.UploadLimit(r.Context())
+	limit, err := a.svc.UploadLimit(r.Context(), actorFrom(r.Context()), r.PathValue("ref"))
 	if err != nil {
 		return err
 	}

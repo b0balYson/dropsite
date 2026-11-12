@@ -73,6 +73,11 @@ type Service struct {
 	siteLocks    keyedMutex
 	settingsMu   sync.RWMutex
 	settingsData *effectiveSettings
+
+	visitorIPLimit   *ratelimit.Window
+	visitorSiteLimit *ratelimit.Window
+	visitorMu        sync.Mutex
+	visitorKeySet    *visitorKeySet
 }
 
 // New builds a Service.
@@ -102,6 +107,9 @@ func New(d Deps) *Service {
 		accountLimit: ratelimit.New(FailedLoginsPerAccount, FailedLoginsWindow).WithClock(now),
 		tokenLimit:   ratelimit.New(FailedTokensPerIP, FailedLoginsWindow).WithClock(now),
 		hasher:       newPasswordHasher(),
+
+		visitorIPLimit:   ratelimit.New(VisitorFailuresPerIP, VisitorFailuresWindow).WithClock(now),
+		visitorSiteLimit: ratelimit.New(VisitorFailuresPerSite, VisitorFailuresWindow).WithClock(now),
 	}
 }
 

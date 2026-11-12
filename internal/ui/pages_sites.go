@@ -113,7 +113,7 @@ func (s *server) loadSite(r *http.Request, rc *reqCtx) (siteData, error) {
 	if err != nil {
 		return siteData{}, err
 	}
-	lim, err := s.svc.Limits(r.Context())
+	lim, err := s.svc.LimitsFor(r.Context(), v.OwnerID)
 	if err != nil {
 		return siteData{}, err
 	}

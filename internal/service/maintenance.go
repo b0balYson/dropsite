@@ -26,6 +26,13 @@ func (s *Service) Start(ctx context.Context) error {
 	if err := s.CleanUploads(); err != nil {
 		return err
 	}
+	if _, err := s.visitorKeys(ctx); err != nil {
+		return err
+	}
+	// Expire first: reconciliation would otherwise relink expired sites.
+	if err := s.ExpireSites(ctx); err != nil {
+		return err
+	}
 	return s.Reconcile(ctx)
 }
 
@@ -46,7 +53,8 @@ func (s *Service) Reconcile(ctx context.Context) error {
 	s.log.Info("sites volume reconciled",
 		"removed_temp", len(report.RemovedTemp), "removed_releases", len(report.RemovedReleases),
 		"removed_sites", len(report.RemovedSites), "linked_hosts", len(report.LinkedHosts),
-		"unlinked_hosts", len(report.UnlinkedHosts), "fixed_current", report.FixedCurrent)
+		"unlinked_hosts", len(report.UnlinkedHosts), "fixed_current", report.FixedCurrent,
+		"set_flags", len(report.SetFlags), "cleared_flags", len(report.ClearedFlags))
 	if len(report.MissingCurrent) > 0 {
 		s.log.Error("current release directory is missing; these sites serve nothing until redeployed",
 			"sites", report.MissingCurrent)
@@ -60,6 +68,7 @@ func toStorageLayout(in []store.SiteLayout) []storage.SiteLayout {
 		out = append(out, storage.SiteLayout{
 			SiteID: l.SiteID, CurrentDeployID: l.CurrentDeployID,
 			Hostnames: l.Hostnames, ReadyDeployIDs: l.ReadyDeployIDs,
+			Noindex: l.Noindex, Protected: l.Protected,
 		})
 	}
 	return out
@@ -132,9 +141,9 @@ func (s *Service) ListAuditActions(ctx context.Context, a Actor) ([]string, erro
 	return s.repo.ListAuditActions(ctx)
 }
 
-// Me returns the actor and effective limits.
+// Me returns the actor and their effective limits.
 func (s *Service) Me(ctx context.Context, a Actor) (domain.User, domain.Limits, int, error) {
-	lim, err := s.Limits(ctx)
+	lim, err := s.LimitsFor(ctx, a.User.ID)
 	if err != nil {
 		return domain.User{}, domain.Limits{}, 0, err
 	}

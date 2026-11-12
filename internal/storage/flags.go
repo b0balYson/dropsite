@@ -83,7 +83,7 @@ func (f *FS) ensureFlag(flag HostFlag, hostname string) (bool, error) {
 		return false, fmt.Errorf("storage: random flag name: %w", err)
 	}
 	tmp := filepath.Join(f.flagDir(flag), tempFlagPrefix+hex.EncodeToString(rnd[:]))
-	fh, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, flagPerm)
+	fh, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, flagPerm) //nolint:gosec // name built from validated parts under the storage root
 	if err != nil {
 		return false, fmt.Errorf("storage: create flag: %w", err)
 	}
