@@ -60,9 +60,9 @@ const (
 	// DefaultAltchaMaxNumber bounds the secret counter of the base level; the
 	// expected work is about 0.75 × max × cost PBKDF2 iterations: a few
 	// seconds on a phone (control measurement in design.md).
-	DefaultAltchaMaxNumber = 5000
+	DefaultAltchaMaxNumber = 100000
 	MinAltchaMaxNumber     = 100
-	MaxAltchaMaxNumber     = 1000000
+	MaxAltchaMaxNumber     = 10000000
 	altchaAlgorithm        = "PBKDF2/SHA-256"
 	maxAltchaPayload       = 8 << 10
 )

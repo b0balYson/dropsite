@@ -1058,3 +1058,6 @@ input.input, select.input { height: 2.75rem; }
 @media (min-width: 60rem) {
   .forms-settings__grid { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); }
 }
+.channel-add__title + * { margin-top: var(--s-3); }
+.forms-settings { margin-top: var(--s-8); }
+.forms-settings .lede { margin-bottom: var(--s-5); }

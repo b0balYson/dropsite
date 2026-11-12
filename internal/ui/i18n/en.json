@@ -373,7 +373,7 @@
   "forms.admin.security.tls": "TLS (port 465)",
   "forms.admin.security.none": "No encryption (local relay)",
   "forms.admin.retention.hint": "Older submissions are deleted automatically.",
-  "forms.admin.altcha.hint": "Base Altcha difficulty: at 5000 a visitor waits a few seconds. Repeated checks from one IP within 10 minutes get 4 times harder each.",
+  "forms.admin.altcha.hint": "Base Altcha difficulty: at the default 100000 a visitor waits under a second on a computer and a few seconds on a phone. Repeated checks from one IP within 10 minutes get 4 times harder each.",
   "unit.days": "days",
   "settings.forms.telegram_token": "Bot token",
   "settings.forms.smtp_host": "SMTP server",
