@@ -23,19 +23,25 @@ type ProgressFunc func(sent int64)
 func (c *Client) Deploy(ctx context.Context, ref string, archive io.Reader, progress ProgressFunc) (*DeployResult, error) {
 	pr, pw := io.Pipe()
 	mw := multipart.NewWriter(pw)
-	go func() { _ = pw.CloseWithError(writeMultipart(mw, archive, progress)) }()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_ = pw.CloseWithError(writeMultipart(mw, archive, progress))
+	}()
+	// Unblock and await the writer even if the server answered before reading
+	// everything, so archive is no longer in use once Deploy returns.
+	defer func() {
+		_ = pr.CloseWithError(io.ErrClosedPipe)
+		<-done
+	}()
 
-	req, err := c.newRequest(ctx, http.MethodPost, refPath("/sites", ref)+"/deploys", nil, pr)
+	req, err := c.newRequest(ctx, http.MethodPost, sitePath(ref)+"/deploys", nil, pr)
 	if err != nil {
-		_ = pr.CloseWithError(err)
 		return nil, err
 	}
 	req.Header.Set("Content-Type", mw.FormDataContentType())
 	var out DeployResult
-	err = c.send(req, &out)
-	// Unblock the writer goroutine if the server answered before reading everything.
-	_ = pr.CloseWithError(io.ErrClosedPipe)
-	if err != nil {
+	if err := c.send(req, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
@@ -46,7 +52,7 @@ func writeMultipart(mw *multipart.Writer, archive io.Reader, progress ProgressFu
 	if err != nil {
 		return fmt.Errorf("start multipart: %w", err)
 	}
-	var dst io.Writer = part
+	dst := part
 	if progress != nil {
 		dst = &progressWriter{w: part, fn: progress}
 	}

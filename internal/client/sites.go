@@ -35,7 +35,7 @@ func (c *Client) CreateSite(ctx context.Context, r CreateSiteRequest) (*Site, er
 // GetSite returns a site by ID or slug.
 func (c *Client) GetSite(ctx context.Context, ref string) (*Site, error) {
 	var out Site
-	if err := c.doJSON(ctx, http.MethodGet, refPath("/sites", ref), nil, nil, &out); err != nil {
+	if err := c.doJSON(ctx, http.MethodGet, sitePath(ref), nil, nil, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
@@ -44,7 +44,7 @@ func (c *Client) GetSite(ctx context.Context, ref string) (*Site, error) {
 // UpdateSite changes a site's title and/or slug.
 func (c *Client) UpdateSite(ctx context.Context, ref string, r UpdateSiteRequest) (*Site, error) {
 	var out Site
-	if err := c.doJSON(ctx, http.MethodPatch, refPath("/sites", ref), nil, r, &out); err != nil {
+	if err := c.doJSON(ctx, http.MethodPatch, sitePath(ref), nil, r, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
@@ -52,13 +52,13 @@ func (c *Client) UpdateSite(ctx context.Context, ref string, r UpdateSiteRequest
 
 // DeleteSite deletes a site and all its releases.
 func (c *Client) DeleteSite(ctx context.Context, ref string) error {
-	return c.doJSON(ctx, http.MethodDelete, refPath("/sites", ref), nil, nil, nil)
+	return c.doJSON(ctx, http.MethodDelete, sitePath(ref), nil, nil, nil)
 }
 
 // ListDeploys returns the site's releases, newest first.
 func (c *Client) ListDeploys(ctx context.Context, ref string) (*List[Deploy], error) {
 	var out List[Deploy]
-	if err := c.doJSON(ctx, http.MethodGet, refPath("/sites", ref)+"/deploys", nil, nil, &out); err != nil {
+	if err := c.doJSON(ctx, http.MethodGet, sitePath(ref)+"/deploys", nil, nil, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
@@ -71,7 +71,7 @@ type rollbackRequest struct {
 // Rollback switches the site to deployID, or to the previous release when empty.
 func (c *Client) Rollback(ctx context.Context, ref, deployID string) (*DeployResult, error) {
 	var out DeployResult
-	path := refPath("/sites", ref) + "/rollback"
+	path := sitePath(ref) + "/rollback"
 	if err := c.doJSON(ctx, http.MethodPost, path, nil, rollbackRequest{DeployID: deployID}, &out); err != nil {
 		return nil, err
 	}

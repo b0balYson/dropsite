@@ -2,17 +2,14 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"os"
+	"os/signal"
 )
 
 func main() {
-	if err := run(os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, "pushpage:", err)
-		os.Exit(1)
-	}
-}
-
-func run(_ []string) error {
-	return nil
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	code := newApp().run(ctx, os.Args[1:])
+	stop()
+	os.Exit(code)
 }

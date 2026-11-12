@@ -149,7 +149,8 @@ func (c *Client) networkError(req *http.Request, err error) error {
 	return fmt.Errorf("%s %s: cannot reach %s: %w", req.Method, req.URL.Path, c.base, err)
 }
 
-func refPath(prefix, ref string) string { return prefix + "/" + url.PathEscape(ref) }
+// sitePath is the URL path of one site (ref is an ID or slug).
+func sitePath(ref string) string { return "/sites/" + url.PathEscape(ref) }
 
 func listQuery(o ListOptions) url.Values {
 	q := url.Values{}
