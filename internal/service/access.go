@@ -118,6 +118,8 @@ func (s *Service) applyAccess(ctx context.Context, a Actor, siteID string, p acc
 	return nil
 }
 
+// hostnamesOf lists every name the site is served under: its hostnames and,
+// in wildcard mode, the previews of its releases.
 func (s *Service) hostnamesOf(ctx context.Context, siteID string) ([]string, error) {
 	hs, err := s.repo.ListHostnames(ctx, siteID)
 	if err != nil {
@@ -127,7 +129,11 @@ func (s *Service) hostnamesOf(ctx context.Context, siteID string) ([]string, err
 	for _, h := range hs {
 		out = append(out, h.Hostname)
 	}
-	return out, nil
+	previews, err := s.previewHosts(ctx, siteID)
+	if err != nil {
+		return nil, err
+	}
+	return append(out, previews...), nil
 }
 
 func (s *Service) setFlag(flag storage.HostFlag, hosts []string) error {
@@ -231,6 +237,17 @@ func siteFlags(site domain.Site) (on, off []storage.HostFlag) {
 // cleared after it, so the name is never served with fewer restrictions than
 // the site has.
 func (s *Service) linkHost(ctx context.Context, siteID, hostname string) error {
+	return s.withHostFlags(ctx, siteID, hostname, func() error {
+		if err := s.files.LinkHost(hostname, siteID); err != nil {
+			return fmt.Errorf("link host: %w", err)
+		}
+		return nil
+	})
+}
+
+// withHostFlags runs link (which makes hostname serve the site) between
+// setting the markers the site needs and clearing the ones it does not.
+func (s *Service) withHostFlags(ctx context.Context, siteID, hostname string, link func() error) error {
 	site, err := s.repo.GetSite(ctx, siteID)
 	if err != nil {
 		return err
@@ -241,8 +258,8 @@ func (s *Service) linkHost(ctx context.Context, siteID, hostname string) error {
 			return fmt.Errorf("set %s marker: %w", f, err)
 		}
 	}
-	if err := s.files.LinkHost(hostname, siteID); err != nil {
-		return fmt.Errorf("link host: %w", err)
+	if err := link(); err != nil {
+		return err
 	}
 	for _, f := range off {
 		if err := s.files.ClearHostFlag(f, hostname); err != nil {

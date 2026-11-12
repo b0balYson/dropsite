@@ -143,3 +143,21 @@ func assertStrings(t *testing.T, what string, got, want []string) {
 		}
 	}
 }
+
+func TestReconcileFlagsCoverPreviews(t *testing.T) {
+	f, root := newTestFS(t)
+	makeRelease(t, f, siteA, deploy1, "a1")
+	preview := "p-" + deploy1 + "-" + siteA + ".example.com"
+	desired := []SiteLayout{{
+		SiteID: siteA, CurrentDeployID: ptr(deploy1), Hostnames: []string{hostA}, ReadyDeployIDs: []string{deploy1},
+		Previews: []Preview{{Hostname: preview, DeployID: deploy1}}, Protected: true,
+	}}
+	rep, err := f.Reconcile(context.Background(), desired, Retained{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertStrings(t, "set flags", rep.SetFlags, []string{"protected/" + hostA, "protected/" + preview})
+	if !exists(t, flagPath(root, FlagProtected, preview)) {
+		t.Fatal("preview marker missing")
+	}
+}

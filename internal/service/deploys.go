@@ -131,6 +131,7 @@ func (s *Service) publish(ctx context.Context, a Actor, site domain.Site, upload
 		// next start repairs the link.
 		return domain.Deploy{}, fmt.Errorf("activate release: %w", err)
 	}
+	s.linkPreview(ctx, site.ID, id)
 	return d, nil
 }
 
@@ -176,6 +177,10 @@ func (s *Service) prune(ctx context.Context, siteID string, keep int) {
 		return
 	}
 	for _, id := range drop {
+		// The preview goes first so it never points at a deleted directory.
+		if err := s.unlinkPreview(ctx, siteID, id); err != nil {
+			s.log.Error("prune: unlink preview", "site", siteID, "deploy", id, "err", err)
+		}
 		if err := s.files.DeleteRelease(siteID, id); err != nil {
 			s.log.Error("prune: delete files", "site", siteID, "deploy", id, "err", err)
 		}

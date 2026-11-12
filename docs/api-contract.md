@@ -28,7 +28,7 @@ Base URL: `https://<API_HOST>/api/v1`. Authentication: `Authorization: Bearer <t
 User     {id, email, role, status, created_at}
 Limits   {max_site_bytes, max_file_bytes, max_files, max_sites_per_user, keep_releases}
 Hostname {hostname, kind}                       kind: default | slug | apex
-Deploy   {id, site_id, source, size_bytes, file_count, status, created_at, created_by, current}
+Deploy   {id, site_id, source, size_bytes, file_count, status, created_at, created_by, current, preview_url|null}
 Site     {id, title, url, urls[], slug|null, hostnames[], owner_id, created_at, updated_at, current_deploy: Deploy|null,
           noindex, protected, expires_at|null}
 SiteItem {id, title, url, urls[], slug|null, owner_id, owner_email, last_deploy_at|null, size_bytes, created_at, updated_at,
@@ -75,6 +75,8 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 `expires_in_days` accepts 1–3650; omitted means the token never expires. In `GET /admin/audit`, `from` and `to` accept RFC 3339 or `YYYY-MM-DD`; `from` is inclusive, an RFC 3339 `to` is exclusive and a date `to` includes the whole day. `PATCH /admin/users/{id}` with `blocked` returns only `{user}`; the invite fields appear only with `reissue_invite`.
 
 The deploy source is `cli` when the request carries `X-Dropsite-Client: cli/<version>`, otherwise `api`. The upload may be at most `max_site_bytes + max_files KiB + 1 MiB`; larger bodies get 413 without being read fully.
+
+`preview_url` is the address that serves exactly this release, `https://p-<deploy id>-<site id>.<BASE_DOMAIN>/` (with `X-Robots-Tag: noindex`). It is set only when the installation runs with `TLS_MODE=wildcard` and the release is `ready`; otherwise it is `null` (see `docs/tls.md`).
 
 ## Site access and limits
 

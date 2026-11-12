@@ -124,7 +124,11 @@ func desiredFlags(desired []SiteLayout) map[HostFlag]map[string]bool {
 		out[flag] = map[string]bool{}
 	}
 	for _, s := range desired {
-		for _, h := range s.Hostnames {
+		hosts := append([]string(nil), s.Hostnames...)
+		for _, p := range s.Previews {
+			hosts = append(hosts, p.Hostname)
+		}
+		for _, h := range hosts {
 			if s.Noindex {
 				out[FlagNoindex][h] = true
 			}

@@ -121,7 +121,11 @@ func (s *Service) siteByHost(ctx context.Context, host string) (domain.Site, err
 	if !domain.IsValidHostname(host) {
 		return domain.Site{}, domain.ErrNotFound
 	}
-	return s.repo.FindSiteByHostname(ctx, host)
+	site, err := s.repo.FindSiteByHostname(ctx, host)
+	if errors.Is(err, domain.ErrNotFound) {
+		return s.siteOfPreview(ctx, host)
+	}
+	return site, err
 }
 
 // CheckVisitorAccess decides whether a request to host carrying the given

@@ -44,6 +44,8 @@ type Deploy struct {
 	CreatedAt time.Time `json:"created_at"`
 	CreatedBy string    `json:"created_by"`
 	Current   bool      `json:"current"`
+	// PreviewURL is set only in wildcard TLS mode for ready releases.
+	PreviewURL *string `json:"preview_url"`
 }
 
 // Site is the full site object.

@@ -73,6 +73,9 @@ func TestRestoreLinkWhitelist(t *testing.T) {
 		{"sites/" + testSite + "/current", "../../empty", true},
 		{"by-host/a.pp.test", "../sites/" + testSite + "/current", true},
 		{"by-host/xn--80ak6aa92e.pp.test", "../sites/" + testSite + "/current", true},
+		{"by-host/p-" + testDeploy + "-" + testSite + ".pp.test", "../sites/" + testSite + "/releases/" + testDeploy, true},
+		{"by-host/a.pp.test", "../sites/" + testSite + "/releases/" + testDeploy + "/..", false},
+		{"by-host/a.pp.test", "../sites/" + testSite + "/releases/../current", false},
 
 		{"a/b/c", "../..", false},
 		{"sites/" + testSite + "/current", "releases/../../../x", false},

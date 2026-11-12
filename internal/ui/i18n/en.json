@@ -93,6 +93,8 @@
   "history.pruned": "removed",
   "history.failed": "failed",
   "history.files": "files: {n}",
+  "history.preview": "preview",
+  "history.preview.label": "Open release {id} at its own address",
   "history.rollback": "Roll back",
   "history.pruned.hint": "files already cleaned up",
   "history.empty": "No releases yet. Upload the first archive and it will appear here.",

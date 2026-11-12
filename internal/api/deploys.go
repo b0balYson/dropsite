@@ -104,7 +104,7 @@ func (a *api) listDeploys(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	writeJSON(w, http.StatusOK, newList(toDeploys(ds, v.Site.CurrentDeployID), len(ds)))
+	writeJSON(w, http.StatusOK, newList(toDeploys(ds, v.Site.CurrentDeployID, a.svc.PreviewURL), len(ds)))
 	return nil
 }
 
