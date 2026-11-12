@@ -93,6 +93,26 @@ func (s *server) setBlocked(w http.ResponseWriter, r *http.Request, rc *reqCtx, 
 	redirect(w, r, "/admin/users")
 }
 
+func (s *server) revokeUserTokens(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
+	id, ok := pathID(r)
+	if !ok {
+		s.notFound(w, r, rc)
+		return
+	}
+	n, err := s.svc.RevokeUserTokens(r.Context(), rc.actor, id)
+	if err != nil {
+		s.fail(w, r, rc, err, "/admin/users")
+		return
+	}
+	u, err := s.svc.GetUser(r.Context(), rc.actor, id)
+	if err != nil {
+		s.fail(w, r, rc, err, "/admin/users")
+		return
+	}
+	s.setFlash(w, r, flashOK, rc.loc.T("users.tokens_revoked", "email", u.Email, "count", strconv.Itoa(n)))
+	redirect(w, r, "/admin/users")
+}
+
 func pathID(r *http.Request) (int64, bool) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	return id, err == nil && id > 0

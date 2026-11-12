@@ -98,6 +98,7 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /admin/users/{id}/block", s.admin(s.blockUser))
 	mux.HandleFunc("POST /admin/users/{id}/unblock", s.admin(s.unblockUser))
 	mux.HandleFunc("POST /admin/users/{id}/invite", s.admin(s.reinviteUser))
+	mux.HandleFunc("POST /admin/users/{id}/revoke-tokens", s.admin(s.revokeUserTokens))
 	mux.HandleFunc("GET /admin/sites", s.admin(s.allSitesPage))
 	mux.HandleFunc("POST /admin/sites/{ref}/apex", s.admin(s.setApex))
 	mux.HandleFunc("POST /admin/sites/{ref}/apex/clear", s.admin(s.clearApex))

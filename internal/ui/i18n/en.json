@@ -13,14 +13,12 @@
   "nav.breadcrumbs": "Breadcrumbs",
   "foot.note": "Sites are published on your own servers. This interface is reachable only from the internal network.",
   "pager.label": "Pages",
-
   "error.notfound.title": "Page not found",
   "error.notfound.text": "This page does not exist or you have no access to it. Check the address or go back to your sites.",
   "error.forbidden.title": "Request rejected",
   "error.forbidden.text": "The form has expired or was sent from another site. Reload the page and try again — nothing was changed.",
   "error.generic.title": "That did not work",
   "error.home": "Back to my sites",
-
   "login.title": "Sign in",
   "login.heading": "Publish a site in a minute",
   "login.lede": "Drop an archive with finished pages and get a link you can send to colleagues and clients.",
@@ -28,7 +26,6 @@
   "login.password": "Password",
   "login.submit": "Sign in",
   "login.forgot": "Forgot your password? Ask an administrator for a new sign-in link.",
-
   "invite.title": "Set your password",
   "invite.heading": "Welcome",
   "invite.lede": "Choose a password and you will be signed in right away.",
@@ -40,7 +37,6 @@
   "invite.password2": "Repeat the password",
   "invite.submit": "Save and sign in",
   "invite.mismatch": "The passwords do not match. Type the same password in both fields.",
-
   "sites.title": "My sites",
   "sites.count": "Sites: {count} of {limit}",
   "sites.create": "Create site",
@@ -54,7 +50,6 @@
   "sites.empty.step1": "Create a site — it gets a permanent address at once.",
   "sites.empty.step2": "Drop a zip archive with an index.html file onto its page.",
   "sites.empty.step3": "Share the link. New versions are published at the same address.",
-
   "site.field.title": "Title",
   "site.field.title.placeholder": "For example, Spring campaign landing",
   "site.field.slug": "Short address",
@@ -76,7 +71,6 @@
   "site.delete.text": "The site's addresses stop working immediately and become free for others. This cannot be undone.",
   "site.delete.confirm": "To confirm, type the title “{title}” or the site address",
   "site.delete.submit": "Delete permanently",
-
   "deploy.title": "Publish a new version",
   "deploy.drop": "Drop an archive here",
   "deploy.hint": "ZIP or TAR.GZ up to {size} with index.html at the root. The previous version stays in the history.",
@@ -94,7 +88,6 @@
   "deploy.howto.1": "Select all the site's files (not the folder that holds them) and compress them: on macOS use Compress, on Windows Send to → Compressed (zipped) folder.",
   "deploy.howto.2": "The home page must be called index.html. If the whole site sits in one folder inside the archive, that works too.",
   "deploy.howto.3": "Shortcuts and symbolic links inside the archive are not supported; system files such as .DS_Store are skipped.",
-
   "history.title": "Release history",
   "history.current": "current",
   "history.pruned": "removed",
@@ -107,7 +100,6 @@
   "source.api": "via API",
   "source.cli": "via CLI",
   "source.mcp": "via AI agent",
-
   "connect.eyebrow": "Publishing from an AI assistant",
   "connect.title": "Connect AI",
   "connect.lede": "Set it up once, then publish sites by saying “publish this site” in Claude Code or Codex.",
@@ -149,7 +141,6 @@
   "copy.button": "Copy",
   "copy.done": "Copied",
   "table.actions": "Actions",
-
   "users.title": "Users",
   "users.invite.title": "Link for {email}",
   "users.invite.text": "Send it to the user so they can set a password. The link works once and is valid until {expires}. It cannot be shown again — issue a new one if needed.",
@@ -177,7 +168,6 @@
   "search.label": "Search",
   "search.submit": "Search",
   "search.reset": "Reset",
-
   "allsites.title": "All sites",
   "allsites.total": "{n} total",
   "allsites.search": "Address, title or owner email",
@@ -197,7 +187,6 @@
   "allsites.transfer.done": "Site “{title}” now belongs to {email}.",
   "allsites.nomatch": "Nothing matches your search.",
   "allsites.empty": "No sites yet.",
-
   "audit.title": "Audit log",
   "audit.total": "{n} entries",
   "audit.user": "User",
@@ -229,7 +218,6 @@
   "audit.action.deploy.create": "Release published",
   "audit.action.deploy.rollback": "Release rolled back",
   "audit.action.settings.update": "Settings changed",
-
   "settings.title": "Settings",
   "settings.lede": "Limits for every user. Changes apply immediately, without a restart.",
   "settings.limits": "Limits",
@@ -255,13 +243,11 @@
   "settings.reserved.env": "From the server configuration (RESERVED_SLUGS)",
   "settings.notnumber": "“{field}” must be a number.",
   "settings.saved": "Settings saved and already in effect.",
-
   "unit.b": "B",
   "unit.kb": "KB",
   "unit.mb": "MB",
   "unit.gb": "GB",
   "unit.pcs": "items",
-
   "month.1": "Jan",
   "month.2": "Feb",
   "month.3": "Mar",
@@ -274,7 +260,6 @@
   "month.10": "Oct",
   "month.11": "Nov",
   "month.12": "Dec",
-
   "err.internal": "Something went wrong on the server. Try again in a minute; if it keeps happening, tell your administrator.",
   "err.not_found": "Not found: it does not exist or you have no access to it.",
   "err.unauthorized": "Please sign in again.",
@@ -307,5 +292,8 @@
   "err.archive_special_file": "The archive contains a special system file “{path}”. Keep only regular files and folders.",
   "err.archive_bad_name": "A file name in the archive is not allowed: “{path}”. Rename the file (no control characters or duplicates) and create the archive again.",
   "err.archive_no_index": "There is no index.html at the root of the archive — it is the site's home page. Put index.html at the root of the archive (not in a subfolder) and upload again. The site still shows the previous version.",
-  "err.archive_empty": "The archive is empty. Add the site's files to it, including index.html."
+  "err.archive_empty": "The archive is empty. Add the site's files to it, including index.html.",
+  "users.revoke_tokens": "Revoke keys",
+  "users.tokens_revoked": "Revoked {count} access keys of {email}. Tools and assistants can no longer publish on their behalf.",
+  "audit.action.user.tokens_revoke": "All user keys revoked"
 }

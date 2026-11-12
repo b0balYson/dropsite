@@ -91,6 +91,16 @@ func TestAdminUsers(t *testing.T) {
 	wantStatus(t, h.submit("/admin/users", "/admin/users/0/block", nil), http.StatusNotFound)
 	wantStatus(t, h.follow(h.submit("/admin/users", "/admin/users/9999/block", nil)), http.StatusNotFound)
 
+	carol := h.env.User("carol@pp.test")
+	tok := h.env.Token(carol, "laptop")
+	cid := strconv.FormatInt(carol.User.ID, 10)
+	rev := h.follow(h.submit("/admin/users", "/admin/users/"+cid+"/revoke-tokens", nil))
+	wantContains(t, rev.body, "У carol@pp.test отозвано ключей доступа: 1")
+	if _, err := h.env.Svc.AuthenticateToken(context.Background(), tok, "10.9.9.9"); err == nil {
+		t.Fatal("revoked token still works")
+	}
+	wantStatus(t, h.follow(h.submit("/admin/users", "/admin/users/9999/revoke-tokens", nil)), http.StatusNotFound)
+
 	search := h.get("/admin/users?q=bob")
 	wantContains(t, search.body, "bob@pp.test")
 	wantNotContains(t, search.body, `addr-break">admin@pp.test</td>`)
