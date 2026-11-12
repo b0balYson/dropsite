@@ -210,6 +210,10 @@ var proxyDropRequest = map[string]bool{
 	"Referer": true, "Connection": true, "Keep-Alive": true, "Te": true, "Trailer": true,
 	"Transfer-Encoding": true, "Upgrade": true, "Proxy-Connection": true, "Forwarded": true,
 	"X-Real-Ip": true, "Accept-Encoding": true, "Content-Length": true, "Expect": true, "Via": true,
+	// Upstreams that honour these would run another method or path than
+	// the endpoint allows.
+	"X-Http-Method-Override": true, "X-Http-Method": true, "X-Method-Override": true, "X-Original-Method": true,
+	"X-Original-Url": true, "X-Rewrite-Url": true,
 }
 
 // proxyPassResponse lists upstream headers returned to the visitor.

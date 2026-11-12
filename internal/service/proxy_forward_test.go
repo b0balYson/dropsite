@@ -354,3 +354,28 @@ func TestProxyTransportRefusesInternalAddresses(t *testing.T) {
 		t.Fatalf("classified as %v", got)
 	}
 }
+
+// Override headers would let a visitor run a method or reach a path the
+// endpoint does not allow on upstreams that honour them.
+func TestProxyDropsMethodAndURLOverrides(t *testing.T) {
+	r := newProxyRig(t)
+	cfg := domain.ProxyConfig{UpstreamURL: "https://api.example.com/v1", Auth: domain.ProxyAuthBearer,
+		Methods: []string{"POST"}, Paths: []string{"/chat"}, Enabled: true}
+	r.endpoint("ai", cfg, "sk-secret-1")
+	overrides := []string{"X-Http-Method-Override", "X-Http-Method", "X-Method-Override", "X-Original-Method",
+		"X-Original-Url", "X-Rewrite-Url"}
+	hdr := http.Header{}
+	for _, h := range overrides {
+		hdr.Set(h, "DELETE")
+	}
+	if _, _, err := r.call(ProxyCall{Name: "ai", Path: "/chat", Header: hdr, Origin: "https://" + r.host,
+		FetchSite: "same-origin", Body: strings.NewReader(`{}`)}); err != nil {
+		t.Fatal(err)
+	}
+	got := r.up.last(t)
+	for _, h := range overrides {
+		if got.Header.Get(h) != "" {
+			t.Errorf("visitor header %s forwarded", h)
+		}
+	}
+}

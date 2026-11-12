@@ -35,7 +35,9 @@ var proxyHeadersReserved = map[string]bool{
 	"host": true, "content-length": true, "content-type": true, "transfer-encoding": true, "connection": true,
 	"keep-alive": true, "te": true, "trailer": true, "upgrade": true, "proxy-connection": true, "cookie": true,
 	"accept-encoding": true, "origin": true, "referer": true, "forwarded": true, "proxy-authorization": true,
-	"authorization": true, "user-agent": true, "expect": true,
+	"authorization": true, "user-agent": true, "expect": true, "via": true, "x-real-ip": true,
+	"x-http-method-override": true, "x-http-method": true, "x-method-override": true, "x-original-method": true,
+	"x-original-url": true, "x-rewrite-url": true,
 }
 
 // proxySecretParams are query parameter names that look like a credential;
