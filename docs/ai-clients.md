@@ -4,7 +4,7 @@ dropsite is meant to be used from a chat: the user connects it once and then ask
 
 | Assistant | How it works with sites | How it is connected |
 | --- | --- | --- |
-| ChatGPT, claude.ai, Claude Desktop, Claude Code (main path) | remote MCP `https://api.<BASE_DOMAIN>/mcp`: every chat tool (publish, change files, forms, statistics, access, domains, rollback) | connector + OAuth with a connect code |
+| ChatGPT, claude.ai, Claude Desktop, Claude Code (main path) | remote MCP `https://api.<BASE_DOMAIN>/mcp`: every chat tool (publish, change files, forms, site data, statistics, access, domains, rollback) | connector + OAuth with a connect code |
 | Claude Code, Codex, Cursor on a computer (optional) | `dropsite-publish` skill → `dropsite deploy <folder>` | one command (`dropsite setup`) |
 | Claude Desktop on a computer (optional) | local MCP server `dropsite mcp`: the same tools, with `deploy_folder` instead of `deploy_files` | one command (`dropsite setup`) |
 
@@ -46,7 +46,7 @@ Chats differ in which MCP features reach the model (checked November 2026):
 So dropsite delivers its rules three ways, from one source:
 
 1. **Server instructions** sent on `initialize` by both servers: the essentials in the first paragraph (plain language, give the link, confirm before deleting, call `get_guide`), then short rules for every task.
-2. **`get_guide`**, a read-only tool that works even before the user has connected. `topic` is one of `overview`, `create`, `update`, `large_sites`, `assets`, `forms`, `stats`, `addresses`, `protection`, `rollback`, `account`, `errors`, or `all` (default).
+2. **`get_guide`**, a read-only tool that works even before the user has connected. `topic` is one of `overview`, `create`, `update`, `large_sites`, `assets`, `forms`, `data`, `stats`, `addresses`, `protection`, `rollback`, `account`, `errors`, or `all` (default).
 3. **Tool descriptions** say when to call each tool and what to tell the user, and point to `get_guide`.
 
 The guide lives in `skills/guide/*.md` and is embedded into both binaries. Its sections on self-contained sites and on forms are also part of the `dropsite-publish` skill and the Codex snippet: `skills/dropsite-publish/SKILL.md` and `skills/codex/AGENTS.md` are generated from `skills/parts/*.md` and those sections. After editing any of them run `go test ./skills -update`; the tests fail while the files are out of date.
@@ -97,6 +97,8 @@ Because the assistant can be steered by content it reads, `deploy_folder` is gua
 The remote server offers every chat tool. A whole small site is published in one call with `deploy_files` (instead of the local `deploy_folder`): `files` is an array of `{path, content, encoding}` (`utf8` or `base64`), at most 16 MB decoded in total; omit `site` to create a new site. Larger sites go up in an upload session where the server offers one; otherwise the error recommends the web interface, the CLI or Claude Desktop. Releases published this way have the source `mcp`.
 
 Form tools (details in [forms.md](forms.md#from-a-chat-assistant)): `get_form_settings`, `set_form_settings`, `list_submissions`, `export_submissions`, `list_channels`, `add_channel`, `verify_channel`, `set_channel_enabled`, `delete_channel`, `rotate_channel_secret`.
+
+Site data tools (collections that pages load from `/_dropsite/data/<name>`, see [api-contract.md](api-contract.md)): `list_collections` (with the public address and a ready loading snippet), `save_collection` (creates or changes), `delete_collection` (with `confirm`), `list_documents`, `save_documents` (`replace` swaps the whole content), `delete_documents`, `moderate_documents` (`approve` or `reject`). Writes are live at once without a new release; rights, limits and errors are those of the HTTP API.
 
 Both servers also cover the account and site settings of the web interface, so a user can manage everything by asking in plain words:
 

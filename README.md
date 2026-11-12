@@ -136,7 +136,7 @@ A site can also open on the owner's domain, such as `promo.example.com`: add it 
 | Custom 404 | `404.html` at the root is served with status 404 |
 | Single-page apps | `200.html` at the root is served with status 200 for any unknown path |
 | Hidden files | any path segment starting with a dot is 404, except `/.well-known/` |
-| Reserved | `/_form/` and `/_dropsite/` belong to the platform (`/_dropsite/login` is the password page of protected sites) |
+| Reserved | `/_form/` and `/_dropsite/` belong to the platform (`/_dropsite/login` is the password page of protected sites, `/_dropsite/data/` serves site data) |
 | Caching | HTML `no-cache`; other files `public, max-age=3600` |
 
 ### Access: search engines, password, lifetime
@@ -166,6 +166,10 @@ Any published site can receive form submissions without a third-party service: p
 Every submission is stored first and then delivered in the background, with retries, to the channels the site owner adds on the site screen: a Telegram chat (one bot per installation, its token is set by an administrator), an e-mail address (SMTP set by an administrator) or an HTTPS webhook signed with HMAC-SHA256. Spam protection: the `_hp` honeypot, an optional fill-time check, rate limits per IP and per site, 64 KB body limit and, when the owner turns it on, a self-hosted [Altcha](https://altcha.org) proof of work whose difficulty grows for repeated attempts from one IP. Submissions are kept 90 days by default, can be browsed on the site screen and exported to CSV. Secrets (bot token, SMTP password, webhook secrets) are stored encrypted with `state/secrets.key`. Details: [docs/forms.md](docs/forms.md).
 
 From ChatGPT or claude.ai the owner manages the same in plain words ("show the latest submissions", "send submissions to Telegram", "export this week's submissions"): the MCP servers (the remote one and the local `dropsite mcp` of Claude Desktop) have tools for form settings, submissions with filters, a capped CSV export and delivery channels; confirmation codes and the Telegram link still go through the user.
+
+## Site data
+
+A site can keep small JSON data in collections (a menu with prices, a catalog, a schedule, reviews) that its pages load with `fetch('/_dropsite/data/<name>')`. The owner changes documents from the chat ("change the cappuccino price to 250"), the web interface (site screen, "Data") or the API, and the change is live at once: no new release, and rollbacks do not touch the data. A `public` collection is written only by the owner; a `moderated` one accepts visitor proposals with `POST /_dropsite/data/<name>` (JSON checked against the collection's JSON Schema, with the same protection as forms: Origin, rate limits, honeypot, Altcha by the site flag), and only documents the owner approved are shown. On a password-protected site the data is served only after sign-in. Limits: 20 collections per site, 5000 documents per collection, 16 KB per document. No server code runs: the pages render the data themselves and keep their HTML as fallback when it cannot be loaded.
 
 ## Visit statistics and analytics counters
 
