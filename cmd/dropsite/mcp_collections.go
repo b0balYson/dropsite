@@ -63,7 +63,8 @@ func (b localBackend) CreateCollection(ctx context.Context, ref string, in mcp.C
 	if err != nil {
 		return mcp.Collection{}, err
 	}
-	c, err := b.c.CreateCollection(ctx, ref, client.CollectionCreate{Name: in.Name, Title: in.Title, Mode: in.Mode, Schema: schema})
+	c, err := b.c.CreateCollection(ctx, ref, client.CollectionCreate{Name: in.Name, Title: in.Title, Mode: in.Mode, Schema: schema,
+		Template: in.Template, WithSamples: in.WithSamples})
 	if err != nil {
 		return mcp.Collection{}, collectionsError(err)
 	}

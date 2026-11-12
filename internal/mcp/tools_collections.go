@@ -30,6 +30,8 @@ type saveCollectionArgs struct {
 	Mode         string         `json:"mode,omitempty" jsonschema:"public (default: everybody reads, only the owner writes; menus, prices, catalogs, schedules) or moderated (visitors propose documents, only approved ones are shown; reviews, questions); empty keeps the current mode"`
 	Schema       map[string]any `json:"schema,omitempty" jsonschema:"JSON Schema with type object describing the documents; required for moderated collections, where visitors may send only the properties it lists"`
 	RemoveSchema bool           `json:"remove_schema,omitempty" jsonschema:"true to drop the schema of a public collection"`
+	Template     string         `json:"template,omitempty" jsonschema:"only when creating: a template from list_collection_templates (menu, catalog, services, events, team, faq, reviews); it fills the title, mode and schema you leave empty"`
+	WithSamples  bool           `json:"with_samples,omitempty" jsonschema:"only with template: also add the template's sample documents, to replace with the user's real content"`
 }
 
 type deleteCollectionArgs struct {
@@ -82,7 +84,9 @@ func (t tools) registerCollections(s *sdk.Server, o Options) {
 			"public: everybody reads, only the owner writes (menu, prices, catalog, schedule). moderated: " +
 			"visitors propose documents with POST /_dropsite/data/<name>, only approved ones are shown (reviews, " +
 			"questions); it needs a schema listing the fields visitors may send. A new schema applies only to " +
-			"documents written afterwards. At most 20 collections per site."}, t.saveCollection)
+			"documents written afterwards. At most 20 collections per site. For a typical list (menu, catalog, " +
+			"price list, events, team, FAQ, reviews) create it with template, after list_collection_templates."}, t.saveCollection)
+	t.registerCollectionTemplates(s)
 	sdk.AddTool(s, &sdk.Tool{Name: "delete_collection", Annotations: writes("Delete collection", true, true),
 		Description: "Delete a collection with all its documents; pages that load it will show their fallback " +
 			"content. Cannot be undone. Only after the user explicitly confirmed: say which collection and how " +
@@ -159,7 +163,7 @@ fetch('/_dropsite/data/` + name + `')
 func withSnippets(cs []Collection) []Collection {
 	out := make([]Collection, 0, len(cs))
 	for _, c := range cs {
-		c.Snippet = CollectionSnippet(c.Name)
+		c.Snippet = snippetOf(c)
 		out = append(out, c)
 	}
 	return out
@@ -200,15 +204,19 @@ func (t tools) saveCollection(ctx context.Context, req *sdk.CallToolRequest, in 
 		return nil, CollectionSaved{}, err
 	}
 	mode := strings.ToLower(strings.TrimSpace(in.Mode))
+	template := strings.ToLower(strings.TrimSpace(in.Template))
 	if !exists {
-		c, err := b.CreateCollection(ctx, in.Site, CollectionInput{Name: in.Name, Title: in.Title, Mode: mode, Schema: in.Schema})
+		c, err := b.CreateCollection(ctx, in.Site, CollectionInput{Name: in.Name, Title: in.Title, Mode: mode, Schema: in.Schema,
+			Template: template, WithSamples: in.WithSamples})
 		if err != nil {
 			return nil, CollectionSaved{}, err
 		}
-		c.Snippet = CollectionSnippet(c.Name)
-		return nil, CollectionSaved{Collection: c, Created: true, Summary: fmt.Sprintf(
-			"Collection %s created (%s). The site reads it at %s; add documents with save_documents.",
-			c.Name, c.Mode, c.PublicURL)}, nil
+		c.Snippet = snippetOf(c)
+		return nil, CollectionSaved{Collection: c, Created: true, Summary: createdSummary(c, template)}, nil
+	}
+	if template != "" || in.WithSamples {
+		return nil, CollectionSaved{}, fmt.Errorf("collection %s already exists: a template applies only when a collection "+
+			"is created; pass schema to change its schema, or save_documents to add documents", cur.Name)
 	}
 	p := CollectionPatch{Schema: in.Schema, RemoveSchema: in.RemoveSchema}
 	if in.Title != "" {
@@ -221,7 +229,7 @@ func (t tools) saveCollection(ctx context.Context, req *sdk.CallToolRequest, in 
 	if err != nil {
 		return nil, CollectionSaved{}, err
 	}
-	c.Snippet = CollectionSnippet(c.Name)
+	c.Snippet = snippetOf(c)
 	summary := fmt.Sprintf("Collection %s saved (%s).", c.Name, c.Mode)
 	if in.Schema != nil && c.Documents > 0 {
 		summary += fmt.Sprintf(" The new schema applies only to documents written from now on; the %d existing "+

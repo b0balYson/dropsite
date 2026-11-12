@@ -33,9 +33,6 @@ func TestBuiltInSet(t *testing.T) {
 		if err := json.Unmarshal(tpl.Schema, &s); err != nil || s.Type != "object" {
 			t.Errorf("%s: schema %s", tpl.Name, tpl.Schema)
 		}
-		if len(tpl.Fields()) == 0 {
-			t.Errorf("%s: no fields", tpl.Name)
-		}
 	}
 	if _, ok := Get(" Menu "); !ok {
 		t.Error("Get is not case-insensitive")

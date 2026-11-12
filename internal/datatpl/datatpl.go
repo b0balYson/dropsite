@@ -11,7 +11,6 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"sort"
 	"strings"
 )
 
@@ -47,31 +46,6 @@ type Template struct {
 // name. Collection names are [a-z0-9_-], safe in an id and a JS string.
 func (t Template) Snippet(collection string) string {
 	return strings.ReplaceAll(t.snippet, Marker, collection)
-}
-
-// Fields lists the top-level properties of the template schema in a
-// stable order: required ones first.
-func (t Template) Fields() []string {
-	var s struct {
-		Properties map[string]json.RawMessage `json:"properties"`
-		Required   []string                   `json:"required"`
-	}
-	if err := json.Unmarshal(t.Schema, &s); err != nil {
-		return nil
-	}
-	out := append([]string(nil), s.Required...)
-	seen := map[string]bool{}
-	for _, r := range s.Required {
-		seen[r] = true
-	}
-	var rest []string
-	for k := range s.Properties {
-		if !seen[k] {
-			rest = append(rest, k)
-		}
-	}
-	sort.Strings(rest)
-	return append(out, rest...)
 }
 
 var templates = mustLoad()
