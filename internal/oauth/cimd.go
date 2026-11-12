@@ -26,7 +26,13 @@ const (
 	cimdDefaultTTL = 10 * time.Minute
 	cimdMaxTTL     = time.Hour
 	cimdCacheSize  = 512
+	// cimdFailureTTL caches a failed fetch, so repeating a broken client_id
+	// does not trigger new outbound requests.
+	cimdFailureTTL = time.Minute
 )
+
+// errCachedFailure answers a client_id whose last fetch failed recently.
+var errCachedFailure = errors.New("the client metadata document failed to load recently; retry in a minute")
 
 // Resolver resolves host names; *net.Resolver implements it.
 type Resolver interface {
@@ -47,11 +53,17 @@ var nonPublic = []netip.Prefix{
 	netip.MustParsePrefix("240.0.0.0/4"),
 	netip.MustParsePrefix("64:ff9b::/96"),   // NAT64 can reach IPv4 internals
 	netip.MustParsePrefix("64:ff9b:1::/48"), // local-use NAT64
+	netip.MustParsePrefix("192.88.99.0/24"), // 6to4 relay anycast
 	netip.MustParsePrefix("2001:db8::/32"),
 	netip.MustParsePrefix("2002::/16"), // 6to4 embeds IPv4
-	netip.MustParsePrefix("2001::/32"), // Teredo
+	netip.MustParsePrefix("2001::/23"), // IETF protocol assignments, incl. Teredo (2001::/32)
 	netip.MustParsePrefix("100::/64"),
 }
+
+// globalUnicast6 is the only IPv6 range allocated for global unicast; it
+// excludes IPv4-compatible (::/96), site-local (fec0::/10) and every other
+// special or unallocated range at once.
+var globalUnicast6 = netip.MustParsePrefix("2000::/3")
 
 // PublicAddr reports whether a is a public unicast address that a server may
 // connect to on behalf of an untrusted client.
@@ -59,6 +71,9 @@ func PublicAddr(a netip.Addr) bool {
 	a = a.Unmap()
 	if !a.IsValid() || !a.IsGlobalUnicast() || a.IsPrivate() || a.IsLoopback() || a.IsLinkLocalUnicast() ||
 		a.IsMulticast() || a.IsUnspecified() || a.IsInterfaceLocalMulticast() {
+		return false
+	}
+	if a.Is6() && !globalUnicast6.Contains(a) {
 		return false
 	}
 	for _, p := range nonPublic {
@@ -77,18 +92,25 @@ var errNotPublic = errors.New("the client metadata host resolves to a non-public
 type fetcher struct {
 	client *http.Client
 	allow  func(netip.Addr) bool
+	// admit is asked before every outbound fetch with the requesting
+	// browser's address (per-IP limit); nil admits everything.
+	admit func(ip string) error
 
 	mu    sync.Mutex
 	cache map[string]cimdEntry
 	now   func() time.Time
 }
 
+// cimdEntry is a cached document, or a cached failure when failed is set.
 type cimdEntry struct {
 	client  Client
+	failed  bool
 	expires time.Time
 }
 
-func newFetcher(res Resolver, tlsCfg *tls.Config, allow func(netip.Addr) bool) *fetcher {
+// newFetcher builds a fetcher. dialPort replaces port 443 when connecting
+// (tests only; empty in production).
+func newFetcher(res Resolver, tlsCfg *tls.Config, allow func(netip.Addr) bool, dialPort string) *fetcher {
 	if res == nil {
 		res = net.DefaultResolver
 	}
@@ -103,6 +125,12 @@ func newFetcher(res Resolver, tlsCfg *tls.Config, allow func(netip.Addr) bool) *
 			host, port, err := net.SplitHostPort(addr)
 			if err != nil {
 				return nil, err
+			}
+			if port != "443" {
+				return nil, errors.New("client metadata is fetched only from port 443")
+			}
+			if dialPort != "" {
+				port = dialPort
 			}
 			ips, err := res.LookupNetIP(ctx, "ip", host)
 			if err != nil {
@@ -135,11 +163,13 @@ func newFetcher(res Resolver, tlsCfg *tls.Config, allow func(netip.Addr) bool) *
 	return f
 }
 
-// IsMetadataURL reports whether a client_id is a client metadata document URL.
+// IsMetadataURL reports whether a client_id is a client metadata document URL:
+// https on the default port, with a path.
 func IsMetadataURL(clientID string) bool {
 	u, err := url.Parse(clientID)
-	return err == nil && u.Scheme == "https" && u.Host != "" && u.Path != "" && u.Path != "/" &&
-		u.User == nil && u.Fragment == "" && !strings.Contains(u.Path, "/../") && !strings.HasSuffix(u.Path, "/..")
+	return err == nil && u.Scheme == "https" && u.Host != "" && (u.Port() == "" || u.Port() == "443") &&
+		u.Path != "" && u.Path != "/" && u.User == nil && u.Fragment == "" &&
+		!strings.Contains(u.Path, "/../") && !strings.HasSuffix(u.Path, "/..")
 }
 
 type metadataDoc struct {
@@ -148,26 +178,43 @@ type metadataDoc struct {
 	RedirectURIs []string `json:"redirect_uris"`
 }
 
-// get returns the client described by the document at clientID.
-func (f *fetcher) get(ctx context.Context, clientID string) (Client, error) {
+// get returns the client described by the document at clientID, fetched on
+// behalf of the browser at ip. Documents and failures are cached; only a
+// cache miss counts against the per-IP fetch limit.
+func (f *fetcher) get(ctx context.Context, clientID, ip string) (Client, error) {
 	now := f.now()
 	f.mu.Lock()
 	if e, ok := f.cache[clientID]; ok && now.Before(e.expires) {
 		f.mu.Unlock()
+		if e.failed {
+			return Client{}, errCachedFailure
+		}
 		return e.client, nil
 	}
 	f.mu.Unlock()
+	if f.admit != nil {
+		if err := f.admit(ip); err != nil {
+			return Client{}, err
+		}
+	}
 	c, ttl, err := f.fetch(ctx, clientID)
 	if err != nil {
+		if ctx.Err() == nil { // the caller giving up is not the document's fault
+			f.store(clientID, cimdEntry{failed: true, expires: now.Add(cimdFailureTTL)})
+		}
 		return Client{}, err
 	}
+	f.store(clientID, cimdEntry{client: c, expires: now.Add(ttl)})
+	return c, nil
+}
+
+func (f *fetcher) store(clientID string, e cimdEntry) {
 	f.mu.Lock()
+	defer f.mu.Unlock()
 	if len(f.cache) >= cimdCacheSize {
 		f.cache = map[string]cimdEntry{}
 	}
-	f.cache[clientID] = cimdEntry{client: c, expires: now.Add(ttl)}
-	f.mu.Unlock()
-	return c, nil
+	f.cache[clientID] = e
 }
 
 func (f *fetcher) fetch(ctx context.Context, clientID string) (Client, time.Duration, error) {
@@ -211,8 +258,8 @@ func (f *fetcher) fetch(ctx context.Context, clientID string) (Client, time.Dura
 			return Client{}, 0, errors.New("client metadata lists a redirect_uri that is neither https nor loopback")
 		}
 	}
-	name := doc.ClientName
-	if strings.TrimSpace(name) == "" {
+	name := service.CleanClientName(doc.ClientName)
+	if name == "" {
 		name = req.URL.Host
 	}
 	return Client{ID: clientID, Name: name, RedirectURIs: doc.RedirectURIs, Metadata: true}, cacheTTL(resp.Header), nil

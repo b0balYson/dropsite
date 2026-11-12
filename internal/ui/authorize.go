@@ -125,10 +125,16 @@ func (a *authorizer) data(p oauth.Pending) authorizeData {
 
 func (a *authorizer) show(w http.ResponseWriter, r *http.Request) {
 	rc := a.begin(w, r)
-	p, err := a.az.ValidateAuthorize(r.Context(), r.URL.Query())
+	p, err := a.az.ValidateAuthorize(r.Context(), r.URL.Query(), rc.ip)
 	var re *oauth.RedirectError
 	if errors.As(err, &re) {
 		http.Redirect(w, r, a.az.ErrorURL(re), http.StatusFound)
+		return
+	}
+	if errors.Is(err, domain.ErrRateLimited) {
+		msg, status := a.s.describe(rc, err)
+		w.Header().Set("Retry-After", retryAfter(err))
+		a.render(w, r, rc, status, authorizeData{Fatal: msg}, "")
 		return
 	}
 	if err != nil {
