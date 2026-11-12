@@ -42,7 +42,9 @@ var proxyHeadersReserved = map[string]bool{
 // a base URL carrying one is refused, the key belongs in the web interface.
 var proxySecretParams = []string{"key", "token", "secret", "password", "passwd", "signature", "credential"}
 
-func proxyInvalid(msg string) error { return domain.E(domain.KindInvalid, domain.CodeProxyInvalid, msg) }
+func proxyInvalid(msg string) error {
+	return domain.E(domain.KindInvalid, domain.CodeProxyInvalid, msg)
+}
 
 // errProxyName is returned for a malformed endpoint name.
 var errProxyName = proxyInvalid("the name must be 1-40 characters: a-z, 0-9 and hyphens, starting with a letter or digit")
