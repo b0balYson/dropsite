@@ -24,7 +24,7 @@ curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/ins
 $env:DROPSITE_SERVER='https://api.example.com'; $env:DROPSITE_CODE='ABCD-EFGH-JKMNP'; irm https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.ps1 | iex
 ```
 
-It installs the CLI (checksum-verified, no admin rights), runs `dropsite login --server … --code …` (a new token named after the computer is saved to the CLI config with owner-only permissions) and then `dropsite setup`. The code in the shell history is useless once spent.
+It installs the CLI (checksum-verified, no admin rights), runs `dropsite login --server …` with the code in the `DROPSITE_CODE` environment variable, so it never appears in the process list (a new token named after the computer is saved to the CLI config with owner-only permissions) and then `dropsite setup`. The code in the shell history is useless once spent.
 
 ### `dropsite setup`
 

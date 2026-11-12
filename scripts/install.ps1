@@ -85,7 +85,10 @@ try {
         if (-not $Server) { throw "install: DROPSITE_CODE needs DROPSITE_SERVER" }
         Write-Host ""
         Write-Host "Signing in to $Server"
-        & $target login --server $Server --code $Code
+        # The code goes through the environment, not the command line, so it
+        # does not show up in the process list (removed again in finally).
+        $env:DROPSITE_CODE = $Code
+        & $target login --server $Server
         if ($LASTEXITCODE -ne 0) {
             throw "install: sign-in failed. Press Connect on the Connect AI page again and run the new command (codes work once, for 10 minutes)."
         }
