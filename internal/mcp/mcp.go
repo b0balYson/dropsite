@@ -95,6 +95,8 @@ type Options struct {
 	Files bool
 	// Folder adds deploy_folder; the backend must implement FolderDeployer.
 	Folder bool
+	// Forms adds the forms tools; the backend must implement FormsBackend.
+	Forms bool
 	// Instructions are sent to the client on initialize.
 	Instructions string
 }

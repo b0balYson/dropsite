@@ -72,7 +72,46 @@ type FormRepository interface {
 type FormSubmissionFilter struct {
 	SiteID string
 	Form   string
+	// Since (inclusive) and Until (exclusive) bound created_at; zero means
+	// unbounded.
+	Since, Until time.Time
+	// Query keeps submissions with a field value containing it (LIKE, so
+	// case-insensitive for ASCII only); field names are not searched.
+	Query string
+	// After continues a listing after this submission (keyset on
+	// created_at, id); the total ignores it.
+	After *SubmissionCursor
 	Page
+}
+
+// SubmissionCursor is the position of a submission in the newest-first order.
+type SubmissionCursor struct {
+	CreatedAt time.Time
+	ID        int64
+}
+
+// where returns the SQL condition of the filter without the cursor. It is
+// built from constant fragments only.
+func (f FormSubmissionFilter) where() (string, []any) {
+	where, args := "site_id = ?", []any{f.SiteID}
+	if f.Form != "" {
+		where += " AND form = ?"
+		args = append(args, f.Form)
+	}
+	if !f.Since.IsZero() {
+		where += " AND created_at >= ?"
+		args = append(args, toMS(f.Since))
+	}
+	if !f.Until.IsZero() {
+		where += " AND created_at < ?"
+		args = append(args, toMS(f.Until))
+	}
+	if p := likePattern(f.Query); p != "" {
+		where += ` AND EXISTS (SELECT 1 FROM json_each(fields_json) j
+			WHERE json_extract(j.value, '$.value') LIKE ? ESCAPE '\')`
+		args = append(args, p)
+	}
+	return where, args
 }
 
 // DeliveryClaim selects deliveries to lease. At most one due delivery per
@@ -291,21 +330,22 @@ const submissionCols = "id, site_id, host, form, fields_json, created_at"
 
 // ListFormSubmissions returns a page of submissions with their deliveries.
 func (db *DB) ListFormSubmissions(ctx context.Context, f FormSubmissionFilter) ([]domain.FormSubmission, int, error) {
-	where, args := "site_id = ?", []any{f.SiteID}
-	if f.Form != "" {
-		where += " AND form = ?"
-		args = append(args, f.Form)
+	where, args := f.where()
+	pageWhere, pageArgs := where, append([]any(nil), args...)
+	if f.After != nil {
+		at := toMS(f.After.CreatedAt)
+		pageWhere += " AND (created_at < ? OR (created_at = ? AND id < ?))"
+		pageArgs = append(pageArgs, at, at, f.After.ID)
 	}
 	limit, offset := f.bounds()
 	var out []domain.FormSubmission
 	var total int
 	err := db.withReadTx(ctx, func(tx *sql.Tx) error {
-		if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM form_submissions WHERE "+where, args...).Scan(&total); err != nil {
+		if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM form_submissions WHERE "+where, args...).Scan(&total); err != nil { //nolint:gosec // G202: where is built from constants
 			return fmt.Errorf("count form submissions: %w", err)
 		}
-		rows, err := tx.QueryContext(ctx, "SELECT "+submissionCols+" FROM form_submissions WHERE "+where+ //nolint:gosec // G202: where is built from constants
-
-			" ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?", append(args, limit, offset)...)
+		rows, err := tx.QueryContext(ctx, "SELECT "+submissionCols+" FROM form_submissions WHERE "+pageWhere+ //nolint:gosec // G202: where is built from constants
+			" ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?", append(pageArgs, limit, offset)...)
 		if err != nil {
 			return fmt.Errorf("list form submissions: %w", err)
 		}
