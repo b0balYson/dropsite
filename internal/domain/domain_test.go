@@ -42,6 +42,10 @@ func TestValidateSlug(t *testing.T) {
 		{"shop", CodeSlugReserved},
 		{"newsletter", ""},
 		{"k3f9x-m7qa", ""},
+		{"p-shop", ""},
+		{"p-20261112-101530-x7k2m9", ""},
+		{"p-20261112-101530-x7k2m9-k3f9x2m7qa", CodeSlugReserved},
+		{"p-00000000-000000-000000-0000000000", CodeSlugReserved},
 	}
 	for _, tc := range cases {
 		t.Run(tc.slug, func(t *testing.T) {
@@ -56,6 +60,24 @@ func TestValidateSlug(t *testing.T) {
 				t.Fatalf("want %s, got %v", tc.code, err)
 			}
 		})
+	}
+}
+
+func TestPreviewLabel(t *testing.T) {
+	got := PreviewLabel("k3f9x2m7qa", "20261112-101530-x7k2m9")
+	if got != "p-20261112-101530-x7k2m9-k3f9x2m7qa" {
+		t.Fatalf("label %q", got)
+	}
+	if !IsPreviewLabel(got) || !IsValidHostname(got) || len(got) > 63 {
+		t.Fatalf("label %q must be a valid preview DNS label", got)
+	}
+	for _, s := range []string{"p-shop", "k3f9x2m7qa", got + ".example.com", "P-20261112-101530-X7K2M9-K3F9X2M7QA", "p-20261112-101530-x7k2m9-k3f9x2m7q"} {
+		if IsPreviewLabel(s) {
+			t.Errorf("%q must not be a preview label", s)
+		}
+	}
+	if !IsPreviewLabel(PreviewLabel(NewSiteID(), NewDeployID(time.Now()))) {
+		t.Fatal("generated IDs must form a preview label")
 	}
 }
 

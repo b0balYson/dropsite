@@ -82,8 +82,8 @@ func TestErrors(t *testing.T) {
 		{"max files zero", "MAX_FILES", "0", "MAX_FILES"},
 		{"bad size", "MAX_SITE_BYTES", "lots", "MAX_SITE_BYTES"},
 		{"keep one", "KEEP_RELEASES", "1", "KEEP_RELEASES"},
-		{"wildcard", "TLS_MODE", "wildcard", "docs/tls.md"},
 		{"unknown tls", "TLS_MODE", "manual", "TLS_MODE"},
+		{"unknown tls lists modes", "TLS_MODE", "dns", "wildcard"},
 		{"log level", "LOG_LEVEL", "loud", "LOG_LEVEL"},
 		{"admin email", "ADMIN_EMAIL", "nope", "ADMIN_EMAIL"},
 		{"admin password", "ADMIN_PASSWORD", "short", "ADMIN_PASSWORD"},
@@ -102,6 +102,20 @@ func TestErrors(t *testing.T) {
 				t.Fatalf("want error containing %q, got %v", tc.want, err)
 			}
 		})
+	}
+}
+
+func TestTLSMode(t *testing.T) {
+	for in, want := range map[string]string{"": TLSModeOnDemand, "ondemand": TLSModeOnDemand, "wildcard": TLSModeWildcard, " WildCard ": TLSModeWildcard} {
+		e := base()
+		e["TLS_MODE"] = in
+		c, err := Load(env(e))
+		if err != nil {
+			t.Fatalf("%q: %v", in, err)
+		}
+		if c.TLSMode != want || c.Wildcard() != (want == TLSModeWildcard) {
+			t.Fatalf("%q: mode %q wildcard %v", in, c.TLSMode, c.Wildcard())
+		}
 	}
 }
 

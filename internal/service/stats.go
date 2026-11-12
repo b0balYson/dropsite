@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/b0balYson/dropsite/internal/domain"
@@ -112,6 +113,7 @@ func (s *Service) CollectStats(ctx context.Context) error {
 		return err
 	}
 	salt := s.saltFunc(ctx, today)
+	isPreview := s.isPreviewHost
 	for range statsMaxReads {
 		ch, err := stats.ReadLog(path, cur, statsReadBytes)
 		if err != nil {
@@ -124,6 +126,7 @@ func (s *Service) CollectStats(ctx context.Context) error {
 			s.log.Warn("statistics: the access log was rotated away before it was read completely; some visits are lost")
 		}
 		b := stats.NewBatch()
+		b.SkipHost = isPreview
 		for _, line := range ch.Lines {
 			if err := b.AddLine(line, sites, salt); err != nil {
 				return err
@@ -171,9 +174,28 @@ func (s *Service) hostIndex(ctx context.Context) (stats.SiteFunc, error) {
 		}
 	}
 	return func(h string) (string, bool) {
-		id, ok := m[h]
-		return id, ok
+		if id, ok := m[h]; ok {
+			return id, true
+		}
+		return s.previewSite(h)
 	}, nil
+}
+
+// previewSite maps a release preview host (p-<deploy>-<site>.<BASE_DOMAIN>,
+// wildcard mode) to its site. Previews are review traffic, not visits: their
+// requests are skipped (isPreviewHost), but links from a preview to the site
+// are internal navigation rather than a referrer.
+func (s *Service) previewSite(host string) (string, bool) {
+	label, ok := strings.CutSuffix(host, "."+s.cfg.BaseDomain)
+	if !ok || !domain.IsPreviewLabel(label) {
+		return "", false
+	}
+	return label[len(label)-domain.SiteIDLength:], true
+}
+
+func (s *Service) isPreviewHost(host string) bool {
+	_, ok := s.previewSite(host)
+	return ok
 }
 
 // RunStats collects statistics every interval until ctx is done.

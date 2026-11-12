@@ -225,3 +225,34 @@ func TestCollectStatsDisabled(t *testing.T) {
 	cancel()
 	e.svc.RunStats(ctx, time.Minute) // returns immediately when disabled
 }
+
+func TestCollectStatsSkipsPreviews(t *testing.T) {
+	ctx := context.Background()
+	logFile := filepath.Join(t.TempDir(), "sites-access.log")
+	e := newEnv(t, wildcard, func(c *config.Config) { c.StatsLogFile = logFile })
+	owner := e.user("owner@pp.test")
+	v, err := e.svc.CreateSite(ctx, owner, "Promo", "promo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := deploy(t, e, owner, v.Site.ID, "v1")
+	preview := previewHost(v.Site.ID, r.Deploy.ID)
+	if !e.hostExists(preview) {
+		t.Fatal("preview host expected in wildcard mode")
+	}
+	now := e.clock.Now()
+	appendLog(t, logFile,
+		accessLine(now, preview, "/", "198.51.100.1", ua, ""),
+		accessLine(now, "promo."+testBase, "/", "198.51.100.1", ua, "https://"+preview+"/"),
+	)
+	if err := e.svc.CollectStats(ctx); err != nil {
+		t.Fatal(err)
+	}
+	st, err := e.svc.GetSiteStats(ctx, owner, "promo", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Views != 1 || len(st.TopReferrers) != 0 {
+		t.Fatalf("previews must not count as visits or sources: %+v", st)
+	}
+}

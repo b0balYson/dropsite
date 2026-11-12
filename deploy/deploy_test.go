@@ -79,10 +79,22 @@ func TestComposeConfig(t *testing.T) {
 	requireDocker(t)
 	env := filepath.Join(t.TempDir(), "test.env")
 	if err := os.WriteFile(env, []byte("BASE_DOMAIN=example.com\nACME_EMAIL=a@example.com\n"+
-		"ADMIN_EMAIL=admin@example.com\nADMIN_PASSWORD=secret-password\n"), 0o600); err != nil {
+		"ADMIN_EMAIL=admin@example.com\nADMIN_PASSWORD=secret-password\nCF_API_TOKEN=test-token\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	out := run(t, "docker", "compose", "-f", "docker-compose.yml", "--env-file", env, "config", "--format", "json")
+	for name, files := range map[string][]string{
+		"ondemand": {"-f", "docker-compose.yml"},
+		"wildcard": {"-f", "docker-compose.yml", "-f", "compose.wildcard.yml"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			args := append(append([]string{"compose"}, files...), "--env-file", env, "config", "--format", "json")
+			checkCompose(t, run(t, "docker", args...))
+		})
+	}
+}
+
+func checkCompose(t *testing.T, out []byte) {
+	t.Helper()
 	var cf composeFile
 	if err := json.Unmarshal(out, &cf); err != nil {
 		t.Fatalf("parse compose config: %v", err)
@@ -122,10 +134,25 @@ func TestCaddyfileValidates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	args := []string{"run", "--rm", "-e", "BASE_DOMAIN=example.com", "-e", "ACME_EMAIL=a@example.com",
-		"-e", "API_HOST=api.example.com", "-v", abs + ":/etc/caddy/Caddyfile:ro", caddyImage}
-	run(t, "docker", append(args, "caddy", "validate", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile")...)
-	out := run(t, "docker", append(args, "caddy", "adapt", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile")...)
+	// Wildcard mode is checked with the "internal" DNS provider, which needs no
+	// plugin, so the stock image can adapt it.
+	for mode, extra := range map[string][]string{
+		"ondemand": nil,
+		"wildcard": {"-e", "TLS_MODE=wildcard", "-e", "TLS_DNS_PROVIDER=internal"},
+	} {
+		t.Run(mode, func(t *testing.T) {
+			args := append([]string{"run", "--rm", "-e", "BASE_DOMAIN=example.com", "-e", "ACME_EMAIL=a@example.com",
+				"-e", "API_HOST=api.example.com", "-v", abs + ":/etc/caddy/Caddyfile:ro"}, extra...)
+			args = append(args, caddyImage)
+			run(t, "docker", append(args, "caddy", "validate", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile")...)
+			out := run(t, "docker", append(args, "caddy", "adapt", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile")...)
+			checkLogging(t, out, mode == "wildcard")
+		})
+	}
+}
+
+func checkLogging(t *testing.T, out []byte, wildcard bool) {
+	t.Helper()
 	var cfg struct {
 		Logging struct {
 			Logs map[string]struct {
@@ -148,5 +175,11 @@ func TestCaddyfileValidates(t *testing.T) {
 	}
 	if strings.Contains(string(out), `"api.example.com":["sites"]`) {
 		t.Error("API requests must not be written to the sites access log")
+	}
+	if !strings.Contains(string(out), `"default_logger_name":"sites"`) {
+		t.Error("the on-demand catch-all must log to the sites logger")
+	}
+	if wildcard && !strings.Contains(string(out), `"*.example.com":["sites"]`) {
+		t.Error("the wildcard block must log to the sites logger")
 	}
 }

@@ -9,6 +9,13 @@
 #                       expanded by the Caddyfile adapter
 #   CADDY_GLOBAL_EXTRA  extra global options (local dev: local_certs and
 #                       skip_install_trust); empty in production
+#   TLS_MODE            ondemand (default) or wildcard; selects the snippet
+#                       tls_<mode> below, so switching needs no edit here
+#   BASE_DOMAIN         base domain (wildcard mode only)
+#   TLS_DNS_PROVIDER    DNS provider for the wildcard certificate (wildcard
+#                       mode only, default cloudflare); selects dns_<provider>
+#   CF_API_TOKEN        Cloudflare API token with Zone.DNS:Edit (read at run
+#                       time through {env.*}, never written into the config)
 {
 	email {$ACME_EMAIL}
 	# No admin API and no autosave: the root filesystem is read-only and
@@ -99,15 +106,14 @@ http:// {
 	redir https://{host}{uri} 308
 }
 
-https:// {
-	tls {
-		on_demand
-	}
+# Everything a site address serves. Shared by the on-demand catch-all and, in
+# wildcard mode, by the *.<BASE_DOMAIN> block, so both behave identically.
+(serve_sites) {
 	# Access log "sites" feeds visit statistics (control reads /logs
 	# read-only); the global "sites_stdout" logger copies it to stdout.
 	# Rotated files stay uncompressed so control can finish a file after
 	# rotation, and mode 0644 lets control (uid 65532) read what caddy
-	# (uid 1000) writes.
+	# (uid 1000) writes. Every block importing this snippet shares the file.
 	log sites {
 		output file /logs/sites-access.log {
 			roll_size 50MiB
@@ -134,6 +140,12 @@ https:// {
 	# Paths reserved for the platform; other /_* paths (e.g. /_next/) are
 	# ordinary site files.
 	@reserved path /_form /_form/* /_dropsite /_dropsite/*
+
+	# Release preview addresses (wildcard mode, see internal/domain
+	# PreviewLabel) are never indexed. The pattern cannot match a slug:
+	# slug validation rejects it.
+	@preview header_regexp Host ^p-[0-9]{8}-[0-9]{6}-[a-z0-9]{6}-[a-z0-9]{10}\.
+	header @preview X-Robots-Tag noindex
 
 	handle @site {
 		root * /data/by-host/{re.site.1}
@@ -204,4 +216,46 @@ https:// {
 			import plain_error
 		}
 	}
+}
+
+# Sites under the base domain in wildcard mode: one certificate for
+# *.<BASE_DOMAIN> and <BASE_DOMAIN> through the DNS-01 challenge. Names outside
+# the base domain still match the on-demand catch-all below.
+#
+# A snippet is parsed only when imported, so the stock caddy image (without DNS
+# plugins) accepts this file in ondemand mode. An unknown TLS_MODE fails at
+# startup: "import tls_<mode>" then looks for a file and finds none.
+(tls_ondemand) {
+	# Nothing to add: every site address uses the on-demand catch-all.
+}
+
+(tls_wildcard) {
+	*.{$BASE_DOMAIN}, {$BASE_DOMAIN} {
+		tls {
+			import dns_{$TLS_DNS_PROVIDER:cloudflare}
+		}
+		import serve_sites
+	}
+}
+
+# DNS providers for the wildcard certificate. Each needs its plugin in the
+# caddy image (deploy/caddy/Dockerfile). "internal" signs the wildcard with
+# Caddy's local CA and is meant only for local testing without real DNS.
+(dns_cloudflare) {
+	dns cloudflare {env.CF_API_TOKEN}
+}
+
+(dns_internal) {
+	issuer internal
+}
+
+import tls_{$TLS_MODE:ondemand}
+
+# Any other name (external domains; every site address in ondemand mode) gets
+# its own certificate on first visit, permitted by the endpoint on :8090.
+https:// {
+	tls {
+		on_demand
+	}
+	import serve_sites
 }

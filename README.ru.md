@@ -96,9 +96,18 @@ irm https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.ps
 
 По умолчанию каждый адрес получает свой сертификат при первом обращении (`TLS_MODE=ondemand`). Caddy запрашивает сертификат только для существующих адресов.
 
-Let's Encrypt выдаёт **50 новых сертификатов на зарегистрированный домен за 7 дней** (на август 2026, см. [rate limits](https://letsencrypt.org/docs/rate-limits/)). Сайт со slug расходует два сертификата (случайный адрес и slug), то есть рассчитывайте примерно на **25 новых сайтов в неделю**. Продления в лимит не входят. При отказе Let's Encrypt Caddy переключается на ZeroSSL. Если этого мало, переходите на wildcard-сертификат: см. [docs/tls.md](docs/tls.md).
+Let's Encrypt выдаёт **50 новых сертификатов на зарегистрированный домен за 7 дней** (на август 2026, см. [rate limits](https://letsencrypt.org/docs/rate-limits/)). Сайт со slug расходует два сертификата (случайный адрес и slug), то есть рассчитывайте примерно на **25 новых сайтов в неделю**. Продления в лимит не входят. При отказе Let's Encrypt Caddy переключается на ZeroSSL. Если этого мало, переходите в режим wildcard.
 
 Каждый выпущенный сертификат попадает в публичные журналы Certificate Transparency, поэтому адреса сайтов не секретны.
+
+**Режим wildcard** (`TLS_MODE=wildcard`) использует один сертификат на `*.<BASE_DOMAIN>` и корень, полученный через проверку DNS-01, поэтому новые сайты сертификатов не расходуют. Нужны DNS в Cloudflare (других провайдеров можно добавить) и API-токен с правом `Zone.DNS:Edit`:
+
+```sh
+# .env: CF_API_TOKEN=<токен>
+docker compose -f docker-compose.yml -f compose.wildcard.yml up -d
+```
+
+В этом режиме у каждого релиза есть ещё и свой превью-адрес `https://p-<релиз>-<сайт>.<BASE_DOMAIN>/` (поисковики его не индексируют), он показан в истории релизов. Переход по шагам и откат: [docs/tls.md](docs/tls.md).
 
 ## Настройки
 
@@ -111,7 +120,8 @@ Let's Encrypt выдаёт **50 новых сертификатов на зар�
 | `ADMIN_BIND_IP` | нет | `127.0.0.1` | Адрес, на котором слушает интерфейс |
 | `UI_URL` | нет | `http://<ADMIN_BIND_IP>:8082` | Адрес в ссылках-приглашениях |
 | `API_HOST` | нет | `api.<BASE_DOMAIN>` | Хост публичного API |
-| `TLS_MODE` | нет | `ondemand` | В этой версии только `ondemand` |
+| `TLS_MODE` | нет | `ondemand` | `ondemand` или `wildcard`; wildcard задаёт `compose.wildcard.yml` |
+| `CF_API_TOKEN` | только для wildcard | — | Токен Cloudflare с правом `Zone.DNS:Edit`, передаётся только Caddy |
 | `MAX_SITE_BYTES`, `MAX_FILE_BYTES`, `MAX_FILES`, `MAX_SITES_PER_USER`, `KEEP_RELEASES` | нет | 50 МБ, 20 МБ, 2000, 10, 5 | Лимиты; администратор может переопределить их в интерфейсе |
 | `RESERVED_SLUGS` | нет | | Дополнительные запрещённые slug через запятую |
 | `LOG_LEVEL` | нет | `info` | `debug`, `info`, `warn`, `error` |

@@ -40,14 +40,27 @@ func repoRoot() string {
 	return filepath.Clean(filepath.Join(filepath.Dir(file), "..", ".."))
 }
 
+// wildcardStand reports whether the stack runs in wildcard TLS mode
+// (E2E_WILDCARD=1): compose.wildcard.yml on top, with the wildcard
+// certificate signed by Caddy's local CA instead of a real DNS provider.
+func wildcardStand() bool { return os.Getenv("E2E_WILDCARD") != "" }
+
 func compose(ctx context.Context, args ...string) *exec.Cmd {
 	root := repoRoot()
 	base := []string{"compose", "-p", project,
 		"-f", filepath.Join(root, "deploy", "docker-compose.yml"),
-		"-f", filepath.Join(root, "deploy", "compose.local.yml"),
-		"--env-file", filepath.Join(root, "deploy", "local.env")}
+		"-f", filepath.Join(root, "deploy", "compose.local.yml")}
+	if wildcardStand() {
+		base = append(base, "-f", filepath.Join(root, "deploy", "compose.wildcard.yml"))
+	}
+	base = append(base, "--env-file", filepath.Join(root, "deploy", "local.env"))
 	cmd := exec.CommandContext(ctx, "docker", append(base, args...)...)
 	cmd.Dir = filepath.Join(root, "deploy")
+	if wildcardStand() {
+		// The "internal" provider never calls a DNS API; the token only
+		// satisfies the override's required variable.
+		cmd.Env = append(os.Environ(), "TLS_DNS_PROVIDER=internal", "CF_API_TOKEN=unused-by-internal-provider")
+	}
 	return cmd
 }
 

@@ -28,7 +28,7 @@ Base URL: `https://<API_HOST>/api/v1`. Authentication: `Authorization: Bearer <t
 User     {id, email, role, status, created_at}
 Limits   {max_site_bytes, max_file_bytes, max_files, max_sites_per_user, keep_releases}
 Hostname {hostname, kind}                       kind: default | slug | apex
-Deploy   {id, site_id, source, size_bytes, file_count, status, created_at, created_by, current}
+Deploy   {id, site_id, source, size_bytes, file_count, status, created_at, created_by, current, preview_url|null}
 Site     {id, title, url, urls[], slug|null, hostnames[], owner_id, created_at, updated_at, current_deploy: Deploy|null}
 SiteItem {id, title, url, urls[], slug|null, owner_id, owner_email, last_deploy_at|null, size_bytes, created_at, updated_at}
 Token    {id, name, prefix, created_at, last_used_at|null, expires_at|null, revoked_at|null}
@@ -75,3 +75,5 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 The deploy source is `cli` when the request carries `X-Dropsite-Client: cli/<version>`, otherwise `api`. The upload may be at most `max_site_bytes + max_files KiB + 1 MiB`; larger bodies get 413 without being read fully.
 
 `GET /sites/{ref}/stats` counts page views of HTML pages from the sites access log (bots and assets excluded), by UTC day; `days` lists every day of the period ending today, oldest first, including days without views. `visitors` is the approximate number of unique visitors of a day (hash of IP and User-Agent with a daily salt); the total is the sum of daily values. In `top_referrers` an empty `name` is a direct visit; in both tops `*` stands for everything beyond the rows stored per day (500 pages, 200 referrers). Statistics lag behind by up to one collection interval (`STATS_INTERVAL`, default one minute).
+
+`preview_url` is the address that serves exactly this release, `https://p-<deploy id>-<site id>.<BASE_DOMAIN>/` (with `X-Robots-Tag: noindex`). It is set only when the installation runs with `TLS_MODE=wildcard` and the release is `ready`; otherwise it is `null` (see `docs/tls.md`).

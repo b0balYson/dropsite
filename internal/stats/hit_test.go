@@ -236,3 +236,22 @@ func TestBatchClosedDayCountsViewsOnly(t *testing.T) {
 		t.Errorf("views=%v visitors=%v", b.Views, b.Visitors)
 	}
 }
+
+func TestBatchSkipHost(t *testing.T) {
+	site := func(h string) (string, bool) { return "s", h == "a.example.com" || h == "p-x.example.com" }
+	none := func(string) ([]byte, error) { return nil, nil }
+	b := NewBatch()
+	b.SkipHost = func(h string) bool { return h == "p-x.example.com" }
+	for _, l := range []string{
+		line("p-x.example.com", "GET", "/", 200, "text/html", browser, ""),
+		line("a.example.com", "GET", "/", 200, "text/html", browser, "https://p-x.example.com/"),
+	} {
+		if err := b.AddLine([]byte(l), site, none); err != nil {
+			t.Fatal(err)
+		}
+	}
+	k := Key{SiteID: "s", Day: "2026-11-12"}
+	if b.Views[k] != 1 || len(b.Referrers[k]) != 0 {
+		t.Fatalf("views %v referrers %v", b.Views, b.Referrers)
+	}
+}

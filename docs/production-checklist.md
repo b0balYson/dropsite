@@ -16,3 +16,9 @@ The automated end-to-end test (`make e2e`) runs the whole stack with a local cer
 - [ ] `docker compose stop control`: published sites still open; `docker compose restart caddy` with `control` still stopped: sites still open; then `docker compose start control`.
 - [ ] A backup is taken and copied off the server.
 - [ ] Claude Code with the skill publishes a folder on "publish this site".
+
+After switching to wildcard mode ([tls.md](tls.md#wildcard-mode)):
+
+- [ ] `docker compose logs caddy` shows `certificate obtained successfully` for `*.<domain>` and `<domain>`.
+- [ ] A newly created site opens with a valid certificate whose subjectAltName is `*.<domain>`, and no new per-address certificate appears in the log.
+- [ ] The `preview` link of a release in the history opens that release and answers with `X-Robots-Tag: noindex` (`curl -sI`).

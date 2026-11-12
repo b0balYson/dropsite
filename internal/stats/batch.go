@@ -16,6 +16,9 @@ type Batch struct {
 	Visitors map[Key]map[string]struct{}
 	// Malformed counts lines that were not valid access-log entries.
 	Malformed int
+	// SkipHost, when set, excludes requests to matching hosts from page views
+	// (release previews); such hosts still count as the site's own referrers.
+	SkipHost func(host string) bool
 }
 
 // NewBatch returns an empty batch.
@@ -50,7 +53,7 @@ func (b *Batch) AddLine(line []byte, site SiteFunc, salt SaltFunc) error {
 		return nil
 	}
 	siteID, ok := site(h.Host)
-	if !ok {
+	if !ok || (b.SkipHost != nil && b.SkipHost(h.Host)) {
 		return nil
 	}
 	k := Key{SiteID: siteID, Day: h.Day()}

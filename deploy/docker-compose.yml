@@ -52,6 +52,9 @@ services:
       # Computed here: the Caddyfile adapter does not expand nested defaults.
       API_HOST: ${API_HOST:-api.${BASE_DOMAIN}}
       CADDY_GLOBAL_EXTRA: ${CADDY_GLOBAL_EXTRA:-}
+      # Same value as control, so both always agree on the mode. wildcard
+      # needs compose.wildcard.yml (Caddy image with a DNS plugin, token).
+      TLS_MODE: ${TLS_MODE:-ondemand}
       # /data is the read-only sites volume, so certificates go elsewhere.
       XDG_DATA_HOME: /caddy/data
       XDG_CONFIG_HOME: /caddy/config
