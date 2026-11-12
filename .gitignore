@@ -1,0 +1,18 @@
+# local toolchain and caches (never committed)
+/.tools/
+
+# secrets and local environment
+.env
+.env.*
+!.env.example
+
+# build output
+/bin/
+/dist/
+*.test
+coverage.out
+
+# OS and editors
+.DS_Store
+.idea/
+.vscode/
