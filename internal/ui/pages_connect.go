@@ -11,7 +11,7 @@ import (
 
 const (
 	installBase = "https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/"
-	installSh   = "curl -fsSL " + installBase + "install.sh | sh"
+	installSh   = "curl -fsSL " + installBase + "install.sh"
 	installPs1  = "irm " + installBase + "install.ps1 | iex"
 	day         = 24 * time.Hour
 )
@@ -54,10 +54,12 @@ type connectData struct {
 }
 
 // unixCommand installs the CLI, exchanges the code and connects assistants.
-// The server comes from validated configuration and the code alphabet has no
-// shell metacharacters, so no quoting is needed.
+// The code goes through the environment of sh, not its arguments, so other
+// users of the computer cannot see it in the process list. The server comes
+// from validated configuration and the code alphabet has no shell
+// metacharacters, so no quoting is needed.
 func unixCommand(server, code string) string {
-	return installSh + " -s -- --server " + server + " --code " + code
+	return installSh + " | DROPSITE_SERVER=" + server + " DROPSITE_CODE=" + code + " sh"
 }
 
 // windowsCommand passes the same through environment variables: iex takes no arguments.

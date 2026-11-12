@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -193,6 +194,41 @@ func TestSubmitFormRejects(t *testing.T) {
 	if _, err := e.svc.SubmitForm(ctx, other); err != nil {
 		t.Fatalf("other IP limited: %v", err)
 	}
+}
+
+// Rejected posts must not use up the site's quota, and an IPv6 /64 is one
+// source for the per-IP limit.
+func TestFormSiteQuotaCountsOnlyAccepted(t *testing.T) {
+	e, _ := formEnv(t)
+	ctx := context.Background()
+	ann := e.user("ann@pp.test")
+	v := mkFormSite(t, e, ann)
+	host := v.Site.ID + "." + testBase
+	for i := range FormPostsPerSite + 5 {
+		hp := post(host, "a", "1")
+		hp.Data.Honeypot = true
+		hp.IP = fmt.Sprintf("198.51.100.%d", i%250+1)
+		if i/250 > 0 {
+			hp.IP = fmt.Sprintf("192.0.2.%d", i%250+1)
+		}
+		if _, err := e.svc.SubmitForm(ctx, hp); err != nil {
+			t.Fatalf("honeypot %d: %v", i, err)
+		}
+	}
+	if out, err := e.svc.SubmitForm(ctx, post(host, "a", "1")); err != nil || !out.Stored {
+		t.Fatalf("real visitor after spam: %+v %v", out, err)
+	}
+	for i := range FormPostsPerIP {
+		p := post(host, "a", "1")
+		p.IP = fmt.Sprintf("2001:db8:0:7::%x", i+1)
+		if _, err := e.svc.SubmitForm(ctx, p); err != nil {
+			t.Fatalf("ipv6 %d: %v", i, err)
+		}
+	}
+	p := post(host, "a", "1")
+	p.IP = "2001:db8:0:7:ffff::1"
+	_, err := e.svc.SubmitForm(ctx, p)
+	wantCode(t, err, domain.CodeRateLimited)
 }
 
 func TestFormChannelsOwnership(t *testing.T) {

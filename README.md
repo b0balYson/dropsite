@@ -76,7 +76,7 @@ Then: **Users → create user**, send them the invite link (valid 72 hours); the
 The one command looks like this (the page fills in the server and the code):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.sh | sh -s -- --server https://api.example.com --code ABCD-EFGH-JKMNP
+curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.sh | DROPSITE_SERVER=https://api.example.com DROPSITE_CODE=ABCD-EFGH-JKMNP sh
 ```
 
 ```powershell

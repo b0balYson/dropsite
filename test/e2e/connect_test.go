@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	connectCodeRe = regexp.MustCompile(`--code ([0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{5})`)
+	connectCodeRe = regexp.MustCompile(`DROPSITE_CODE=([0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{5}) sh`)
 	sealedRe      = regexp.MustCompile(`name="request" value="([^"]+)"`)
 )
 

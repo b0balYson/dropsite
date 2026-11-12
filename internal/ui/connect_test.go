@@ -14,7 +14,7 @@ import (
 
 var loginCmdRe = regexp.MustCompile(`dropsite login --server https://api\.pp\.test --token (ds_[A-Za-z0-9]+)`)
 
-var codeCmdRe = regexp.MustCompile(`install\.sh \| sh -s -- --server https://api\.pp\.test --code ([0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{5})`)
+var codeCmdRe = regexp.MustCompile(`install\.sh \| DROPSITE_SERVER=https://api\.pp\.test DROPSITE_CODE=([0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{5}) sh`)
 
 func TestConnectPage(t *testing.T) {
 	h := newHarness(t)
@@ -24,7 +24,7 @@ func TestConnectPage(t *testing.T) {
 	wantContains(t, p.body, `action="/connect/code"`, "https://api.pp.test/mcp", "Ключей пока нет",
 		"Чат-клиенты пока не подключены", "ChatGPT", "claude.ai")
 	// The manual skill instructions are gone.
-	wantNotContains(t, p.body, "SKILL.md", "install.sh | sh -s")
+	wantNotContains(t, p.body, "SKILL.md", "DROPSITE_CODE=")
 }
 
 func TestConnectCodeCommands(t *testing.T) {

@@ -118,7 +118,7 @@ func TestUsedKeysExist(t *testing.T) {
 		}
 		b, _ := os.ReadFile(f.Name())
 		for _, m := range goKeyRe.FindAllStringSubmatch(string(b), -1) {
-			if !strings.HasSuffix(m[1], ".html") {
+			if !strings.HasSuffix(m[1], ".html") && !strings.HasSuffix(m[1], ".sh") {
 				keys[m[1]] = true
 			}
 		}

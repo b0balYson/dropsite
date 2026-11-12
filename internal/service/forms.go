@@ -201,20 +201,25 @@ func (s *Service) SubmitForm(ctx context.Context, p FormPost) (FormPostResult, e
 	if !sameOrigin(p.Origin, p.Host) {
 		return FormPostResult{}, errFormOrigin
 	}
-	if ok, retry := s.postIPLimit.Allow("ip:" + p.IP); !ok {
+	// IPv6 sources are counted per /64. The site-wide limit is only checked
+	// here and recorded once the post passed the anti-robot checks, so
+	// rejected posts from elsewhere cannot use up a site's quota.
+	src := ipKey(p.IP)
+	if ok, retry := s.postIPLimit.Allow(src); !ok {
 		return FormPostResult{}, domain.ErrRateLimited.WithRetryAfter(retry)
 	}
-	if ok, retry := s.postSiteLimit.Allow(site.ID); !ok {
+	if ok, retry := s.postSiteLimit.Check(site.ID); !ok {
 		return FormPostResult{}, domain.ErrRateLimited.WithRetryAfter(retry)
 	}
 	if p.Data.Honeypot || forms.TooFast(p.Data.RenderedAt, s.now()) {
-		s.penalizeAltcha(forms.PurposeForm, p.IP, site.ID)
+		s.penalizeAltcha(forms.PurposeForm, src, site.ID)
 		return FormPostResult{}, nil
 	}
 	if err := s.checkAltcha(ctx, site.ID, host, p.Data.Altcha); err != nil {
-		s.penalizeAltcha(forms.PurposeForm, p.IP, site.ID)
+		s.penalizeAltcha(forms.PurposeForm, src, site.ID)
 		return FormPostResult{}, err
 	}
+	s.postSiteLimit.Record(site.ID)
 	id, err := s.repo.InsertFormSubmission(ctx, domain.FormSubmission{
 		SiteID: site.ID, Host: host, Form: form, Fields: p.Data.Fields, CreatedAt: s.now(),
 	})
@@ -250,7 +255,7 @@ func (s *Service) AltchaChallenge(ctx context.Context, rawHost, ip string) (altc
 	if err != nil {
 		return altcha.Challenge{}, err
 	}
-	return s.issueAltcha(ctx, forms.PurposeForm, site.ID, host, ip, 0)
+	return s.issueAltcha(ctx, forms.PurposeForm, site.ID, host, ipKey(ip), 0)
 }
 
 func (s *Service) wakeDelivery() {

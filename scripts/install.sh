@@ -6,7 +6,8 @@
 # With a connect code from the "Connect AI" page it also signs in and connects
 # the AI assistants found on this computer:
 #
-#   curl -fsSL .../install.sh | sh -s -- --server https://api.example.com --code ABCD-EFGH-JKMNP
+#   curl -fsSL .../install.sh | DROPSITE_SERVER=https://api.example.com DROPSITE_CODE=ABCD-EFGH-JKMNP sh
+#   (environment, not arguments: arguments are visible to other users in ps)
 #
 # Arguments (or environment variables):
 #   --server URL            DROPSITE_SERVER: server to sign in to

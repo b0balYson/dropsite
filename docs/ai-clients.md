@@ -17,7 +17,7 @@ dropsite reaches AI assistants in three ways. All of them start on the **Connect
 The page shows a command for macOS/Linux and one for Windows with the server and the code filled in:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.sh | sh -s -- --server https://api.example.com --code ABCD-EFGH-JKMNP
+curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.sh | DROPSITE_SERVER=https://api.example.com DROPSITE_CODE=ABCD-EFGH-JKMNP sh
 ```
 
 ```powershell

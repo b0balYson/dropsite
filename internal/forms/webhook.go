@@ -63,8 +63,15 @@ func PublicAddr(ip netip.Addr, allow []netip.Prefix) bool {
 		ip.IsLinkLocalUnicast() || ip.IsMulticast() || ip.IsUnspecified() {
 		return false
 	}
+	// Only global unicast space is reachable over IPv6; this also excludes
+	// the deprecated IPv4-compatible ::/96 and site-local fec0::/10.
+	if ip.Is6() && !globalIPv6.Contains(ip) {
+		return false
+	}
 	return !inPrefixes(ip, blockedPrefixes)
 }
+
+var globalIPv6 = netip.MustParsePrefix("2000::/3")
 
 // ValidateWebhookURL checks a URL when a channel is created. Plain http is
 // accepted only when allow is non-empty (test networks); the address is
