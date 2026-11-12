@@ -3,8 +3,6 @@ package remote
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/b0balYson/dropsite/internal/mcp"
@@ -81,26 +79,10 @@ func (b backend) ReadSiteFiles(ctx context.Context, ref, deployID string, paths 
 }
 
 func filesResult(r service.UpdateResult, verb string) mcp.FilesResult {
-	parts := []string{fmt.Sprintf("%s: %d file(s) written", verb, r.Written)}
-	if r.Deleted > 0 {
-		parts = append(parts, fmt.Sprintf("%d removed", r.Deleted))
-	}
-	resized := 0
-	for _, f := range r.Fetched {
-		if f.Resized {
-			resized++
-		}
-	}
-	if len(r.Fetched) > 0 {
-		parts = append(parts, fmt.Sprintf("%d downloaded (%d photo(s) scaled down)", len(r.Fetched), resized))
-	}
-	summary := strings.Join(parts, ", ") + fmt.Sprintf("; the site now has %d files and is live at %s. "+
-		"The previous version can be restored with rollback.", r.Deploy.FileCount, r.Site.URL)
-	return mcp.FilesResult{
-		SiteID: r.Site.Site.ID, DeployID: r.Deploy.ID, BaseDeployID: r.Base, URL: r.Site.URL, URLs: r.Site.URLs,
+	return mcp.NewFilesResult(mcp.FilesOutcome{
+		SiteID: r.Site.Site.ID, DeployID: r.Deploy.ID, Base: r.Base, URL: r.Site.URL, URLs: r.Site.URLs,
 		Written: r.Written, Deleted: r.Deleted, FileCount: r.Deploy.FileCount, Fetched: toFetched(r.Fetched),
-		Summary: summary,
-	}
+	}, verb)
 }
 
 func (b backend) UpdateSiteFiles(ctx context.Context, c mcp.FilesChange) (mcp.FilesResult, error) {
