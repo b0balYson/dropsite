@@ -51,6 +51,13 @@ const (
 	CodeFilesTooLarge  = "files_too_large"
 	CodeCounterInvalid = "counter_id_invalid"
 
+	// Editing site files through MCP (change mcp-site-files).
+	CodeDeployConflict   = "deploy_conflict"
+	CodeSiteNotPublished = "site_not_published"
+	CodeUploadExpired    = "upload_expired"
+	CodeUploadLimit      = "upload_limit_reached"
+	CodeFetchFailed      = "fetch_failed"
+
 	// External domain codes.
 	CodeDomainInvalid       = "domain_invalid"
 	CodeDomainForbidden     = "domain_forbidden"

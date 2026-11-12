@@ -295,7 +295,7 @@ func (s *Service) CleanUploads() error {
 			return fmt.Errorf("remove upload %s: %w", m, err)
 		}
 	}
-	return nil
+	return s.cleanUploadSessions()
 }
 
 // UploadLimit is the largest request body a deploy to the site may send, so

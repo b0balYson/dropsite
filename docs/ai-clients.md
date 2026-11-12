@@ -109,6 +109,27 @@ The remote server also covers the account and site settings of the web interface
 | `list_connections`, `revoke_connection` | connected apps and active API tokens without secrets, the current one marked; revoking takes the name (or ID) again in `confirm` and works on the next call, including for the assistant's own connection |
 | `set_root_site`, `clear_root_site` | administrators only: put any site on the root domain or take it off, with the site's slug or ID in `confirm` |
 
+### Changing a site from a new chat
+
+The assistant does not need the original files: it reads the published ones.
+
+| Tool | What it does |
+| --- | --- |
+| `list_site_files` | files of the served release (or `deploy_id`): path, size, sha256, type; up to 1000 per call, `prefix` narrows the list. Returns `deploy_id`. |
+| `read_site_files` | up to 50 paths or patterns (`css/*.css`): text as is, binaries up to 64 KB as base64, larger files only described; at most 256 KB of content per call. The analytics block dropsite inserts into HTML is not shown. |
+| `update_site_files` | `base_deploy_id` (required) plus `files` to write, `delete` (files or folders) and `fetch` (`{url, path}` downloaded by the server). Builds a new release from the base with the changes; everything else is kept, the previous release stays available for rollback. |
+| `begin_upload`, `upload_files`, `commit_upload` | sites larger than 1 MB: a session in `replace` mode (new content, a new site when `site` is omitted) or `patch` mode (on top of `base_deploy_id`), up to 1 MB per `upload_files` call. |
+
+If the site changed after the assistant read it (another publication, a rollback, a parallel edit), `update_site_files` and a `patch` commit fail with `deploy_conflict` and the current release ID; the assistant reads the files again and repeats the change. Of two simultaneous edits of the same release exactly one is published.
+
+Every new release passes the same checks as an uploaded archive (paths, `index.html`, the owner's `MAX_SITE_BYTES`, `MAX_FILE_BYTES`, `MAX_FILES`, 30 publications per hour). Paths that look like secrets (`.env*`, keys, credentials) and service files (`.git/`, `node_modules/`) cannot be written from chat.
+
+Upload sessions: at most 3 open per user, closed after 30 idle minutes (every `upload_files` call extends a session) and on a restart of `control`; their files live in the upload directory of the state volume and are removed by housekeeping.
+
+### Images and fonts downloaded by the server
+
+`fetch` entries let the assistant put images, fonts, CSS and JS inside the site instead of linking to other servers. The server downloads them only over `https` on port 443, without a proxy, and only from public addresses: the address actually connected to is checked after every DNS lookup and on every redirect (at most 3), so private, loopback, link-local, cloud metadata and other reserved networks are never reached. Allowed: images (PNG, JPEG, GIF, WebP, AVIF, SVG, ICO), fonts (WOFF, WOFF2, TTF, OTF, EOT), `.css`, `.js`, `.mjs` — by the response type and the target extension. Limits: 20 URLs and 20 MB per call, 5 MB per file (and at most the owner's `MAX_FILE_BYTES`), 60 seconds per call, 300 URLs per user per hour. JPEG and PNG wider than 2000 px are scaled down to 2000 px when that makes the file smaller. One failed URL cancels the whole call and the error names it.
+
 `list_sites` and `get_site` also return `hidden_from_search`, `password_protected`, `expires_at`, `root_domain` and `own_domains`. Answers carry ready links and a short `summary` the assistant can repeat. These tools exist only on the remote server; the local `dropsite mcp` keeps the tools listed above.
 
 No tool issues credentials: API tokens and connect codes are created only in the web interface.

@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/b0balYson/dropsite/internal/netguard"
 	"github.com/b0balYson/dropsite/internal/service"
 )
 
@@ -39,50 +40,9 @@ type Resolver interface {
 	LookupNetIP(ctx context.Context, network, host string) ([]netip.Addr, error)
 }
 
-// nonPublic lists ranges that are not reachable public unicast addresses
-// beyond what netip already classifies (private, loopback, link-local,
-// multicast, unspecified).
-var nonPublic = []netip.Prefix{
-	netip.MustParsePrefix("0.0.0.0/8"),
-	netip.MustParsePrefix("100.64.0.0/10"), // CGNAT
-	netip.MustParsePrefix("192.0.0.0/24"),
-	netip.MustParsePrefix("192.0.2.0/24"),
-	netip.MustParsePrefix("198.18.0.0/15"),
-	netip.MustParsePrefix("198.51.100.0/24"),
-	netip.MustParsePrefix("203.0.113.0/24"),
-	netip.MustParsePrefix("240.0.0.0/4"),
-	netip.MustParsePrefix("64:ff9b::/96"),   // NAT64 can reach IPv4 internals
-	netip.MustParsePrefix("64:ff9b:1::/48"), // local-use NAT64
-	netip.MustParsePrefix("192.88.99.0/24"), // 6to4 relay anycast
-	netip.MustParsePrefix("2001:db8::/32"),
-	netip.MustParsePrefix("2002::/16"), // 6to4 embeds IPv4
-	netip.MustParsePrefix("2001::/23"), // IETF protocol assignments, incl. Teredo (2001::/32)
-	netip.MustParsePrefix("100::/64"),
-}
-
-// globalUnicast6 is the only IPv6 range allocated for global unicast; it
-// excludes IPv4-compatible (::/96), site-local (fec0::/10) and every other
-// special or unallocated range at once.
-var globalUnicast6 = netip.MustParsePrefix("2000::/3")
-
 // PublicAddr reports whether a is a public unicast address that a server may
 // connect to on behalf of an untrusted client.
-func PublicAddr(a netip.Addr) bool {
-	a = a.Unmap()
-	if !a.IsValid() || !a.IsGlobalUnicast() || a.IsPrivate() || a.IsLoopback() || a.IsLinkLocalUnicast() ||
-		a.IsMulticast() || a.IsUnspecified() || a.IsInterfaceLocalMulticast() {
-		return false
-	}
-	if a.Is6() && !globalUnicast6.Contains(a) {
-		return false
-	}
-	for _, p := range nonPublic {
-		if p.Contains(a) {
-			return false
-		}
-	}
-	return true
-}
+func PublicAddr(a netip.Addr) bool { return netguard.PublicAddr(a) }
 
 var errNotPublic = errors.New("the client metadata host resolves to a non-public address")
 
@@ -118,33 +78,23 @@ func newFetcher(res Resolver, tlsCfg *tls.Config, allow func(netip.Addr) bool, d
 		allow = PublicAddr
 	}
 	f := &fetcher{allow: allow, cache: map[string]cimdEntry{}, now: time.Now}
-	dialer := &net.Dialer{Timeout: cimdTimeout}
+	guard := &netguard.Dialer{
+		Resolver: res,
+		OK:       func(a netip.Addr) bool { return f.allow(a) },
+		Dialer:   &net.Dialer{Timeout: cimdTimeout},
+		Port:     dialPort,
+	}
 	tr := &http.Transport{
 		Proxy: nil, // a proxy would bypass the address check
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			host, port, err := net.SplitHostPort(addr)
-			if err != nil {
-				return nil, err
-			}
-			if port != "443" {
+			if _, port, err := net.SplitHostPort(addr); err != nil || port != "443" {
 				return nil, errors.New("client metadata is fetched only from port 443")
 			}
-			if dialPort != "" {
-				port = dialPort
+			conn, err := guard.DialContext(ctx, network, addr)
+			if errors.Is(err, netguard.ErrBlocked) {
+				return nil, errNotPublic
 			}
-			ips, err := res.LookupNetIP(ctx, "ip", host)
-			if err != nil {
-				return nil, fmt.Errorf("resolve %s: %w", host, err)
-			}
-			if len(ips) == 0 {
-				return nil, fmt.Errorf("resolve %s: no addresses", host)
-			}
-			for _, ip := range ips {
-				if !f.allow(ip) {
-					return nil, errNotPublic
-				}
-			}
-			return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0].Unmap().String(), port))
+			return conn, err
 		},
 		TLSClientConfig:       tlsCfg,
 		TLSHandshakeTimeout:   cimdTimeout,

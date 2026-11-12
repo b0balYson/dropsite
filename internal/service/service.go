@@ -57,6 +57,8 @@ type Deps struct {
 	Resolver dnscheck.Resolver
 	// FormSender replaces form delivery transports (tests).
 	FormSender FormSender
+	// Fetcher downloads assets for site edits; nil means sitefetch defaults.
+	Fetcher SiteFetcher
 }
 
 // Service implements the use cases.
@@ -92,6 +94,7 @@ type Service struct {
 	visitorMu        sync.Mutex
 	visitorKeySet    *visitorKeySet
 	formState
+	siteFilesState
 }
 
 // New builds a Service.
@@ -130,6 +133,7 @@ func New(d Deps) *Service {
 		visitorIPLimit:   ratelimit.New(VisitorFailuresPerIP, VisitorFailuresWindow).WithClock(now),
 		visitorSiteLimit: ratelimit.New(VisitorFailuresPerSite, VisitorFailuresWindow).WithClock(now),
 		formState:        newFormState(d, now),
+		siteFilesState:   newSiteFilesState(d, now),
 	}
 }
 

@@ -102,14 +102,14 @@ func (t tools) register(s *sdk.Server, o Options) {
 			"link) will be deleted, wait for yes, then pass the site's slug or ID again in confirm."}, t.deleteSite)
 	if o.Files {
 		sdk.AddTool(s, &sdk.Tool{Name: "deploy_files", Annotations: writes("Publish files", false, false),
-			Description: "Publish a whole static site from files passed by value (at most 1 MB in total) and " +
-				"return its link. Without site it creates a new site (name it with title); with site it replaces " +
-				"all files of that site (to change a few files of an existing site use update_site_files when " +
-				"available). index.html is required at the root. Ship every image, font and script with the site " +
-				"(no CDNs or hotlinks; see get_guide topic assets). Bigger sites: upload sessions (begin_upload) " +
-				"when available, otherwise the dropsite web interface or CLI. Reply \"Your site is live: <link>\"."},
-			t.deployFiles)
+			Description: "Publish a new static site, or replace a whole site, from files passed by value (at most " +
+				"1 MB in total) and return its link to give to the user. Creates a new site when site is omitted. " +
+				"index.html is required at the root. Every file not passed is gone from the new version: to change " +
+				"an existing site use list_site_files, read_site_files and update_site_files instead. For sites " +
+				"larger than 1 MB use begin_upload, upload_files and commit_upload. Ship every image, font and script with the " +
+				"site (no CDNs or hotlinks; see get_guide topic assets). Reply \"Your site is live: <link>\"."}, t.deployFiles)
 	}
+	t.registerFiles(s, o)
 	if o.Folder {
 		sdk.AddTool(s, &sdk.Tool{Name: "deploy_folder", Annotations: writes("Publish folder", false, false),
 			Description: "Publish a folder from this computer (it must contain index.html) and return its link. " +
