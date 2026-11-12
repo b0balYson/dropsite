@@ -35,6 +35,8 @@ type Deploy struct {
 	Status    string `json:"status"`
 	CreatedAt string `json:"created_at"`
 	Current   bool   `json:"current" jsonschema:"true for the release being served"`
+	// PreviewURL is the release's own address, when the server has previews.
+	PreviewURL string `json:"preview_url,omitempty" jsonschema:"address that always serves this exact release, if previews are enabled"`
 }
 
 // DeployResult is the outcome of a publication or rollback.

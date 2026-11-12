@@ -20,6 +20,11 @@ const module = "github.com/b0balYson/dropsite/internal/"
 var forbidden = map[string][]string{
 	"api": {"store", "storage", "archive"},
 	"ui":  {"store", "storage", "archive"},
+	// MCP and OAuth adapters; internal/mcp is also linked into the CLI, so
+	// it must not reach the server at all.
+	"oauth":      {"store", "storage", "archive"},
+	"mcp/remote": {"store", "storage", "archive"},
+	"mcp":        {"store", "storage", "archive", "config"},
 }
 
 func TestAdaptersDoNotBypassService(t *testing.T) {

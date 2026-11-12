@@ -31,10 +31,10 @@ func stamp(t *time.Time) string {
 	return t.UTC().Format(time.RFC3339)
 }
 
-func toDeploy(d domain.Deploy, current string) mcp.Deploy {
+func toDeploy(d domain.Deploy, current, preview string) mcp.Deploy {
 	return mcp.Deploy{
 		ID: d.ID, Source: string(d.Source), SizeBytes: d.SizeBytes, FileCount: d.FileCount,
-		Status: string(d.Status), CreatedAt: stamp(&d.CreatedAt), Current: d.ID == current,
+		Status: string(d.Status), CreatedAt: stamp(&d.CreatedAt), Current: d.ID == current, PreviewURL: preview,
 	}
 }
 
@@ -43,7 +43,7 @@ func toSite(v service.SiteView) mcp.Site {
 		ID: v.Site.ID, Title: v.Site.Title, URL: v.URL, URLs: v.URLs, Slug: v.Slug, UpdatedAt: stamp(&v.Site.UpdatedAt),
 	}
 	if v.Current != nil {
-		d := toDeploy(*v.Current, v.Current.ID)
+		d := toDeploy(*v.Current, v.Current.ID, v.CurrentPreviewURL)
 		s.CurrentDeploy = &d
 	}
 	return s
@@ -138,7 +138,7 @@ func (b backend) ListDeploys(ctx context.Context, ref string) ([]mcp.Deploy, err
 	}
 	out := make([]mcp.Deploy, 0, len(ds))
 	for _, d := range ds {
-		out = append(out, toDeploy(d, current))
+		out = append(out, toDeploy(d, current, b.svc.PreviewURL(d)))
 	}
 	return out, nil
 }

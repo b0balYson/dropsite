@@ -49,7 +49,7 @@
     {{if .D.Loopback}}<p class="notice notice--warn">{{.L.T "oauth.loopback"}}</p>{{end}}
     <p class="hint">{{.L.T "oauth.only_you"}}</p>
   </div>
-  <form class="auth__form stack" method="post" action="/oauth/authorize">
+  <form class="auth__form stack" method="post" action="/oauth/authorize?ui_lang={{.L.Lang}}">
     <h2 class="section-title">{{.L.T "oauth.code.title"}}</h2>
     {{template "csrf" .}}
     <input type="hidden" name="request" value="{{.D.Sealed}}">
