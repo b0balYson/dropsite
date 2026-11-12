@@ -207,11 +207,11 @@ func (s *Service) deliver(ctx context.Context, cfg formConfig, j store.DeliveryJ
 	s.recordChannelResult(context.WithoutCancel(ctx), j.Channel, err == nil)
 }
 
-// recordChannelResult feeds the circuit breaker of webhook channels: their
-// receivers are chosen by site owners, while Telegram and SMTP are shared
+// recordChannelResult feeds the circuit breaker of webhook and Google Sheets
+// channels: their receivers are chosen by site owners, while Telegram and SMTP are shared
 // by the whole installation and their outages must not pause every channel.
 func (s *Service) recordChannelResult(ctx context.Context, ch domain.FormChannel, ok bool) {
-	if ch.Kind != domain.ChannelWebhook {
+	if ch.Kind != domain.ChannelWebhook && ch.Kind != domain.ChannelSheets {
 		return
 	}
 	paused, err := s.repo.RecordChannelResult(ctx, ch.ID, ok, formChannelPauseAfter, s.now())
@@ -258,6 +258,8 @@ func (s *Service) send(ctx context.Context, cfg formConfig, ch domain.FormChanne
 			return forms.Permanent("could not encode the submission")
 		}
 		return s.senders.Webhook(ctx, ch.Target, secret, body)
+	case domain.ChannelSheets:
+		return s.sendSheets(ctx, ch, m)
 	}
 	return forms.Permanent("unknown channel kind")
 }
