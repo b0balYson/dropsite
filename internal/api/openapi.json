@@ -494,6 +494,140 @@
         }
       }
     },
+    "/sites/{ref}/collections": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }],
+      "get": {
+        "operationId": "listCollections",
+        "summary": "Collections of a site with counts and public read addresses",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CollectionList" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      },
+      "post": {
+        "operationId": "createCollection",
+        "summary": "Create a collection (at most 20 per site)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CollectionCreate" } } } },
+        "responses": {
+          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Collection" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/LimitReached" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/sites/{ref}/collections/{name}": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }, { "$ref": "#/components/parameters/CollectionName" }],
+      "patch": {
+        "operationId": "updateCollection",
+        "summary": "Change the title, mode or schema of a collection; only passed fields change, schema null removes the schema",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CollectionUpdate" } } } },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Collection" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      },
+      "delete": {
+        "operationId": "deleteCollection",
+        "summary": "Delete a collection with its documents; confirm (body or query) must repeat the name",
+        "requestBody": { "required": false, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Confirm" } } } },
+        "responses": {
+          "204": { "description": "Deleted" },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/sites/{ref}/collections/{name}/documents": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }, { "$ref": "#/components/parameters/CollectionName" }],
+      "get": {
+        "operationId": "listDocuments",
+        "summary": "Documents of a collection, including pending ones",
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["approved", "pending", "all"], "default": "all" } },
+          { "name": "order", "in": "query", "schema": { "type": "string", "enum": ["position", "newest", "oldest"], "default": "position" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 500, "default": 100 } },
+          { "name": "cursor", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DocumentPage" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      },
+      "post": {
+        "operationId": "saveDocuments",
+        "summary": "Write up to 1000 documents atomically (approved at once); replace swaps the whole content. Body up to 20 MiB",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DocumentsWrite" } } } },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DocumentsWritten" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/LimitReached" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/sites/{ref}/collections/{name}/delete-documents": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }, { "$ref": "#/components/parameters/CollectionName" }],
+      "post": {
+        "operationId": "deleteDocuments",
+        "summary": "Delete up to 1000 documents by ID",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DocumentIDs" } } } },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DocumentCount" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/sites/{ref}/collections/{name}/documents/{doc}": {
+      "parameters": [
+        { "$ref": "#/components/parameters/SiteRef" },
+        { "$ref": "#/components/parameters/CollectionName" },
+        { "name": "doc", "in": "path", "required": true, "schema": { "type": "string" } }
+      ],
+      "delete": {
+        "operationId": "deleteDocument",
+        "summary": "Delete one document",
+        "responses": {
+          "204": { "description": "Deleted" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/sites/{ref}/collections/{name}/moderate": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }, { "$ref": "#/components/parameters/CollectionName" }],
+      "post": {
+        "operationId": "moderateDocuments",
+        "summary": "Approve or reject (delete) up to 1000 pending documents",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Moderation" } } } },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DocumentCount" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
     "/tokens": {
       "get": {
         "operationId": "listTokens",
@@ -2376,6 +2510,13 @@
         },
         "description": "Site ID or slug"
       },
+      "CollectionName": {
+        "name": "name",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string" },
+        "description": "Collection name"
+      },
       "ID": {
         "name": "id",
         "in": "path",
@@ -2511,6 +2652,120 @@
       }
     },
     "schemas": {
+      "Collection": {
+        "type": "object",
+        "required": ["name", "title", "mode", "schema", "documents", "pending", "public_url", "created_at", "updated_at"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" },
+          "title": { "type": "string", "maxLength": 200 },
+          "mode": { "type": "string", "enum": ["public", "moderated"] },
+          "schema": { "type": ["object", "null"], "description": "JSON Schema (draft-07 or 2020-12) of the documents, or null" },
+          "documents": { "type": "integer" },
+          "pending": { "type": "integer" },
+          "public_url": { "type": "string", "description": "https://<site address>/_dropsite/data/<name>; empty while the site has no active address" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CollectionList": {
+        "type": "object",
+        "required": ["items", "total"],
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/Collection" } },
+          "total": { "type": "integer" }
+        }
+      },
+      "CollectionCreate": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "title": { "type": "string" },
+          "mode": { "type": "string", "enum": ["public", "moderated"], "default": "public" },
+          "schema": { "type": ["object", "null"], "description": "required for moderated collections" }
+        }
+      },
+      "CollectionUpdate": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "mode": { "type": "string", "enum": ["public", "moderated"] },
+          "schema": { "type": ["object", "null"], "description": "null removes the schema (not allowed for moderated collections)" }
+        }
+      },
+      "Confirm": {
+        "type": "object",
+        "properties": { "confirm": { "type": "string" } }
+      },
+      "Document": {
+        "type": "object",
+        "required": ["id", "data", "position", "status", "created_at", "updated_at"],
+        "properties": {
+          "id": { "type": "string" },
+          "data": { "type": "object", "additionalProperties": true },
+          "position": { "type": "integer" },
+          "status": { "type": "string", "enum": ["approved", "pending"] },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "DocumentPage": {
+        "type": "object",
+        "required": ["items", "next_cursor"],
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/Document" } },
+          "next_cursor": { "type": ["string", "null"] }
+        }
+      },
+      "DocumentsWrite": {
+        "type": "object",
+        "required": ["documents"],
+        "properties": {
+          "documents": {
+            "type": "array",
+            "maxItems": 1000,
+            "items": {
+              "type": "object",
+              "required": ["data"],
+              "properties": {
+                "id": { "type": "string", "description": "assigned by the server when omitted; an existing ID is replaced" },
+                "data": { "type": "object", "additionalProperties": true, "description": "at most 16 KB in compact form" },
+                "position": { "type": "integer", "description": "sort position; omitted keeps the stored one (0 for new documents)" }
+              }
+            }
+          },
+          "replace": { "type": "boolean", "description": "remove every document of the collection first" }
+        }
+      },
+      "DocumentsWritten": {
+        "type": "object",
+        "required": ["ids", "collection"],
+        "properties": {
+          "ids": { "type": "array", "items": { "type": "string" } },
+          "collection": { "$ref": "#/components/schemas/Collection" }
+        }
+      },
+      "DocumentIDs": {
+        "type": "object",
+        "required": ["ids"],
+        "properties": { "ids": { "type": "array", "maxItems": 1000, "items": { "type": "string" } } }
+      },
+      "Moderation": {
+        "type": "object",
+        "required": ["ids", "action"],
+        "properties": {
+          "ids": { "type": "array", "maxItems": 1000, "items": { "type": "string" } },
+          "action": { "type": "string", "enum": ["approve", "reject"] }
+        }
+      },
+      "DocumentCount": {
+        "type": "object",
+        "required": ["count", "collection"],
+        "properties": {
+          "count": { "type": "integer" },
+          "collection": { "$ref": "#/components/schemas/Collection" }
+        }
+      },
       "Error": {
         "type": "object",
         "required": [

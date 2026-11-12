@@ -55,6 +55,7 @@ func New(svc *service.Service, log *slog.Logger, mounts ...Mount) http.Handler {
 		return r.RemoteAddr
 	}))
 	a.registerSitePaths(mux)
+	a.registerDataPaths(mux)
 	return a.middleware(mux)
 }
 
@@ -98,6 +99,15 @@ func (a *api) routes() []route {
 		{Method: http.MethodGet, Path: "/sites/{ref}/forms/submissions.csv", handle: a.exportSubmissions},
 		{Method: http.MethodGet, Path: "/sites/{ref}/forms/submissions/search", handle: a.searchSubmissions},
 		{Method: http.MethodGet, Path: "/sites/{ref}/forms/submissions/export", handle: a.exportSubmissionsText},
+		{Method: http.MethodGet, Path: "/sites/{ref}/collections", handle: a.listCollections},
+		{Method: http.MethodPost, Path: "/sites/{ref}/collections", handle: a.createCollection},
+		{Method: http.MethodPatch, Path: "/sites/{ref}/collections/{name}", handle: a.updateCollection},
+		{Method: http.MethodDelete, Path: "/sites/{ref}/collections/{name}", handle: a.deleteCollection},
+		{Method: http.MethodGet, Path: "/sites/{ref}/collections/{name}/documents", handle: a.listDocuments},
+		{Method: http.MethodPost, Path: "/sites/{ref}/collections/{name}/documents", handle: a.saveDocuments},
+		{Method: http.MethodPost, Path: "/sites/{ref}/collections/{name}/delete-documents", handle: a.deleteDocuments},
+		{Method: http.MethodDelete, Path: "/sites/{ref}/collections/{name}/documents/{doc}", handle: a.deleteDocument},
+		{Method: http.MethodPost, Path: "/sites/{ref}/collections/{name}/moderate", handle: a.moderateDocuments},
 		{Method: http.MethodGet, Path: "/tokens", handle: a.listTokens},
 		{Method: http.MethodPost, Path: "/tokens", handle: a.createToken},
 		{Method: http.MethodDelete, Path: "/tokens/{id}", handle: a.revokeToken},
