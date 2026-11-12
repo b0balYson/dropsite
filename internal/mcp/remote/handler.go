@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"net"
 	"net/http"
 	"strconv"
 
@@ -54,7 +55,12 @@ func New(svc *service.Service, o Options) http.Handler {
 		o.Logger = slog.New(slog.DiscardHandler)
 	}
 	if o.ClientIP == nil {
-		o.ClientIP = func(r *http.Request) string { return r.RemoteAddr }
+		o.ClientIP = func(r *http.Request) string {
+			if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+				return host
+			}
+			return r.RemoteAddr
+		}
 	}
 	server := mcp.NewServer(brand.Version, resolver(svc, o.Logger), mcp.Options{Files: true, Instructions: instructions})
 	stream := sdk.NewStreamableHTTPHandler(func(*http.Request) *sdk.Server { return server },

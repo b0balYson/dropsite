@@ -44,7 +44,13 @@ func newFlow(t *testing.T) *flow {
 	return &flow{t: t, a: a, srv: srv, c: c}
 }
 
-func (f *flow) do(method, path, ctype string, body io.Reader, hdr ...string) (*http.Response, string) {
+// reply is what the tests read from a response (the body is read and closed).
+type reply struct {
+	StatusCode int
+	Header     http.Header
+}
+
+func (f *flow) do(method, path, ctype string, body io.Reader, hdr ...string) (*reply, string) {
 	f.t.Helper()
 	req, err := http.NewRequestWithContext(context.Background(), method, f.srv.URL+path, body)
 	if err != nil {
@@ -62,10 +68,10 @@ func (f *flow) do(method, path, ctype string, body io.Reader, hdr ...string) (*h
 	}
 	defer resp.Body.Close()
 	b, _ := io.ReadAll(resp.Body)
-	return resp, string(b)
+	return &reply{StatusCode: resp.StatusCode, Header: resp.Header}, string(b)
 }
 
-func (f *flow) form(path string, v url.Values) (*http.Response, string) {
+func (f *flow) form(path string, v url.Values) (*reply, string) {
 	f.t.Helper()
 	return f.do(http.MethodPost, path, "application/x-www-form-urlencoded", strings.NewReader(v.Encode()))
 }
@@ -123,7 +129,7 @@ func (f *flow) register() string {
 }
 
 // authorize opens the consent page and submits it with a connect code.
-func (f *flow) authorize(clientID, code, action string) *http.Response {
+func (f *flow) authorize(clientID, code, action string) *reply {
 	f.t.Helper()
 	q := url.Values{
 		"response_type": {"code"}, "client_id": {clientID}, "redirect_uri": {redirectURI},

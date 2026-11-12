@@ -42,7 +42,13 @@ func newConsentRig(t *testing.T) *consentRig {
 	return &consentRig{t: t, env: env, srv: srv, c: c, client: cl.ID}
 }
 
-func (r *consentRig) do(req *http.Request) (*http.Response, string) {
+// reply is what the tests read from a response (the body is read and closed).
+type reply struct {
+	StatusCode int
+	Header     http.Header
+}
+
+func (r *consentRig) do(req *http.Request) (*reply, string) {
 	r.t.Helper()
 	resp, err := r.c.Do(req)
 	if err != nil {
@@ -50,7 +56,7 @@ func (r *consentRig) do(req *http.Request) (*http.Response, string) {
 	}
 	defer resp.Body.Close()
 	b, _ := io.ReadAll(resp.Body)
-	return resp, string(b)
+	return &reply{StatusCode: resp.StatusCode, Header: resp.Header}, string(b)
 }
 
 func (r *consentRig) open(lang string) (string, string, string) {
@@ -65,7 +71,7 @@ func (r *consentRig) open(lang string) (string, string, string) {
 	return body, csrfRe.FindStringSubmatch(body)[1], strings.ReplaceAll(sealedRe.FindStringSubmatch(body)[1], "&#43;", "+")
 }
 
-func (r *consentRig) post(form url.Values) (*http.Response, string) {
+func (r *consentRig) post(form url.Values) (*reply, string) {
 	r.t.Helper()
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, r.srv.URL+"/oauth/authorize?ui_lang=en", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")

@@ -145,7 +145,11 @@ func TestRemoteToolsWithAPIToken(t *testing.T) {
 
 func TestRemoteAuthErrors(t *testing.T) {
 	r := newRig(t)
-	post := func(token string) *http.Response {
+	type reply struct {
+		StatusCode int
+		Header     http.Header
+	}
+	post := func(token string) reply {
 		req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, r.srv.URL,
 			strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/list"}`))
 		req.Header.Set("Content-Type", "application/json")
@@ -158,7 +162,7 @@ func TestRemoteAuthErrors(t *testing.T) {
 			t.Fatal(err)
 		}
 		_ = resp.Body.Close()
-		return resp
+		return reply{StatusCode: resp.StatusCode, Header: resp.Header}
 	}
 	resp := post("")
 	wa := resp.Header.Get("WWW-Authenticate")
@@ -167,7 +171,7 @@ func TestRemoteAuthErrors(t *testing.T) {
 		!strings.Contains(wa, `scope="sites"`) {
 		t.Fatalf("no token: %d %q", resp.StatusCode, wa)
 	}
-	var last *http.Response
+	var last reply
 	for range service.FailedTokensPerIP + 1 {
 		last = post("ds_wrong")
 	}

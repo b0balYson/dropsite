@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/netip"
 	"net/url"
@@ -31,7 +32,7 @@ import (
 // Paths on the API host.
 const (
 	AuthorizePath = "/oauth/authorize"
-	TokenPath     = "/oauth/token"
+	TokenPath     = "/oauth/token" //nolint:gosec // G101: a URL path, not a credential
 	RegisterPath  = "/oauth/register"
 	RevokePath    = "/oauth/revoke"
 	ResourceMeta  = "/.well-known/oauth-protected-resource"
@@ -77,13 +78,21 @@ func New(svc *service.Service, o Options) *Server {
 		o.Logger = slog.New(slog.DiscardHandler)
 	}
 	if o.ClientIP == nil {
-		o.ClientIP = func(r *http.Request) string { return r.RemoteAddr }
+		o.ClientIP = remoteHost
 	}
 	key := make([]byte, 32)
 	if _, err := rand.Read(key); err != nil {
 		panic("crypto/rand failed: " + err.Error())
 	}
 	return &Server{svc: svc, o: o, cimd: newFetcher(o.Resolver, o.TLSConfig, o.AllowAddr), key: key, nowFn: time.Now}
+}
+
+// remoteHost is the connection address without the port.
+func remoteHost(r *http.Request) string {
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
+	return r.RemoteAddr
 }
 
 // Issuer is the authorization server identifier.

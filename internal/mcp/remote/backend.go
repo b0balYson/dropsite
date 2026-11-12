@@ -96,8 +96,8 @@ func (b backend) ListSites(ctx context.Context) ([]mcp.Site, error) {
 	out := make([]mcp.Site, 0, len(rows))
 	for _, r := range rows {
 		out = append(out, mcp.Site{
-			ID: r.Site.ID, Title: r.Site.Title, URL: r.URL, URLs: r.URLs, Slug: r.Slug,
-			LastDeployAt: stamp(r.LastDeployAt), UpdatedAt: stamp(&r.Site.UpdatedAt),
+			ID: r.ID, Title: r.Title, URL: r.URL, URLs: r.URLs, Slug: r.Slug,
+			LastDeployAt: stamp(r.LastDeployAt), UpdatedAt: stamp(&r.UpdatedAt),
 		})
 	}
 	return out, nil

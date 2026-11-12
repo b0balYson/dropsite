@@ -225,7 +225,13 @@ func newRig(t *testing.T, o Options) *rig {
 	return &rig{t: t, env: env, s: s, srv: srv}
 }
 
-func (r *rig) req(method, path, ctype, body string) (*http.Response, string) {
+// reply is the part of a response the tests look at (the body is read and closed).
+type reply struct {
+	StatusCode int
+	Header     http.Header
+}
+
+func (r *rig) req(method, path, ctype, body string) (*reply, string) {
 	r.t.Helper()
 	req, _ := http.NewRequestWithContext(context.Background(), method, r.srv.URL+path, strings.NewReader(body))
 	if ctype != "" {
@@ -237,7 +243,7 @@ func (r *rig) req(method, path, ctype, body string) (*http.Response, string) {
 	}
 	defer resp.Body.Close()
 	b, _ := io.ReadAll(resp.Body)
-	return resp, string(b)
+	return &reply{StatusCode: resp.StatusCode, Header: resp.Header}, string(b)
 }
 
 const form = "application/x-www-form-urlencoded"
@@ -287,7 +293,7 @@ func TestRegisterEndpoint(t *testing.T) {
 	if resp, _ := r.req(http.MethodGet, RegisterPath, "", ""); resp.StatusCode != http.StatusMethodNotAllowed {
 		t.Fatal("GET register")
 	}
-	var last *http.Response
+	var last *reply
 	for range service.RegistrationsPerIP {
 		last, _ = r.req(http.MethodPost, RegisterPath, "application/json", `{"redirect_uris":["https://a.example/cb"]}`)
 	}

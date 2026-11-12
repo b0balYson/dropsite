@@ -17,6 +17,7 @@ import (
 )
 
 const (
+	goodCode  = "ABCD-EFGH-JKMNP"
 	goodToken = "ds_good"
 	userEmail = "dev@example.com"
 )
@@ -34,6 +35,8 @@ type fakeServer struct {
 	rateLimit  bool    // every request gets 429
 	lastFiles  []string
 	lastClient string
+	codeUsed   bool
+	tokenName  string
 }
 
 type fakeSite struct {
@@ -66,6 +69,7 @@ func newFakeServer(t *testing.T) *fakeServer {
 	mux.HandleFunc("GET /api/v1/sites", f.listSites)
 	mux.HandleFunc("POST /api/v1/sites", f.createSite)
 	mux.HandleFunc("GET /api/v1/sites/{ref}", f.withSite(f.getSite))
+	mux.HandleFunc("PATCH /api/v1/sites/{ref}", f.withSite(f.patchSite))
 	mux.HandleFunc("DELETE /api/v1/sites/{ref}", f.withSite(f.deleteSite))
 	mux.HandleFunc("POST /api/v1/sites/{ref}/deploys", f.withSite(f.deploy))
 	mux.HandleFunc("GET /api/v1/sites/{ref}/deploys", f.withSite(f.listDeploys))
@@ -85,6 +89,10 @@ func (f *fakeServer) auth(next http.Handler) http.Handler {
 		if limited {
 			w.Header().Set("Retry-After", "42")
 			fail(w, apiErr{429, "rate_limited", "too many requests", nil})
+			return
+		}
+		if r.URL.Path == "/api/v1/connect/exchange" {
+			f.exchange(w, r)
 			return
 		}
 		if r.Header.Get("Authorization") != "Bearer "+goodToken {
@@ -244,6 +252,42 @@ func (f *fakeServer) createSite(w http.ResponseWriter, r *http.Request) {
 }
 
 func (f *fakeServer) getSite(w http.ResponseWriter, _ *http.Request, s *fakeSite) {
+	reply(w, 200, s.json())
+}
+
+// exchange trades goodCode (once) for goodToken.
+func (f *fakeServer) exchange(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Code string `json:"code"`
+		Name string `json:"name"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&in)
+	f.mu.Lock()
+	ok := in.Code == goodCode && !f.codeUsed
+	f.codeUsed = f.codeUsed || ok
+	f.tokenName = in.Name
+	f.mu.Unlock()
+	if !ok || r.Header.Get("Authorization") != "" {
+		fail(w, apiErr{400, "connect_code_invalid", "the connect code is invalid, already used or expired", nil})
+		return
+	}
+	reply(w, 201, map[string]any{"value": goodToken, "user": map[string]any{"id": "u1", "email": userEmail},
+		"token": map[string]any{"id": "1", "name": in.Name}})
+}
+
+func (f *fakeServer) patchSite(w http.ResponseWriter, r *http.Request, s *fakeSite) {
+	var in struct {
+		Slug *string `json:"slug"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&in)
+	if in.Slug != nil {
+		if *in.Slug == "www" {
+			fail(w, apiErr{400, "slug_reserved", "this address is reserved", map[string]any{"slug": "www"}})
+			return
+		}
+		slug := *in.Slug
+		s.Slug = &slug
+	}
 	reply(w, 200, s.json())
 }
 

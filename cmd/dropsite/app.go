@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"runtime"
 	"sort"
 	"strings"
 
@@ -31,6 +32,11 @@ type app struct {
 	configDir  func() (string, error)
 	isTerminal func() bool
 	httpClient *http.Client // nil: client default
+	hostname   func() (string, error)
+	// home, lookPath-like and platform hooks for setup (tests replace them).
+	homeDir    func() (string, error)
+	goos       string
+	executable func() (string, error)
 }
 
 func newApp() *app {
@@ -41,6 +47,10 @@ func newApp() *app {
 		getenv:     os.Getenv,
 		configDir:  os.UserConfigDir,
 		isTerminal: stdinIsTerminal,
+		hostname:   os.Hostname,
+		homeDir:    os.UserHomeDir,
+		goos:       runtime.GOOS,
+		executable: os.Executable,
 	}
 }
 
@@ -57,7 +67,9 @@ type command struct {
 
 func commands() map[string]command {
 	return map[string]command{
-		"login":    {"Verify an API token and save the server and token", cmdLogin},
+		"login":    {"Sign in with a connect code or an API token", cmdLogin},
+		"setup":    {"Connect Claude Code, Codex, Cursor and Claude Desktop", cmdSetup},
+		"mcp":      {"Run a local MCP server over stdio (for Claude Desktop)", cmdMCP},
 		"deploy":   {"Publish a directory and print the site URL", cmdDeploy},
 		"sites":    {"List your sites", cmdSites},
 		"deploys":  {"Show the release history of a site", cmdDeploys},

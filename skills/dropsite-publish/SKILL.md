@@ -15,8 +15,8 @@ Run:
 dropsite version && dropsite sites --json >/dev/null && echo READY
 ```
 
-- `command not found`: the CLI is not installed. Stop and tell the user to open the **Connect AI** page of their dropsite web interface and follow the install instructions there. Do not try to install it yourself.
-- An error that mentions `dropsite login` or `401`: there is no valid token. Stop and tell the user to issue a token on the **Connect AI** page and run the `dropsite login` command shown there in their own terminal. Never ask the user to paste a token into the chat.
+- `command not found`: the CLI is not installed. Stop and tell the user to open the **Connect AI** page of their dropsite web interface, press **Connect** and run the command shown there in their own terminal (it installs the CLI and signs in). Do not try to install it yourself.
+- An error that mentions `not logged in`, `dropsite login` or `401`: the CLI is not signed in or its key was revoked. Stop and give the user the same advice: press **Connect** on the **Connect AI** page and run the shown command in their own terminal. Never ask the user to paste a token or a connect code into the chat.
 
 ## 2. Find the folder to publish
 
