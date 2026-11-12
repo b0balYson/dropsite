@@ -66,7 +66,7 @@ func TestDemoteSkipsCodeFences(t *testing.T) {
 }
 
 func TestGuideTopics(t *testing.T) {
-	want := []string{"overview", "create", "update", "large_sites", "assets", "forms", "stats", "addresses",
+	want := []string{"overview", "create", "update", "large_sites", "assets", "forms", "data", "stats", "addresses",
 		"protection", "rollback", "account", "errors"}
 	if got := strings.Join(Topics(), ","); got != strings.Join(want, ",") {
 		t.Fatalf("topics: %s", got)
@@ -107,9 +107,27 @@ func TestGuideNamesTheFixedTools(t *testing.T) {
 		"revoke_connection", "set_root_site", "clear_root_site", "get_form_settings", "set_form_settings",
 		"list_submissions", "export_submissions", "list_channels", "add_channel", "verify_channel",
 		"set_channel_enabled", "delete_channel", "rotate_channel_secret", "confirm",
+		"list_collections", "save_collection", "delete_collection", "list_documents", "save_documents",
+		"delete_documents", "moderate_documents", "/_dropsite/data/",
 	} {
 		if !strings.Contains(all, tool) {
 			t.Errorf("guide does not mention %s", tool)
+		}
+	}
+}
+
+// TestDataTopic keeps the site data rules the spec requires in the guide.
+func TestDataTopic(t *testing.T) {
+	text, ok := Guide("data")
+	if !ok {
+		t.Fatal("no data topic")
+	}
+	for _, want := range []string{
+		"fetch('/_dropsite/data/", "fallback", "`public`", "`moderated`", "_hp", "altcha-widget",
+		"rollback", "not part of releases", "textContent", "replace: true",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("data topic lacks %q", want)
 		}
 	}
 }

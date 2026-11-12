@@ -27,6 +27,7 @@ Call get_guide with one of these topics when you need details:
 - `large_sites`: sites over 16 MB (many photos, several pages).
 - `assets`: self-contained, fast, mobile-friendly, accessible sites (read before building any site).
 - `forms`: forms on the site, where requests go (Telegram, e-mail, webhook), reading and exporting requests.
+- `data`: content that changes without a new release (prices, menus, schedules) and visitor reviews with approval.
 - `stats`: visits and analytics counters.
 - `addresses`: the memorable address, own domains and the DNS steps the user does, the root domain (administrators).
 - `protection`: password, hiding from search engines, lifetime.
