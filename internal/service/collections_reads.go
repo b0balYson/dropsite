@@ -12,7 +12,7 @@ import (
 const (
 	// DataReadsPerIP allows about 60 page views a minute from one address
 	// (an office behind NAT): a page usually loads 1-5 collections.
-	DataReadsPerIP      = 300
+	DataReadsPerIP       = 300
 	DataReadsPerIPWindow = time.Minute
 	// MaxPublicDocumentPage caps a visitor page (about 3.2 MB at 16 KB per
 	// document). A larger limit, still accepted up to MaxDocumentPage for
