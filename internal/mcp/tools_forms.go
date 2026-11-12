@@ -44,8 +44,8 @@ type exportArgs struct {
 
 type addChannelArgs struct {
 	Site   string `json:"site" jsonschema:"site ID or slug"`
-	Kind   string `json:"kind" jsonschema:"telegram, email or webhook"`
-	Target string `json:"target,omitempty" jsonschema:"telegram: leave empty to get a link (or a numeric chat ID); email: the address; webhook: an https:// URL"`
+	Kind   string `json:"kind" jsonschema:"telegram, email, webhook or sheets"`
+	Target string `json:"target,omitempty" jsonschema:"telegram: leave empty to get a link (or a numeric chat ID); email: the address; webhook: an https:// URL; sheets: the Google Sheets link of the sheet (tab)"`
 }
 
 type verifyArgs struct {
@@ -105,15 +105,18 @@ func (t tools) registerForms(s *sdk.Server, o Options) {
 			"cabinet_url, where the full CSV can be downloaded."}, t.exportSubmissions)
 	sdk.AddTool(s, &sdk.Tool{Name: "list_channels", Annotations: readOnly("List delivery channels"),
 		Description: "List where a site's submissions are delivered (Telegram chats, e-mail addresses, " +
-			"webhooks) with their state in plain words, and which channel kinds this server offers."}, t.listChannels)
+			"webhooks, Google Sheets) with their state in plain words, and which channel kinds this server offers."}, t.listChannels)
 	sdk.AddTool(s, &sdk.Tool{Name: "add_channel", Annotations: writes("Add delivery channel", false, false),
-		Description: "Start delivering a site's submissions to Telegram, e-mail or a webhook. " +
+		Description: "Start delivering a site's submissions to Telegram, e-mail, a webhook or a Google Sheet. " +
 			"telegram without target returns a link: ask the user to open it in Telegram and press Start in " +
 			"the chat that should get the submissions (for a group: add the bot to the group, then send the " +
 			"/start command shown in the link there); then call list_channels to see it active. " +
 			"email (target = address) sends a 6-digit code: ask the user for it and call verify_channel. " +
 			"webhook (target = https URL) is active at once and returns a signing secret shown only this once: " +
-			"give it to the user for the receiving system. Follow next_step in the result. If the result says " +
+			"give it to the user for the receiving system. " +
+			"sheets (target = link to the sheet, shared with the address from get_sheets_setup as Editor) writes the " +
+			"header row as a test and is active at once; every submission becomes a row, new fields add columns. " +
+			"Follow next_step in the result. If the result says " +
 			"channel_unavailable, tell the user that the administrator of the dropsite server must set up " +
 			"Telegram or e-mail first."}, t.addChannel)
 	sdk.AddTool(s, &sdk.Tool{Name: "verify_channel", Annotations: writes("Confirm delivery channel", false, false),
@@ -121,7 +124,7 @@ func (t tools) registerForms(s *sdk.Server, o Options) {
 			"Codes work 30 minutes and 5 attempts; after that remove the channel and add it again."}, t.verifyChannel)
 	sdk.AddTool(s, &sdk.Tool{Name: "set_channel_enabled", Annotations: writes("Turn channel on or off", false, true),
 		Description: "Turn delivery to a channel off (queued submissions for it are dropped, they stay visible " +
-			"in list_submissions) or on again. Turning on also resumes a webhook paused after repeated failures."}, t.setChannelEnabled)
+			"in list_submissions) or on again. Turning on also resumes a webhook or Google Sheet paused after repeated failures."}, t.setChannelEnabled)
 	sdk.AddTool(s, &sdk.Tool{Name: "delete_channel", Annotations: writes("Delete delivery channel", true, true),
 		Description: "Remove a delivery channel; submissions stay stored. Only after the user explicitly " +
 			"confirmed: pass the channel's ID or target again in confirm."}, t.deleteChannel)

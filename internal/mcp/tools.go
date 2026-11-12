@@ -125,6 +125,7 @@ func (t tools) register(s *sdk.Server, o Options) {
 	t.registerForms(s, o)
 	t.registerCabinet(s, o)
 	t.registerCollections(s, o)
+	t.registerSheets(s, o)
 	t.registerPublish(s, o)
 	t.registerQuality(s, o)
 	t.registerWorkflow(s, o)
