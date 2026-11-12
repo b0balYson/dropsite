@@ -21,6 +21,12 @@ type ProgressFunc func(sent int64)
 // Only ctx and the response-header timeout bound the call, so large uploads
 // over slow links are not cut off. progress may be nil.
 func (c *Client) Deploy(ctx context.Context, ref string, archive io.Reader, progress ProgressFunc) (*DeployResult, error) {
+	return c.DeployWith(ctx, ref, archive, progress, DeployOptions{})
+}
+
+// DeployWith is Deploy with options (a draft instead of going live).
+func (c *Client) DeployWith(ctx context.Context, ref string, archive io.Reader, progress ProgressFunc,
+	opts DeployOptions) (*DeployResult, error) {
 	pr, pw := io.Pipe()
 	mw := multipart.NewWriter(pw)
 	done := make(chan struct{})
@@ -35,7 +41,7 @@ func (c *Client) Deploy(ctx context.Context, ref string, archive io.Reader, prog
 		<-done
 	}()
 
-	req, err := c.newRequest(ctx, http.MethodPost, sitePath(ref)+"/deploys", nil, pr)
+	req, err := c.newRequest(ctx, http.MethodPost, sitePath(ref)+"/deploys", opts.query(), pr)
 	if err != nil {
 		return nil, err
 	}

@@ -75,6 +75,8 @@ type FilesChange struct {
 	Files        []InlineFile `json:"files,omitempty"`
 	Delete       []string     `json:"delete,omitempty"`
 	Fetch        []FetchSpec  `json:"fetch,omitempty"`
+	// Draft builds the release as the site's draft.
+	Draft bool `json:"draft,omitempty"`
 }
 
 // FilesResult is a release made by a files edit or an upload commit.
@@ -181,13 +183,10 @@ func (c *Client) UploadFiles(ctx context.Context, id string, files []InlineFile,
 
 type commitUploadRequest struct {
 	Delete []string `json:"delete,omitempty"`
+	Draft  bool     `json:"draft,omitempty"`
 }
 
 // CommitUpload publishes a session and closes it.
 func (c *Client) CommitUpload(ctx context.Context, id string, deletes []string) (*FilesResult, error) {
-	var out FilesResult
-	if err := c.doJSON(ctx, http.MethodPost, uploadPath(id)+"/commit", nil, commitUploadRequest{Delete: deletes}, &out); err != nil {
-		return nil, err
-	}
-	return &out, nil
+	return c.CommitUploadWith(ctx, id, deletes, false)
 }

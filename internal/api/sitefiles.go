@@ -187,6 +187,7 @@ type updateSiteFilesRequest struct {
 	Files        []inlineFileDTO `json:"files"`
 	Delete       []string        `json:"delete"`
 	Fetch        []fetchSpecDTO  `json:"fetch"`
+	Draft        bool            `json:"draft"`
 }
 
 func (a *api) updateSiteFiles(w http.ResponseWriter, r *http.Request) error {
@@ -194,8 +195,9 @@ func (a *api) updateSiteFiles(w http.ResponseWriter, r *http.Request) error {
 	if err := decodeFilesJSON(w, r, &req); err != nil {
 		return err
 	}
-	res, err := a.svc.UpdateSiteFiles(r.Context(), actorFrom(r.Context()), r.PathValue("ref"), req.BaseDeployID,
-		service.FileChanges{Put: toInline(req.Files), Delete: req.Delete, Fetch: toFetchSpecs(req.Fetch)})
+	res, err := a.svc.UpdateSiteFilesWith(r.Context(), actorFrom(r.Context()), r.PathValue("ref"), req.BaseDeployID,
+		service.FileChanges{Put: toInline(req.Files), Delete: req.Delete, Fetch: toFetchSpecs(req.Fetch)},
+		service.PublishOptions{Draft: req.Draft})
 	if err != nil {
 		return err
 	}
@@ -244,6 +246,7 @@ func (a *api) uploadFiles(w http.ResponseWriter, r *http.Request) error {
 
 type commitUploadRequest struct {
 	Delete []string `json:"delete"`
+	Draft  bool     `json:"draft"`
 }
 
 func (a *api) commitUpload(w http.ResponseWriter, r *http.Request) error {
@@ -251,7 +254,8 @@ func (a *api) commitUpload(w http.ResponseWriter, r *http.Request) error {
 	if err := decodeOptionalJSON(w, r, &req); err != nil {
 		return err
 	}
-	res, err := a.svc.CommitUpload(r.Context(), actorFrom(r.Context()), r.PathValue("id"), req.Delete)
+	res, err := a.svc.CommitUploadWith(r.Context(), actorFrom(r.Context()), r.PathValue("id"), req.Delete,
+		service.PublishOptions{Draft: req.Draft})
 	if err != nil {
 		return err
 	}
