@@ -76,6 +76,10 @@ Windows (PowerShell):
 irm https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.ps1 | iex
 ```
 
+### Own domains
+
+A site can also open on the owner's domain, such as `promo.example.com`: add it in the **Own domains** block of the site page, with `dropsite domains add <site> <domain>` or `POST /sites/{id}/hostnames`. Point it at the server (a CNAME to the site's random address, or A/AAAA records for a root domain). The domain gets a certificate and serves the site only after an administrator approves it on the **Domains** screen, so nobody can make the server request certificates for arbitrary names. Details: [docs/external-domains.md](docs/external-domains.md).
+
 ### What a site archive may contain
 
 `index.html` at the root (a single top-level folder such as `dist/` is unwrapped automatically). Up to 50 MB unpacked, 20 MB per file, 2000 files by default. Symlinks, absolute paths and `..` are rejected. `.git`, `node_modules`, `__MACOSX`, `.DS_Store`, `Thumbs.db` are skipped.
@@ -124,6 +128,8 @@ In this mode every release also gets its own preview address `https://p-<release
 | `CF_API_TOKEN` | wildcard only | — | Cloudflare token with `Zone.DNS:Edit`, passed to Caddy only |
 | `MAX_SITE_BYTES`, `MAX_FILE_BYTES`, `MAX_FILES`, `MAX_SITES_PER_USER`, `KEEP_RELEASES` | no | 50 MB, 20 MB, 2000, 10, 5 | Limits; admins can override them in the interface |
 | `RESERVED_SLUGS` | no | | Extra forbidden slugs, comma separated |
+| `MAX_DOMAINS_PER_SITE` | no | `5` | Own domains per site, 1–100 |
+| `SERVER_IPS` | no | addresses of `BASE_DOMAIN` | Public IPs of the server, comma separated: DNS target shown to owners and used by the domain DNS check |
 | `LOG_LEVEL` | no | `info` | `debug`, `info`, `warn`, `error` |
 
 ## Operations
@@ -133,7 +139,7 @@ In this mode every release also gets its own preview address `https://p-<release
 - **Logs:** JSON on stdout of both containers: `docker compose logs -f`.
 - **Health:** `docker compose ps` shows the `control` health check.
 
-More: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [docs/tls.md](docs/tls.md), [docs/production-checklist.md](docs/production-checklist.md).
+More: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [docs/tls.md](docs/tls.md), [docs/external-domains.md](docs/external-domains.md), [docs/production-checklist.md](docs/production-checklist.md).
 
 ## Security model
 
