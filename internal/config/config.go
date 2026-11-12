@@ -54,6 +54,12 @@ type Config struct {
 	AdminAddr    string
 
 	TrustedProxies []netip.Prefix
+
+	// TelegramAPIURL is the Bot API base URL (overridable for tests).
+	TelegramAPIURL string
+	// FormWebhookAllow lists networks that form webhooks may reach although
+	// they are private (test stacks only); plain http is allowed for them.
+	FormWebhookAllow []netip.Prefix
 }
 
 // Getenv is the environment lookup function, injectable for tests.
@@ -132,6 +138,8 @@ func Load(get Getenv) (*Config, error) {
 	c.LogLevel = r.logLevel()
 	c.ReservedSlugs = splitList(r.str("RESERVED_SLUGS", ""))
 	c.TrustedProxies = r.prefixes("TRUSTED_PROXIES", "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8,::1/128")
+	c.TelegramAPIURL = r.httpURL("TELEGRAM_API_URL", "https://api.telegram.org")
+	c.FormWebhookAllow = r.prefixes("FORM_WEBHOOK_ALLOW_CIDRS", "")
 
 	switch c.TLSMode {
 	case TLSModeOnDemand:
@@ -215,6 +223,17 @@ func underDomain(host, domainName string) bool {
 		h = ascii
 	}
 	return h == domainName || strings.HasSuffix(h, "."+domainName)
+}
+
+// httpURL reads an absolute http(s) URL without a trailing slash.
+func (r *reader) httpURL(key, def string) string {
+	raw := strings.TrimSuffix(r.str(key, def), "/")
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil {
+		r.fail(key, "must be an absolute http(s) URL, got %q", raw)
+		return def
+	}
+	return raw
 }
 
 func (r *reader) logLevel() slog.Level {
