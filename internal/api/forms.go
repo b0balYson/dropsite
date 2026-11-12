@@ -83,8 +83,38 @@ func toSubmission(s domain.FormSubmission) submissionDTO {
 	return out
 }
 
+// formSiteSettingsDTO is the form setup of a site with what an owner needs
+// to add forms and channels.
 type formSiteSettingsDTO struct {
-	RequireAltcha bool `json:"require_altcha"`
+	SiteID            string   `json:"site_id"`
+	SiteURL           string   `json:"site_url"`
+	RequireAltcha     bool     `json:"require_altcha"`
+	FormNames         []string `json:"form_names"`
+	TelegramAvailable bool     `json:"telegram_available"`
+	TelegramBot       *string  `json:"telegram_bot"`
+	EmailAvailable    bool     `json:"email_available"`
+	CabinetURL        string   `json:"cabinet_url"`
+}
+
+// formSiteSettings completes the settings of a site the actor may see.
+func (a *api) formSiteSettings(r *http.Request, v service.SiteView, requireAltcha bool) (formSiteSettingsDTO, error) {
+	ctx := r.Context()
+	names, err := a.svc.ListFormNames(ctx, actorFrom(ctx), v.Site.ID)
+	if err != nil {
+		return formSiteSettingsDTO{}, err
+	}
+	av, err := a.svc.FormChannelAvailability(ctx)
+	if err != nil {
+		return formSiteSettingsDTO{}, err
+	}
+	out := formSiteSettingsDTO{
+		SiteID: v.Site.ID, SiteURL: v.URL, RequireAltcha: requireAltcha, FormNames: nonNil(names),
+		TelegramAvailable: av.Telegram, EmailAvailable: av.Email, CabinetURL: a.svc.FormsPageURL(v.Site.ID),
+	}
+	if av.Telegram {
+		out.TelegramBot = optional("@" + av.Bot)
+	}
+	return out, nil
 }
 
 func channelID(r *http.Request) (int64, error) {
@@ -197,11 +227,19 @@ func (a *api) rotateChannelSecret(w http.ResponseWriter, r *http.Request) error 
 }
 
 func (a *api) getFormSiteSettings(w http.ResponseWriter, r *http.Request) error {
-	st, err := a.svc.GetFormSiteSettings(r.Context(), actorFrom(r.Context()), r.PathValue("ref"))
+	v, err := a.svc.GetSite(r.Context(), actorFrom(r.Context()), r.PathValue("ref"))
 	if err != nil {
 		return err
 	}
-	writeJSON(w, http.StatusOK, formSiteSettingsDTO{RequireAltcha: st.RequireAltcha})
+	st, err := a.svc.GetFormSiteSettings(r.Context(), actorFrom(r.Context()), v.Site.ID)
+	if err != nil {
+		return err
+	}
+	out, err := a.formSiteSettings(r, v, st.RequireAltcha)
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusOK, out)
 	return nil
 }
 
@@ -217,11 +255,19 @@ func (a *api) updateFormSiteSettings(w http.ResponseWriter, r *http.Request) err
 	if req.RequireAltcha == nil {
 		return invalidField("require_altcha", "require_altcha must be true or false")
 	}
-	st, err := a.svc.SetFormSiteSettings(r.Context(), actorFrom(r.Context()), r.PathValue("ref"), *req.RequireAltcha)
+	v, err := a.svc.GetSite(r.Context(), actorFrom(r.Context()), r.PathValue("ref"))
 	if err != nil {
 		return err
 	}
-	writeJSON(w, http.StatusOK, formSiteSettingsDTO{RequireAltcha: st.RequireAltcha})
+	st, err := a.svc.SetFormSiteSettings(r.Context(), actorFrom(r.Context()), v.Site.ID, *req.RequireAltcha)
+	if err != nil {
+		return err
+	}
+	out, err := a.formSiteSettings(r, v, st.RequireAltcha)
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusOK, out)
 	return nil
 }
 

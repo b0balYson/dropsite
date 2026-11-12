@@ -33,18 +33,27 @@ func noContent(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// maxFilesBody bounds the JSON bodies that carry file content by value:
+// 1 MB of content (the service limit) in base64 or escaped text plus framing.
+const maxFilesBody = 4 << 20
+
 // decodeJSON strictly decodes a single JSON object into dst.
 func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
-	return decode(w, r, dst, false)
+	return decode(w, r, dst, false, maxJSONBody)
 }
 
 // decodeOptionalJSON is decodeJSON that accepts an empty body.
 func decodeOptionalJSON(w http.ResponseWriter, r *http.Request, dst any) error {
-	return decode(w, r, dst, true)
+	return decode(w, r, dst, true, maxJSONBody)
 }
 
-func decode(w http.ResponseWriter, r *http.Request, dst any, allowEmpty bool) error {
-	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxJSONBody))
+// decodeFilesJSON is decodeJSON for bodies with file content.
+func decodeFilesJSON(w http.ResponseWriter, r *http.Request, dst any) error {
+	return decode(w, r, dst, false, maxFilesBody)
+}
+
+func decode(w http.ResponseWriter, r *http.Request, dst any, allowEmpty bool, limit int64) error {
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, limit))
 	if err != nil {
 		var mbe *http.MaxBytesError
 		if errors.As(err, &mbe) {
