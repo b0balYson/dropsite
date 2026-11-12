@@ -19,6 +19,7 @@
     {{if .Me}}
     <nav class="nav" aria-label="{{.L.T "nav.label"}}">
       <a class="nav__link" href="/" {{if eq .Nav "sites"}}aria-current="page"{{end}}>{{.L.T "nav.sites"}}</a>
+      <a class="nav__link" href="/workspaces" {{if eq .Nav "workspaces"}}aria-current="page"{{end}}>{{.L.T "nav.workspaces"}}</a>
       <a class="nav__link" href="/connect" {{if eq .Nav "connect"}}aria-current="page"{{end}}>{{.L.T "nav.connect"}}</a>
       {{if .IsAdmin}}
       <span class="nav__group" role="group" aria-label="{{.L.T "nav.admin"}}">

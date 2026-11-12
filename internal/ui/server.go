@@ -123,6 +123,8 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /sites/{ref}/proxy/{name}/secret/delete", s.user(s.clearProxySecret))
 	mux.HandleFunc("POST /sites/{ref}/proxy/{name}/delete", s.user(s.deleteProxy))
 
+	s.workspaceRoutes(mux)
+
 	mux.HandleFunc("GET /connect", s.user(s.connectPage))
 	mux.HandleFunc("POST /connect/code", s.user(s.createCode))
 	mux.HandleFunc("POST /connect/apps/{id}/revoke", s.user(s.revokeApp))

@@ -9,6 +9,8 @@
 
 {{if .D.AtLimit}}{{with .D.Form.Error}}<p class="notice notice--error" role="alert">{{.}}</p>{{end}}<p class="notice notice--warn" role="status">{{.L.T "sites.atlimit" "limit" .D.Limit}}</p>{{end}}
 
+{{template "sites_workspace_filter" .}}
+
 {{if .D.Sites}}
 <ol class="site-list">
   {{range $i, $s := .D.Sites}}
@@ -16,6 +18,7 @@
     <span class="site-row__index mono" aria-hidden="true">{{printf "%02d" (inc $i)}}</span>
     <div class="site-row__main">
       <h2 class="site-row__title"><a href="/sites/{{$s.ID}}">{{$s.Title}}</a></h2>
+      {{with $s.WorkspaceName}}<p class="hint">{{$.L.T "workspaces.badge" "name" .}}</p>{{end}}
       {{if or $s.Protected $s.Noindex $s.ExpiresAt}}
       <ul class="flag-list">
         {{if $s.Protected}}<li><span class="badge badge--ok">{{$.L.T "access.badge.protected"}}</span></li>{{end}}
@@ -68,6 +71,7 @@
       <p class="hint" id="slug-hint">{{.L.T "site.slug.hint" "domain" .D.Domain}}</p>
       <p class="slug-status" id="slug-status" aria-live="polite"></p>
     </div>
+    {{template "workspace_select" .}}
     <div class="form-grid__full">
       <button class="btn btn--primary" type="submit">{{.L.T "sites.create.submit"}}</button>
     </div>
