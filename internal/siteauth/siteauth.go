@@ -91,7 +91,9 @@ func AuthCheck(svc *service.Service, log *slog.Logger) http.Handler {
 		case d == service.AccessAllow:
 			w.WriteHeader(http.StatusOK)
 		case d == service.AccessLogin:
-			w.Header().Set("X-Robots-Tag", "noindex, nofollow")
+			// No X-Robots-Tag here: Caddy adds response headers of
+			// forward_auth to its own, and sets that header itself for
+			// noindex sites, so sending it would duplicate it.
 			http.Redirect(w, r, loginURL(r.Header.Get("X-Forwarded-Uri")), http.StatusFound)
 		default:
 			http.Error(w, "not found", http.StatusNotFound)
