@@ -100,4 +100,36 @@ func siteForms(t *testing.T, s *stack, owner *api, siteID, host string) {
 	if strings.Contains(string(raw), "spam-") || !strings.Contains(string(raw), marker) || !strings.Contains(string(raw), `"status":"sent"`) {
 		t.Fatalf("submissions %s", raw)
 	}
+
+	// The channel reports its circuit breaker; a healthy one is not paused.
+	st, body = owner.json(http.MethodGet, "/sites/"+siteID+"/forms/channels", nil)
+	must(t, st, http.StatusOK, body, "list channels")
+	if raw, _ := json.Marshal(body); !strings.Contains(string(raw), `"paused_at":null`) {
+		t.Fatalf("channels %s", raw)
+	}
+	formsSelfWebhookRefused(t, s, owner, siteID, post)
+}
+
+// formsSelfWebhookRefused checks that a webhook aimed at control itself is
+// refused although FORM_WEBHOOK_ALLOW_CIDRS covers the compose network.
+func formsSelfWebhookRefused(t *testing.T, s *stack, owner *api, siteID string,
+	post func(url.Values, ...string) (*http.Response, string)) {
+	st, body := owner.json(http.MethodPost, "/sites/"+siteID+"/forms/channels",
+		map[string]string{"kind": "webhook", "target": "http://control:8081/internal"})
+	must(t, st, http.StatusCreated, body, "create webhook to control")
+	marker := fmt.Sprintf("self-%d", time.Now().UnixNano())
+	if resp, out := post(url.Values{"name": {marker}}, "Accept", "application/json"); resp.StatusCode != http.StatusOK {
+		t.Fatalf("form post: %d %s", resp.StatusCode, out)
+	}
+	s.eventually("webhook to control refused", func() error {
+		st, body := owner.json(http.MethodGet, "/sites/"+siteID+"/forms/submissions", nil)
+		if st != http.StatusOK {
+			return fmt.Errorf("list submissions: %d", st)
+		}
+		raw, _ := json.Marshal(body)
+		if !strings.Contains(string(raw), "not allowed") {
+			return fmt.Errorf("not refused yet")
+		}
+		return nil
+	})
 }

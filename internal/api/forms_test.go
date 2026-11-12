@@ -218,8 +218,9 @@ func TestFormChannelEndpoints(t *testing.T) {
 		t.Fatal("secret not rotated")
 	}
 	rec = f.do(http.MethodPatch, base+"/"+created.Channel.ID, f.owner, map[string]bool{"enabled": false})
-	if decodeAs[channelDTO](t, rec).Enabled {
-		t.Fatal("not disabled")
+	if decodeAs[channelDTO](t, rec).Enabled || !strings.Contains(rec.Body.String(), `"paused_at":null`) ||
+		!strings.Contains(rec.Body.String(), `"consecutive_failures":0`) {
+		t.Fatalf("not disabled: %s", rec.Body.String())
 	}
 	wantError(t, f.do(http.MethodPost, base, f.owner, map[string]string{"kind": "telegram"}), http.StatusBadRequest, "channel_unavailable")
 	wantError(t, f.do(http.MethodPost, base, f.owner, map[string]string{"kind": "webhook", "target": "https://127.0.0.1/"}), http.StatusBadRequest, "channel_invalid")
@@ -229,9 +230,12 @@ func TestFormChannelEndpoints(t *testing.T) {
 	f.visitor(http.MethodPost, "/_form/lead", formCT, "name=%3D1%2B1")
 	rec = f.do(http.MethodGet, "/api/v1/sites/"+f.site.ID+"/forms/submissions.csv", f.owner, nil)
 	if rec.Code != http.StatusOK || rec.Header().Get("Content-Type") != "text/csv; charset=utf-8" ||
-		!strings.Contains(rec.Body.String(), "'=1+1") || !strings.Contains(rec.Header().Get("Content-Disposition"), f.site.ID) {
+		!strings.Contains(rec.Body.String(), "'=1+1") || !strings.Contains(rec.Header().Get("Content-Disposition"), f.site.ID) ||
+		rec.Header().Get("Cache-Control") != "no-store" {
 		t.Fatalf("csv %d %v %s", rec.Code, rec.Header(), rec.Body.String())
 	}
+	// Without access the error is a JSON 404, not a CSV.
+	wantError(t, f.do(http.MethodGet, "/api/v1/sites/nosuchsite/forms/submissions.csv", f.owner, nil), http.StatusNotFound, "not_found")
 }
 
 func TestAdminFormSettingsEndpoint(t *testing.T) {

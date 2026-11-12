@@ -1,5 +1,6 @@
 {{define "channel_badge"}}{{/* .R = view, .V = domain.FormChannel */}}
 {{- if not .V.Enabled}}<span class="badge badge--muted">{{.R.L.T "forms.channel.off"}}</span>
+{{- else if .V.PausedAt}}<span class="badge badge--error">{{.R.L.T "forms.channel.paused"}}</span>
 {{- else if eq (printf "%s" .V.Status) "active"}}<span class="badge badge--ok">{{.R.L.T "forms.status.active"}}</span>
 {{- else}}<span class="badge badge--warn">{{.R.L.T "forms.status.pending"}}</span>{{end -}}
 {{end}}
@@ -21,7 +22,7 @@
       <ul class="deliveries">
         {{range .Deliveries}}
         <li class="deliveries__item">
-          <span class="badge badge--{{if eq (printf "%s" .Status) "sent"}}ok{{else if eq (printf "%s" .Status) "failed"}}error{{else}}warn{{end}}">{{$.R.L.T (printf "forms.kind.%s" .ChannelKind)}} · {{$.R.L.T (printf "forms.delivery.%s" .Status)}}</span>
+          <span class="badge badge--{{if eq (printf "%s" .Status) "sent"}}ok{{else if eq (printf "%s" .Status) "failed"}}error{{else if eq (printf "%s" .Status) "cancelled"}}muted{{else}}warn{{end}}">{{$.R.L.T (printf "forms.kind.%s" .ChannelKind)}} · {{$.R.L.T (printf "forms.delivery.%s" .Status)}}</span>
           {{if gt .Attempts 1}}<span class="small muted">{{$.R.L.T "forms.delivery.attempts" "n" .Attempts}}</span>{{end}}
           {{if .LastError}}<span class="small deliveries__error">{{.LastError}}</span>{{end}}
         </li>

@@ -42,8 +42,13 @@ type FormChannel struct {
 	VerifyHash      []byte
 	VerifyExpiresAt *time.Time
 	VerifyAttempts  int
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	// ConsecutiveFailures counts failed delivery attempts in a row;
+	// PausedAt is set when the circuit breaker stopped deliveries to the
+	// channel until its owner resumes it.
+	ConsecutiveFailures int
+	PausedAt            *time.Time
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 // FormField is one submitted field after merging repeated names.
@@ -70,6 +75,9 @@ const (
 	DeliveryPending DeliveryStatus = "pending"
 	DeliverySent    DeliveryStatus = "sent"
 	DeliveryFailed  DeliveryStatus = "failed"
+	// DeliveryCancelled marks a queued delivery dropped because its channel
+	// was turned off or its site was deleted.
+	DeliveryCancelled DeliveryStatus = "cancelled"
 )
 
 // FormDelivery is the queue entry of a submission for one channel.

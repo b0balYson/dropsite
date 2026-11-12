@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
@@ -132,5 +133,34 @@ func TestWebhookStatusClassesAndTimeout(t *testing.T) {
 		if err == nil || IsPermanent(err) != permanent {
 			t.Errorf("%d: %v", code, err)
 		}
+	}
+}
+
+func TestWebhookDenyWinsOverAllow(t *testing.T) {
+	var hits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { hits.Add(1) }))
+	defer srv.Close()
+	c := NewWebhookClient(WebhookOptions{Allow: loopback, Deny: SelfPrefixes(nil)})
+	err := c.Post(context.Background(), srv.URL, "s", []byte("{}"))
+	if err == nil || !IsPermanent(err) || hits.Load() != 0 {
+		t.Fatalf("control host reached through the allowlist: %v, hits %d", err, hits.Load())
+	}
+}
+
+func TestSelfPrefixesCoverInterfaceAddresses(t *testing.T) {
+	self := SelfPrefixes([]net.Addr{&net.IPNet{IP: net.ParseIP("10.1.2.3"), Mask: net.CIDRMask(16, 32)}})
+	for _, ip := range []string{"10.1.2.3", "127.0.0.2", "::1", "0.0.0.0"} {
+		if !inPrefixes(netip.MustParseAddr(ip), self) {
+			t.Errorf("%s not denied", ip)
+		}
+	}
+	if inPrefixes(netip.MustParseAddr("10.1.2.4"), self) {
+		t.Error("a neighbour on the same network must stay reachable")
+	}
+}
+
+func TestDefaultWebhookTimeoutIsShort(t *testing.T) {
+	if DefaultWebhookTimeout > 10*time.Second || webhookHeaderTimeout >= DefaultWebhookTimeout {
+		t.Fatal(DefaultWebhookTimeout, webhookHeaderTimeout)
 	}
 }

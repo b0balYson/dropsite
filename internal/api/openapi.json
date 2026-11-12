@@ -1264,6 +1264,7 @@
       "patch": {
         "operationId": "updateFormChannel",
         "summary": "Enable or disable a channel",
+        "description": "Setting enabled to true also resumes a channel paused by the circuit breaker (paused_at is cleared). Turning a channel off cancels its queued deliveries.",
         "requestBody": {
           "required": true,
           "content": {
@@ -2926,6 +2927,8 @@
           "target",
           "status",
           "enabled",
+          "consecutive_failures",
+          "paused_at",
           "created_at",
           "updated_at"
         ],
@@ -2954,6 +2957,18 @@
           },
           "enabled": {
             "type": "boolean"
+          },
+          "consecutive_failures": {
+            "type": "integer",
+            "description": "Failed delivery attempts in a row"
+          },
+          "paused_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Set when deliveries to a webhook were paused after repeated failures; resume with PATCH {\"enabled\": true}"
           },
           "created_at": {
             "type": "string",
@@ -3081,7 +3096,8 @@
             "enum": [
               "pending",
               "sent",
-              "failed"
+              "failed",
+              "cancelled"
             ]
           },
           "attempts": {

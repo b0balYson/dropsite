@@ -217,8 +217,7 @@ func TestFormChannelsOwnership(t *testing.T) {
 		func() error { _, err := e.svc.RotateWebhookSecret(ctx, bob, v.Site.ID, id); return err },
 		func() error { _, _, err := e.svc.ListFormSubmissions(ctx, bob, v.Site.ID, "", Page{}); return err },
 		func() error {
-			_, err := e.svc.ExportFormSubmissions(ctx, bob, v.Site.ID, "", &bytes.Buffer{})
-			return err
+			return e.svc.ExportFormSubmissions(ctx, bob, v.Site.ID, "", into(&bytes.Buffer{}))
 		},
 		func() error { _, err := e.svc.SetFormSiteSettings(ctx, bob, v.Site.ID, true); return err },
 		func() error { _, err := e.svc.GetFormSettings(ctx, bob); return err },
@@ -456,7 +455,7 @@ func TestFormRetentionAndExport(t *testing.T) {
 	host := v.Site.ID + "." + testBase
 	_, _ = e.svc.SubmitForm(ctx, post(host, "name", "=cmd"))
 	var buf bytes.Buffer
-	if _, err := e.svc.ExportFormSubmissions(ctx, ann, v.Site.ID, "", &buf); err != nil || !strings.Contains(buf.String(), "'=cmd") {
+	if err := e.svc.ExportFormSubmissions(ctx, ann, v.Site.ID, "", into(&buf)); err != nil || !strings.Contains(buf.String(), "'=cmd") {
 		t.Fatalf("csv %q %v", buf.String(), err)
 	}
 	e.clock.Advance(DefaultFormRetentionDays*24*time.Hour + time.Hour)

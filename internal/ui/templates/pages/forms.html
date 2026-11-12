@@ -48,7 +48,16 @@
       {{else if eq (printf "%s" .Status) "pending"}}
       <p class="hint">{{$.L.T "forms.channel.waitlink"}}</p>
       {{end}}
+      {{if and .Enabled .PausedAt}}
+      <p class="channel__paused" role="status">{{$.L.T "forms.channel.paused.text" "n" .ConsecutiveFailures "at" ($.L.Date .PausedAt)}}</p>
+      {{end}}
       <div class="channel__actions">
+        {{if and .Enabled .PausedAt}}
+        <form method="post" action="{{$base}}/channels/{{.ID}}/toggle">
+          {{template "csrf" $}}<input type="hidden" name="enabled" value="1"><input type="hidden" name="resume" value="1">
+          <button class="btn btn--small btn--primary" type="submit">{{$.L.T "forms.channel.resume"}}</button>
+        </form>
+        {{end}}
         {{if eq (printf "%s" .Status) "active"}}
         <form method="post" action="{{$base}}/channels/{{.ID}}/toggle">
           {{template "csrf" $}}<input type="hidden" name="enabled" value="{{if .Enabled}}0{{else}}1{{end}}">

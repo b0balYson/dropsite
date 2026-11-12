@@ -202,6 +202,25 @@ func TestSendMailErrors(t *testing.T) {
 	}
 }
 
+func TestSendMailErrorsHideServerInternals(t *testing.T) {
+	srv, _ := startSMTP(t, false)
+	cfg := SMTPConfig{Host: "127.0.0.1", Port: srv.port(), From: "forms@example.com", Security: SMTPNone}
+	srv.rcptCode = 550
+	err := SendMail(context.Background(), cfg, "owner@example.com", "s", "b")
+	if err == nil || strings.Contains(err.Error(), "550") || strings.Contains(err.Error(), "127.0.0.1") {
+		t.Fatalf("public message leaks the server reply: %v", err)
+	}
+	if !strings.Contains(ErrDetail(err), "550") {
+		t.Fatalf("log detail lacks the reply: %q", ErrDetail(err))
+	}
+	down := cfg
+	down.Port = 1
+	err = SendMail(context.Background(), down, "owner@example.com", "s", "b")
+	if err == nil || strings.Contains(err.Error(), "127.0.0.1") || !strings.Contains(ErrDetail(err), "127.0.0.1") {
+		t.Fatalf("connection error %q / %q", err, ErrDetail(err))
+	}
+}
+
 func TestParseEmail(t *testing.T) {
 	for in, ok := range map[string]bool{
 		"a@example.com": true, " a@example.com ": true, "Ann <a@example.com>": false, "a@localhost": false,
