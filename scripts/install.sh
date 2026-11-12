@@ -3,6 +3,15 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.sh | sh
 #
+# With a connect code from the "Connect AI" page it also signs in and connects
+# the AI assistants found on this computer:
+#
+#   curl -fsSL .../install.sh | sh -s -- --server https://api.example.com --code ABCD-EFGH-JKMNP
+#
+# Arguments (or environment variables):
+#   --server URL            DROPSITE_SERVER: server to sign in to
+#   --code CODE             DROPSITE_CODE: one-time connect code
+#
 # Environment:
 #   DROPSITE_VERSION        release tag to install (default: latest)
 #   DROPSITE_INSTALL_DIR    target directory (default: $HOME/.local/bin)
@@ -86,7 +95,38 @@ path_hint() {
 	esac
 }
 
+# parse_args sets server and code from arguments, falling back to the environment.
+parse_args() {
+	server="${DROPSITE_SERVER:-}"
+	code="${DROPSITE_CODE:-}"
+	while [ $# -gt 0 ]; do
+		case "$1" in
+		--server) [ $# -ge 2 ] || die "--server needs a value"; server="$2"; shift 2 ;;
+		--server=*) server="${1#--server=}"; shift ;;
+		--code) [ $# -ge 2 ] || die "--code needs a value"; code="$2"; shift 2 ;;
+		--code=*) code="${1#--code=}"; shift ;;
+		*) die "unknown argument: $1" ;;
+		esac
+	done
+	if [ -n "$code" ] && [ -z "$server" ]; then
+		die "--code needs --server"
+	fi
+}
+
+# connect signs in with the connect code and connects the assistants.
+connect() {
+	bin="$1"
+	say ""
+	say "Signing in to $server"
+	"$bin" login --server "$server" --code "$code" ||
+		die "sign-in failed. Press Connect on the Connect AI page again and run the new command (codes work once, for 10 minutes)."
+	say ""
+	say "Connecting AI assistants"
+	"$bin" setup || die "connecting the assistants failed; run '$NAME setup' to retry"
+}
+
 main() {
+	parse_args "$@"
 	os=$(detect_os)
 	arch=$(detect_arch)
 	ext=""
@@ -108,9 +148,15 @@ main() {
 	mv -f "$tmp/$asset" "$dir/$NAME$ext" || die "cannot write to $dir (set DROPSITE_INSTALL_DIR)"
 
 	say "Installed $("$dir/$NAME$ext" version 2>/dev/null || echo "$NAME") to $dir/$NAME$ext"
+	if [ -n "$code" ]; then
+		connect "$dir/$NAME$ext"
+		path_hint "$dir"
+		return
+	fi
 	path_hint "$dir"
 	say ""
-	say "Next: $NAME login --server https://api.<your-domain> --token -"
+	say "Next: press Connect on the Connect AI page of your $NAME web interface and run the command shown there,"
+	say "or: $NAME login --server https://api.<your-domain> --token -"
 }
 
 main "$@"
