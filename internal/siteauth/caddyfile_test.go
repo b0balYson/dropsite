@@ -22,8 +22,12 @@ func TestCaddyfileMatchesPaths(t *testing.T) {
 	for _, want := range []string{
 		"forward_auth @protected control:8081",
 		"uri /internal/auth-check",
-		"@platform path " + strings.TrimSuffix(Prefix, "/") + " " + Prefix + "*",
+		"path " + strings.TrimSuffix(Prefix, "/") + " " + Prefix + "*\n",
+		"not path " + Prefix + "data " + Prefix + "data/*",
+		"@data path " + Prefix + "data " + Prefix + "data/*",
 		"reverse_proxy @platform control:8080",
+		"reverse_proxy @data control:8080",
+		"max_size 8KiB",
 		"header_down -X-Robots-Tag",
 		"root /data/flags/noindex",
 		"root /data/flags/protected",
@@ -37,6 +41,10 @@ func TestCaddyfileMatchesPaths(t *testing.T) {
 	// The flags must come before the error/serve rules of the route.
 	if i, j := strings.Index(cf, "forward_auth @protected"), strings.Index(cf, "error @hidden 404"); i < 0 || j < 0 || i > j {
 		t.Error("forward_auth must precede the error and file_server rules")
+	}
+	// Site data must never be proxied before the access check.
+	if i, j := strings.Index(cf, "forward_auth @protected"), strings.Index(cf, "reverse_proxy @data"); i < 0 || j < 0 || i > j {
+		t.Error("site data must be proxied after forward_auth")
 	}
 	if service.VisitorCookieName != "__Host-dropsite_access" {
 		t.Errorf("cookie name changed to %q: update docs", service.VisitorCookieName)
