@@ -89,10 +89,13 @@ func (t tools) register(s *sdk.Server, o Options) {
 			"explicitly confirmed: pass the site's slug or ID again in confirm."}, t.deleteSite)
 	if o.Files {
 		sdk.AddTool(s, &sdk.Tool{Name: "deploy_files", Annotations: writes("Publish files", false, false),
-			Description: "Publish a small static site from files passed by value (at most 1 MB in total) and " +
-				"return its link. Creates a new site when site is omitted. index.html is required at the root. " +
-				"For bigger sites tell the user to publish with the dropsite CLI or Claude Desktop."}, t.deployFiles)
+			Description: "Publish a new static site, or replace a whole site, from files passed by value (at most " +
+				"1 MB in total) and return its link to give to the user. Creates a new site when site is omitted. " +
+				"index.html is required at the root. Every file not passed is gone from the new version: to change " +
+				"an existing site use list_site_files, read_site_files and update_site_files instead. For sites " +
+				"larger than 1 MB use begin_upload, upload_files and commit_upload."}, t.deployFiles)
 	}
+	t.registerFiles(s, o)
 	if o.Folder {
 		sdk.AddTool(s, &sdk.Tool{Name: "deploy_folder", Annotations: writes("Publish folder", false, false),
 			Description: "Publish a folder from this computer (it must contain index.html) and return its link. " +

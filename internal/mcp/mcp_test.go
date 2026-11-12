@@ -151,9 +151,20 @@ func TestToolsOverInMemoryTransport(t *testing.T) {
 		}
 	}
 	sort.Strings(names)
-	want := "create_site delete_site deploy_files get_site list_deploys list_sites rollback set_slug"
-	if strings.Join(names, " ") != want {
-		t.Fatalf("tools: %v", names)
+	got := " " + strings.Join(names, " ") + " "
+	for _, want := range []string{"create_site", "delete_site", "deploy_files", "get_site", "list_deploys", "list_sites",
+		"rollback", "set_slug", "list_site_files", "read_site_files", "update_site_files", "begin_upload",
+		"upload_files", "commit_upload"} {
+		if !strings.Contains(got, " "+want+" ") {
+			t.Fatalf("tool %s missing: %v", want, names)
+		}
+	}
+	if strings.Contains(got, " deploy_folder ") {
+		t.Fatal("deploy_folder on the remote server")
+	}
+	// A backend without SiteFilesBackend answers with an error.
+	if _, isErr, _ := call(t, cs, "list_site_files", map[string]any{"site": "x"}); !isErr {
+		t.Fatal("list_site_files without a files backend")
 	}
 
 	out, isErr, _ := call(t, cs, "list_sites", map[string]any{})
