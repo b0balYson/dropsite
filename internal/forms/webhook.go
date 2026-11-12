@@ -17,6 +17,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/b0balYson/dropsite/internal/netguard"
 )
 
 // SignatureHeader carries the HMAC-SHA256 of the webhook body.
@@ -24,54 +26,16 @@ const SignatureHeader = "X-Dropsite-Signature"
 
 const maxWebhookURLLen = 2048
 
-// blockedPrefixes are special-purpose ranges a webhook must never reach, on
-// top of what netip.Addr's predicates cover (loopback, private, link-local,
-// multicast, unspecified).
-var blockedPrefixes = func() []netip.Prefix {
-	var out []netip.Prefix
-	for _, s := range []string{
-		"0.0.0.0/8", "100.64.0.0/10", "192.0.0.0/24", "192.0.2.0/24", "192.88.99.0/24",
-		"198.18.0.0/15", "198.51.100.0/24", "203.0.113.0/24", "240.0.0.0/4",
-		"64:ff9b::/96", "64:ff9b:1::/48", "100::/64", "2001::/23", "2001:db8::/32",
-		"2002::/16", "fec0::/10",
-	} {
-		out = append(out, netip.MustParsePrefix(s))
-	}
-	return out
-}()
-
 // errBlockedAddress is returned when a connection targets a forbidden address.
 var errBlockedAddress = errors.New("webhook address is not allowed (private or reserved network)")
 
-func inPrefixes(ip netip.Addr, list []netip.Prefix) bool {
-	for _, p := range list {
-		if p.Contains(ip) {
-			return true
-		}
-	}
-	return false
-}
+func inPrefixes(ip netip.Addr, list []netip.Prefix) bool { return netguard.InPrefixes(ip, list) }
 
 // PublicAddr reports whether ip may be contacted by a webhook delivery, or
 // is in allow (FORM_WEBHOOK_ALLOW_CIDRS).
 func PublicAddr(ip netip.Addr, allow []netip.Prefix) bool {
-	ip = ip.Unmap()
-	if inPrefixes(ip, allow) {
-		return true
-	}
-	if !ip.IsValid() || !ip.IsGlobalUnicast() || ip.IsPrivate() || ip.IsLoopback() ||
-		ip.IsLinkLocalUnicast() || ip.IsMulticast() || ip.IsUnspecified() {
-		return false
-	}
-	// Only global unicast space is reachable over IPv6; this also excludes
-	// the deprecated IPv4-compatible ::/96 and site-local fec0::/10.
-	if ip.Is6() && !globalIPv6.Contains(ip) {
-		return false
-	}
-	return !inPrefixes(ip, blockedPrefixes)
+	return inPrefixes(ip, allow) || netguard.PublicAddr(ip)
 }
-
-var globalIPv6 = netip.MustParsePrefix("2000::/3")
 
 // ValidateWebhookURL checks a URL when a channel is created. Plain http is
 // accepted only when allow is non-empty (test networks); the address is
@@ -171,9 +135,8 @@ func NewWebhookClient(o WebhookOptions) *WebhookClient {
 func newGuardedClient(ok func(netip.Addr) bool, o WebhookOptions) *http.Client {
 	dialer := &net.Dialer{
 		Timeout: webhookDialTimeout,
-		Control: func(_, address string, _ syscall.RawConn) error {
-			ap, err := netip.ParseAddrPort(address)
-			if err != nil || !ok(ap.Addr()) {
+		Control: func(network, address string, c syscall.RawConn) error {
+			if netguard.Control(ok)(network, address, c) != nil {
 				return errBlockedAddress
 			}
 			return nil
