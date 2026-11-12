@@ -60,21 +60,22 @@ ssh -L 8082:127.0.0.1:8082 you@server
 ## Публикация
 
 - **Веб-интерфейс:** создайте сайт и перетащите на него zip или tar.gz.
-- **CLI:** на странице **Подключить ИИ** выпустите токен и выполните показанную команду `dropsite login`, затем `dropsite deploy ./dist`. Первый запуск создаёт сайт и запоминает его в `.dropsite.json`, следующие обновляют тот же сайт.
-- **ИИ-ассистенты:** на странице **Подключить ИИ** есть готовые инструкции для Claude Code (`skills/claude-code/SKILL.md`) и Codex (`skills/codex/AGENTS.md`). Ассистент публикует через CLI.
-- **HTTP API:** `https://api.<BASE_DOMAIN>/api/v1`, Bearer-токен, см. [docs/api-contract.md](docs/api-contract.md) и `/api/v1/openapi.json`.
+- **ИИ-ассистенты на компьютере (одна команда):** на странице **Подключить ИИ** нажмите **Подключить**. Появится одноразовый код (10 минут) внутри готовой команды для macOS/Linux и для Windows. Команда ставит CLI, входит по коду и запускает `dropsite setup`, который подключает найденных ассистентов: скилл публикации для **Claude Code**, **Codex** и **Cursor** и локальный MCP-сервер для **Claude Desktop**. После этого скажите «опубликуй этот сайт».
+- **ChatGPT и claude.ai:** добавьте собственный коннектор с адресом `https://api.<BASE_DOMAIN>/mcp`. Когда откроется страница dropsite, введите код подключения со страницы **Подключить ИИ**; пароль не запрашивается никогда. Собственные MCP-коннекторы в ChatGPT требуют режима разработчика и доступны не на всех тарифах; актуальные условия — на [help.openai.com](https://help.openai.com/). Подключённые приложения видны на странице **Подключить ИИ**, там же их можно отключить. Подробности: [docs/ai-clients.md](docs/ai-clients.md).
+- **CLI вручную:** `dropsite login --server https://api.<BASE_DOMAIN> --code <код>` (или `--token` с ключом из свёрнутого раздела «Ручные ключи доступа»), затем `dropsite deploy ./dist`. Первый запуск создаёт сайт и запоминает его в `.dropsite.json`, следующие обновляют тот же сайт.
+- **HTTP API и MCP:** `https://api.<BASE_DOMAIN>/api/v1` с Bearer-токеном ([docs/api-contract.md](docs/api-contract.md), `/api/v1/openapi.json`); MCP-эндпоинт `https://api.<BASE_DOMAIN>/mcp` принимает те же API-токены или токены OAuth.
 
-Установка CLI (Linux, macOS):
+Команда выглядит так (страница подставляет сервер и код):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.sh | sh -s -- --server https://api.example.com --code ABCD-EFGH-JKMNP
 ```
-
-Windows (PowerShell):
 
 ```powershell
-irm https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.ps1 | iex
+$env:DROPSITE_SERVER='https://api.example.com'; $env:DROPSITE_CODE='ABCD-EFGH-JKMNP'; irm https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.ps1 | iex
 ```
+
+Без `--server` и `--code` установщики только ставят CLI. `dropsite setup --remove` убирает интеграции.
 
 ### Что может быть в архиве сайта
 
@@ -140,6 +141,7 @@ docker compose -f docker-compose.yml -f compose.wildcard.yml up -d
 - Веб-интерфейс работает на отдельном listener-е, недоступном из интернета; cookie сессии привязана только к хосту интерфейса.
 - API принимает только Bearer-токены, cookies не принимаются. Токен показывается один раз, хранится в виде хэша, может истекать и отзываться.
 - Чужой сайт всегда отвечает «не найдено».
+- Пароль вводится только во внутреннем интерфейсе. Чат-клиенты авторизуются на публичном API-хосте по OAuth 2.1 (PKCE, короткие access-токены, ротация refresh-токенов с обнаружением повторного использования); пользователь подтверждает доступ одноразовым кодом подключения из интерфейса, а не паролем.
 - Архив проверяется до записи на диск: никаких выходов за пределы каталога, ссылок, устройств и zip-бомб.
 - Caddy видит том сайтов только на чтение и не имеет доступа к базе и токенам. Оба контейнера работают не от root с корневой файловой системой только для чтения.
 

@@ -1,6 +1,6 @@
 # HTTP API v1: wire contract
 
-Base URL: `https://<API_HOST>/api/v1`. Authentication: `Authorization: Bearer <token>` on every endpoint except `GET /openapi.json`. Bodies are JSON (`Content-Type: application/json`), except the deploy upload. Times are RFC 3339 in UTC. The machine-readable description is `GET /api/v1/openapi.json`.
+Base URL: `https://<API_HOST>/api/v1`. Authentication: `Authorization: Bearer <token>` on every endpoint except `GET /openapi.json` and `POST /connect/exchange`. Only API tokens (`ds_…`) are accepted here; OAuth tokens work only on the MCP endpoint (see [ai-clients.md](ai-clients.md)). Bodies are JSON (`Content-Type: application/json`), except the deploy upload. Times are RFC 3339 in UTC. The machine-readable description is `GET /api/v1/openapi.json`.
 
 ## Errors
 
@@ -44,6 +44,7 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 
 | Method and path | Request | Response |
 | --- | --- | --- |
+| `POST /connect/exchange` | `{code, name?}`, no token | `201 {token: Token, value, user: User}`; `value` is shown once |
 | `GET /me` | | `{user: User, limits: Limits, site_count}` |
 | `GET /sites` | `?limit&offset` | `List<SiteItem>` (own sites) |
 | `POST /sites` | `{title, slug?}` | `201 Site` |
@@ -73,3 +74,7 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 The deploy source is `cli` when the request carries `X-Dropsite-Client: cli/<version>`, otherwise `api`. The upload may be at most `max_site_bytes + max_files KiB + 1 MiB`; larger bodies get 413 without being read fully.
 
 `preview_url` is the address that serves exactly this release, `https://p-<deploy id>-<site id>.<BASE_DOMAIN>/` (with `X-Robots-Tag: noindex`). It is set only when the installation runs with `TLS_MODE=wildcard` and the release is `ready`; otherwise it is `null` (see `docs/tls.md`).
+
+`POST /connect/exchange` trades a one-time connect code from the Connect AI page for a new API token of its owner. Unknown, used and expired codes all answer `400 connect_code_invalid`; ten failures per IP within 15 minutes give `429`. Without `name` the token is called `Connected <date>`.
+
+Outside `/api/v1` the API host also serves `/mcp`, `/.well-known/oauth-protected-resource[/mcp]`, `/.well-known/oauth-authorization-server` and `/oauth/*` (see [ai-clients.md](ai-clients.md)).

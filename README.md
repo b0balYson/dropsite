@@ -60,21 +60,22 @@ Then: **Users → create user**, send them the invite link (valid 72 hours); the
 ## Publishing
 
 - **Web interface:** create a site, drag a zip or tar.gz onto it.
-- **CLI:** on the **Connect AI** page issue a token and run the shown `dropsite login` command, then `dropsite deploy ./dist`. The first run creates a site and remembers it in `.dropsite.json`; later runs update it.
-- **AI assistants:** the **Connect AI** page has ready instructions for Claude Code (`skills/claude-code/SKILL.md`) and Codex (`skills/codex/AGENTS.md`). The assistant publishes through the CLI.
-- **HTTP API:** `https://api.<BASE_DOMAIN>/api/v1`, bearer token, see [docs/api-contract.md](docs/api-contract.md) and `/api/v1/openapi.json`.
+- **AI assistants on a computer (one command):** on the **Connect AI** page press **Connect**. It shows a one-time code (10 minutes) inside a ready command for macOS/Linux and for Windows. The command installs the CLI, signs in with the code and runs `dropsite setup`, which connects every assistant it finds: the publish skill for **Claude Code**, **Codex** and **Cursor**, and a local MCP server for **Claude Desktop**. Then say "publish this site".
+- **ChatGPT and claude.ai:** add a custom connector with the address `https://api.<BASE_DOMAIN>/mcp`. When the dropsite page opens, enter a connect code from the **Connect AI** page; the password is never asked for. Custom MCP connectors in ChatGPT need developer mode and are not available on every plan; check the current terms at [help.openai.com](https://help.openai.com/). Connected apps are listed on the **Connect AI** page and can be disconnected there. Details: [docs/ai-clients.md](docs/ai-clients.md).
+- **CLI by hand:** `dropsite login --server https://api.<BASE_DOMAIN> --code <code>` (or `--token` with a key from the collapsed "Manual access keys" section), then `dropsite deploy ./dist`. The first run creates a site and remembers it in `.dropsite.json`; later runs update it.
+- **HTTP API and MCP:** `https://api.<BASE_DOMAIN>/api/v1` with a bearer token ([docs/api-contract.md](docs/api-contract.md), `/api/v1/openapi.json`); the MCP endpoint `https://api.<BASE_DOMAIN>/mcp` accepts the same API tokens or OAuth tokens.
 
-Install the CLI (Linux, macOS):
+The one command looks like this (the page fills in the server and the code):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.sh | sh -s -- --server https://api.example.com --code ABCD-EFGH-JKMNP
 ```
-
-Windows (PowerShell):
 
 ```powershell
-irm https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.ps1 | iex
+$env:DROPSITE_SERVER='https://api.example.com'; $env:DROPSITE_CODE='ABCD-EFGH-JKMNP'; irm https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.ps1 | iex
 ```
+
+Without `--server` and `--code` the installers only install the CLI. `dropsite setup --remove` takes the integrations out again.
 
 ### What a site archive may contain
 
@@ -140,6 +141,7 @@ More: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [doc
 - The web interface is on a separate listener that is not reachable from the internet; its session cookie is bound to the interface host only.
 - The API accepts only bearer tokens (never cookies). Tokens are shown once, stored as hashes, can expire and be revoked.
 - Another user's site always answers "not found".
+- Passwords are typed only on the private interface. Chat clients are authorised on the public API host with OAuth 2.1 (PKCE, short-lived access tokens, rotating refresh tokens with reuse detection); the user confirms with a one-time connect code issued in the interface, not with a password.
 - Archives are validated before anything is written: no path traversal, links, devices or zip bombs.
 - Caddy mounts the sites volume read-only and has no access to the database or tokens. Both containers run as non-root with read-only root filesystems.
 
