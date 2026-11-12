@@ -17,6 +17,7 @@ import (
 )
 
 const (
+	goodCode  = "ABCD-EFGH-JKMNP"
 	goodToken = "ds_good"
 	userEmail = "dev@example.com"
 )
@@ -36,6 +37,8 @@ type fakeServer struct {
 	lastClient string
 	lastPatch  map[string]any // body of the last PATCH /sites/{ref}
 	patchErr   *apiErr        // returned instead of accepting a PATCH
+	codeUsed   bool
+	tokenName  string
 }
 
 type fakeSite struct {
@@ -69,8 +72,8 @@ func newFakeServer(t *testing.T) *fakeServer {
 	mux.HandleFunc("GET /api/v1/sites", f.listSites)
 	mux.HandleFunc("POST /api/v1/sites", f.createSite)
 	mux.HandleFunc("GET /api/v1/sites/{ref}", f.withSite(f.getSite))
-	mux.HandleFunc("DELETE /api/v1/sites/{ref}", f.withSite(f.deleteSite))
 	mux.HandleFunc("PATCH /api/v1/sites/{ref}", f.withSite(f.patchSite))
+	mux.HandleFunc("DELETE /api/v1/sites/{ref}", f.withSite(f.deleteSite))
 	mux.HandleFunc("POST /api/v1/sites/{ref}/deploys", f.withSite(f.deploy))
 	mux.HandleFunc("GET /api/v1/sites/{ref}/deploys", f.withSite(f.listDeploys))
 	mux.HandleFunc("POST /api/v1/sites/{ref}/rollback", f.withSite(f.rollback))
@@ -92,6 +95,10 @@ func (f *fakeServer) auth(next http.Handler) http.Handler {
 		if limited {
 			w.Header().Set("Retry-After", "42")
 			fail(w, apiErr{429, "rate_limited", "too many requests", nil})
+			return
+		}
+		if r.URL.Path == "/api/v1/connect/exchange" {
+			f.exchange(w, r)
 			return
 		}
 		if r.Header.Get("Authorization") != "Bearer "+goodToken {
@@ -292,6 +299,26 @@ func (f *fakeServer) getSite(w http.ResponseWriter, _ *http.Request, s *fakeSite
 	reply(w, 200, s.json())
 }
 
+// exchange trades goodCode (once) for goodToken.
+func (f *fakeServer) exchange(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Code string `json:"code"`
+		Name string `json:"name"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&in)
+	f.mu.Lock()
+	ok := in.Code == goodCode && !f.codeUsed
+	f.codeUsed = f.codeUsed || ok
+	f.tokenName = in.Name
+	f.mu.Unlock()
+	if !ok || r.Header.Get("Authorization") != "" {
+		fail(w, apiErr{400, "connect_code_invalid", "the connect code is invalid, already used or expired", nil})
+		return
+	}
+	reply(w, 201, map[string]any{"value": goodToken, "user": map[string]any{"id": "u1", "email": userEmail},
+		"token": map[string]any{"id": "1", "name": in.Name}})
+}
+
 func (f *fakeServer) patchSite(w http.ResponseWriter, r *http.Request, s *fakeSite) {
 	if f.patchErr != nil {
 		fail(w, *f.patchErr)
@@ -303,6 +330,13 @@ func (f *fakeServer) patchSite(w http.ResponseWriter, r *http.Request, s *fakeSi
 		return
 	}
 	f.lastPatch = body
+	if v, ok := body["slug"].(string); ok {
+		if v == "www" {
+			fail(w, apiErr{400, "slug_reserved", "this address is reserved", map[string]any{"slug": "www"}})
+			return
+		}
+		s.Slug = &v
+	}
 	out := s.json()
 	out["expires_at"] = body["expires_at"]
 	reply(w, 200, out)

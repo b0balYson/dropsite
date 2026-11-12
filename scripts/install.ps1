@@ -2,12 +2,22 @@
 #
 #   irm https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.ps1 | iex
 #
+# With a connect code from the "Connect AI" page it also signs in and connects
+# the AI assistants found on this computer. iex takes no arguments, so the
+# values come from environment variables:
+#
+#   $env:DROPSITE_SERVER='https://api.example.com'; $env:DROPSITE_CODE='ABCD-EFGH-JKMNP'; irm .../install.ps1 | iex
+#
 # Environment:
+#   DROPSITE_SERVER         server to sign in to (with DROPSITE_CODE)
+#   DROPSITE_CODE           one-time connect code
 #   DROPSITE_VERSION        release tag to install (default: latest)
 #   DROPSITE_INSTALL_DIR    target directory (default: %LOCALAPPDATA%\Programs\dropsite)
 #   DROPSITE_DOWNLOAD_BASE  where binaries and SHA256SUMS live (overrides the GitHub URL)
 
 $ErrorActionPreference = 'Stop'
+$Server = $env:DROPSITE_SERVER
+$Code = $env:DROPSITE_CODE
 $ProgressPreference = 'SilentlyContinue'
 
 $Repo = 'b0balYson/dropsite'
@@ -71,8 +81,25 @@ try {
     Move-Item -Force -LiteralPath $bin -Destination $target
     Write-Host "Installed $(& $target version) to $target"
     Add-ToUserPath $dir
-    Write-Host "Next: $Name login --server https://api.<your-domain> --token -"
+    if ($Code) {
+        if (-not $Server) { throw "install: DROPSITE_CODE needs DROPSITE_SERVER" }
+        Write-Host ""
+        Write-Host "Signing in to $Server"
+        & $target login --server $Server --code $Code
+        if ($LASTEXITCODE -ne 0) {
+            throw "install: sign-in failed. Press Connect on the Connect AI page again and run the new command (codes work once, for 10 minutes)."
+        }
+        Write-Host ""
+        Write-Host "Connecting AI assistants"
+        & $target setup
+        if ($LASTEXITCODE -ne 0) { throw "install: connecting the assistants failed; run '$Name setup' to retry" }
+    }
+    else {
+        Write-Host "Next: press Connect on the Connect AI page of your $Name web interface and run the command shown there."
+    }
 }
 finally {
+    # The code is spent either way; do not leave it in the session.
+    Remove-Item -Path Env:DROPSITE_CODE -ErrorAction SilentlyContinue
     Remove-Item -Recurse -Force -LiteralPath $tmp -ErrorAction SilentlyContinue
 }

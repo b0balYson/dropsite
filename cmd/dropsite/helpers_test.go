@@ -17,6 +17,9 @@ type testEnv struct {
 	env      map[string]string
 	terminal bool
 	stdin    string
+	home     string
+	goos     string
+	exe      string
 }
 
 type result struct {
@@ -27,7 +30,8 @@ type result struct {
 
 func newTestEnv(t *testing.T) *testEnv {
 	t.Helper()
-	return &testEnv{t: t, srv: newFakeServer(t), cfgDir: t.TempDir(), env: map[string]string{}}
+	return &testEnv{t: t, srv: newFakeServer(t), cfgDir: t.TempDir(), env: map[string]string{},
+		home: t.TempDir(), goos: "darwin", exe: "/opt/dropsite/bin/dropsite"}
 }
 
 func (e *testEnv) run(args ...string) result {
@@ -40,6 +44,10 @@ func (e *testEnv) run(args ...string) result {
 		getenv:     func(k string) string { return e.env[k] },
 		configDir:  func() (string, error) { return e.cfgDir, nil },
 		isTerminal: func() bool { return e.terminal },
+		hostname:   func() (string, error) { return "test-host", nil },
+		homeDir:    func() (string, error) { return e.home, nil },
+		goos:       e.goos,
+		executable: func() (string, error) { return e.exe, nil },
 	}
 	code := a.run(context.Background(), args)
 	return result{code: code, stdout: out.String(), stderr: errOut.String()}

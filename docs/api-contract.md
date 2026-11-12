@@ -1,6 +1,6 @@
 # HTTP API v1: wire contract
 
-Base URL: `https://<API_HOST>/api/v1`. Authentication: `Authorization: Bearer <token>` on every endpoint except `GET /openapi.json`. Bodies are JSON (`Content-Type: application/json`), except the deploy upload. Times are RFC 3339 in UTC. The machine-readable description is `GET /api/v1/openapi.json`.
+Base URL: `https://<API_HOST>/api/v1`. Authentication: `Authorization: Bearer <token>` on every endpoint except `GET /openapi.json` and `POST /connect/exchange`. Only API tokens (`ds_…`) are accepted here; OAuth tokens work only on the MCP endpoint (see [ai-clients.md](ai-clients.md)). Bodies are JSON (`Content-Type: application/json`), except the deploy upload. Times are RFC 3339 in UTC. The machine-readable description is `GET /api/v1/openapi.json`.
 
 ## Errors
 
@@ -53,6 +53,7 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 
 | Method and path | Request | Response |
 | --- | --- | --- |
+| `POST /connect/exchange` | `{code, name?}`, no token | `201 {token: Token, value, user: User}`; `value` is shown once |
 | `GET /me` | | `{user: User, limits: Limits, site_count}` |
 | `GET /sites` | `?limit&offset` | `List<SiteItem>` (own sites) |
 | `POST /sites` | `{title, slug?}` | `201 Site` |
@@ -101,3 +102,7 @@ External domains (see `docs/external-domains.md`): `hostname` is normalised (low
 - `password` (10–256 bytes) protects the site or changes its password; it is stored as an argon2id hash and never returned. `protected: true` without `password` is accepted only when the site already has one (otherwise `400 site_password_required`); `protected: false` removes protection and must not come with `password`. Changing or removing the password signs every visitor out.
 - `expires_at` is an RFC 3339 time in the future, at most 10 years ahead (`400 expiry_invalid` otherwise); `null` removes it. Within a minute after it passes the site is soft-deleted (`site.expire` in the audit log) and purged 7 days later.
 - `limits` in `PATCH /admin/users/{id}` replaces the user's personal overrides; a missing or `null` field inherits the global value, `{}` resets all. Effective limits follow user override → admin setting → environment → default; `GET /me` returns them. Deploy size limits and release pruning use the limits of the site's owner.
+
+`POST /connect/exchange` trades a one-time connect code from the Connect AI page for a new API token of its owner. Unknown, used and expired codes all answer `400 connect_code_invalid`; ten failures per IP within 15 minutes give `429`. Without `name` the token is called `Connected <date>`.
+
+Outside `/api/v1` the API host also serves `/mcp`, `/.well-known/oauth-protected-resource[/mcp]`, `/.well-known/oauth-authorization-server` and `/oauth/*` (see [ai-clients.md](ai-clients.md)).

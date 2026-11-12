@@ -1,0 +1,32 @@
+{{define "connect_block"}}
+<div class="connect-block" id="connect-block">
+  {{with .D.Code}}
+  <div class="connect-code" data-countdown="{{.ExpiresISO}}" data-countdown-left="{{$.L.T "connect.code.left" "time" "{t}"}}">
+    <div class="connect-code__head">
+      <p class="codeblock__label">{{$.L.T "connect.code.label"}}</p>
+      <p class="connect-code__value mono" id="connect-code">{{.Code}}</p>
+      <p class="connect-code__timer" role="timer" aria-live="off">
+        <span data-countdown-live>{{$.L.T "connect.code.until" "time" ($.L.Time .ExpiresAt)}}</span>
+      </p>
+      <p class="notice notice--warn connect-code__expired" data-countdown-expired hidden>{{$.L.T "connect.code.expired"}}</p>
+    </div>
+    <div class="codeblock">
+      <p class="codeblock__label">{{$.L.T "connect.cmd.unix"}}</p>
+      <pre class="code" id="cmd-unix"><code>{{.Unix}}</code></pre>
+      <button class="btn btn--small" type="button" data-copy="#cmd-unix" data-copied="{{$.L.T "copy.done"}}">{{$.L.T "copy.button"}}</button>
+    </div>
+    <div class="codeblock">
+      <p class="codeblock__label">{{$.L.T "connect.cmd.windows"}}</p>
+      <pre class="code" id="cmd-windows"><code>{{.Windows}}</code></pre>
+      <button class="btn btn--small" type="button" data-copy="#cmd-windows" data-copied="{{$.L.T "copy.done"}}">{{$.L.T "copy.button"}}</button>
+    </div>
+    <p class="hint">{{$.L.T "connect.cmd.after"}}</p>
+  </div>
+  {{end}}
+  <form class="connect-block__form" method="post" action="/connect/code" hx-post="/connect/code" hx-target="#connect-block" hx-swap="outerHTML">
+    {{template "csrf" .}}
+    <button class="btn {{if .D.Code}}btn--ghost{{else}}btn--primary btn--hero{{end}}" type="submit">{{if .D.Code}}{{.L.T "connect.code.again"}}{{else}}{{.L.T "connect.code.submit"}}{{end}}</button>
+    {{if not .D.Code}}<p class="hint">{{.L.T "connect.code.hint"}}</p>{{end}}
+  </form>
+</div>
+{{end}}

@@ -1,0 +1,80 @@
+# Connecting AI assistants
+
+dropsite reaches AI assistants in three ways. All of them start on the **Connect AI** page of the web interface.
+
+| Assistant | How it publishes | How it is connected |
+| --- | --- | --- |
+| Claude Code, Codex, Cursor | `dropsite-publish` skill → `dropsite deploy <folder>` | one command (`dropsite setup`) |
+| Claude Desktop | local MCP server `dropsite mcp` (tool `deploy_folder`) | one command (`dropsite setup`) |
+| ChatGPT, claude.ai | remote MCP `https://api.<BASE_DOMAIN>/mcp` (tool `deploy_files`, up to 1 MB) | custom connector + OAuth with a connect code |
+
+## Connect codes
+
+**Connect** on the page issues a one-time code such as `ABCD-EFGH-JKMNP`: 13 symbols (65 bits) from an alphabet without look-alike characters, case, spaces and dashes are ignored. A code is valid for 10 minutes, works once and is stored only as a hash. It can be exchanged either for an API token (CLI) or for an OAuth grant (chat clients); on its own it opens nothing. Ten wrong codes from one IP within 15 minutes block further attempts until the window passes. Issuing and using codes is recorded in the audit log, without the code.
+
+## One command on a computer
+
+The page shows a command for macOS/Linux and one for Windows with the server and the code filled in:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.sh | sh -s -- --server https://api.example.com --code ABCD-EFGH-JKMNP
+```
+
+```powershell
+$env:DROPSITE_SERVER='https://api.example.com'; $env:DROPSITE_CODE='ABCD-EFGH-JKMNP'; irm https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.ps1 | iex
+```
+
+It installs the CLI (checksum-verified, no admin rights), runs `dropsite login --server … --code …` (a new token named after the computer is saved to the CLI config with owner-only permissions) and then `dropsite setup`. The code in the shell history is useless once spent.
+
+### `dropsite setup`
+
+An assistant counts as installed when its settings directory exists. Setup writes only its own files and keys, and running it again changes nothing.
+
+| Assistant | Detected by | What setup writes |
+| --- | --- | --- |
+| Claude Code | `$CLAUDE_CONFIG_DIR` or `~/.claude` (`%USERPROFILE%\.claude`) | `<that dir>/skills/dropsite-publish/SKILL.md` |
+| Codex | `$CODEX_HOME` or `~/.codex` | `~/.agents/skills/dropsite-publish/SKILL.md` (the user skills directory of current Codex; the global `AGENTS.md` is not touched) |
+| Cursor | `~/.cursor` | `~/.cursor/skills/dropsite-publish/SKILL.md` |
+| Claude Desktop | `~/Library/Application Support/Claude` (macOS), `%APPDATA%\Claude` (Windows); not available on Linux | `mcpServers.dropsite = {"command": "<absolute path of dropsite>", "args": ["mcp"]}` in `claude_desktop_config.json` |
+
+The Claude Desktop config is rewritten atomically with its permissions and every other key kept; a file with invalid JSON is left alone and reported. `--remove` deletes the skill files and the `mcpServers.dropsite` entry only; `--json` prints a machine-readable result. Restart the assistants that setup lists (Claude Code and Codex pick up skills in a new session).
+
+### Local MCP server
+
+`dropsite mcp` speaks MCP over stdio and calls the API with the saved login: `list_sites`, `create_site`, `get_site`, `set_slug`, `list_deploys`, `rollback`, `delete_site` and `deploy_folder` (an absolute folder path; packed exactly like `dropsite deploy`, including `.dropsite.json`). Without a login every tool answers with instructions to press **Connect**.
+
+## ChatGPT and claude.ai
+
+Both connect to the remote MCP endpoint `https://api.<BASE_DOMAIN>/mcp`:
+
+- **ChatGPT:** Settings → Apps (Connectors) → Advanced → developer mode; create an app with the server address and OAuth authentication. Custom MCP connectors are not available on every ChatGPT plan and workspace admins may have to allow them; check the current terms at [help.openai.com](https://help.openai.com/).
+- **claude.ai:** Settings → Connectors → Add custom connector, paste the address, press Connect.
+
+When the dropsite page opens, the user enters a connect code from the **Connect AI** page and presses **Allow**. The page shows the application name, the domain it returns to and the permissions; it never asks for a password (passwords are typed only on the private interface).
+
+Tools: the same as the local server, with `deploy_files` instead of `deploy_folder`: `files` is an array of `{path, content, encoding}` (`utf8` or `base64`), at most 1 MB decoded in total; omit `site` to create a new site. Larger sites get an error that recommends the CLI or Claude Desktop. Releases published this way have the source `mcp`.
+
+Connected applications are listed on the **Connect AI** page; **Disconnect** revokes every token of that application at once.
+
+## OAuth server reference
+
+The endpoint follows the MCP authorization specification (2025-11-25) and the requirements of ChatGPT apps.
+
+| Path | Purpose |
+| --- | --- |
+| `GET /.well-known/oauth-protected-resource` and `/.well-known/oauth-protected-resource/mcp` | RFC 9728 metadata: `resource = https://<API_HOST>/mcp`, `authorization_servers = [https://<API_HOST>]`, scope `sites` |
+| `GET /.well-known/oauth-authorization-server` | RFC 8414 metadata: `code_challenge_methods_supported: ["S256"]`, `token_endpoint_auth_methods_supported: ["none"]`, `client_id_metadata_document_supported: true`, `authorization_response_iss_parameter_supported: true` |
+| `GET/POST /oauth/authorize` | consent page with the connect code |
+| `POST /oauth/token` | `authorization_code` (PKCE S256 required) and `refresh_token` |
+| `POST /oauth/register` | dynamic client registration (RFC 7591), public clients only |
+| `POST /oauth/revoke` | RFC 7009 revocation, revokes the whole grant |
+
+- `401` from `/mcp` carries `WWW-Authenticate: Bearer resource_metadata="…/.well-known/oauth-protected-resource/mcp", scope="sites"`.
+- Clients are identified by a client ID metadata document (CIMD, preferred by ChatGPT) or registered dynamically. Metadata documents are fetched only over https, only from public addresses (checked after DNS resolution and pinned for the connection), without redirects, within 5 seconds and 64 KB, and cached for up to an hour. Dynamic registration accepts https or loopback redirect URIs and is limited to 10 per hour per IP and 1000 clients in total; clients without connections are removed after 30 days.
+- Redirect URIs are compared exactly; an unknown client or redirect URI shows an error page instead of redirecting. Authorization responses include `iss`.
+- `resource` must be the MCP resource (the API origin is accepted as a synonym); tokens carry it as their audience and `/mcp` rejects any other.
+- Access tokens live 1 hour, refresh tokens 30 days. Each refresh returns a new pair; presenting a used refresh token (or a used authorization code) revokes the whole connection. Only hashes are stored.
+- OAuth tokens work only on `/mcp`, never on `/api/v1`.
+- Blocking a user stops their OAuth tokens immediately.
+
+Caddy proxies the whole `API_HOST` to `control`, so no proxy changes are needed. The endpoint is stateless (every POST is authorised on its own; no server-sent event streams).

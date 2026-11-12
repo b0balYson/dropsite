@@ -118,7 +118,9 @@ func (c *Client) newRequest(ctx context.Context, method, path string, q url.Valu
 	if err != nil {
 		return nil, fmt.Errorf("build %s %s: %w", method, path, err)
 	}
-	req.Header.Set("Authorization", "Bearer "+c.token)
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
 	req.Header.Set("User-Agent", UserAgent())
 	req.Header.Set(clientHeader, UserAgent())
 	req.Header.Set("Accept", "application/json")

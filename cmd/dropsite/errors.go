@@ -38,7 +38,8 @@ func (e *hintError) Unwrap() error { return e.err }
 func withHint(err error, hints ...string) error { return &hintError{err: err, hints: hints} }
 
 var errNotLoggedIn = withHint(errors.New("not logged in"),
-	fmt.Sprintf("Run '%s login --server <url> --token <token>' or set %s and %s.", brand.Name, envServer, envToken))
+	"Press Connect on the Connect AI page of the dropsite web interface and run the command shown there,",
+	fmt.Sprintf("or run '%s login --server <url> --token <token>', or set %s and %s.", brand.Name, envServer, envToken))
 
 // describeError renders err as one message line plus hint lines.
 func describeError(err error) (string, []string) {

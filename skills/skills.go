@@ -1,15 +1,16 @@
-// Package skills embeds the harness instructions so the web interface can
-// show them on the "Connect AI" page.
+// Package skills embeds the harness instructions. `dropsite setup` installs
+// the publish skill into Claude Code, Codex and Cursor.
 package skills
 
 import _ "embed"
 
-// ClaudeCode is skills/claude-code/SKILL.md.
+// Publish is skills/dropsite-publish/SKILL.md, shared by Claude Code, Codex
+// and Cursor (all read the same SKILL.md format).
 //
-//go:embed claude-code/SKILL.md
-var ClaudeCode string
+//go:embed dropsite-publish/SKILL.md
+var Publish string
 
-// Codex is skills/codex/AGENTS.md.
+// Codex is skills/codex/AGENTS.md, a snippet for a project's AGENTS.md.
 //
 //go:embed codex/AGENTS.md
 var Codex string

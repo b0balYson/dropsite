@@ -18,6 +18,7 @@ import (
 const (
 	envServer      = "DROPSITE_SERVER"
 	envToken       = "DROPSITE_TOKEN"
+	envCode        = "DROPSITE_CODE"    // one-time connect code for login
 	envCAFile      = "DROPSITE_CA_FILE" // extra trusted root CA (PEM) for private installations
 	configFileName = "config.json"
 	configDirPerm  = 0o700

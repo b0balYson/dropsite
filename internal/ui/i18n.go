@@ -164,6 +164,12 @@ func (l *locale) Date(t time.Time) string {
 	return fmt.Sprintf("%d %s %d, %02d:%02d UTC", t.Day(), month, t.Year(), t.Hour(), t.Minute())
 }
 
+// Time formats the clock time in UTC, e.g. 14:05 UTC.
+func (l *locale) Time(t time.Time) string {
+	t = t.UTC()
+	return fmt.Sprintf("%02d:%02d UTC", t.Hour(), t.Minute())
+}
+
 // DatePtr formats an optional time.
 func (l *locale) DatePtr(t *time.Time) string {
 	if t == nil {

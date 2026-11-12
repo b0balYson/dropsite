@@ -57,33 +57,18 @@ func cmdDeploy(ctx context.Context, a *app, args []string) error {
 }
 
 func (a *app) deploy(ctx context.Context, o deployOpts) error {
-	if err := checkDeployDir(o.dir); err != nil {
-		return err
-	}
 	c, err := a.connect()
 	if err != nil {
 		return err
 	}
-	me, err := c.Me(ctx)
-	if err != nil {
-		return err
-	}
-	p := startPack(ctx, o.dir, packLimits(me.Limits))
-	if err := p.ready(); err != nil {
-		return err
-	}
-	siteID, err := a.resolveSite(ctx, c, o, me.User.ID)
-	if err != nil {
-		return errors.Join(err, p.stop())
-	}
-	res, err := a.upload(ctx, c, siteID, o.dir, p)
+	res, err := a.publishDir(ctx, c, o)
 	if err != nil {
 		return err
 	}
 	if err := a.printDeploy(res, o.asJSON); err != nil {
 		return err
 	}
-	return a.setExpiry(ctx, c, siteID, o.expiry)
+	return a.setExpiry(ctx, c, res.Site.ID, o.expiry)
 }
 
 // setExpiry applies --expires after a successful publication.
@@ -102,6 +87,27 @@ func (a *app) setExpiry(ctx context.Context, c *client.Client, siteID string, e 
 	}
 	fmt.Fprintf(a.stderr, "The site expires at %s.\n", s.ExpiresAt.UTC().Format(time.RFC3339))
 	return nil
+}
+
+// publishDir packs and publishes o.dir; progress goes to stderr only, so the
+// MCP server can reuse it without touching stdout.
+func (a *app) publishDir(ctx context.Context, c *client.Client, o deployOpts) (*client.DeployResult, error) {
+	if err := checkDeployDir(o.dir); err != nil {
+		return nil, err
+	}
+	me, err := c.Me(ctx)
+	if err != nil {
+		return nil, err
+	}
+	p := startPack(ctx, o.dir, packLimits(me.Limits))
+	if err := p.ready(); err != nil {
+		return nil, err
+	}
+	siteID, err := a.resolveSite(ctx, c, o, me.User.ID)
+	if err != nil {
+		return nil, errors.Join(err, p.stop())
+	}
+	return a.upload(ctx, c, siteID, o.dir, p)
 }
 
 func packLimits(l client.Limits) archive.Limits {

@@ -88,7 +88,7 @@ func (s *Service) Housekeeping(ctx context.Context) error {
 	if err := s.pruneStats(ctx); err != nil {
 		return fmt.Errorf("delete old statistics: %w", err)
 	}
-	return nil
+	return s.housekeepConnect(ctx, now)
 }
 
 func (s *Service) purgeSite(ctx context.Context, id string, now time.Time) error {

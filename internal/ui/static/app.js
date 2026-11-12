@@ -65,6 +65,35 @@
     root.querySelectorAll('[data-copy]').forEach(bindCopy);
   }
 
+  // ---- connect code countdown -----------------------------------------------
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  function initCountdown(root) {
+    root.querySelectorAll('[data-countdown]').forEach(function (box) {
+      if (box.dataset.bound) { return; }
+      box.dataset.bound = '1';
+      var end = Date.parse(box.dataset.countdown);
+      var live = box.querySelector('[data-countdown-live]');
+      var expired = box.querySelector('[data-countdown-expired]');
+      if (isNaN(end) || !live) { return; }
+      var timer;
+      function tick() {
+        if (!document.body.contains(box)) { window.clearInterval(timer); return; }
+        var left = Math.max(0, Math.round((end - Date.now()) / 1000));
+        var clock = pad(Math.floor(left / 60)) + ':' + pad(left % 60);
+        live.textContent = (box.dataset.countdownLeft || '{t}').replace('{t}', clock);
+        if (left === 0) {
+          window.clearInterval(timer);
+          box.classList.add('is-expired');
+          if (expired) { expired.hidden = false; }
+        }
+      }
+      tick();
+      timer = window.setInterval(tick, 1000);
+    });
+  }
+
   // ---- archive upload ------------------------------------------------------
 
   function hostOf(url) {
@@ -216,11 +245,13 @@
   document.addEventListener('DOMContentLoaded', function () {
     document.documentElement.classList.add('js');
     initCopy(document);
+    initCountdown(document);
     document.querySelectorAll('[data-upload]').forEach(function (form) {
       new Uploader(form).bind();
     });
     document.body.addEventListener('htmx:load', function (e) {
       initCopy(e.detail.elt);
+      initCountdown(e.detail.elt);
       focusIssued(e.detail.elt);
     });
   });

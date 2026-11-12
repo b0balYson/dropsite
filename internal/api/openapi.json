@@ -3,7 +3,7 @@
   "info": {
     "title": "Dropsite API",
     "version": "1",
-    "description": "Publish static sites. Every endpoint except GET /openapi.json requires `Authorization: Bearer <token>`. Times are RFC 3339 in UTC. IDs are strings. Resources of other users and admin endpoints for non-admins answer 404."
+    "description": "Publish static sites. Every endpoint except GET /openapi.json and POST /connect/exchange requires `Authorization: Bearer <token>`. Times are RFC 3339 in UTC. IDs are strings. Resources of other users and admin endpoints for non-admins answer 404."
   },
   "servers": [
     {
@@ -32,6 +32,23 @@
               }
             }
           }
+        }
+      }
+    },
+    "/connect/exchange": {
+      "post": {
+        "operationId": "exchangeConnectCode",
+        "summary": "Exchange a one-time connect code from the web interface for a new API token (no bearer token needed)",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ConnectExchangeRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ConnectExchange" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/Internal" }
         }
       }
     },
@@ -1931,6 +1948,23 @@
             "type": "string",
             "description": "Full token value, shown only once"
           }
+        }
+      },
+      "ConnectExchangeRequest": {
+        "type": "object",
+        "required": ["code"],
+        "properties": {
+          "code": { "type": "string", "description": "Connect code such as ABCD-EFGH-JKMNP; case, spaces and dashes are ignored" },
+          "name": { "type": "string", "description": "Name of the new token (default: Connected <date>)" }
+        }
+      },
+      "ConnectExchange": {
+        "type": "object",
+        "required": ["token", "value", "user"],
+        "properties": {
+          "token": { "$ref": "#/components/schemas/Token" },
+          "value": { "type": "string", "description": "Full token value, shown only once" },
+          "user": { "$ref": "#/components/schemas/User" }
         }
       },
       "Invite": {

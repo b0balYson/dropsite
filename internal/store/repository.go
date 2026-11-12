@@ -28,6 +28,8 @@ type Repository interface {
 	DeployRepository
 	AuditRepository
 	SettingsRepository
+	ConnectRepository
+	OAuthRepository
 	StatsRepository
 	CounterRepository
 	AccessRepository
