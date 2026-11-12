@@ -164,7 +164,7 @@ func (s *Service) SyncSheet(ctx context.Context, a Actor, ref, name string) (She
 }
 
 // syncLinked runs one synchronization and records its outcome.
-func (s *Service) syncLinked(ctx context.Context, a Actor, c domain.Collection, l domain.SheetLink, trigger string) domain.SheetSyncResult {
+func (s *Service) syncLinked(ctx context.Context, a Actor, c domain.Collection, l domain.SheetLink, trigger string) {
 	ctx = context.WithoutCancel(ctx)
 	res := s.syncSheet(ctx, c, l)
 	res.At, res.Trigger = s.now(), trigger
@@ -174,7 +174,6 @@ func (s *Service) syncLinked(ctx context.Context, a Actor, c domain.Collection, 
 	s.audit(ctx, a, "collection.sheet.sync", siteTarget(c.SiteID), map[string]any{
 		"name": c.Name, "trigger": trigger, "status": string(res.Status), "rows": res.Rows,
 	})
-	return res
 }
 
 func failedSync(msg string) domain.SheetSyncResult {
@@ -244,14 +243,17 @@ func (s *Service) SyncDueSheets(ctx context.Context) (int, error) {
 		if ctx.Err() != nil {
 			break
 		}
-		c, err := s.repo.GetCollection(ctx, l.SiteID, l.Collection)
-		if err != nil {
-			continue // removed meanwhile
+		c, cerr := s.repo.GetCollection(ctx, l.SiteID, l.Collection)
+		if cerr != nil {
+			if !errors.Is(cerr, domain.ErrNotFound) {
+				s.log.Error("load collection for sheet sync", "site", l.SiteID, "collection", l.Collection, "err", cerr)
+			}
+			continue // removed meanwhile, or retried on the next run
 		}
 		s.syncLinked(ctx, Actor{}, c, l, domain.SheetTriggerSchedule)
 		n++
 	}
-	return n, nil
+	return n, nil //nolint:nilerr // a collection that cannot be loaded is skipped and logged, not a batch failure
 }
 
 // RunSheetSync runs SyncDueSheets every interval until ctx is done.

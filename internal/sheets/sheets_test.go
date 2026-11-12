@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"net/netip"
 	"reflect"
 	"strings"
 	"testing"
@@ -170,13 +169,5 @@ func TestGuardRefusesOtherHosts(t *testing.T) {
 	_, _ = c.Token(context.Background())
 	if rec.hits != 1 {
 		t.Fatalf("token request did not go to the fixed endpoint: hits %d", rec.hits)
-	}
-}
-
-func TestTransportRefusesPrivateAddresses(t *testing.T) {
-	tr := sheets.NewTransport([]netip.Prefix{netip.MustParsePrefix("127.0.0.0/8")})
-	req, _ := http.NewRequest(http.MethodGet, "http://127.0.0.1:1/", nil)
-	if _, err := tr.RoundTrip(req); err == nil {
-		t.Fatal("connection to 127.0.0.1 allowed")
 	}
 }

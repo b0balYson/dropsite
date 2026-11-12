@@ -39,7 +39,7 @@ func genKey() {
 		panic(err)
 	}
 	p := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der})
-	keyJSON, err = json.Marshal(map[string]string{
+	keyJSON, err = json.Marshal(map[string]string{ //nolint:gosec // G101: a throwaway key generated for tests
 		"type": "service_account", "project_id": "test-project", "private_key_id": "kid1",
 		"private_key": string(p), "client_email": Email, "token_uri": "https://evil.example/token",
 	})

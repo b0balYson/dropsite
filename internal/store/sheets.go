@@ -104,27 +104,11 @@ func (db *DB) DeleteSheetLink(ctx context.Context, siteID, collection string) er
 func (db *DB) ClaimDueSheetLinks(ctx context.Context, now time.Time, limit int) ([]domain.SheetLink, error) {
 	var out []domain.SheetLink
 	err := db.withTx(ctx, func(tx *sql.Tx) error {
-		rows, err := tx.QueryContext(ctx, `SELECT `+prefixCols("c.", sheetCols)+` FROM collection_sheets c
-			JOIN sites s ON s.id = c.site_id AND s.deleted_at IS NULL
-			WHERE c.interval_minutes > 0 AND (c.next_sync_at IS NULL OR c.next_sync_at <= ?)
-			ORDER BY c.next_sync_at LIMIT ?`, toMS(now), limit)
+		due, err := dueSheetLinks(ctx, tx, now, limit)
 		if err != nil {
-			return fmt.Errorf("list due sheet links: %w", err)
+			return err
 		}
-		for rows.Next() {
-			l, err := scanSheetLink(rows)
-			if err != nil {
-				_ = rows.Close()
-				return fmt.Errorf("scan sheet link: %w", err)
-			}
-			out = append(out, l)
-		}
-		if err := rows.Close(); err != nil {
-			return fmt.Errorf("list due sheet links: %w", err)
-		}
-		if err := rows.Err(); err != nil {
-			return fmt.Errorf("list due sheet links: %w", err)
-		}
+		out = due
 		for i, l := range out {
 			next := now.Add(time.Duration(l.IntervalMinutes) * time.Minute)
 			if _, err := tx.ExecContext(ctx, "UPDATE collection_sheets SET next_sync_at = ? WHERE site_id = ? AND collection = ?",
@@ -172,4 +156,27 @@ func prefixCols(prefix, cols string) string {
 		}
 	}
 	return string(out)
+}
+
+func dueSheetLinks(ctx context.Context, tx *sql.Tx, now time.Time, limit int) ([]domain.SheetLink, error) {
+	rows, err := tx.QueryContext(ctx, `SELECT `+prefixCols("c.", sheetCols)+` FROM collection_sheets c `+ //nolint:gosec // G202: constant column list, values are bound
+		`JOIN sites s ON s.id = c.site_id AND s.deleted_at IS NULL
+		WHERE c.interval_minutes > 0 AND (c.next_sync_at IS NULL OR c.next_sync_at <= ?)
+		ORDER BY c.next_sync_at LIMIT ?`, toMS(now), limit)
+	if err != nil {
+		return nil, fmt.Errorf("list due sheet links: %w", err)
+	}
+	defer rows.Close()
+	var out []domain.SheetLink
+	for rows.Next() {
+		l, err := scanSheetLink(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan sheet link: %w", err)
+		}
+		out = append(out, l)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list due sheet links: %w", err)
+	}
+	return out, nil
 }

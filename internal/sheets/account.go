@@ -22,11 +22,11 @@ const MaxKeyBytes = 16 << 10
 // Fixed Google endpoints and scope. The token_uri of a key is ignored on
 // purpose: a forged key must not send a signed assertion elsewhere.
 const (
-	TokenURL = "https://oauth2.googleapis.com/token"
+	TokenURL = "https://oauth2.googleapis.com/token" //nolint:gosec // G101: a public endpoint, not a credential
 	APIBase  = "https://sheets.googleapis.com/v4/spreadsheets/"
-	Scope    = "https://www.googleapis.com/auth/spreadsheets"
+	Scope    = "https://www.googleapis.com/auth/spreadsheets" //nolint:gosec // G101: an OAuth scope, not a credential
 
-	TokenHost = "oauth2.googleapis.com"
+	TokenHost = "oauth2.googleapis.com" //nolint:gosec // G101: a host name, not a credential
 	APIHost   = "sheets.googleapis.com"
 )
 

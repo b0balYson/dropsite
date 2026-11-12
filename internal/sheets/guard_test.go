@@ -13,6 +13,15 @@ func (o *okTransport) RoundTrip(*http.Request) (*http.Response, error) {
 	return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody}, nil
 }
 
+func roundTrip(rt http.RoundTripper, u string) error {
+	req, _ := http.NewRequest(http.MethodGet, u, nil)
+	resp, err := rt.RoundTrip(req)
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	return err
+}
+
 func TestGuard(t *testing.T) {
 	next := &okTransport{}
 	g := guard{next: next}
@@ -20,8 +29,7 @@ func TestGuard(t *testing.T) {
 		"https://sheets.googleapis.com/v4/spreadsheets/x",
 		"https://oauth2.googleapis.com/token",
 	} {
-		req, _ := http.NewRequest(http.MethodGet, u, nil)
-		if _, err := g.RoundTrip(req); err != nil {
+		if err := roundTrip(g, u); err != nil {
 			t.Fatalf("%s refused: %v", u, err)
 		}
 	}
@@ -33,8 +41,7 @@ func TestGuard(t *testing.T) {
 		"https://sheets.googleapis.com.evil.com/",
 		"https://www.googleapis.com/",
 	} {
-		req, _ := http.NewRequest(http.MethodGet, u, nil)
-		if _, err := g.RoundTrip(req); !errors.Is(err, ErrHostNotAllowed) {
+		if err := roundTrip(g, u); !errors.Is(err, ErrHostNotAllowed) {
 			t.Fatalf("%s allowed: %v", u, err)
 		}
 	}
@@ -45,7 +52,13 @@ func TestGuard(t *testing.T) {
 
 func TestNoRedirects(t *testing.T) {
 	c := newHTTPClient(&okTransport{})
-	if c.CheckRedirect(nil, nil) != http.ErrUseLastResponse {
+	if err := c.CheckRedirect(nil, nil); !errors.Is(err, http.ErrUseLastResponse) {
 		t.Fatal("redirects followed")
+	}
+}
+
+func TestTransportRefusesPrivateAddresses(t *testing.T) {
+	if err := roundTrip(NewTransport(nil), "http://127.0.0.1:1/"); err == nil {
+		t.Fatal("connection to 127.0.0.1 allowed")
 	}
 }
