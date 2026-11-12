@@ -84,6 +84,9 @@ func parseSchema(raw json.RawMessage) (json.RawMessage, *jsonschema.Resolved, er
 	if err != nil {
 		return nil, nil, schemaErr("the schema cannot be used: " + err.Error())
 	}
+	if err := checkSchemaRefs(buf.Bytes()); err != nil {
+		return nil, nil, err
+	}
 	return buf.Bytes(), rs, nil
 }
 
