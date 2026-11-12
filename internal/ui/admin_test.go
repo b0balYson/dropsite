@@ -13,7 +13,7 @@ import (
 	"github.com/b0balYson/dropsite/internal/service"
 )
 
-var adminPages = []string{"/admin/users", "/admin/sites", "/admin/audit", "/admin/settings"}
+var adminPages = []string{"/admin/users", "/admin/sites", "/admin/domains", "/admin/audit", "/admin/settings"}
 
 func TestAdminPagesHiddenFromUsers(t *testing.T) {
 	h := newHarness(t)
