@@ -4,6 +4,7 @@
 
 {{define "content"}}
 {{$v := .D.V}}
+<div class="site-page">
 <nav class="crumbs" aria-label="{{.L.T "nav.breadcrumbs"}}"><a href="/">← {{.L.T "nav.sites"}}</a></nav>
 <header class="site-head">
   <p class="eyebrow mono">{{.L.T "site.id"}} {{$v.Site.ID}}</p>
@@ -26,8 +27,7 @@
 <p class="notice notice--warn expiry-notice" role="status">{{.L.T "access.expires.soon" "date" (.L.DatePtr $v.Site.ExpiresAt)}}</p>
 {{end}}
 
-<div class="site-grid">
-  <section class="site-grid__main" aria-labelledby="publish-h">
+  <section class="section site-block" aria-labelledby="publish-h">
     <h2 class="section-title" id="publish-h">{{.L.T "deploy.title"}}</h2>
     <form class="dropzone" method="post" action="/sites/{{$v.Site.ID}}/deploy" enctype="multipart/form-data"
       data-upload data-history="/sites/{{$v.Site.ID}}/history"
@@ -63,11 +63,20 @@
     </details>
   </section>
 
-  <div class="site-grid__side side-stack">
-  <section class="panel panel--tight" aria-labelledby="settings-h">
-    <h2 class="section-title" id="settings-h">{{.L.T "site.settings"}}</h2>
+<section class="section site-block" aria-labelledby="history-h">
+  <h2 class="section-title" id="history-h">{{.L.T "history.title"}}</h2>
+  <div id="history">{{template "history" .}}</div>
+</section>
+
+{{template "site_stats" .}}
+
+{{template "site_forms" .}}
+
+<section class="section site-block" aria-labelledby="settings-h">
+  <h2 class="section-title" id="settings-h">{{.L.T "site.settings"}}</h2>
     <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/settings">
       {{template "csrf" .}}
+      <div class="site-block__row">
       <div class="field">
         <label class="field__label" for="title">{{.L.T "site.field.title"}}</label>
         <input class="input" id="title" name="title" required maxlength="120" value="{{$v.Site.Title}}">
@@ -79,29 +88,14 @@
         <p class="hint" id="slug-hint">{{.L.T "site.slug.hint" "domain" .D.Domain}} {{.L.T "site.slug.clear"}}</p>
         <p class="slug-status" id="slug-status" aria-live="polite"></p>
       </div>
+      </div>
       <button class="btn btn--primary" type="submit">{{.L.T "form.save"}}</button>
     </form>
+</section>
 
-    <h2 class="section-title section-title--sub" id="counters-h">{{.L.T "counters.title"}}</h2>
-    <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/counters" aria-labelledby="counters-h">
-      {{template "csrf" .}}
-      <div class="field">
-        <label class="field__label" for="metrika_id">{{.L.T "counters.metrika"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
-        <input class="input mono" id="metrika_id" name="metrika_id" value="{{.D.Counters.Own.MetrikaID}}" inputmode="numeric" pattern="[1-9][0-9]{3,11}" maxlength="12" autocomplete="off" spellcheck="false" placeholder="12345678">
-      </div>
-      <div class="field">
-        <label class="field__label" for="ga4_id">{{.L.T "counters.ga4"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
-        <input class="input mono" id="ga4_id" name="ga4_id" value="{{.D.Counters.Own.GA4ID}}" pattern="[Gg]-[A-Za-z0-9]{4,16}" maxlength="18" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="G-XXXXXXXXXX" aria-describedby="counters-hint">
-        <p class="hint" id="counters-hint">{{.L.T "counters.hint"}}{{if $v.Current}} {{.L.T "counters.hint.release"}}{{end}}</p>
-        {{with .D.Counters.Global}}{{if or .MetrikaID .GA4ID}}
-        <p class="hint">{{$.L.T "counters.global"}} <span class="mono">{{if .MetrikaID}}{{.MetrikaID}}{{end}}{{if and .MetrikaID .GA4ID}}, {{end}}{{if .GA4ID}}{{.GA4ID}}{{end}}</span></p>
-        {{end}}{{end}}
-      </div>
-      <button class="btn btn--ghost" type="submit">{{.L.T "counters.save"}}</button>
-    </form>
-  </section>
+{{template "site_domains" .}}
 
-  <section class="panel panel--tight" aria-labelledby="access-h">
+  <section class="section site-block" aria-labelledby="access-h">
     <h2 class="section-title" id="access-h">{{.L.T "access.title"}}</h2>
     <form class="stack access" method="post" action="/sites/{{$v.Site.ID}}/access">
       {{template "csrf" .}}
@@ -130,19 +124,28 @@
       <button class="btn btn--primary" type="submit">{{.L.T "form.save"}}</button>
     </form>
   </section>
-  </div>
-</div>
 
-{{template "site_stats" .}}
-
-{{template "site_forms" .}}
-
-<section class="section" aria-labelledby="history-h">
-  <h2 class="section-title" id="history-h">{{.L.T "history.title"}}</h2>
-  <div id="history">{{template "history" .}}</div>
+<section class="section site-block" aria-labelledby="counters-h">
+  <h2 class="section-title" id="counters-h">{{.L.T "counters.title"}}</h2>
+    <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/counters">
+      {{template "csrf" .}}
+      <div class="site-block__row">
+      <div class="field">
+        <label class="field__label" for="metrika_id">{{.L.T "counters.metrika"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+        <input class="input mono" id="metrika_id" name="metrika_id" value="{{.D.Counters.Own.MetrikaID}}" inputmode="numeric" pattern="[1-9][0-9]{3,11}" maxlength="12" autocomplete="off" spellcheck="false" placeholder="12345678">
+      </div>
+      <div class="field">
+        <label class="field__label" for="ga4_id">{{.L.T "counters.ga4"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+        <input class="input mono" id="ga4_id" name="ga4_id" value="{{.D.Counters.Own.GA4ID}}" pattern="[Gg]-[A-Za-z0-9]{4,16}" maxlength="18" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="G-XXXXXXXXXX" aria-describedby="counters-hint">
+        <p class="hint" id="counters-hint">{{.L.T "counters.hint"}}{{if $v.Current}} {{.L.T "counters.hint.release"}}{{end}}</p>
+        {{with .D.Counters.Global}}{{if or .MetrikaID .GA4ID}}
+        <p class="hint">{{$.L.T "counters.global"}} <span class="mono">{{if .MetrikaID}}{{.MetrikaID}}{{end}}{{if and .MetrikaID .GA4ID}}, {{end}}{{if .GA4ID}}{{.GA4ID}}{{end}}</span></p>
+        {{end}}{{end}}
+      </div>
+      </div>
+      <button class="btn btn--ghost" type="submit">{{.L.T "counters.save"}}</button>
+    </form>
 </section>
-
-{{template "site_domains" .}}
 
 <section class="section danger" aria-labelledby="delete-h">
   <details class="danger__box">
@@ -158,4 +161,5 @@
     </form>
   </details>
 </section>
+</div>
 {{end}}
