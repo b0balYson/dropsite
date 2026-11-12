@@ -113,6 +113,7 @@ type siteData struct {
 	Stats    statsView
 	Counters service.SiteCounters
 	Access   accessView
+	Publish  service.PublishSettingsView
 }
 
 func (s *server) loadSite(r *http.Request, rc *reqCtx) (siteData, error) {
@@ -148,6 +149,9 @@ func (s *server) sitePage(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	}
 	if err == nil {
 		data.Forms, err = s.formsSummary(r, rc, data.V.Site.ID)
+	}
+	if err == nil {
+		data.Publish, err = s.svc.GetPublishSettings(r.Context(), rc.actor, data.V.Site.ID)
 	}
 	if err != nil {
 		s.failPage(w, r, rc, err)

@@ -118,6 +118,8 @@ services:
       # webhooks may reach (test stacks only). Empty means the defaults.
       TELEGRAM_API_URL: ${TELEGRAM_API_URL:-}
       FORM_WEBHOOK_ALLOW_CIDRS: ${FORM_WEBHOOK_ALLOW_CIDRS:-}
+      # Publish-time optimization (docs/publishing.md): on (default) or off.
+      PUBLISH_OPTIMIZE: ${PUBLISH_OPTIMIZE:-}
     volumes:
       - sites:/data
       - state:/state

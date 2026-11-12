@@ -86,6 +86,7 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("GET /sites/{ref}/slug-check", s.user(s.slugCheckSite))
 	mux.HandleFunc("POST /sites/{ref}/settings", s.user(s.siteSettings))
 	mux.HandleFunc("POST /sites/{ref}/access", s.user(s.siteAccess))
+	mux.HandleFunc("POST /sites/{ref}/publish-settings", s.user(s.sitePublishSettings))
 	mux.HandleFunc("POST /sites/{ref}/deploy", s.upload(s.deploy))
 	mux.HandleFunc("POST /sites/{ref}/rollback", s.user(s.rollback))
 	mux.HandleFunc("POST /sites/{ref}/counters", s.user(s.saveCounters))

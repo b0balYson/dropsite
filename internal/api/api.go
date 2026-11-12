@@ -73,6 +73,8 @@ func (a *api) routes() []route {
 		{Method: http.MethodPost, Path: "/sites/{ref}/deploys", handle: a.deploy},
 		{Method: http.MethodGet, Path: "/sites/{ref}/deploys", handle: a.listDeploys},
 		{Method: http.MethodPost, Path: "/sites/{ref}/rollback", handle: a.rollback},
+		{Method: http.MethodGet, Path: "/sites/{ref}/publish-settings", handle: a.getPublishSettings},
+		{Method: http.MethodPatch, Path: "/sites/{ref}/publish-settings", handle: a.updatePublishSettings},
 		{Method: http.MethodGet, Path: "/sites/{ref}/hostnames", handle: a.listHostnames},
 		{Method: http.MethodPost, Path: "/sites/{ref}/hostnames", handle: a.addHostname},
 		{Method: http.MethodDelete, Path: "/sites/{ref}/hostnames/{hostname}", handle: a.removeHostname},

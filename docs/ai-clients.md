@@ -98,6 +98,8 @@ The remote server offers every chat tool. A whole small site is published in one
 
 Form tools (details in [forms.md](forms.md#from-a-chat-assistant)): `get_form_settings`, `set_form_settings`, `list_submissions`, `export_submissions`, `list_channels`, `add_channel`, `verify_channel`, `set_channel_enabled`, `delete_channel`, `rotate_channel_secret`.
 
+Publish settings tools (details in [publishing.md](publishing.md)): `get_publish_settings`, `set_publish_settings`.
+
 Both servers also cover the account and site settings of the web interface, so a user can manage everything by asking in plain words:
 
 | Tool | What it does |

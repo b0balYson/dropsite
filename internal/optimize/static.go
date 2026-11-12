@@ -228,14 +228,14 @@ func wrapICO(pngData []byte) []byte {
 	const headerLen, entryLen = 6, 16
 	var b bytes.Buffer
 	le := binary.LittleEndian
-	_ = binary.Write(&b, le, [3]uint16{0, 1, 1}) // reserved, type icon, one image
-	b.WriteByte(faviconSize)                     // width
-	b.WriteByte(faviconSize)                     // height
-	b.WriteByte(0)                               // no palette
-	b.WriteByte(0)                               // reserved
-	_ = binary.Write(&b, le, uint16(1))          // colour planes
-	_ = binary.Write(&b, le, uint16(32))         // bits per pixel
-	_ = binary.Write(&b, le, uint32(len(pngData)))
+	_ = binary.Write(&b, le, [3]uint16{0, 1, 1})   // reserved, type icon, one image
+	b.WriteByte(faviconSize)                       // width
+	b.WriteByte(faviconSize)                       // height
+	b.WriteByte(0)                                 // no palette
+	b.WriteByte(0)                                 // reserved
+	_ = binary.Write(&b, le, uint16(1))            // colour planes
+	_ = binary.Write(&b, le, uint16(32))           // bits per pixel
+	_ = binary.Write(&b, le, uint32(len(pngData))) //nolint:gosec // a 32x32 PNG is a few hundred bytes
 	_ = binary.Write(&b, le, uint32(headerLen+entryLen))
 	b.Write(pngData)
 	return b.Bytes()

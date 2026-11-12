@@ -122,6 +122,7 @@ func (t tools) register(s *sdk.Server, o Options) {
 	}
 	t.registerForms(s, o)
 	t.registerCabinet(s, o)
+	t.registerPublish(s, o)
 }
 
 func (t tools) listSites(ctx context.Context, req *sdk.CallToolRequest, _ struct{}) (*sdk.CallToolResult, sitesOut, error) {

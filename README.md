@@ -211,6 +211,7 @@ In this mode every release also gets its own preview address `https://p-<release
 | `STATS_INTERVAL` | no | `1m` | How often control reads the sites access log (1s to 1h) |
 | `STATS_LOG_FILE` | no | `/logs/sites-access.log` | Sites access log inside control; `off` disables statistics |
 | `TELEGRAM_API_URL` | no | `https://api.telegram.org` | Bot API address for form delivery (proxy or tests) |
+| `PUBLISH_OPTIMIZE` | no | `on` | Publish-time optimization: WebP copies of images and fallback `robots.txt`, `sitemap.xml`, `favicon.ico`; site files are never changed (docs/publishing.md) |
 | `FORM_WEBHOOK_ALLOW_CIDRS` | no | | Private networks form webhooks may reach — for every user (test stacks only; the control host itself is always refused) |
 
 ## Operations

@@ -125,6 +125,8 @@
     </form>
   </section>
 
+{{template "site_publish" .}}
+
 <section class="section site-block" aria-labelledby="counters-h">
   <h2 class="section-title" id="counters-h">{{.L.T "counters.title"}}</h2>
     <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/counters">

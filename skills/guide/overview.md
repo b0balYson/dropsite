@@ -30,6 +30,7 @@ Call get_guide with one of these topics when you need details:
 - `stats`: visits and analytics counters.
 - `addresses`: the memorable address, own domains and the DNS steps the user does, the root domain (administrators).
 - `protection`: password, hiding from search engines, lifetime.
+- `publishing`: what the server adds to every version (WebP images, robots.txt, sitemap, icon) and how to turn it off.
 - `rollback`: versions and restoring an earlier one.
 - `account`: limits, connected apps, what only the web interface or an administrator can do.
 - `errors`: what errors mean and what to tell the user.

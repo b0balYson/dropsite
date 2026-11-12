@@ -1475,6 +1475,78 @@
         }
       }
     },
+    "/sites/{ref}/publish-settings": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SiteRef"
+        }
+      ],
+      "get": {
+        "operationId": "getPublishSettings",
+        "summary": "Publish settings of a site",
+        "description": "Whether new releases get WebP variants of images and fallback robots.txt, sitemap.xml and favicon.ico. Site files are never changed.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updatePublishSettings",
+        "summary": "Turn publish-time optimization of a site on or off",
+        "description": "Applies from the next publication; existing releases do not change.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishSettingsUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
     "/sites/{ref}/forms/submissions": {
       "parameters": [
         {
@@ -3816,6 +3888,44 @@
             "type": "string"
           }
         }
+      },
+      "PublishSettings": {
+        "type": "object",
+        "required": [
+          "site_id",
+          "optimize",
+          "installation_enabled",
+          "effective"
+        ],
+        "properties": {
+          "site_id": {
+            "type": "string"
+          },
+          "optimize": {
+            "type": "boolean",
+            "description": "The site's own setting (default true)"
+          },
+          "installation_enabled": {
+            "type": "boolean",
+            "description": "False when the installation turned optimization off (PUBLISH_OPTIMIZE=off)"
+          },
+          "effective": {
+            "type": "boolean",
+            "description": "Whether the next publication is optimized"
+          }
+        }
+      },
+      "PublishSettingsUpdate": {
+        "type": "object",
+        "required": [
+          "optimize"
+        ],
+        "properties": {
+          "optimize": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
       },
       "FormSiteSettings": {
         "type": "object",
