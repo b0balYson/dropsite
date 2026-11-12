@@ -87,8 +87,8 @@ type folderBackend struct{ *fakeBackend }
 // plainBackend hides the publisher methods of the fake.
 type plainBackend struct{ Backend }
 
-func (f folderBackend) DeployFolder(_ context.Context, path, _, _ string) (DeployResult, error) {
-	f.folder = path
+func (f folderBackend) DeployFolder(_ context.Context, in Folder) (DeployResult, error) {
+	f.folder = in.Path
 	return DeployResult{SiteID: "abc", DeployID: "d4", URL: "https://promo.example/"}, nil
 }
 

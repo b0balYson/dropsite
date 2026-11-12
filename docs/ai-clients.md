@@ -43,6 +43,10 @@ The Claude Desktop config is rewritten atomically with its permissions and every
 
 `dropsite mcp` speaks MCP over stdio and calls the API with the saved login: `list_sites`, `create_site`, `get_site`, `set_slug`, `list_deploys`, `rollback`, `delete_site` and `deploy_folder` (an absolute folder path; packed exactly like `dropsite deploy`, including `.dropsite.json`). Without a login every tool answers with instructions to press **Connect**.
 
+Because the assistant can be steered by content it reads, `deploy_folder` is guarded: the home folder, folders directly inside it and file system roots are refused (symbolic links are resolved), and a folder with secret-looking files — `.env*`, `.npmrc`, `.netrc`, `.git-credentials`, `.pypirc`, `.ssh/`, `.aws/`, `.gnupg/`, `*.pem`, `*.key`, `id_rsa*`, `id_dsa*`, `id_ecdsa*`, `id_ed25519*` — is refused with the list of those files. With `skip_sensitive_files: true` the folder is published without them; the tool has no way to publish them. Other dotfiles such as `.well-known/` are published as usual. The tool description tells the assistant to pass only the build output folder.
+
+`dropsite deploy` applies the same secret-file check (not the folder check): it stops and lists the files unless `--skip-sensitive` (leave them out) or `--include-sensitive` (publish them, when they really are public) is given.
+
 ## ChatGPT and claude.ai
 
 Both connect to the remote MCP endpoint `https://api.<BASE_DOMAIN>/mcp`:

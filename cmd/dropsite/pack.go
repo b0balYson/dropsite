@@ -54,12 +54,12 @@ type packer struct {
 	err  error
 }
 
-func startPack(ctx context.Context, dir string, lim archive.Limits) *packer {
+func startPack(ctx context.Context, dir string, lim archive.Limits, skip func(string) bool) *packer {
 	pr, pw := io.Pipe()
 	p := &packer{pr: pr, br: bufio.NewReaderSize(pr, packBufSize), done: make(chan struct{})}
 	go func() {
 		defer close(p.done)
-		p.res, p.err = archive.WriteTarGz(ctx, dir, pw, lim)
+		p.res, p.err = archive.WriteTarGzWith(ctx, dir, pw, lim, archive.PackOptions{Skip: skip})
 		_ = pw.CloseWithError(p.err)
 	}()
 	return p

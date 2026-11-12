@@ -27,6 +27,18 @@ type packEntry struct {
 // at the root (CodeArchiveNoIndex), enforces lim, honours ctx cancellation.
 // The whole tree is validated before the first byte is written to w.
 func WriteTarGz(ctx context.Context, dir string, w io.Writer, lim Limits) (Result, error) {
+	return WriteTarGzWith(ctx, dir, w, lim, PackOptions{})
+}
+
+// PackOptions adjust WriteTarGzWith.
+type PackOptions struct {
+	// Skip leaves out matching paths (slash-separated, relative) and, for a
+	// directory, everything below it.
+	Skip func(rel string) bool
+}
+
+// WriteTarGzWith is WriteTarGz with options.
+func WriteTarGzWith(ctx context.Context, dir string, w io.Writer, lim Limits, o PackOptions) (Result, error) {
 	root, err := os.OpenRoot(dir)
 	if err != nil {
 		return Result{}, internalErr("open directory", err)
@@ -35,7 +47,7 @@ func WriteTarGz(ctx context.Context, dir string, w io.Writer, lim Limits) (Resul
 	if err := requireIndex(root); err != nil {
 		return Result{}, err
 	}
-	s := &packScan{ctx: ctx, lim: lim}
+	s := &packScan{ctx: ctx, lim: lim, skip: o.Skip}
 	if err := fs.WalkDir(root.FS(), ".", s.visit); err != nil {
 		return Result{}, domain.AsError(err)
 	}
@@ -49,6 +61,7 @@ func WriteTarGz(ctx context.Context, dir string, w io.Writer, lim Limits) (Resul
 type packScan struct {
 	ctx     context.Context
 	lim     Limits
+	skip    func(string) bool
 	entries []packEntry
 	res     Result
 	dirs    int
@@ -64,7 +77,7 @@ func (s *packScan) visit(p string, d fs.DirEntry, err error) error {
 	if p == "." {
 		return nil
 	}
-	if IsIgnored(p) {
+	if IsIgnored(p) || (s.skip != nil && s.skip(p)) {
 		if d.IsDir() {
 			return fs.SkipDir
 		}

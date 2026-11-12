@@ -20,6 +20,10 @@ type deployOpts struct {
 	expires string
 	asJSON  bool
 	expiry  *client.Expiry // parsed --expires; nil leaves the expiry alone
+	// sensitive decides about secret-looking files; sensitiveHints explain
+	// how to override a refusal in the caller's terms.
+	sensitive      sensitiveMode
+	sensitiveHints []string
 }
 
 // deployOutput is the --json result of deploy and rollback.
@@ -31,15 +35,19 @@ type deployOutput struct {
 }
 
 func cmdDeploy(ctx context.Context, a *app, args []string) error {
-	fs := a.newFlagSet("deploy", "<dir> [--site <id|slug>] [--title <text>] [--expires <when>] [--json]",
+	fs := a.newFlagSet("deploy", "<dir> [--site <id|slug>] [--title <text>] [--expires <when>] [--skip-sensitive|--include-sensitive] [--json]",
 		"Pack <dir> (it must contain index.html), publish it and print the site URL.\n"+
 			"Without --site the site is taken from "+brand.ProjectFile+" in <dir>; if there is\n"+
-			"none, a new site is created and remembered there.")
+			"none, a new site is created and remembered there. A folder with secret-looking\n"+
+			"files (.env*, .npmrc, .netrc, .git-credentials, .ssh/, .aws/, *.pem, *.key,\n"+
+			"id_rsa*) is refused unless --skip-sensitive or --include-sensitive is given.")
 	var o deployOpts
 	fs.StringVar(&o.site, "site", "", "publish to this site (ID or slug)")
 	fs.StringVar(&o.title, "title", "", "title of a newly created site (default: the directory name)")
 	fs.StringVar(&o.expires, "expires", "", "take the site down after: 7d, 36h, 2026-12-31 (end of day, UTC), an RFC 3339 time, or never")
 	fs.BoolVar(&o.asJSON, "json", false, "print one JSON object {site_id, deploy_id, url, urls}")
+	skipSensitive := fs.Bool("skip-sensitive", false, "publish without secret-looking files (.env*, keys, credentials) instead of stopping")
+	includeSensitive := fs.Bool("include-sensitive", false, "publish secret-looking files too (only if they are really meant to be public)")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
 		return err
@@ -47,6 +55,15 @@ func cmdDeploy(ctx context.Context, a *app, args []string) error {
 	if err := wantArgs(fs, pos, 1, 1); err != nil {
 		return err
 	}
+	switch {
+	case *skipSensitive && *includeSensitive:
+		return usagef("--skip-sensitive and --include-sensitive cannot be used together")
+	case *skipSensitive:
+		o.sensitive = sensitiveSkip
+	case *includeSensitive:
+		o.sensitive = sensitiveInclude
+	}
+	o.sensitiveHints = cliSensitiveHints
 	o.dir = pos[0]
 	if o.expires != "" {
 		if o.expiry, err = parseExpires(o.expires, time.Now()); err != nil {
@@ -95,11 +112,15 @@ func (a *app) publishDir(ctx context.Context, c *client.Client, o deployOpts) (*
 	if err := checkDeployDir(o.dir); err != nil {
 		return nil, err
 	}
+	skip, err := a.checkSensitive(ctx, o)
+	if err != nil {
+		return nil, err
+	}
 	me, err := c.Me(ctx)
 	if err != nil {
 		return nil, err
 	}
-	p := startPack(ctx, o.dir, packLimits(me.Limits))
+	p := startPack(ctx, o.dir, packLimits(me.Limits), skip)
 	if err := p.ready(); err != nil {
 		return nil, err
 	}
