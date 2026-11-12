@@ -1,7 +1,7 @@
 {{define "connect_block"}}
 <div class="connect-block" id="connect-block">
   {{with .D.Code}}
-  <div class="connect-code" data-countdown="{{.ExpiresISO}}">
+  <div class="connect-code" data-countdown="{{.ExpiresISO}}" data-countdown-left="{{$.L.T "connect.code.left" "time" "{t}"}}">
     <div class="connect-code__head">
       <p class="codeblock__label">{{$.L.T "connect.code.label"}}</p>
       <p class="connect-code__value mono" id="connect-code">{{.Code}}</p>

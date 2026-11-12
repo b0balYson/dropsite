@@ -1301,3 +1301,4 @@ a.xdomain__host { text-decoration: none; border-bottom: 2px solid var(--c-ink); 
 .stats__empty-title { font-size: var(--t-md); font-weight: 600; margin-bottom: var(--s-2); }
 .stats__note { margin-top: var(--s-5); max-width: var(--measure); }
 .counters-lede { max-width: var(--measure); margin-bottom: var(--s-5); }
+.consent .auth__form > p + .field { margin-top: var(--s-3); }

@@ -81,7 +81,8 @@
       function tick() {
         if (!document.body.contains(box)) { window.clearInterval(timer); return; }
         var left = Math.max(0, Math.round((end - Date.now()) / 1000));
-        live.textContent = pad(Math.floor(left / 60)) + ':' + pad(left % 60);
+        var clock = pad(Math.floor(left / 60)) + ':' + pad(left % 60);
+        live.textContent = (box.dataset.countdownLeft || '{t}').replace('{t}', clock);
         if (left === 0) {
           window.clearInterval(timer);
           box.classList.add('is-expired');
