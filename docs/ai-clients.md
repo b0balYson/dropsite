@@ -6,7 +6,7 @@ dropsite reaches AI assistants in three ways. All of them start on the **Connect
 | --- | --- | --- |
 | Claude Code, Codex, Cursor | `dropsite-publish` skill → `dropsite deploy <folder>` | one command (`dropsite setup`) |
 | Claude Desktop | local MCP server `dropsite mcp` (tool `deploy_folder`) | one command (`dropsite setup`) |
-| ChatGPT, claude.ai | remote MCP `https://api.<BASE_DOMAIN>/mcp` (tool `deploy_files`, up to 1 MB) | custom connector + OAuth with a connect code |
+| ChatGPT, claude.ai | remote MCP `https://api.<BASE_DOMAIN>/mcp` (`deploy_files`, file editing tools, uploads in parts) | custom connector + OAuth with a connect code |
 
 ## Connect codes
 
@@ -56,7 +56,28 @@ Both connect to the remote MCP endpoint `https://api.<BASE_DOMAIN>/mcp`:
 
 When the dropsite page opens, the user enters a connect code from the **Connect AI** page and presses **Allow**. The page shows the application name, the domain it returns to and the permissions; it never asks for a password (passwords are typed only on the private interface).
 
-Tools: the same as the local server, with `deploy_files` instead of `deploy_folder`: `files` is an array of `{path, content, encoding}` (`utf8` or `base64`), at most 1 MB decoded in total; omit `site` to create a new site. Larger sites get an error that recommends the CLI or Claude Desktop. Releases published this way have the source `mcp`.
+Tools: the same as the local server, with `deploy_files` instead of `deploy_folder`: `files` is an array of `{path, content, encoding}` (`utf8` or `base64`), at most 1 MB decoded in total; omit `site` to create a new site. `deploy_files` replaces the whole site. Releases published this way have the source `mcp`.
+
+### Changing a site from a new chat
+
+The assistant does not need the original files: it reads the published ones.
+
+| Tool | What it does |
+| --- | --- |
+| `list_site_files` | files of the served release (or `deploy_id`): path, size, sha256, type; up to 1000 per call, `prefix` narrows the list. Returns `deploy_id`. |
+| `read_site_files` | up to 50 paths or patterns (`css/*.css`): text as is, binaries up to 64 KB as base64, larger files only described; at most 256 KB of content per call. The analytics block dropsite inserts into HTML is not shown. |
+| `update_site_files` | `base_deploy_id` (required) plus `files` to write, `delete` (files or folders) and `fetch` (`{url, path}` downloaded by the server). Builds a new release from the base with the changes; everything else is kept, the previous release stays available for rollback. |
+| `begin_upload`, `upload_files`, `commit_upload` | sites larger than 1 MB: a session in `replace` mode (new content, a new site when `site` is omitted) or `patch` mode (on top of `base_deploy_id`), up to 1 MB per `upload_files` call. |
+
+If the site changed after the assistant read it (another publication, a rollback, a parallel edit), `update_site_files` and a `patch` commit fail with `deploy_conflict` and the current release ID; the assistant reads the files again and repeats the change. Of two simultaneous edits of the same release exactly one is published.
+
+Every new release passes the same checks as an uploaded archive (paths, `index.html`, the owner's `MAX_SITE_BYTES`, `MAX_FILE_BYTES`, `MAX_FILES`, 30 publications per hour). Paths that look like secrets (`.env*`, keys, credentials) and service files (`.git/`, `node_modules/`) cannot be written from chat.
+
+Upload sessions: at most 3 open per user, closed after 30 idle minutes (every `upload_files` call extends a session) and on a restart of `control`; their files live in the upload directory of the state volume and are removed by housekeeping.
+
+### Images and fonts downloaded by the server
+
+`fetch` entries let the assistant put images, fonts, CSS and JS inside the site instead of linking to other servers. The server downloads them only over `https` on port 443, without a proxy, and only from public addresses: the address actually connected to is checked after every DNS lookup and on every redirect (at most 3), so private, loopback, link-local, cloud metadata and other reserved networks are never reached. Allowed: images (PNG, JPEG, GIF, WebP, AVIF, SVG, ICO), fonts (WOFF, WOFF2, TTF, OTF, EOT), `.css`, `.js`, `.mjs` — by the response type and the target extension. Limits: 20 URLs and 20 MB per call, 5 MB per file (and at most the owner's `MAX_FILE_BYTES`), 60 seconds per call, 300 URLs per user per hour. JPEG and PNG wider than 2000 px are scaled down to 2000 px when that makes the file smaller. One failed URL cancels the whole call and the error names it.
 
 Whatever token reaches `/mcp` (an OAuth token or an API token), the assistant works only with the user's own sites: an administrator's assistant gets no administrator powers and cannot see, publish to, roll back or delete other users' sites. Administration stays in the web interface, the API and the CLI.
 
