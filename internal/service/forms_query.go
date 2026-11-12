@@ -19,11 +19,11 @@ import (
 const (
 	MaxSubmissionQueryLen    = 200
 	DefaultSubmissionPage    = 20
-	MaxSubmissionPage        = 100
+	MaxSubmissionPage        = 1000
 	DefaultInlineExportRows  = 200
-	MaxInlineExportRows      = 1000
+	MaxInlineExportRows      = 100_000
 	DefaultInlineExportBytes = 100 << 10
-	MaxInlineExportBytes     = 256 << 10
+	MaxInlineExportBytes     = 16 << 20
 	minInlineExportBytes     = 1 << 10
 )
 

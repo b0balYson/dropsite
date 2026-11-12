@@ -22,8 +22,8 @@ import (
 // Path is where the endpoint is mounted on the API host.
 const Path = "/mcp"
 
-// maxBodyBytes allows 1 MB of file content in base64 plus JSON framing.
-const maxBodyBytes = 2 << 20
+// maxBodyBytes allows 16 MB of file content in base64 plus JSON framing.
+const maxBodyBytes = 32 << 20
 
 const actorKey = "actor"
 

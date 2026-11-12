@@ -22,10 +22,10 @@ import (
 
 // Reading site files through MCP (spec site-files).
 const (
-	MaxListEntries     = 1000
-	MaxReadPaths       = 50
-	MaxReadBytes       = 256 << 10
-	MaxReadBinaryBytes = 64 << 10
+	MaxListEntries     = 100_000
+	MaxReadPaths       = 2000
+	MaxReadBytes       = 8 << 20
+	MaxReadBinaryBytes = 4 << 20
 )
 
 // SiteFile describes one regular file of a release.

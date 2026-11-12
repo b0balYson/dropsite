@@ -24,7 +24,7 @@ Call get_guide with one of these topics when you need details:
 
 - `create`: build a new site and publish it.
 - `update`: change an existing site, also from a new chat.
-- `large_sites`: sites over 1 MB (many photos, several pages).
+- `large_sites`: sites over 16 MB (many photos, several pages).
 - `assets`: self-contained, fast, mobile-friendly, accessible sites (read before building any site).
 - `forms`: forms on the site, where requests go (Telegram, e-mail, webhook), reading and exporting requests.
 - `stats`: visits and analytics counters.

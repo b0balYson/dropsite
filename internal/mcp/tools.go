@@ -34,7 +34,7 @@ type deleteArgs struct {
 type filesArgs struct {
 	Site  string `json:"site,omitempty" jsonschema:"site ID or slug to update; omit to create a new site"`
 	Title string `json:"title,omitempty" jsonschema:"name of the new site when site is omitted"`
-	Files []File `json:"files" jsonschema:"every file of the site; index.html is required at the root; at most 1 MB in total"`
+	Files []File `json:"files" jsonschema:"every file of the site; index.html is required at the root; at most 16 MB in total"`
 }
 
 type folderArgs struct {
@@ -103,10 +103,10 @@ func (t tools) register(s *sdk.Server, o Options) {
 	if o.Files {
 		sdk.AddTool(s, &sdk.Tool{Name: "deploy_files", Annotations: writes("Publish files", false, false),
 			Description: "Publish a new static site, or replace a whole site, from files passed by value (at most " +
-				"1 MB in total) and return its link to give to the user. Creates a new site when site is omitted. " +
+				"16 MB in total) and return its link to give to the user. Creates a new site when site is omitted. " +
 				"index.html is required at the root. Every file not passed is gone from the new version: to change " +
 				"an existing site use list_site_files, read_site_files and update_site_files instead. For sites " +
-				"larger than 1 MB use begin_upload, upload_files and commit_upload. Ship every image, font and script with the " +
+				"larger than 16 MB use begin_upload, upload_files and commit_upload. Ship every image, font and script with the " +
 				"site (no CDNs or hotlinks; see get_guide topic assets). Reply \"Your site is live: <link>\"."}, t.deployFiles)
 	}
 	t.registerFiles(s, o)

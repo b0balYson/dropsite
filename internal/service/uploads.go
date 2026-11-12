@@ -18,8 +18,8 @@ import (
 
 // Upload sessions (spec site-files).
 const (
-	MaxUploadSessions = 3
-	UploadSessionTTL  = 30 * time.Minute
+	MaxUploadSessions = 50
+	UploadSessionTTL  = 24 * time.Hour
 	uploadSessionsDir = "sessions"
 	uploadIDPrefix    = "up_"
 )

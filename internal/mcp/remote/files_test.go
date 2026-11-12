@@ -95,7 +95,7 @@ func TestRemoteUploadSession(t *testing.T) {
 	r := newRig(t)
 	cs := r.session(r.env.Token(r.env.User("alice@pp.test"), "mcp"))
 	out, msg := call(t, cs, "begin_upload", map[string]any{"title": "Big"})
-	if msg != "" || out["mode"] != "replace" || out["max_call_bytes"].(float64) != 1<<20 {
+	if msg != "" || out["mode"] != "replace" || out["max_call_bytes"].(float64) != 16<<20 {
 		t.Fatalf("begin: %v %q", out, msg)
 	}
 	id := out["upload_id"].(string)

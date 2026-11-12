@@ -13,7 +13,7 @@ import (
 )
 
 // FetchedURLsPerHour caps server-side downloads per user.
-const FetchedURLsPerHour = 300
+const FetchedURLsPerHour = 100_000
 
 // SiteFetcher downloads assets for a site; *sitefetch.Client implements it.
 type SiteFetcher interface {

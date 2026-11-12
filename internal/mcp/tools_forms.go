@@ -100,8 +100,8 @@ func (t tools) registerForms(s *sdk.Server, o Options) {
 			"deliveries and suggest list_channels."}, t.listSubmissions)
 	sdk.AddTool(s, &sdk.Tool{Name: "export_submissions", Annotations: readOnly("Export submissions"),
 		Description: "Return a site's submissions as CSV text (the same columns as the download in the web " +
-			"interface, formulas escaped) for the user to save or paste into a spreadsheet. At most 1000 rows " +
-			"and 256 KB; when truncated is true, tell the user that only the newest rows are included and give " +
+			"interface, formulas escaped) for the user to save or paste into a spreadsheet. At most 100000 rows " +
+			"and 16 MB; when truncated is true, tell the user that only the newest rows are included and give " +
 			"cabinet_url, where the full CSV can be downloaded."}, t.exportSubmissions)
 	sdk.AddTool(s, &sdk.Tool{Name: "list_channels", Annotations: readOnly("List delivery channels"),
 		Description: "List where a site's submissions are delivered (Telegram chats, e-mail addresses, " +

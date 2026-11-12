@@ -16,8 +16,8 @@ import (
 
 // Inline publication limits (spec mcp-server).
 const (
-	MaxInlineBytes = 1 << 20
-	MaxInlineFiles = 1000
+	MaxInlineBytes = 16 << 20
+	MaxInlineFiles = 20_000
 	maxInlinePath  = 512
 )
 

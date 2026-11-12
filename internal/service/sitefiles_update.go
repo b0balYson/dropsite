@@ -17,7 +17,7 @@ import (
 )
 
 // MaxDeletePaths caps the delete list of one call.
-const MaxDeletePaths = 1000
+const MaxDeletePaths = 100_000
 
 // FileChanges are the edits of update_site_files.
 type FileChanges struct {

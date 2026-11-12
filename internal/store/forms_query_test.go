@@ -104,3 +104,24 @@ func joinVals(v []string) string {
 	}
 	return out
 }
+
+// Text search ignores case in any script, not only ASCII.
+func TestListFormSubmissionsCyrillicCase(t *testing.T) {
+	db := newDB(t)
+	ctx := context.Background()
+	u := mkUser(t, db, "a@x.test", domain.UserActive)
+	mkSite(t, db, "site000001", u, "", t0)
+	f := func(v string) domain.FormField { return domain.FormField{Name: "name", Value: v} }
+	insertSub(t, db, "site000001", "lead", t0, f("Анна Петрова"))
+	insertSub(t, db, "site000001", "lead", t0.Add(time.Hour), f("ЁЛКА"))
+	insertSub(t, db, "site000001", "lead", t0.Add(2*time.Hour), f("Борис"))
+	for q, want := range map[string]string{"анна": "Анна Петрова", "ПЕТРОВ": "Анна Петрова", "ёлка": "ЁЛКА", "бОрИс": "Борис"} {
+		subs, total, err := db.ListFormSubmissions(ctx, FormSubmissionFilter{SiteID: "site000001", Query: q})
+		if err != nil {
+			t.Fatal(q, err)
+		}
+		if total != 1 || len(subs) != 1 || subs[0].Fields[0].Value != want {
+			t.Fatalf("%q: %v (%d)", q, values(subs), total)
+		}
+	}
+}

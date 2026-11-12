@@ -75,8 +75,8 @@ type FormSubmissionFilter struct {
 	// Since (inclusive) and Until (exclusive) bound created_at; zero means
 	// unbounded.
 	Since, Until time.Time
-	// Query keeps submissions with a field value containing it (LIKE, so
-	// case-insensitive for ASCII only); field names are not searched.
+	// Query keeps submissions with a field value containing it, ignoring
+	// case in any script (casefold); field names are not searched.
 	Query string
 	// After continues a listing after this submission (keyset on
 	// created_at, id); the total ignores it.
@@ -106,9 +106,9 @@ func (f FormSubmissionFilter) where() (string, []any) {
 		where += " AND created_at < ?"
 		args = append(args, toMS(f.Until))
 	}
-	if p := likePattern(f.Query); p != "" {
+	if p := likePattern(strings.ToLower(f.Query)); p != "" {
 		where += ` AND EXISTS (SELECT 1 FROM json_each(fields_json) j
-			WHERE json_extract(j.value, '$.value') LIKE ? ESCAPE '\')`
+			WHERE casefold(json_extract(j.value, '$.value')) LIKE ? ESCAPE '\')`
 		args = append(args, p)
 	}
 	return where, args

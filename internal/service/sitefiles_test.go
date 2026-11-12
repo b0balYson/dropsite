@@ -142,10 +142,10 @@ func TestReadSiteFilesLimitsAndCounters(t *testing.T) {
 	e := newEnv(t)
 	ctx := context.Background()
 	u := e.user("u@pp.test")
-	big := strings.Repeat("a", 200<<10)
+	big := strings.Repeat("a", MaxReadBytes*4/5)
 	files := map[string]string{
 		"index.html": "<html><head></head><body>hi</body></html>", "a.txt": big, "b.txt": big,
-		"huge.txt": strings.Repeat("b", MaxReadBytes+1), "photo.jpg": "\xff\xd8" + strings.Repeat("\x00", 70<<10),
+		"huge.txt": strings.Repeat("b", MaxReadBytes+1), "photo.jpg": "\xff\xd8" + strings.Repeat("\x00", MaxReadBinaryBytes+(10<<10)),
 	}
 	id, _, _ := e.published(u, files)
 	if _, err := e.svc.SetSiteCounters(ctx, u, id, domain.Counters{MetrikaID: "12345678"}, domain.SourceMCP); err != nil {

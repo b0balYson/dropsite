@@ -22,7 +22,7 @@ type readFilesArgs struct {
 type updateFilesArgs struct {
 	Site         string      `json:"site" jsonschema:"site ID or slug"`
 	BaseDeployID string      `json:"base_deploy_id" jsonschema:"deploy_id returned by list_site_files or read_site_files for the files you changed"`
-	Files        []File      `json:"files,omitempty" jsonschema:"files to add or replace, whole content each; at most 1 MB in total"`
+	Files        []File      `json:"files,omitempty" jsonschema:"files to add or replace, whole content each; at most 16 MB in total"`
 	Delete       []string    `json:"delete,omitempty" jsonschema:"files or folders to remove, e.g. old.html or img/old/"`
 	Fetch        []FetchFile `json:"fetch,omitempty" jsonschema:"images, fonts, stylesheets or scripts the server downloads from public https addresses (up to 20)"`
 }
@@ -36,7 +36,7 @@ type beginUploadArgs struct {
 
 type uploadFilesArgs struct {
 	UploadID string      `json:"upload_id" jsonschema:"from begin_upload"`
-	Files    []File      `json:"files,omitempty" jsonschema:"next part of the files; at most 1 MB of content per call"`
+	Files    []File      `json:"files,omitempty" jsonschema:"next part of the files; at most 16 MB of content per call"`
 	Fetch    []FetchFile `json:"fetch,omitempty" jsonschema:"files the server downloads from public https addresses (up to 20)"`
 }
 
@@ -65,7 +65,7 @@ func (t tools) registerFiles(s *sdk.Server, o Options) {
 			"pass it as base_deploy_id to update_site_files."}, t.listSiteFiles)
 	sdk.AddTool(s, &sdk.Tool{Name: "read_site_files", Annotations: readOnly("Read site files"),
 		Description: "Read files of a published site: text as is, small binary files as base64, large ones only " +
-			"described. At most 256 KB of content per call; read the rest in further calls. Read the files you are " +
+			"described. At most 8 MB of content per call; read the rest in further calls. Read the files you are " +
 			"going to change, then call update_site_files with the deploy_id returned here."}, t.readSiteFiles)
 	sdk.AddTool(s, &sdk.Tool{Name: "update_site_files", Annotations: writes("Change site files", false, false),
 		Description: "Change an existing site: add or replace files (whole content), delete files or folders, and " +
@@ -74,12 +74,12 @@ func (t tools) registerFiles(s *sdk.Server, o Options) {
 			"site changed meanwhile you get a deploy_conflict error; then read the files again and redo the change. " +
 			"Give the user the returned link and say in plain words what changed." + fetchAdvice}, t.updateSiteFiles)
 	sdk.AddTool(s, &sdk.Tool{Name: "begin_upload", Annotations: writes("Start upload", false, false),
-		Description: "Start uploading a site that is larger than 1 MB, in parts. mode replace publishes exactly " +
+		Description: "Start uploading a site that is larger than 16 MB, in parts. mode replace publishes exactly " +
 			"the uploaded files (a new site when site is omitted); mode patch adds them on top of base_deploy_id. " +
-			"Then call upload_files (up to 1 MB per call) and commit_upload. The session closes after 30 idle " +
-			"minutes; at most 3 can be open."}, t.beginUpload)
+			"Then call upload_files (up to 16 MB per call) and commit_upload. The session closes after 24 idle " +
+			"hours; at most 50 can be open."}, t.beginUpload)
 	sdk.AddTool(s, &sdk.Tool{Name: "upload_files", Annotations: writes("Upload files", false, true),
-		Description: "Send the next part of an upload started with begin_upload: files by value (at most 1 MB per " +
+		Description: "Send the next part of an upload started with begin_upload: files by value (at most 16 MB per " +
 			"call) and/or fetch entries the server downloads. Sending a path again replaces it." + fetchAdvice}, t.uploadFiles)
 	sdk.AddTool(s, &sdk.Tool{Name: "commit_upload", Annotations: writes("Publish upload", false, false),
 		Description: "Publish an upload as a new version of the site and close the session. index.html is required " +

@@ -6,7 +6,7 @@ Tool errors explain what went wrong and how to fix it. Fix what you can yourself
 | --- | --- | --- |
 | site not found | list_sites, pick the right site or ask | nothing, or "Which site do you mean: …?" |
 | no `index.html`, bad path, duplicate path | fix the files and publish again | nothing |
-| too large (1 MB per call) | switch to an upload session (`large_sites`) | nothing |
+| too large (16 MB per call) | switch to an upload session (`large_sites`) | nothing |
 | site too large, too many files, file too large | shrink images (`assets`), drop unused files | "The site is over the size limit; I compressed the photos" or ask what to remove |
 | site limit reached | get_account to see the limit | "You have reached your site limit (N). Delete an old site or ask your dropsite administrator to raise it." |
 | conflict: the site changed | re-read and redo the change (`update`) | only if their change may have been overwritten |

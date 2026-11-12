@@ -92,7 +92,7 @@ Because the assistant can be steered by content it reads, `deploy_folder` is gua
 
 ## Remote MCP: tools and rights
 
-The remote server offers every chat tool. A whole small site is published in one call with `deploy_files` (instead of the local `deploy_folder`): `files` is an array of `{path, content, encoding}` (`utf8` or `base64`), at most 1 MB decoded in total; omit `site` to create a new site. Larger sites go up in an upload session where the server offers one; otherwise the error recommends the web interface, the CLI or Claude Desktop. Releases published this way have the source `mcp`.
+The remote server offers every chat tool. A whole small site is published in one call with `deploy_files` (instead of the local `deploy_folder`): `files` is an array of `{path, content, encoding}` (`utf8` or `base64`), at most 16 MB decoded in total; omit `site` to create a new site. Larger sites go up in an upload session where the server offers one; otherwise the error recommends the web interface, the CLI or Claude Desktop. Releases published this way have the source `mcp`.
 
 Form tools (remote server only; details in [forms.md](forms.md#from-a-chat-assistant)): `get_form_settings`, `set_form_settings`, `list_submissions`, `export_submissions`, `list_channels`, `add_channel`, `verify_channel`, `set_channel_enabled`, `delete_channel`, `rotate_channel_secret`.
 
@@ -116,19 +116,19 @@ The assistant does not need the original files: it reads the published ones.
 | Tool | What it does |
 | --- | --- |
 | `list_site_files` | files of the served release (or `deploy_id`): path, size, sha256, type; up to 1000 per call, `prefix` narrows the list. Returns `deploy_id`. |
-| `read_site_files` | up to 50 paths or patterns (`css/*.css`): text as is, binaries up to 64 KB as base64, larger files only described; at most 256 KB of content per call. The analytics block dropsite inserts into HTML is not shown. |
+| `read_site_files` | up to 2000 paths or patterns (`css/*.css`): text as is, binaries up to 4 MB as base64, larger files only described; at most 8 MB of content per call. The analytics block dropsite inserts into HTML is not shown. |
 | `update_site_files` | `base_deploy_id` (required) plus `files` to write, `delete` (files or folders) and `fetch` (`{url, path}` downloaded by the server). Builds a new release from the base with the changes; everything else is kept, the previous release stays available for rollback. |
-| `begin_upload`, `upload_files`, `commit_upload` | sites larger than 1 MB: a session in `replace` mode (new content, a new site when `site` is omitted) or `patch` mode (on top of `base_deploy_id`), up to 1 MB per `upload_files` call. |
+| `begin_upload`, `upload_files`, `commit_upload` | sites larger than 16 MB: a session in `replace` mode (new content, a new site when `site` is omitted) or `patch` mode (on top of `base_deploy_id`), up to 16 MB per `upload_files` call. |
 
 If the site changed after the assistant read it (another publication, a rollback, a parallel edit), `update_site_files` and a `patch` commit fail with `deploy_conflict` and the current release ID; the assistant reads the files again and repeats the change. Of two simultaneous edits of the same release exactly one is published.
 
 Every new release passes the same checks as an uploaded archive (paths, `index.html`, the owner's `MAX_SITE_BYTES`, `MAX_FILE_BYTES`, `MAX_FILES`, 30 publications per hour). Paths that look like secrets (`.env*`, keys, credentials) and service files (`.git/`, `node_modules/`) cannot be written from chat.
 
-Upload sessions: at most 3 open per user, closed after 30 idle minutes (every `upload_files` call extends a session) and on a restart of `control`; their files live in the upload directory of the state volume and are removed by housekeeping.
+Upload sessions: at most 50 open per user, closed after 24 idle hours (every `upload_files` call extends a session) and on a restart of `control`; their files live in the upload directory of the state volume and are removed by housekeeping.
 
 ### Images and fonts downloaded by the server
 
-`fetch` entries let the assistant put images, fonts, CSS and JS inside the site instead of linking to other servers. The server downloads them only over `https` on port 443, without a proxy, and only from public addresses: the address actually connected to is checked after every DNS lookup and on every redirect (at most 3), so private, loopback, link-local, cloud metadata and other reserved networks are never reached. Allowed: images (PNG, JPEG, GIF, WebP, AVIF, SVG, ICO), fonts (WOFF, WOFF2, TTF, OTF, EOT), `.css`, `.js`, `.mjs` — by the response type and the target extension. Limits: 20 URLs and 20 MB per call, 5 MB per file (and at most the owner's `MAX_FILE_BYTES`), 60 seconds per call, 300 URLs per user per hour. JPEG and PNG wider than 2000 px are scaled down to 2000 px when that makes the file smaller. One failed URL cancels the whole call and the error names it.
+`fetch` entries let the assistant put images, fonts, CSS and JS inside the site instead of linking to other servers. The server downloads them only over `https` on port 443, without a proxy, and only from public addresses: the address actually connected to is checked after every DNS lookup and on every redirect (at most 3), so private, loopback, link-local, cloud metadata and other reserved networks are never reached. Allowed: images (PNG, JPEG, GIF, WebP, AVIF, SVG, ICO), fonts (WOFF, WOFF2, TTF, OTF, EOT), `.css`, `.js`, `.mjs` — by the response type and the target extension. Limits: 500 URLs and 256 MB per call, 50 MB per file (and at most the owner's `MAX_FILE_BYTES`), 10 minutes per call, 100000 URLs per user per hour. JPEG and PNG wider than 2000 px are scaled down to 2000 px when that makes the file smaller. One failed URL cancels the whole call and the error names it.
 
 `list_sites` and `get_site` also return `hidden_from_search`, `password_protected`, `expires_at`, `root_domain` and `own_domains`. Answers carry ready links and a short `summary` the assistant can repeat. These tools exist only on the remote server; the local `dropsite mcp` keeps the tools listed above.
 

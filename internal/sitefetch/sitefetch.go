@@ -30,10 +30,10 @@ import (
 
 // Default limits (design mcp-site-files, decision 6).
 const (
-	MaxURLs          = 20
-	MaxFileBytes     = 5 << 20
-	MaxCallBytes     = 20 << 20
-	CallTimeout      = 60 * time.Second
+	MaxURLs          = 500
+	MaxFileBytes     = 50 << 20
+	MaxCallBytes     = 256 << 20
+	CallTimeout      = 10 * time.Minute
 	MaxRedirects     = 3
 	maxURLLen        = 2048
 	dialTimeout      = 5 * time.Second

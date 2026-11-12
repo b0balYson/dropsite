@@ -3,7 +3,7 @@
 1. Understand the goal in one or two questions at most: who the site is for, the name, contacts, what visitors should do (call, order, leave a request). If the user gave enough, start right away and use sensible placeholders they can change later.
 2. Build a static site: `index.html` at the root, other pages as `about.html` or `about/index.html`, styles and scripts in separate files or inline. Follow the `assets` topic: every image, font and script ships with the site, sizes are small, the page works on a phone first.
 3. Publish:
-   - Up to 1 MB in total: call deploy_files with every file and no `site`; it creates a new site and returns its link. Pass `title` with a human name of the site.
+   - Up to 16 MB in total: call deploy_files with every file and no `site`; it creates a new site and returns its link. Pass `title` with a human name of the site.
    - Bigger sites (several photos): use an upload session, see `large_sites`.
    - To bring in photos or fonts from the web, use the `fetch` list of update_site_files or upload_files (the server downloads them; https only, public addresses only). Prefer real photos the user gave or freely licensed ones; never hotlink them.
    - A desktop client with deploy_folder publishes a folder from the computer: pass only the folder with `index.html` (the build output), never a project or home folder.
