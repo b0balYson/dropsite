@@ -211,15 +211,10 @@ func (s *Service) UpdateSiteFilesWith(ctx context.Context, a Actor, ref, base st
 	return res, nil
 }
 
-// publishEdit takes the site lock, re-checks the base (empty base: a full
-// replacement), packs base − dels + overlay and publishes it.
-func (s *Service) publishEdit(ctx context.Context, a Actor, siteID, base string, dels []string,
-	overlay map[string]overlayFile, lim domain.Limits, reason string) (UpdateResult, error) {
-	return s.publishEditAs(ctx, a, siteID, base, dels, overlay, lim, reason, modeLive)
-}
-
-// publishEditAs is publishEdit with a publish mode: prepared releases (a
-// scheduled publish switches later) and drafts do not switch the site.
+// publishEditAs takes the site lock, re-checks the base (empty base: a full
+// replacement), packs base − dels + overlay and publishes it in mode:
+// prepared releases (a scheduled publish switches later) and drafts do not
+// switch the site.
 func (s *Service) publishEditAs(ctx context.Context, a Actor, siteID, base string, dels []string,
 	overlay map[string]overlayFile, lim domain.Limits, reason string, mode publishMode) (UpdateResult, error) {
 	unlock := s.siteLocks.lock(siteID)
