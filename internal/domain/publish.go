@@ -8,6 +8,12 @@ type PublishSettings struct {
 	Optimize bool
 }
 
+// QualityScore is the score and grade of a release's quality report.
+type QualityScore struct {
+	Score int
+	Grade string
+}
+
 // DefaultPublishSettings are the settings of a site without a stored row.
 func DefaultPublishSettings(siteID string) PublishSettings {
 	return PublishSettings{SiteID: siteID, Optimize: true}

@@ -37,6 +37,7 @@ type Repository interface {
 	SecretRepository
 	FormRepository
 	PublishRepository
+	ReportRepository
 	Ping(ctx context.Context) error
 }
 

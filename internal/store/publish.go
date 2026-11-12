@@ -50,5 +50,8 @@ func deletePublishData(ctx context.Context, tx *sql.Tx, siteID string) error {
 	if _, err := tx.ExecContext(ctx, "DELETE FROM site_publish_settings WHERE site_id = ?", siteID); err != nil {
 		return fmt.Errorf("delete publish settings: %w", err)
 	}
+	if _, err := tx.ExecContext(ctx, "DELETE FROM deploy_reports WHERE site_id = ?", siteID); err != nil {
+		return fmt.Errorf("delete deploy reports: %w", err)
+	}
 	return nil
 }
