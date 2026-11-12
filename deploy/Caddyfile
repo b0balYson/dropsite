@@ -1,0 +1,178 @@
+# Serving and TLS for published sites. Based on a configuration verified on
+# caddy:2.11.9 (openspec/changes/stage-1-core/reference); see design §15
+# before changing anything here: several details below are load-bearing.
+#
+# Environment (set by docker-compose.yml):
+#   ACME_EMAIL          ACME account email
+#   API_HOST            public API host; computed in compose because a nested
+#                       default such as {$API_HOST:api.{$BASE_DOMAIN}} is not
+#                       expanded by the Caddyfile adapter
+#   CADDY_GLOBAL_EXTRA  extra global options (local dev: local_certs and
+#                       skip_install_trust); empty in production
+{
+	email {$ACME_EMAIL}
+	# No admin API and no autosave: the root filesystem is read-only and
+	# nothing needs to reconfigure Caddy at runtime.
+	admin off
+	persist_config off
+	{$CADDY_GLOBAL_EXTRA}
+
+	# Certificate permission is answered by Caddy itself (the listener below),
+	# never by control: Caddy also calls "ask" when loading an already issued
+	# certificate from storage, so depending on control would break handshakes
+	# after a Caddy restart while control is down.
+	on_demand_tls {
+		ask http://127.0.0.1:8090/
+	}
+
+	log {
+		output stdout
+		format json
+	}
+
+	servers {
+		# A Host header that differs from the TLS SNI name gets 421, so one
+		# site's certificate cannot be used to fetch another site's files.
+		strict_sni_host on
+	}
+}
+
+(security_headers) {
+	header X-Content-Type-Options nosniff
+}
+
+(plain_error) {
+	header Cache-Control no-store
+	respond "{err.status_code} {err.status_text}" {err.status_code}
+}
+
+# On-demand TLS permission endpoint, reachable only from inside this
+# container (bind 127.0.0.1). A name is allowed if /data/by-host/<name>/
+# exists and resolves to a directory.
+# - The regexp is mandatory: ".." and "%2e%2e" collapse to /data/by-host/
+#   itself and would otherwise be allowed. It is the @site expression below
+#   without the port. IP addresses pass the regexp but have no by-host entry.
+# - The trailing "/" in try_files is mandatory: without it the matcher accepts
+#   only regular files, and by-host entries are symlinks to directories.
+http://127.0.0.1:8090 {
+	bind 127.0.0.1
+	@allowed {
+		vars_regexp {query.domain} ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$
+		file {
+			root /data/by-host
+			try_files {query.domain}/
+		}
+	}
+	respond @allowed 200
+	respond 404
+}
+
+{$API_HOST} {
+	import security_headers
+	log
+	reverse_proxy control:8080
+	handle_errors {
+		import security_headers
+		import plain_error
+	}
+}
+
+http:// {
+	import security_headers
+	log
+	redir https://{host}{uri} 308
+}
+
+https:// {
+	tls {
+		on_demand
+	}
+	log
+	import security_headers
+
+	# The site directory is taken from this regexp group, not from {host}:
+	# {host} is empty for an HTTP/1.0 request without Host (root would become
+	# /data/by-host/ and expose other sites), and it keeps upper case and a
+	# trailing dot. Only lower-case DNS labels with an optional port match.
+	@site header_regexp site Host ^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*)(:[0-9]{1,5})?$
+	# Any path segment starting with a dot is hidden, except plain entries
+	# under /.well-known/. "hide .*" is not used: file matchers ignore it and
+	# it would also hide /.well-known/.
+	@hidden {
+		path_regexp /\.
+		not path_regexp ^/\.well-known(/[^./][^/]*)*/?$
+	}
+	# Paths reserved for the platform; other /_* paths (e.g. /_next/) are
+	# ordinary site files.
+	@reserved path /_form /_form/* /_pushpage /_pushpage/*
+
+	handle @site {
+		root * /data/by-host/{re.site.1}
+
+		# The explicit route keeps directives in the written order. Without it
+		# Caddy sorts "header" before "rewrite", and clean URLs would get the
+		# asset Cache-Control instead of no-cache.
+		route {
+			# STAGE2-FLAGS
+
+			error @hidden 404
+			error @reserved 404
+
+			@cleanurl {
+				not file {path}
+				file {path}.html
+			}
+			rewrite @cleanurl {path}.html
+
+			@spa {
+				not file {path} {path}/index.html
+				file /200.html
+			}
+			rewrite @spa /200.html
+
+			# Chosen by the path after rewrites, not by Content-Type: a 304
+			# response has no Content-Type.
+			@html path / */ *.html *.htm
+			header @html Cache-Control no-cache
+			@asset not path / */ *.html *.htm
+			header @asset Cache-Control "public, max-age=3600"
+
+			encode zstd gzip
+			file_server
+		}
+	}
+
+	handle {
+		error 404
+	}
+
+	handle_errors {
+		import security_headers
+
+		handle @site {
+			# root must be its own directive before the file matcher below.
+			root * /data/by-host/{re.site.1}
+
+			@custom404 {
+				expression {err.status_code} == 404
+				file /404.html
+			}
+			handle @custom404 {
+				rewrite * /404.html
+				header Cache-Control no-cache
+				encode zstd gzip
+				file_server {
+					status 404
+				}
+			}
+
+			handle {
+				import plain_error
+			}
+		}
+
+		handle {
+			import plain_error
+		}
+	}
+}

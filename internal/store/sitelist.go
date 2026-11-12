@@ -1,0 +1,196 @@
+package store
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+
+	"github.com/b0balYson/dropsite/internal/domain"
+)
+
+// siteListWhere filters active sites by owner (?1, NULL = all) and by a LIKE
+// pattern (?2, empty = none) over title, owner email and any hostname.
+const siteListWhere = ` WHERE s.deleted_at IS NULL AND (?1 IS NULL OR s.owner_id = ?1)
+	AND (?2 = '' OR s.title LIKE ?2 ESCAPE '\' OR u.email LIKE ?2 ESCAPE '\'
+		OR EXISTS (SELECT 1 FROM hostnames h WHERE h.site_id = s.id AND h.hostname LIKE ?2 ESCAPE '\'))`
+
+const siteListFrom = ` FROM sites s JOIN users u ON u.id = s.owner_id`
+
+// ListSites returns a page of active sites, most recently updated first, and
+// the total number of matches. Hostnames are loaded with one extra query.
+func (db *DB) ListSites(ctx context.Context, f SiteFilter) ([]SiteSummary, int, error) {
+	var out []SiteSummary
+	var total int
+	err := db.withReadTx(ctx, func(tx *sql.Tx) error {
+		pattern := likePattern(f.Query)
+		if err := tx.QueryRowContext(ctx, "SELECT count(*)"+siteListFrom+siteListWhere, f.OwnerID, pattern).
+			Scan(&total); err != nil {
+			return fmt.Errorf("count sites: %w", err)
+		}
+		var err error
+		if out, err = listSitePage(ctx, tx, f, pattern); err != nil {
+			return err
+		}
+		return attachHostnames(ctx, tx, out)
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	return out, total, nil
+}
+
+func listSitePage(ctx context.Context, tx *sql.Tx, f SiteFilter, pattern string) ([]SiteSummary, error) {
+	limit, offset := f.bounds()
+	rows, err := tx.QueryContext(ctx, "SELECT "+siteColsS+", u.email, d.created_at, d.size_bytes"+siteListFrom+
+		` LEFT JOIN deploys d ON d.id = s.current_deploy_id AND d.site_id = s.id`+siteListWhere+
+		` ORDER BY s.updated_at DESC, s.id LIMIT ?3 OFFSET ?4`, f.OwnerID, pattern, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("list sites: %w", err)
+	}
+	defer rows.Close()
+	out := []SiteSummary{}
+	for rows.Next() {
+		s, err := scanSiteSummary(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan site: %w", err)
+		}
+		out = append(out, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list sites: %w", err)
+	}
+	return out, nil
+}
+
+func scanSiteSummary(rows *sql.Rows) (SiteSummary, error) {
+	var s SiteSummary
+	var current sql.NullString
+	var created, updated int64
+	var deleted, purged, deployAt, size sql.NullInt64
+	if err := rows.Scan(&s.ID, &s.OwnerID, &s.Title, &current, &created, &updated, &deleted, &purged,
+		&s.OwnerEmail, &deployAt, &size); err != nil {
+		return SiteSummary{}, err
+	}
+	s.CurrentDeployID = fromNullString(current)
+	s.CreatedAt, s.UpdatedAt = fromMS(created), fromMS(updated)
+	s.DeletedAt, s.PurgedAt = fromNullMS(deleted), fromNullMS(purged)
+	s.LastDeployAt, s.SizeBytes = fromNullMS(deployAt), size.Int64
+	s.Hostnames = []domain.Hostname{}
+	return s, nil
+}
+
+// attachHostnames fills Hostnames for every site of the page in one query.
+func attachHostnames(ctx context.Context, tx *sql.Tx, sites []SiteSummary) error {
+	if len(sites) == 0 {
+		return nil
+	}
+	ids := make([]string, len(sites))
+	index := make(map[string]int, len(sites))
+	for i, s := range sites {
+		ids[i], index[s.ID] = s.ID, i
+	}
+	list, err := jsonList(ids)
+	if err != nil {
+		return err
+	}
+	rows, err := tx.QueryContext(ctx, "SELECT "+hostCols+
+		" FROM hostnames WHERE site_id IN (SELECT value FROM json_each(?))"+hostOrder, list)
+	if err != nil {
+		return fmt.Errorf("list page hostnames: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		h, err := scanHost(rows)
+		if err != nil {
+			return fmt.Errorf("scan hostname: %w", err)
+		}
+		i := index[h.SiteID]
+		sites[i].Hostnames = append(sites[i].Hostnames, h)
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("list page hostnames: %w", err)
+	}
+	return nil
+}
+
+// ActiveLayout returns every active site with its current deploy, hostnames
+// and ready deploys, read from one snapshot with three queries.
+func (db *DB) ActiveLayout(ctx context.Context) ([]SiteLayout, error) {
+	var out []SiteLayout
+	err := db.withReadTx(ctx, func(tx *sql.Tx) error {
+		var err error
+		if out, err = activeSites(ctx, tx); err != nil {
+			return err
+		}
+		hosts, err := groupPairs(ctx, tx, `SELECT h.site_id, h.hostname FROM hostnames h
+			JOIN sites s ON s.id = h.site_id WHERE s.deleted_at IS NULL ORDER BY h.site_id, h.hostname`)
+		if err != nil {
+			return err
+		}
+		ready, err := groupPairs(ctx, tx, `SELECT d.site_id, d.id FROM deploys d
+			JOIN sites s ON s.id = d.site_id WHERE s.deleted_at IS NULL AND d.status = 'ready'
+			ORDER BY d.site_id, d.created_at, d.id`)
+		if err != nil {
+			return err
+		}
+		for i := range out {
+			out[i].Hostnames = orEmpty(hosts[out[i].SiteID])
+			out[i].ReadyDeployIDs = orEmpty(ready[out[i].SiteID])
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func activeSites(ctx context.Context, tx *sql.Tx) ([]SiteLayout, error) {
+	rows, err := tx.QueryContext(ctx, "SELECT id, current_deploy_id FROM sites WHERE deleted_at IS NULL ORDER BY id")
+	if err != nil {
+		return nil, fmt.Errorf("list active sites: %w", err)
+	}
+	defer rows.Close()
+	out := []SiteLayout{}
+	for rows.Next() {
+		var l SiteLayout
+		var current sql.NullString
+		if err := rows.Scan(&l.SiteID, &current); err != nil {
+			return nil, fmt.Errorf("scan active site: %w", err)
+		}
+		l.CurrentDeployID = fromNullString(current)
+		out = append(out, l)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list active sites: %w", err)
+	}
+	return out, nil
+}
+
+// groupPairs runs a (key, value) query and groups values by key.
+func groupPairs(ctx context.Context, tx *sql.Tx, query string) (map[string][]string, error) {
+	rows, err := tx.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("layout query: %w", err)
+	}
+	defer rows.Close()
+	out := map[string][]string{}
+	for rows.Next() {
+		var k, v string
+		if err := rows.Scan(&k, &v); err != nil {
+			return nil, fmt.Errorf("layout scan: %w", err)
+		}
+		out[k] = append(out[k], v)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("layout query: %w", err)
+	}
+	return out, nil
+}
+
+func orEmpty(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
+}

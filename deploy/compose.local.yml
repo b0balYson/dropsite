@@ -1,0 +1,19 @@
+# Local development override. Publishes everything on 127.0.0.1 high ports:
+#   https://<site>.pushpage.localhost:18443/   sites (internal CA, curl -k)
+#   http://127.0.0.1:18082/                    admin UI
+#
+#   docker compose -f deploy/docker-compose.yml -f deploy/compose.local.yml \
+#     --env-file deploy/local.env up -d --build
+
+name: pushpage-local
+
+services:
+  caddy:
+    ports: !override
+      - "127.0.0.1:18080:80"
+      - "127.0.0.1:18443:443"
+      - "127.0.0.1:18443:443/udp"
+
+  control:
+    ports: !override
+      - "127.0.0.1:18082:8082"

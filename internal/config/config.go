@@ -39,6 +39,8 @@ type Config struct {
 	AdminEmail    string
 	AdminPassword string
 	UIURL         string
+	// SitesHTTPSPort is the port visitors use; non-443 only in local development.
+	SitesHTTPSPort int
 
 	Limits        domain.Limits
 	ReservedSlugs []string
@@ -123,6 +125,10 @@ func Load(get Getenv) (*Config, error) {
 	c.BaseDomain = r.hostname("BASE_DOMAIN", "", true)
 	c.APIHost = r.hostname("API_HOST", "api."+c.BaseDomain, false)
 	c.UIURL = r.uiURL()
+	c.SitesHTTPSPort = r.positiveInt("SITES_HTTPS_PORT", 443)
+	if c.SitesHTTPSPort > 65535 {
+		r.fail("SITES_HTTPS_PORT", "must be a TCP port")
+	}
 	c.LogLevel = r.logLevel()
 	c.ReservedSlugs = splitList(r.str("RESERVED_SLUGS", ""))
 	c.TrustedProxies = r.prefixes("TRUSTED_PROXIES", "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8,::1/128")

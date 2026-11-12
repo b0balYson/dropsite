@@ -1,0 +1,163 @@
+// Package client is a typed HTTP client for the pushpage API v1
+// (see docs/api-contract.md).
+package client
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+
+	"github.com/b0balYson/dropsite/internal/brand"
+)
+
+const (
+	// DefaultTimeout bounds a regular API request end to end.
+	DefaultTimeout = 60 * time.Second
+	// DefaultDeployHeaderTimeout bounds the wait for the deploy response
+	// headers after the upload finished (the server unpacks meanwhile).
+	DefaultDeployHeaderTimeout = 10 * time.Minute
+
+	apiPrefix    = "/api/v1"
+	clientHeader = "X-Pushpage-Client"
+	maxBody      = 16 << 20
+)
+
+// Client talks to one server with one token. It is safe for concurrent use.
+type Client struct {
+	base    string
+	token   string
+	timeout time.Duration
+	http    *http.Client
+}
+
+// Option configures a Client.
+type Option func(*Client)
+
+// WithHTTPClient replaces the underlying HTTP client (its Timeout should be
+// zero, otherwise it also caps uploads).
+func WithHTTPClient(h *http.Client) Option { return func(c *Client) { c.http = h } }
+
+// WithTimeout sets the per-request timeout for everything except Deploy.
+func WithTimeout(d time.Duration) Option { return func(c *Client) { c.timeout = d } }
+
+// New creates a client for server, the scheme://host[:port] root of the API host.
+func New(server, token string, opts ...Option) *Client {
+	c := &Client{
+		base:    strings.TrimSuffix(strings.TrimRight(server, "/"), apiPrefix),
+		token:   token,
+		timeout: DefaultTimeout,
+	}
+	for _, o := range opts {
+		o(c)
+	}
+	if c.http == nil {
+		c.http = defaultHTTPClient()
+	}
+	return c
+}
+
+func defaultHTTPClient() *http.Client {
+	tr, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return &http.Client{}
+	}
+	tr = tr.Clone()
+	tr.ResponseHeaderTimeout = DefaultDeployHeaderTimeout
+	return &http.Client{Transport: tr}
+}
+
+// Server returns the normalized server root the client talks to.
+func (c *Client) Server() string { return c.base }
+
+// UserAgent is sent as both User-Agent and X-Pushpage-Client.
+func UserAgent() string { return "cli/" + brand.Version }
+
+func (c *Client) endpoint(path string, q url.Values) string {
+	u := c.base + apiPrefix + path
+	if len(q) > 0 {
+		u += "?" + q.Encode()
+	}
+	return u
+}
+
+func (c *Client) newRequest(ctx context.Context, method, path string, q url.Values, body io.Reader) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, method, c.endpoint(path, q), body)
+	if err != nil {
+		return nil, fmt.Errorf("build %s %s: %w", method, path, err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("User-Agent", UserAgent())
+	req.Header.Set(clientHeader, UserAgent())
+	req.Header.Set("Accept", "application/json")
+	return req, nil
+}
+
+// doJSON performs a bounded request with an optional JSON body and decodes
+// the response into out (nil to discard).
+func (c *Client) doJSON(ctx context.Context, method, path string, q url.Values, in, out any) error {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+	var body io.Reader
+	if in != nil {
+		b, err := json.Marshal(in)
+		if err != nil {
+			return fmt.Errorf("encode request: %w", err)
+		}
+		body = bytes.NewReader(b)
+	}
+	req, err := c.newRequest(ctx, method, path, q, body)
+	if err != nil {
+		return err
+	}
+	if in != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	return c.send(req, out)
+}
+
+// send executes req, maps non-2xx to *APIError and decodes 2xx into out.
+func (c *Client) send(req *http.Request, out any) error {
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return c.networkError(req, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return parseAPIError(resp)
+	}
+	if out == nil || resp.StatusCode == http.StatusNoContent {
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, maxBody))
+		return nil
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxBody)).Decode(out); err != nil {
+		return fmt.Errorf("%s %s: decode response: %w", req.Method, req.URL.Path, err)
+	}
+	return nil
+}
+
+func (c *Client) networkError(req *http.Request, err error) error {
+	if errors.Is(err, context.DeadlineExceeded) {
+		return fmt.Errorf("%s %s: request to %s timed out: %w", req.Method, req.URL.Path, c.base, err)
+	}
+	return fmt.Errorf("%s %s: cannot reach %s: %w", req.Method, req.URL.Path, c.base, err)
+}
+
+func refPath(prefix, ref string) string { return prefix + "/" + url.PathEscape(ref) }
+
+func listQuery(o ListOptions) url.Values {
+	q := url.Values{}
+	if o.Limit > 0 {
+		q.Set("limit", fmt.Sprint(o.Limit))
+	}
+	if o.Offset > 0 {
+		q.Set("offset", fmt.Sprint(o.Offset))
+	}
+	return q
+}

@@ -1,0 +1,11 @@
+.tools
+.git
+.claude
+bin
+dist
+openspec
+coverage.out
+*.coverprofile
+.env
+.env.*
+deploy/local.env

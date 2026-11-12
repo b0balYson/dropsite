@@ -90,6 +90,7 @@ func TestErrors(t *testing.T) {
 		{"ui url", "UI_URL", "ftp://x", "UI_URL"},
 		{"proxies", "TRUSTED_PROXIES", "nope", "TRUSTED_PROXIES"},
 		{"file over site", "MAX_FILE_BYTES", "60MiB", "MAX_FILE_BYTES"},
+		{"https port", "SITES_HTTPS_PORT", "70000", "SITES_HTTPS_PORT"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

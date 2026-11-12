@@ -1,0 +1,124 @@
+# pushpage: self-hosted publishing of static sites.
+#
+# Install: copy this file, Caddyfile and .env.example (as .env) into one
+# directory, fill in the four required variables and run:
+#   docker compose up -d
+#
+# Containers: caddy (serving and TLS), control (API, UI, deploys) and the
+# one-shot caddy-init. Volumes: sites, state, caddy_data.
+
+name: pushpage
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  # New named volumes are owned by root; Caddy runs as 1000:1000 and must
+  # write certificates to caddy_data. This one-shot job hands it over.
+  caddy-init:
+    image: caddy:2.11.9
+    user: "0:0"
+    network_mode: none
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [CHOWN]
+    security_opt: ["no-new-privileges:true"]
+    command: ["chown", "1000:1000", "/caddy/data"]
+    volumes:
+      - caddy_data:/caddy/data
+    logging: *logging
+
+  caddy:
+    image: caddy:2.11.9
+    # Serving must not depend on control: no dependency on its health.
+    depends_on:
+      caddy-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    cap_drop: [ALL]
+    # Insurance for hosts where net.ipv4.ip_unprivileged_port_start > 80.
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required (ACME account email), see .env.example}
+      # Computed here: the Caddyfile adapter does not expand nested defaults.
+      API_HOST: ${API_HOST:-api.${BASE_DOMAIN}}
+      CADDY_GLOBAL_EXTRA: ${CADDY_GLOBAL_EXTRA:-}
+      # /data is the read-only sites volume, so certificates go elsewhere.
+      XDG_DATA_HOME: /caddy/data
+      XDG_CONFIG_HOME: /caddy/config
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # nocopy: the caddy image has a root-owned /data/caddy. Without it, if
+      # caddy mounts the still empty sites volume before control does, Docker
+      # copies that directory and root ownership into the volume, and control
+      # (65532) can no longer write to it. With it, control's image sets the
+      # owner on its first mount.
+      - type: volume
+        source: sites
+        target: /data
+        read_only: true
+        volume:
+          nocopy: true
+      - caddy_data:/caddy/data
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    logging: *logging
+
+  control:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        VERSION: ${PUSHPAGE_VERSION:-dev}
+    image: ghcr.io/b0balyson/pushpage-control:${PUSHPAGE_VERSION:-latest}
+    restart: unless-stopped
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      # Required: compose refuses to start without them.
+      BASE_DOMAIN: ${BASE_DOMAIN:?BASE_DOMAIN is required (base domain for sites), see .env.example}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?ADMIN_EMAIL is required (first administrator login), see .env.example}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required (first administrator password), see .env.example}
+      # Optional: an empty value means "use the built-in default".
+      API_HOST: ${API_HOST:-api.${BASE_DOMAIN}}
+      UI_URL: ${UI_URL:-http://${ADMIN_BIND_IP:-127.0.0.1}:8082}
+      TLS_MODE: ${TLS_MODE:-}
+      MAX_SITE_BYTES: ${MAX_SITE_BYTES:-}
+      MAX_FILE_BYTES: ${MAX_FILE_BYTES:-}
+      MAX_FILES: ${MAX_FILES:-}
+      MAX_SITES_PER_USER: ${MAX_SITES_PER_USER:-}
+      KEEP_RELEASES: ${KEEP_RELEASES:-}
+      RESERVED_SLUGS: ${RESERVED_SLUGS:-}
+      LOG_LEVEL: ${LOG_LEVEL:-}
+      # Port visitors use for HTTPS; only differs from 443 in local development.
+      SITES_HTTPS_PORT: ${SITES_HTTPS_PORT:-}
+    volumes:
+      - sites:/data
+      - state:/state
+    # Only the admin UI is published. 8080 (public API, behind caddy) and
+    # 8081 (internal: healthz) stay inside the compose network.
+    ports:
+      - "${ADMIN_BIND_IP:-127.0.0.1}:8082:8082"
+    healthcheck:
+      test: ["CMD", "/control", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    logging: *logging
+
+volumes:
+  sites:
+  state:
+  caddy_data:

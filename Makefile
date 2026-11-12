@@ -41,7 +41,7 @@ e2e:
 	$(ENV) go test -count=1 -timeout 20m -tags e2e ./test/e2e/...
 
 dev-up:
-	docker compose -f deploy/docker-compose.yml -f deploy/compose.local.yml --env-file deploy/.env.local up -d --build
+	docker compose -f deploy/docker-compose.yml -f deploy/compose.local.yml --env-file deploy/local.env up -d --build
 
 dev-down:
-	docker compose -f deploy/docker-compose.yml -f deploy/compose.local.yml --env-file deploy/.env.local down
+	docker compose -f deploy/docker-compose.yml -f deploy/compose.local.yml --env-file deploy/local.env down
