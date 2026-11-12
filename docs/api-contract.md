@@ -94,6 +94,15 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 | `POST /uploads` | `{site?, title?, mode?, base_deploy_id?}` | `201 Upload` |
 | `POST /uploads/{id}/files` | `{files?[], fetch?[]}` | `Upload` |
 | `POST /uploads/{id}/commit` | `{delete?[]}` (patch mode) | `201 FilesResult` |
+| `POST /uploads/{id}/schedule` | `{publish_at}` (RFC 3339 with zone) | `201 Schedule`; the session becomes a prepared release that goes live at `publish_at` |
+| `POST /sites/{ref}/schedules` | `{deploy_id, publish_at}` | `201 Schedule` (`id, site_id, site_title, site_url, deploy_id, publish_at, status, error, created_at, finished_at, preview_url`) |
+| `GET /schedules?site=` | | `List<Schedule>`: pending and finished in the last 7 days |
+| `DELETE /schedules/{id}` | | `Schedule` (`cancelled`); `409 schedule_not_pending` |
+| `POST /sites/{ref}/clone` | `{title?, slug?}` | `201 DeployResult` of the new site (files only) |
+| `GET /templates?lang=` | | `List<{name, title, description}>` |
+| `POST /templates/{name}/sites` | `{title?, slug?, lang?}` | `201 DeployResult`; `404 template_not_found` |
+| `GET /sites/{ref}/screenshot?deploy_id=&device=` | | `200 image/png` with `X-Dropsite-Site-Id`, `X-Dropsite-Deploy-Id`, `X-Dropsite-Device`, `X-Dropsite-Viewport`; `503 renderer_unavailable` without a renderer ([screenshots.md](screenshots.md)) |
+| `GET /sites/{ref}/visual-diff?from=&to=&device=` | | `{site_id, from_deploy_id, to_deploy_id, device, changed_percent, width, height, image_png}` (base64 PNG); `503 renderer_unavailable` |
 | `GET /sites/{ref}/forms/channels` | | `List<Channel>` (no secrets) |
 | `POST /sites/{ref}/forms/channels` | `{kind, target?}` | `201 {channel: Channel, secret?, link?}` |
 | `PATCH /sites/{ref}/forms/channels/{id}` | `{enabled}` | `Channel`; `true` also resumes a paused channel |

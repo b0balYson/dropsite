@@ -120,6 +120,10 @@ services:
       FORM_WEBHOOK_ALLOW_CIDRS: ${FORM_WEBHOOK_ALLOW_CIDRS:-}
       # Publish-time optimization (docs/publishing.md): on (default) or off.
       PUBLISH_OPTIMIZE: ${PUBLISH_OPTIMIZE:-}
+      # Screenshots (docs/screenshots.md): set RENDERER_URL=http://renderer:3000
+      # and COMPOSE_PROFILES=renderer. Empty disables screenshots.
+      RENDERER_URL: ${RENDERER_URL:-}
+      RENDER_BASE_URL: ${RENDER_BASE_URL:-}
     volumes:
       - sites:/data
       - state:/state
@@ -129,6 +133,8 @@ services:
     # 8081 (internal: healthz) stay inside the compose network.
     ports:
       - "${ADMIN_BIND_IP:-127.0.0.1}:8082:8082"
+    # render: the internal network the optional renderer reaches control on.
+    networks: [default, render]
     healthcheck:
       test: ["CMD", "/control", "healthcheck"]
       interval: 30s
@@ -136,6 +142,30 @@ services:
       start_period: 20s
       retries: 3
     logging: *logging
+
+  # Optional screenshot renderer (docs/screenshots.md): headless Chromium in
+  # its own container, started only with COMPOSE_PROFILES=renderer. It is on
+  # the internal network "render" only: no internet, no caddy, just control,
+  # which serves it release files by one-time token on port 8083.
+  renderer:
+    image: gotenberg/gotenberg:8.20.1
+    profiles: [renderer]
+    restart: unless-stopped
+    networks: [render]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    command:
+      - gotenberg
+      - --api-port=3000
+      - --api-timeout=60s
+      - --log-level=warn
+      - --chromium-allow-list=^http://control:8083/.*
+    logging: *logging
+
+networks:
+  default:
+  render:
+    internal: true
 
 volumes:
   sites:

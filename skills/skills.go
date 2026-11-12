@@ -51,6 +51,7 @@ var topics = []struct {
 	{"protection", []string{"protection.md"}},
 	{"publishing", []string{"publishing.md"}},
 	{"rollback", []string{"rollback.md"}},
+	{"workflow", []string{"workflow.md"}},
 	{"account", []string{"account.md"}},
 	{"errors", []string{"errors.md"}},
 	{"external_backend", []string{"external_backend.md"}},

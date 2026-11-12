@@ -16,13 +16,14 @@ type siteForm struct {
 }
 
 type sitesData struct {
-	Sites   []service.SiteSummaryView
-	Soon    map[string]bool // site ID → expires within ExpiryWarning
-	Count   int
-	Limit   int
-	AtLimit bool
-	Domain  string
-	Form    siteForm
+	Sites     []service.SiteSummaryView
+	Soon      map[string]bool // site ID → expires within ExpiryWarning
+	Count     int
+	Limit     int
+	AtLimit   bool
+	Domain    string
+	Form      siteForm
+	Templates []service.TemplateInfo
 }
 
 func (s *server) sitesPage(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
@@ -43,6 +44,7 @@ func (s *server) renderSites(w http.ResponseWriter, r *http.Request, rc *reqCtx,
 	data := sitesData{
 		Sites: sites, Soon: s.expiringSoon(sites), Count: count, Limit: lim.MaxSitesPerUser, AtLimit: count >= lim.MaxSitesPerUser,
 		Domain: s.svc.Config().BaseDomain, Form: form,
+		Templates: s.svc.ListTemplates(rc.loc.Lang),
 	}
 	s.page(w, r, rc, status, "sites", "sites", "sites.title", data)
 }
@@ -116,6 +118,7 @@ type siteData struct {
 	Counters service.SiteCounters
 	Access   accessView
 	Publish  service.PublishSettingsView
+	Workflow workflowView
 }
 
 func (s *server) loadSite(r *http.Request, rc *reqCtx) (siteData, error) {
@@ -165,6 +168,9 @@ func (s *server) sitePage(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	}
 	if err == nil {
 		data.Publish, err = s.svc.GetPublishSettings(r.Context(), rc.actor, data.V.Site.ID)
+	}
+	if err == nil {
+		data.Workflow, err = s.workflowView(r, rc, data)
 	}
 	if err != nil {
 		s.failPage(w, r, rc, err)

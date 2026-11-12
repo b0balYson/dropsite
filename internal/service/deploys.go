@@ -104,21 +104,36 @@ func (s *Service) receive(r io.Reader, max int64) (string, error) {
 }
 
 func (s *Service) publish(ctx context.Context, a Actor, site domain.Site, upload string, lim domain.Limits, source domain.DeploySource) (domain.Deploy, error) {
+	d, rep, err := s.stage(ctx, a, site, upload, lim, source)
+	if err != nil {
+		return domain.Deploy{}, err
+	}
+	d, err = s.commit(ctx, site.ID, d)
+	if err == nil {
+		s.saveReport(ctx, site.ID, d.ID, rep)
+	}
+	return d, err
+}
+
+// stage extracts the upload into a staging directory with the site's
+// counters applied and returns the release to commit with its quality
+// report (nil when the analysis failed).
+func (s *Service) stage(ctx context.Context, a Actor, site domain.Site, upload string, lim domain.Limits, source domain.DeploySource) (domain.Deploy, *quality.Report, error) {
 	now := s.now()
 	id := domain.NewDeployID(now)
 	staging, err := s.files.StagingDir(site.ID, id)
 	if err != nil {
-		return domain.Deploy{}, fmt.Errorf("prepare staging: %w", err)
+		return domain.Deploy{}, nil, fmt.Errorf("prepare staging: %w", err)
 	}
 	res, err := s.extract(ctx, upload, staging,
 		archive.Limits{MaxTotalBytes: lim.MaxSiteBytes, MaxFileBytes: lim.MaxFileBytes, MaxFiles: lim.MaxFiles}, now)
 	if err != nil {
 		s.discard(site.ID, id)
-		return domain.Deploy{}, err
+		return domain.Deploy{}, nil, err
 	}
 	if err := checkSecrets(ctx, staging); err != nil {
 		s.discard(site.ID, id)
-		return domain.Deploy{}, err
+		return domain.Deploy{}, nil, err
 	}
 	opt := s.optimizeRelease(ctx, site, staging)
 	// The report sees the site's files before the platform's counters.
@@ -126,25 +141,21 @@ func (s *Service) publish(ctx context.Context, a Actor, site domain.Site, upload
 	set, err := s.countersFor(ctx, site.ID)
 	if err != nil {
 		s.discard(site.ID, id)
-		return domain.Deploy{}, err
+		return domain.Deploy{}, nil, err
 	}
 	var delta int64
 	if !set.Empty() {
 		inj, err := tracking.Inject(staging, set, now)
 		if err != nil {
 			s.discard(site.ID, id)
-			return domain.Deploy{}, err
+			return domain.Deploy{}, nil, err
 		}
 		delta = inj.DeltaBytes
 	}
-	d, err := s.commit(ctx, site.ID, domain.Deploy{
+	return domain.Deploy{
 		ID: id, SiteID: site.ID, CreatedBy: a.User.ID, Source: source,
 		SizeBytes: res.Bytes + delta, FileCount: res.Files, Status: domain.DeployReady, CreatedAt: now,
-	})
-	if err == nil {
-		s.saveReport(ctx, site.ID, d.ID, rep)
-	}
-	return d, err
+	}, rep, nil
 }
 
 // commit turns a filled staging directory into the site's current release.
@@ -186,10 +197,15 @@ func (s *Service) prune(ctx context.Context, siteID string, keep int) {
 		s.log.Error("prune: list deploys", "site", siteID, "err", err)
 		return
 	}
+	scheduled, err := s.repo.PendingScheduledDeploys(ctx, siteID)
+	if err != nil {
+		s.log.Error("prune: list scheduled", "site", siteID, "err", err)
+		return
+	}
 	kept := 0
 	var drop []string
 	for _, d := range deploys {
-		if d.Status != domain.DeployReady {
+		if d.Status != domain.DeployReady || scheduled[d.ID] {
 			continue
 		}
 		if site.CurrentDeployID != nil && d.ID == *site.CurrentDeployID {
@@ -286,13 +302,17 @@ func (s *Service) rollbackTarget(ctx context.Context, site domain.Site, deployID
 	if err != nil {
 		return domain.Deploy{}, err
 	}
+	scheduled, err := s.repo.PendingScheduledDeploys(ctx, site.ID)
+	if err != nil {
+		return domain.Deploy{}, err
+	}
 	passedCurrent := site.CurrentDeployID == nil
 	for _, d := range deploys {
 		if !passedCurrent {
 			passedCurrent = d.ID == *site.CurrentDeployID
 			continue
 		}
-		if d.Status == domain.DeployReady {
+		if d.Status == domain.DeployReady && !scheduled[d.ID] {
 			return d, nil
 		}
 	}

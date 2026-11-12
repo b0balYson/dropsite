@@ -1,14 +1,15 @@
 # Create a site and publish it
 
 1. Understand the goal in one or two questions at most: who the site is for, the name, contacts, what visitors should do (call, order, leave a request). If the user gave enough, start right away and use sensible placeholders they can change later.
-2. Build a static site: `index.html` at the root, other pages as `about.html` or `about/index.html`, styles and scripts in separate files or inline. Follow the `assets` topic: every image, font and script ships with the site, sizes are small, the page works on a phone first.
-3. Publish:
+2. Choose a visual direction before writing code, so every site looks like its own business and not like a template: who the visitors are and what mood fits (a cosy family bakery, a strict law office, a loud street-food truck), then a palette of 2-4 colors with one accent, a typeface pairing (system fonts or one or two shipped WOFF2 files), and a layout idea (full-bleed photo hero, editorial columns, cards, a single long story). Vary these between sites; avoid the default "centered headline on a gradient, three cards" page. If the user gave a picture or a link of a site they like, take the direction from it (palette, type, density, composition, mood) but never copy its texts, photos, logos or brand.
+3. Build a static site: `index.html` at the root, other pages as `about.html` or `about/index.html`, styles and scripts in separate files or inline. Follow the `assets` topic: every image, font and script ships with the site, sizes are small, the page works on a phone first.
+4. Publish:
    - Up to 16 MB in total: call deploy_files with every file and no `site`; it creates a new site and returns its link. Pass `title` with a human name of the site.
    - Bigger sites (several photos): use an upload session, see `large_sites`.
    - To bring in photos or fonts from the web, use the `fetch` list of update_site_files or upload_files (the server downloads them; https only, public addresses only). Prefer real photos the user gave or freely licensed ones; never hotlink them.
    - A desktop client with deploy_folder publishes a folder from the computer: pass only the folder with `index.html` (the build output), never a project or home folder.
-4. If the user wants a readable address, set it right away (update_site or set_slug, for example `coffee-river`), see `addresses`.
-5. Reply in plain words: "Your site is live: <link>". Mention one or two next steps in one line: own domain, a form for requests, a password while it is a draft.
+5. If the user wants a readable address, set it right away (update_site or set_slug, for example `coffee-river`), see `addresses`.
+6. Reply in plain words: "Your site is live: <link>". Mention one or two next steps in one line: own domain, a form for requests, a password while it is a draft.
 
 Good defaults for a small business site: a hero with the name and one clear action (call, map, order), menu or services with prices, photos, opening hours, address with a map link (a plain link to a map service, not an embedded heavy widget), contacts, a request form (see `forms`), `404.html`, a favicon, `<title>` and `<meta name="description">`, Open Graph tags, `lang` on `<html>`.
 

@@ -1,0 +1,17 @@
+:root {
+  --paper: #f7f9fb; --ink: #0f2a3d; --muted: #4a6072; --card: #fff; --line: #d8e1e8;
+  --accent: #0b6e4f; --accent-ink: #085a40; --on-accent: #fff; --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --paper: #0c1a24; --ink: #e8f0f5; --muted: #a7b9c6; --card: #12263a; --line: #23394c; --accent: #3fc79a; --accent-ink: #6fdcb7; --on-accent: #062018; }
+}
+.hero { padding-block: clamp(3.5rem, 2rem + 8vw, 8rem); background: linear-gradient(160deg, var(--card), var(--paper) 70%); border-bottom: 1px solid var(--line); }
+.section--alt { background: var(--card); border-block: 1px solid var(--line); }
+.plain { list-style: none; padding: 0; margin: 0; }
+.icon { display: inline-grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 50%; background: var(--accent); color: var(--on-accent); font-weight: 800; margin-bottom: 1rem; }
+.steps { counter-reset: step; list-style: none; padding: 0; display: grid; gap: .75rem; max-width: 40rem; }
+.steps li { counter-increment: step; display: flex; gap: 1rem; align-items: baseline; }
+.steps li::before { content: counter(step); font-weight: 800; color: var(--accent-ink); min-width: 1.5rem; }
+.prices { width: 100%; max-width: 40rem; border-collapse: collapse; }
+.prices th, .prices td { padding: .85rem 0; border-bottom: 1px solid var(--line); text-align: left; }
+.prices td { text-align: right; font-weight: 700; }

@@ -40,6 +40,7 @@ type Repository interface {
 	ProxyRepository
 	PublishRepository
 	ReportRepository
+	ScheduleRepository
 	Ping(ctx context.Context) error
 }
 

@@ -56,6 +56,9 @@ func statusFor(e *domain.Error) int {
 	if e.Code == codeMethodNotAllowed {
 		return http.StatusMethodNotAllowed
 	}
+	if e.Code == domain.CodeRendererUnavailable {
+		return http.StatusServiceUnavailable
+	}
 	switch e.Kind {
 	case domain.KindNotFound:
 		return http.StatusNotFound

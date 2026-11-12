@@ -113,6 +113,9 @@ type Options struct {
 	// Collections adds the site data tools; the backend must implement
 	// CollectionsBackend.
 	Collections bool
+	// Workflow adds site copies, templates, scheduled publishes and
+	// screenshots; the backend must implement WorkflowBackend.
+	Workflow bool
 	// Instructions are sent to the client on initialize.
 	Instructions string
 }

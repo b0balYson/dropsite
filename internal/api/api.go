@@ -63,7 +63,7 @@ func New(svc *service.Service, log *slog.Logger, mounts ...Mount) http.Handler {
 // routes is the single table of endpoints; the OpenAPI test compares the
 // document against it.
 func (a *api) routes() []route {
-	return []route{
+	return append([]route{
 		{Method: http.MethodGet, Path: "/openapi.json", Public: true, handle: a.openAPI},
 		{Method: http.MethodPost, Path: "/connect/exchange", Public: true, handle: a.exchangeConnect},
 		{Method: http.MethodGet, Path: "/me", handle: a.me},
@@ -138,7 +138,7 @@ func (a *api) routes() []route {
 		{Method: http.MethodPost, Path: "/admin/domains/{hostname}/dns-check", handle: adminOnly(a.checkDomainDNS)},
 		{Method: http.MethodGet, Path: "/admin/forms/settings", handle: adminOnly(a.getFormSettings)},
 		{Method: http.MethodPatch, Path: "/admin/forms/settings", handle: adminOnly(a.updateFormSettings)},
-	}
+	}, a.workflowRoutes()...)
 }
 
 // register mounts every route plus, per path, a method-less fallback that

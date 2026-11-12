@@ -1,0 +1,60 @@
+{{template "head" .}}
+<header class="hero">
+  <div class="wrap hero__grid">
+    <div>
+      <p class="eyebrow">{{.T.tagline}}</p>
+      <h1>{{.Title}}</h1>
+      <p class="lead">{{.T.hero_text}}</p>
+      <p class="actions">
+        <a class="btn" href="#menu">{{.T.cta_menu}}</a>
+        <a class="btn btn--ghost" href="tel:+70000000000">{{.T.cta_call}}</a>
+      </p>
+    </div>
+    <svg class="hero__art" viewBox="0 0 200 200" width="320" height="320" aria-hidden="true" focusable="false">
+      <circle cx="100" cy="100" r="96" style="fill: var(--card)"/>
+      <path d="M52 86h84v34a42 42 0 0 1-84 0z" style="fill: var(--accent)"/>
+      <path d="M136 94h10a16 16 0 0 1 0 32h-12" fill="none" stroke-width="8" style="stroke: var(--accent)"/>
+      <path d="M78 46c-6 8 6 14 0 24M100 40c-6 8 6 14 0 24M122 46c-6 8 6 14 0 24" fill="none" stroke-width="5" stroke-linecap="round" style="stroke: var(--muted)"/>
+      <ellipse cx="94" cy="166" rx="56" ry="8" style="fill: var(--line)"/>
+    </svg>
+  </div>
+</header>
+<main id="main">
+  <section class="section" id="menu" aria-labelledby="menu-h">
+    <div class="wrap">
+      <h2 id="menu-h">{{.T.menu_title}}</h2>
+      <div class="grid grid--2">
+        <div class="card">
+          <h3>{{.T.menu_coffee}}</h3>
+          <dl class="menu">
+            <div><dt>{{.T.item1}}</dt><dd>{{.T.price1}}</dd></div>
+            <div><dt>{{.T.item2}}</dt><dd>{{.T.price2}}</dd></div>
+            <div><dt>{{.T.item3}}</dt><dd>{{.T.price3}}</dd></div>
+          </dl>
+        </div>
+        <div class="card">
+          <h3>{{.T.menu_food}}</h3>
+          <dl class="menu">
+            <div><dt>{{.T.item4}}</dt><dd>{{.T.price4}}</dd></div>
+            <div><dt>{{.T.item5}}</dt><dd>{{.T.price5}}</dd></div>
+            <div><dt>{{.T.item6}}</dt><dd>{{.T.price6}}</dd></div>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="section section--alt" aria-labelledby="visit-h">
+    <div class="wrap grid grid--2">
+      <div>
+        <h2 id="visit-h">{{.T.visit_title}}</h2>
+        <p>{{.T.address}}<br><a href="https://maps.google.com/?q=1+River+Street">{{.T.map_link}}</a></p>
+        <p>{{.T.phone_label}}: <a href="tel:+70000000000">+7 000 000-00-00</a></p>
+      </div>
+      <div>
+        <h2>{{.T.hours_title}}</h2>
+        <p>{{.T.hours_weekdays}}<br>{{.T.hours_weekend}}</p>
+      </div>
+    </div>
+  </section>
+</main>
+{{template "foot" .}}

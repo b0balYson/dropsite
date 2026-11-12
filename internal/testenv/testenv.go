@@ -101,6 +101,12 @@ type options struct {
 	mutate []func(*config.Config)
 	sender service.FormSender
 	proxy  http.RoundTripper
+	render service.Screenshotter
+}
+
+// WithRenderer sets the screenshot renderer (none by default).
+func WithRenderer(r service.Screenshotter) Option {
+	return func(o *options) { o.render = r }
 }
 
 // WithFormSender replaces the transports used for form delivery.
@@ -180,6 +186,7 @@ func start(t testing.TB, cfg *config.Config, o *options) *Env {
 		Resolver:       dns,
 		FormSender:     o.sender,
 		ProxyTransport: o.proxy,
+		Renderer:       o.render,
 	})
 	if err := svc.Start(ctx); err != nil {
 		t.Fatalf("testenv: start service: %v", err)

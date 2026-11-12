@@ -1,0 +1,39 @@
+{{template "head" .}}
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">{{.T.role}}</p>
+    <h1>{{.Title}}</h1>
+    <p class="lead">{{.T.hero_text}}</p>
+    <p class="actions">
+      <a class="btn" href="#work">{{.T.cta_work}}</a>
+      <a class="btn btn--ghost" href="#contact">{{.T.cta_contact}}</a>
+    </p>
+  </div>
+</header>
+<main id="main">
+  <section class="section" id="work" aria-labelledby="work-h">
+    <div class="wrap">
+      <h2 id="work-h">{{.T.work_title}}</h2>
+      <ul class="works grid grid--2">
+        <li class="work"><div class="work__art work__art--1" role="img" aria-label="{{.T.w1}}"></div><h3>{{.T.w1}}</h3><p class="muted">{{.T.w1t}}</p></li>
+        <li class="work"><div class="work__art work__art--2" role="img" aria-label="{{.T.w2}}"></div><h3>{{.T.w2}}</h3><p class="muted">{{.T.w2t}}</p></li>
+        <li class="work"><div class="work__art work__art--3" role="img" aria-label="{{.T.w3}}"></div><h3>{{.T.w3}}</h3><p class="muted">{{.T.w3t}}</p></li>
+        <li class="work"><div class="work__art work__art--4" role="img" aria-label="{{.T.w4}}"></div><h3>{{.T.w4}}</h3><p class="muted">{{.T.w4t}}</p></li>
+      </ul>
+    </div>
+  </section>
+  <section class="section section--alt" aria-labelledby="about-h">
+    <div class="wrap narrow">
+      <h2 id="about-h">{{.T.about_title}}</h2>
+      <p class="lead">{{.T.about_text}}</p>
+    </div>
+  </section>
+  <section class="section" id="contact" aria-labelledby="contact-h">
+    <div class="wrap">
+      <h2 id="contact-h">{{.T.contact_title}}</h2>
+      <p class="lead">{{.T.contact_text}}</p>
+      <p class="actions"><a class="btn" href="mailto:hello@example.com">hello@example.com</a></p>
+    </div>
+  </section>
+</main>
+{{template "foot" .}}

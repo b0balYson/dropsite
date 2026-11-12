@@ -63,6 +63,8 @@ type Deps struct {
 	// ProxyTransport replaces the guarded upstream transport of the secret
 	// proxy (tests).
 	ProxyTransport http.RoundTripper
+	// Renderer takes screenshots; nil means the configured renderer, if any.
+	Renderer Screenshotter
 }
 
 // Service implements the use cases.
@@ -101,6 +103,7 @@ type Service struct {
 	siteFilesState
 	collectionState
 	proxyState
+	shotState
 }
 
 // New builds a Service.
@@ -142,6 +145,7 @@ func New(d Deps) *Service {
 		siteFilesState:   newSiteFilesState(d, now),
 		collectionState:  newCollectionState(now),
 		proxyState:       newProxyState(d, now),
+		shotState:        newShotState(d, now),
 	}
 }
 

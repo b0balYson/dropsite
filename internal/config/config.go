@@ -79,6 +79,8 @@ type Config struct {
 	// PublishOptimize allows publish-time optimization (PUBLISH_OPTIMIZE,
 	// on by default); sites may still turn it off for themselves.
 	PublishOptimize bool
+	// Renderer is the optional screenshot renderer.
+	Renderer Renderer
 }
 
 // maxDomainsPerSiteLimit bounds MAX_DOMAINS_PER_SITE.
@@ -177,6 +179,7 @@ func Load(get Getenv) (*Config, error) {
 	c.TelegramAPIURL = r.httpURL("TELEGRAM_API_URL", "https://api.telegram.org")
 	c.FormWebhookAllow = r.prefixes("FORM_WEBHOOK_ALLOW_CIDRS", "")
 	c.PublishOptimize = r.onOff("PUBLISH_OPTIMIZE", true)
+	c.Renderer = r.renderer()
 
 	// The DNS provider token is deliberately not read here: only Caddy needs
 	// it, and compose refuses to start the wildcard override without it.

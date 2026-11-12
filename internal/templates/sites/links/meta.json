@@ -1,0 +1,6 @@
+{
+  "order": 5,
+  "theme": "#0e3b43",
+  "ru": {"title": "Страница ссылок", "description": "Одна страница со ссылками на соцсети, мессенджеры, магазин и контакты.", "site_title": "Мария Ковалёва"},
+  "en": {"title": "Link in bio", "description": "One page with links to social networks, messengers, a shop and contacts.", "site_title": "Maria Cole"}
+}

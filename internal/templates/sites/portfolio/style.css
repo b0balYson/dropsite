@@ -1,0 +1,18 @@
+:root {
+  --paper: #fafaf7; --ink: #111; --muted: #5b5b55; --card: #efefe9; --line: #dcdcd4;
+  --accent: #111; --accent-ink: #111; --on-accent: #fafaf7; --radius: 0;
+  --display: "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --paper: #121212; --ink: #f2f2ee; --muted: #b0b0a8; --card: #1d1d1b; --line: #33332f; --accent: #f2f2ee; --accent-ink: #f2f2ee; --on-accent: #121212; }
+}
+.hero { padding-block: clamp(4rem, 2rem + 10vw, 10rem) clamp(2rem, 1rem + 4vw, 4rem); }
+.hero h1 { font-size: clamp(2.6rem, 1.2rem + 7vw, 6rem); text-transform: uppercase; }
+.works { list-style: none; padding: 0; margin: 0; gap: 2rem; }
+.work__art { aspect-ratio: 4 / 3; margin-bottom: 1rem; border: 1px solid var(--line); }
+.work__art--1 { background: radial-gradient(circle at 30% 40%, #e3a857 0 22%, transparent 23%), #f5e6cf; }
+.work__art--2 { background: linear-gradient(135deg, #9dbfa7 0 50%, #e9efe6 50%); }
+.work__art--3 { background: repeating-linear-gradient(90deg, #2d3a8c 0 18px, #3e4fb8 18px 36px); }
+.work__art--4 { background: conic-gradient(from 45deg, #e2475a, #f2b134, #2fa58b, #e2475a); }
+.section--alt { background: var(--card); }
+.narrow { max-width: 46rem; }

@@ -1,0 +1,40 @@
+{{define "head"}}<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{if .NotFound}}{{.T.notfound_title}} · {{end}}{{.Title}}</title>
+<meta name="description" content="{{.T.description}}">
+<meta property="og:title" content="{{.Title}}">
+<meta property="og:description" content="{{.T.description}}">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="{{.Theme}}">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/base.css">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<a class="skip" href="#main">{{.T.skip}}</a>
+{{end}}
+
+{{define "foot"}}
+<footer class="site-foot">
+  <div class="wrap">
+    <p>© {{.Title}}</p>
+    <p>{{.T.footer}}</p>
+  </div>
+</footer>
+</body>
+</html>
+{{end}}
+
+{{define "notfound"}}{{template "head" .}}
+<main id="main" class="section">
+  <div class="wrap">
+    <p class="eyebrow">404</p>
+    <h1>{{.T.notfound_title}}</h1>
+    <p class="lead">{{.T.notfound_text}}</p>
+    <p class="actions"><a class="btn" href="/">{{.T.notfound_home}}</a></p>
+  </div>
+</main>
+{{template "foot" .}}{{end}}

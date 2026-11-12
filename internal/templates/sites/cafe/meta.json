@@ -1,0 +1,6 @@
+{
+  "order": 1,
+  "theme": "#2b1d14",
+  "ru": {"title": "Кафе или кофейня", "description": "Меню с ценами, часы работы, адрес с картой и телефон.", "site_title": "Кофейня у реки"},
+  "en": {"title": "Café or coffee shop", "description": "Menu with prices, opening hours, address with a map link and phone.", "site_title": "Riverside Coffee"}
+}

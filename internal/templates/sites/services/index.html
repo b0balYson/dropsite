@@ -1,0 +1,58 @@
+{{template "head" .}}
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">{{.T.tagline}}</p>
+    <h1>{{.Title}}</h1>
+    <p class="lead">{{.T.hero_text}}</p>
+    <p class="actions">
+      <a class="btn" href="#contact">{{.T.cta_contact}}</a>
+      <a class="btn btn--ghost" href="#prices">{{.T.cta_prices}}</a>
+    </p>
+  </div>
+</header>
+<main id="main">
+  <section class="section" aria-labelledby="services-h">
+    <div class="wrap">
+      <h2 id="services-h">{{.T.services_title}}</h2>
+      <ul class="grid grid--3 plain">
+        <li class="card"><span class="icon" aria-hidden="true">1</span><h3>{{.T.s1_title}}</h3><p>{{.T.s1_text}}</p></li>
+        <li class="card"><span class="icon" aria-hidden="true">2</span><h3>{{.T.s2_title}}</h3><p>{{.T.s2_text}}</p></li>
+        <li class="card"><span class="icon" aria-hidden="true">3</span><h3>{{.T.s3_title}}</h3><p>{{.T.s3_text}}</p></li>
+      </ul>
+    </div>
+  </section>
+  <section class="section section--alt" aria-labelledby="steps-h">
+    <div class="wrap">
+      <h2 id="steps-h">{{.T.steps_title}}</h2>
+      <ol class="steps">
+        <li>{{.T.step1}}</li>
+        <li>{{.T.step2}}</li>
+        <li>{{.T.step3}}</li>
+        <li>{{.T.step4}}</li>
+      </ol>
+    </div>
+  </section>
+  <section class="section" id="prices" aria-labelledby="prices-h">
+    <div class="wrap">
+      <h2 id="prices-h">{{.T.prices_title}}</h2>
+      <table class="prices">
+        <tbody>
+          <tr><th scope="row">{{.T.p1}}</th><td>{{.T.p1v}}</td></tr>
+          <tr><th scope="row">{{.T.p2}}</th><td>{{.T.p2v}}</td></tr>
+          <tr><th scope="row">{{.T.p3}}</th><td>{{.T.p3v}}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="section section--alt" id="contact" aria-labelledby="contact-h">
+    <div class="wrap">
+      <h2 id="contact-h">{{.T.contact_title}}</h2>
+      <p class="lead">{{.T.contact_text}}</p>
+      <p class="actions">
+        <a class="btn" href="tel:+70000000000">+7 000 000-00-00</a>
+        <a class="btn btn--ghost" href="mailto:hello@example.com">hello@example.com</a>
+      </p>
+    </div>
+  </section>
+</main>
+{{template "foot" .}}

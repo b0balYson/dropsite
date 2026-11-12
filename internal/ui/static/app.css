@@ -780,6 +780,15 @@ legend.field__label { float: left; width: 100%; }
 .release--current { border-left-color: var(--c-current); background: var(--c-current-bg); }
 .release--pruned { color: var(--c-ink-3); }
 .release--pruned .release__id { font-weight: 400; text-decoration: line-through; text-decoration-color: var(--c-ink-3); }
+/* Copies, schedules and screenshots (partials/workflow.html). */
+.shot { margin: 0 0 var(--s-4); }
+.shot__img { width: 100%; max-width: 40rem; height: auto; border: var(--rule-thin) solid var(--c-hair); background: var(--c-current-bg); }
+.schedules { list-style: none; margin: 0 0 var(--s-4); padding: 0; display: grid; gap: var(--s-2); }
+.schedule { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); padding: var(--s-2) var(--s-3); border-left: var(--rule-thick) solid var(--c-hair); }
+.schedule--pending { border-left-color: var(--c-current); background: var(--c-current-bg); }
+.template-pick { display: grid; gap: var(--s-2); border: 0; padding: 0; margin: 0; }
+@media (min-width: 48rem) { .template-pick { grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); } }
+.template-pick__item { align-items: flex-start; padding: var(--s-3); border: var(--rule-thin) solid var(--c-hair); }
 @media (min-width: 64rem) {
   .release { grid-template-columns: minmax(0, 20rem) minmax(0, 1fr) 14rem; align-items: center; }
   .release__action { justify-content: flex-end; padding-right: var(--s-3); }

@@ -2413,6 +2413,170 @@
         }
       }
     },
+    "/sites/{ref}/clone": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }],
+      "post": {
+        "operationId": "cloneSite",
+        "summary": "Create a new site from the current release of a site (files only)",
+        "description": "Forms, collections, domains, the slug, password, noindex, expiry and counters are not copied; the counter block dropsite inserted is removed from the pages. Fails with site_not_published when the site has no release.",
+        "requestBody": { "required": false, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NewSiteRequest" } } } },
+        "responses": {
+          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DeployResult" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/LimitReached" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "413": { "$ref": "#/components/responses/TooLarge" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/templates": {
+      "get": {
+        "operationId": "listTemplates",
+        "summary": "List the built-in starter templates",
+        "parameters": [
+          { "name": "lang", "in": "query", "schema": { "type": "string", "enum": ["ru", "en"] }, "description": "Language of titles and descriptions (default ru)" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TemplateList" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/templates/{name}/sites": {
+      "parameters": [{ "name": "name", "in": "path", "required": true, "schema": { "type": "string" } }],
+      "post": {
+        "operationId": "createSiteFromTemplate",
+        "summary": "Create a site from a built-in template and publish it",
+        "description": "Unknown templates fail with template_not_found (404). An empty title uses the template's sample title.",
+        "requestBody": { "required": false, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NewSiteRequest" } } } },
+        "responses": {
+          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DeployResult" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/LimitReached" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/schedules": {
+      "get": {
+        "operationId": "listSchedules",
+        "summary": "List pending and recently finished scheduled publishes",
+        "parameters": [
+          { "name": "site", "in": "query", "schema": { "type": "string" }, "description": "Site ID or slug; omit for every own site" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ScheduleList" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/schedules/{id}": {
+      "parameters": [{ "$ref": "#/components/parameters/ID" }],
+      "delete": {
+        "operationId": "cancelSchedule",
+        "summary": "Cancel a pending scheduled publish",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Schedule" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/sites/{ref}/schedules": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }],
+      "post": {
+        "operationId": "scheduleRelease",
+        "summary": "Schedule a ready release of the site to go live at publish_at",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ScheduleRequest" } } } },
+        "responses": {
+          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Schedule" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/LimitReached" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/uploads/{id}/schedule": {
+      "parameters": [{ "$ref": "#/components/parameters/ID" }],
+      "post": {
+        "operationId": "scheduleUpload",
+        "summary": "Close an upload session into a prepared release and schedule it",
+        "description": "publish_at is checked first; on a bad time the session stays open. The prepared release is not served until publish_at.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ScheduleUploadRequest" } } } },
+        "responses": {
+          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Schedule" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/LimitReached" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "413": { "$ref": "#/components/responses/TooLarge" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/sites/{ref}/screenshot": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }],
+      "get": {
+        "operationId": "screenshotSite",
+        "summary": "PNG of the first screen of a release (needs the optional renderer)",
+        "parameters": [
+          { "name": "deploy_id", "in": "query", "schema": { "type": "string" }, "description": "Release; default the current one" },
+          { "name": "device", "in": "query", "schema": { "type": "string", "enum": ["desktop", "mobile"] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "The screenshot",
+            "headers": { "X-Dropsite-Site-Id": { "schema": { "type": "string" } }, "X-Dropsite-Deploy-Id": { "schema": { "type": "string" } }, "X-Dropsite-Device": { "schema": { "type": "string" } }, "X-Dropsite-Viewport": { "description": "e.g. 1280x800", "schema": { "type": "string" } } },
+            "content": { "image/png": { "schema": { "type": "string", "format": "binary" } } }
+          },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/Internal" },
+          "503": { "description": "renderer_unavailable: no renderer is configured or it does not respond", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/sites/{ref}/visual-diff": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }],
+      "get": {
+        "operationId": "visualDiff",
+        "summary": "Compare screenshots of two releases (needs the optional renderer)",
+        "parameters": [
+          { "name": "from", "in": "query", "required": true, "schema": { "type": "string" }, "description": "Earlier release" },
+          { "name": "to", "in": "query", "schema": { "type": "string" }, "description": "Later release; default the current one" },
+          { "name": "device", "in": "query", "schema": { "type": "string", "enum": ["desktop", "mobile"] } }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VisualDiff" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/Internal" },
+          "503": { "description": "renderer_unavailable: no renderer is configured or it does not respond", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
     "/sites/{ref}/forms/submissions/search": {
       "parameters": [
         {
@@ -5824,6 +5988,85 @@
               "$ref": "#/components/schemas/FetchSpec"
             }
           }
+        }
+      },
+      "NewSiteRequest": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "maxLength": 120 },
+          "slug": { "type": "string" },
+          "lang": { "type": "string", "enum": ["ru", "en"], "description": "Template language (templates only)" }
+        }
+      },
+      "Template": {
+        "type": "object",
+        "required": ["name", "title", "description"],
+        "properties": {
+          "name": { "type": "string", "example": "cafe" },
+          "title": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      },
+      "TemplateList": {
+        "type": "object",
+        "required": ["items", "total"],
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/Template" } },
+          "total": { "type": "integer" }
+        }
+      },
+      "ScheduleRequest": {
+        "type": "object",
+        "required": ["deploy_id", "publish_at"],
+        "properties": {
+          "deploy_id": { "type": "string" },
+          "publish_at": { "type": "string", "format": "date-time", "description": "RFC 3339 with a time zone, in the future, at most 365 days ahead" }
+        }
+      },
+      "ScheduleUploadRequest": {
+        "type": "object",
+        "required": ["publish_at"],
+        "properties": {
+          "publish_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Schedule": {
+        "type": "object",
+        "required": ["id", "site_id", "site_title", "site_url", "deploy_id", "publish_at", "status", "error", "created_at", "finished_at", "preview_url"],
+        "properties": {
+          "id": { "type": "string" },
+          "site_id": { "type": "string" },
+          "site_title": { "type": "string" },
+          "site_url": { "type": "string" },
+          "deploy_id": { "type": "string" },
+          "publish_at": { "type": "string", "format": "date-time" },
+          "status": { "type": "string", "enum": ["pending", "done", "cancelled", "failed"] },
+          "error": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "finished_at": { "type": ["string", "null"], "format": "date-time" },
+          "preview_url": { "type": ["string", "null"] }
+        }
+      },
+      "ScheduleList": {
+        "type": "object",
+        "required": ["items", "total"],
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/Schedule" } },
+          "total": { "type": "integer" }
+        }
+      },
+      "VisualDiff": {
+        "type": "object",
+        "required": ["site_id", "from_deploy_id", "to_deploy_id", "device", "changed_percent", "width", "height", "image_png"],
+        "properties": {
+          "site_id": { "type": "string" },
+          "from_deploy_id": { "type": "string" },
+          "to_deploy_id": { "type": "string" },
+          "device": { "type": "string", "enum": ["desktop", "mobile"] },
+          "changed_percent": { "type": "number", "description": "Share of changed pixels, 0-100, two decimals" },
+          "width": { "type": "integer" },
+          "height": { "type": "integer" },
+          "image_png": { "type": "string", "contentEncoding": "base64", "description": "PNG: before | after, changes highlighted on the right" }
         }
       },
       "CommitUploadRequest": {
