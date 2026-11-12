@@ -72,7 +72,7 @@ func TestDemoteSkipsCodeFences(t *testing.T) {
 
 func TestGuideTopics(t *testing.T) {
 	want := []string{"overview", "create", "update", "large_sites", "assets", "forms", "data", "proxy", "stats",
-		"addresses", "protection", "publishing", "rollback", "workflow", "account", "errors", "external_backend",
+		"addresses", "protection", "publishing", "drafts", "rollback", "workflow", "account", "errors", "external_backend",
 		"payments", "booking", "legal", "seo", "multilingual", "quiz", "embeds"}
 	if got := strings.Join(Topics(), ","); got != strings.Join(want, ",") {
 		t.Fatalf("topics: %s", got)
