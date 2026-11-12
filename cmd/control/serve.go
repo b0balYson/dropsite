@@ -18,6 +18,7 @@ import (
 	"github.com/b0balYson/dropsite/internal/config"
 	"github.com/b0balYson/dropsite/internal/mcp/remote"
 	"github.com/b0balYson/dropsite/internal/oauth"
+	"github.com/b0balYson/dropsite/internal/render"
 	"github.com/b0balYson/dropsite/internal/service"
 	"github.com/b0balYson/dropsite/internal/siteauth"
 	"github.com/b0balYson/dropsite/internal/storage"
@@ -141,6 +142,10 @@ func (a *app) run(ctx context.Context) error {
 		newServer(a.cfg.InternalAddr, a.intern, a.log),
 		newServer(a.cfg.AdminAddr, a.admin, a.log),
 	}
+	if a.cfg.Renderer.Enabled() {
+		// The renderer fetches release files here by one-time token.
+		servers = append(servers, newServer(a.cfg.Renderer.Addr, render.Handler(a.svc.OpenRenderRelease), a.log))
+	}
 	g, gctx := errgroup.WithContext(ctx)
 	for _, srv := range servers {
 		ln, err := (&net.ListenConfig{}).Listen(ctx, "tcp", srv.Addr)
@@ -169,6 +174,10 @@ func (a *app) run(ctx context.Context) error {
 	})
 	g.Go(func() error {
 		a.svc.RunFormDelivery(gctx)
+		return nil
+	})
+	g.Go(func() error {
+		a.svc.RunWorkflow(gctx, service.WorkflowInterval)
 		return nil
 	})
 	g.Go(func() error {

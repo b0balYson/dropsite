@@ -59,6 +59,8 @@ type Deps struct {
 	FormSender FormSender
 	// Fetcher downloads assets for site edits; nil means sitefetch defaults.
 	Fetcher SiteFetcher
+	// Renderer takes screenshots; nil means the configured renderer, if any.
+	Renderer Screenshotter
 }
 
 // Service implements the use cases.
@@ -95,6 +97,7 @@ type Service struct {
 	visitorKeySet    *visitorKeySet
 	formState
 	siteFilesState
+	shotState
 }
 
 // New builds a Service.
@@ -134,6 +137,7 @@ func New(d Deps) *Service {
 		visitorSiteLimit: ratelimit.New(VisitorFailuresPerSite, VisitorFailuresWindow).WithClock(now),
 		formState:        newFormState(d, now),
 		siteFilesState:   newSiteFilesState(d, now),
+		shotState:        newShotState(d, now),
 	}
 }
 

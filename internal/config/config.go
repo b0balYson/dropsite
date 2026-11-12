@@ -76,6 +76,8 @@ type Config struct {
 	// FormWebhookAllow lists networks that form webhooks may reach although
 	// they are private (test stacks only); plain http is allowed for them.
 	FormWebhookAllow []netip.Prefix
+	// Renderer is the optional screenshot renderer.
+	Renderer Renderer
 }
 
 // maxDomainsPerSiteLimit bounds MAX_DOMAINS_PER_SITE.
@@ -173,6 +175,7 @@ func Load(get Getenv) (*Config, error) {
 	c.ServerIPs = r.addrs("SERVER_IPS")
 	c.TelegramAPIURL = r.httpURL("TELEGRAM_API_URL", "https://api.telegram.org")
 	c.FormWebhookAllow = r.prefixes("FORM_WEBHOOK_ALLOW_CIDRS", "")
+	c.Renderer = r.renderer()
 
 	// The DNS provider token is deliberately not read here: only Caddy needs
 	// it, and compose refuses to start the wildcard override without it.
