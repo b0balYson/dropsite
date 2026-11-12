@@ -101,6 +101,7 @@ type deployRow struct {
 	domain.Deploy
 	Current    bool
 	PreviewURL string // wildcard TLS mode only
+	Quality    *domain.QualityScore
 }
 
 type siteData struct {
@@ -125,9 +126,17 @@ func (s *server) loadSite(r *http.Request, rc *reqCtx) (siteData, error) {
 	if err != nil {
 		return siteData{}, err
 	}
+	scores, err := s.svc.DeployScores(r.Context(), rc.actor, v.Site.ID)
+	if err != nil {
+		return siteData{}, err
+	}
 	rows := make([]deployRow, 0, len(ds))
 	for _, d := range ds {
-		rows = append(rows, deployRow{Deploy: d, Current: v.Current != nil && v.Current.ID == d.ID, PreviewURL: s.svc.PreviewURL(d)})
+		row := deployRow{Deploy: d, Current: v.Current != nil && v.Current.ID == d.ID, PreviewURL: s.svc.PreviewURL(d)}
+		if sc, ok := scores[d.ID]; ok {
+			row.Quality = &sc
+		}
+		rows = append(rows, row)
 	}
 	doms, err := s.loadSiteDomains(r, rc, v)
 	if err != nil {

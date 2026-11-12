@@ -3,6 +3,8 @@ package client
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/b0balYson/dropsite/internal/quality"
 )
 
 // User is an account as returned by the API.
@@ -161,4 +163,6 @@ type DeployResult struct {
 	URLs     []string `json:"urls"`
 	Deploy   Deploy   `json:"deploy"`
 	Site     Site     `json:"site"`
+	// Quality is the short quality report of the release, nil when none.
+	Quality *quality.Summary `json:"quality"`
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/b0balYson/dropsite/internal/mcp"
+	"github.com/b0balYson/dropsite/internal/quality"
 	"github.com/b0balYson/dropsite/internal/service"
 )
 
@@ -82,6 +83,7 @@ func filesResult(r service.UpdateResult, verb string) mcp.FilesResult {
 	return mcp.NewFilesResult(mcp.FilesOutcome{
 		SiteID: r.Site.Site.ID, DeployID: r.Deploy.ID, Base: r.Base, URL: r.Site.URL, URLs: r.Site.URLs,
 		Written: r.Written, Deleted: r.Deleted, FileCount: r.Deploy.FileCount, Fetched: toFetched(r.Fetched),
+		Quality: quality.Summarize(r.Quality),
 	}, verb)
 }
 

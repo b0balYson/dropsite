@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"golang.org/x/net/idna"
+
+	"github.com/b0balYson/dropsite/internal/quality"
 )
 
 // Conversions and plain-language texts shared by the remote backend
@@ -313,6 +315,7 @@ type FilesOutcome struct {
 	Deleted   int
 	FileCount int
 	Fetched   []FetchedFile
+	Quality   *quality.Summary
 }
 
 // NewFilesResult builds the tool output with a summary starting with verb
@@ -333,6 +336,9 @@ func NewFilesResult(o FilesOutcome, verb string) FilesResult {
 	}
 	summary := strings.Join(parts, ", ") + fmt.Sprintf("; the site now has %d files and is live at %s. "+
 		"The previous version can be restored with rollback.", o.FileCount, o.URL)
+	if o.Quality != nil {
+		summary += " " + o.Quality.Summary
+	}
 	fetched := o.Fetched
 	if len(fetched) == 0 {
 		fetched = nil
@@ -340,5 +346,6 @@ func NewFilesResult(o FilesOutcome, verb string) FilesResult {
 	return FilesResult{
 		SiteID: o.SiteID, DeployID: o.DeployID, BaseDeployID: o.Base, URL: o.URL, URLs: o.URLs,
 		Written: o.Written, Deleted: o.Deleted, FileCount: o.FileCount, Fetched: fetched, Summary: summary,
+		Quality: o.Quality,
 	}
 }

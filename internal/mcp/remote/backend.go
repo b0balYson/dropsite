@@ -12,6 +12,7 @@ import (
 
 	"github.com/b0balYson/dropsite/internal/domain"
 	"github.com/b0balYson/dropsite/internal/mcp"
+	"github.com/b0balYson/dropsite/internal/quality"
 	"github.com/b0balYson/dropsite/internal/service"
 )
 
@@ -44,7 +45,8 @@ func toSite(v service.SiteView) mcp.Site {
 }
 
 func toResult(r service.DeployResult) mcp.DeployResult {
-	return mcp.DeployResult{SiteID: r.Site.Site.ID, DeployID: r.Deploy.ID, URL: r.Site.URL, URLs: r.Site.URLs}
+	return mcp.DeployResult{SiteID: r.Site.Site.ID, DeployID: r.Deploy.ID, URL: r.Site.URL, URLs: r.Site.URLs,
+		Quality: quality.Summarize(r.Quality)}
 }
 
 // toolError turns a service error into text the model can act on. Internal

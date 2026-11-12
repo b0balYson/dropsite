@@ -345,6 +345,41 @@
         }
       }
     },
+    "/sites/{ref}/deploys/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SiteRef"
+        },
+        {
+          "$ref": "#/components/parameters/ID"
+        }
+      ],
+      "get": {
+        "operationId": "getDeploy",
+        "summary": "One release with its quality report",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeployReport"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
     "/sites/{ref}/rollback": {
       "parameters": [
         {
@@ -3143,6 +3178,326 @@
           }
         }
       },
+      "QualityIssue": {
+        "type": "object",
+        "required": [
+          "page",
+          "target"
+        ],
+        "properties": {
+          "page": {
+            "type": "string",
+            "description": "Site file where it was found (page or stylesheet)"
+          },
+          "target": {
+            "type": "string",
+            "description": "The link, path or address as written"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "image",
+              "stylesheet",
+              "script",
+              "font",
+              "icon",
+              "media",
+              "other"
+            ]
+          }
+        }
+      },
+      "QualityReport": {
+        "type": "object",
+        "description": "Static quality report of a release (docs/quality.md)",
+        "required": [
+          "score",
+          "grade",
+          "summary",
+          "pages",
+          "files",
+          "total_bytes",
+          "counts",
+          "broken_links",
+          "missing_assets",
+          "images_without_alt",
+          "external_resources",
+          "external_hosts",
+          "pages_missing",
+          "heaviest_pages",
+          "largest_files",
+          "truncated"
+        ],
+        "properties": {
+          "score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "grade": {
+            "type": "string",
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          "summary": {
+            "type": "string"
+          },
+          "pages": {
+            "type": "integer"
+          },
+          "files": {
+            "type": "integer"
+          },
+          "total_bytes": {
+            "type": "integer"
+          },
+          "counts": {
+            "type": "object",
+            "description": "Full numbers; lists keep at most 50 items",
+            "required": [
+              "broken_links",
+              "missing_assets",
+              "images_without_alt",
+              "missing_title",
+              "missing_description",
+              "missing_viewport",
+              "missing_lang",
+              "external_resources",
+              "external_hosts",
+              "heavy_pages"
+            ],
+            "properties": {
+              "broken_links": {
+                "type": "integer"
+              },
+              "missing_assets": {
+                "type": "integer"
+              },
+              "images_without_alt": {
+                "type": "integer"
+              },
+              "missing_title": {
+                "type": "integer"
+              },
+              "missing_description": {
+                "type": "integer"
+              },
+              "missing_viewport": {
+                "type": "integer"
+              },
+              "missing_lang": {
+                "type": "integer"
+              },
+              "external_resources": {
+                "type": "integer"
+              },
+              "external_hosts": {
+                "type": "integer"
+              },
+              "heavy_pages": {
+                "type": "integer"
+              }
+            }
+          },
+          "broken_links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QualityIssue"
+            }
+          },
+          "missing_assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QualityIssue"
+            }
+          },
+          "images_without_alt": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QualityIssue"
+            }
+          },
+          "external_resources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QualityIssue"
+            }
+          },
+          "external_hosts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "pages_missing": {
+            "type": "object",
+            "required": [
+              "title",
+              "description",
+              "viewport",
+              "lang"
+            ],
+            "properties": {
+              "title": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "description": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "viewport": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "lang": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "heaviest_pages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "page",
+                "bytes"
+              ],
+              "properties": {
+                "page": {
+                  "type": "string"
+                },
+                "bytes": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "largest_files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "path",
+                "bytes"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "bytes": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "optimization": {
+            "type": "object",
+            "description": "What publish-time optimization added; absent when it did not run",
+            "required": [
+              "images_converted",
+              "bytes_saved",
+              "generated",
+              "timed_out"
+            ],
+            "properties": {
+              "images_converted": {
+                "type": "integer"
+              },
+              "bytes_saved": {
+                "type": "integer"
+              },
+              "generated": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "timed_out": {
+                "type": "boolean"
+              }
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        }
+      },
+      "QualitySummary": {
+        "type": "object",
+        "description": "Short quality report of a release",
+        "required": [
+          "score",
+          "grade",
+          "summary",
+          "issues"
+        ],
+        "properties": {
+          "score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "grade": {
+            "type": "string",
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          "summary": {
+            "type": "string"
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Up to five main problems, most important first"
+          }
+        }
+      },
+      "DeployReport": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Deploy"
+          },
+          {
+            "type": "object",
+            "required": [
+              "quality"
+            ],
+            "properties": {
+              "quality": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/QualityReport"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Null for releases without a report"
+              }
+            }
+          }
+        ]
+      },
       "DeployResult": {
         "type": "object",
         "required": [
@@ -3170,6 +3525,17 @@
           },
           "site": {
             "$ref": "#/components/schemas/Site"
+          },
+          "quality": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/QualitySummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Short quality report of the release; null when it has none"
           }
         }
       },

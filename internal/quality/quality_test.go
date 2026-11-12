@@ -47,12 +47,12 @@ func TestCleanSiteScoresA(t *testing.T) {
 			<form action="/_form/lead"></form><script src="/_dropsite/altcha.js"></script>
 			<link rel="icon" href="/favicon.ico"><link rel="canonical" href="https://other.example/x">
 			<iframe src="https://www.youtube.com/embed/x"></iframe></body></html>`,
-		"about.html":       goodHead + `<body><a href="./">home</a><a href="../../index.html">up</a></body></html>`,
-		"css/site.css":     `@font-face{src:url("../fonts/inter.woff2")} body{background:url(data:image/png;base64,AA)}`,
+		"about.html":        goodHead + `<body><a href="./">home</a><a href="../../index.html">up</a></body></html>`,
+		"css/site.css":      `@font-face{src:url("../fonts/inter.woff2")} body{background:url(data:image/png;base64,AA)}`,
 		"fonts/inter.woff2": "font",
-		"img/logo.png":     "png",
-		"img/a.jpg":        "a",
-		"img/b.jpg":        "b",
+		"img/logo.png":      "png",
+		"img/a.jpg":         "a",
+		"img/b.jpg":         "b",
 	}, Options{Generated: []string{"favicon.ico"}})
 	if r.Score != 100 || r.Grade != "A" || r.Counts != (Counts{}) || r.Truncated {
 		t.Fatalf("report %+v", r)

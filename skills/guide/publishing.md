@@ -9,3 +9,11 @@ Every new version is optimized by the server unless the user or the administrato
 - Files the server adds do not appear in list_site_files or read_site_files and do not count against size limits.
 
 get_publish_settings shows whether this is on for a site; set_publish_settings turns it off or on from the next publication. Turn it off only when the user asks, for example "serve my files exactly as I uploaded them".
+
+## Quality check of every version
+
+Every publication result (deploy_files, deploy_folder, update_site_files, commit_upload, rollback) has `quality`: a score from 0 to 100, a grade A to D and up to five main problems. get_quality_report shows the full list for a version: broken internal links, missing images, styles, scripts or fonts, images without alt text, pages without a title, description, viewport or `lang`, the heaviest pages and largest files, and files loaded from other servers.
+
+- Fix what you can right away with update_site_files, without asking: wrong links and paths, a missing `<title>`, viewport or `lang`, alt text that describes the image. Download files loaded from other servers into the site with `fetch` and link them locally.
+- Ask the user before inventing content: real photos for missing images, the wording of a description.
+- Tell the user about the result in one plain sentence ("I checked the site: everything works" or "I fixed two broken links"), not the score or the field names, unless they ask.

@@ -12,6 +12,7 @@ import (
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/b0balYson/dropsite/internal/brand"
+	"github.com/b0balYson/dropsite/internal/quality"
 )
 
 // Site is a site as tools return it.
@@ -46,6 +47,8 @@ type DeployResult struct {
 	DeployID string   `json:"deploy_id"`
 	URL      string   `json:"url" jsonschema:"primary address: show this link to the user"`
 	URLs     []string `json:"urls"`
+	// Quality is the short quality report of the release being served.
+	Quality *quality.Summary `json:"quality,omitempty" jsonschema:"quality check of this version: fix the listed issues with update_site_files; full report: get_quality_report"`
 }
 
 // File is one file passed by value to deploy_files.

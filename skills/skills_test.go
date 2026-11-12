@@ -107,7 +107,7 @@ func TestGuideNamesTheFixedTools(t *testing.T) {
 		"revoke_connection", "set_root_site", "clear_root_site", "get_form_settings", "set_form_settings",
 		"list_submissions", "export_submissions", "list_channels", "add_channel", "verify_channel",
 		"set_channel_enabled", "delete_channel", "rotate_channel_secret", "confirm",
-		"get_publish_settings", "set_publish_settings",
+		"get_publish_settings", "set_publish_settings", "get_quality_report",
 	} {
 		if !strings.Contains(all, tool) {
 			t.Errorf("guide does not mention %s", tool)

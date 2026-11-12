@@ -83,6 +83,7 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("GET /slug-check", s.user(s.slugCheckNew))
 	mux.HandleFunc("GET /sites/{ref}", s.user(s.sitePage))
 	mux.HandleFunc("GET /sites/{ref}/history", s.user(s.historyFragment))
+	mux.HandleFunc("GET /sites/{ref}/deploys/{id}", s.user(s.qualityPage))
 	mux.HandleFunc("GET /sites/{ref}/slug-check", s.user(s.slugCheckSite))
 	mux.HandleFunc("POST /sites/{ref}/settings", s.user(s.siteSettings))
 	mux.HandleFunc("POST /sites/{ref}/access", s.user(s.siteAccess))

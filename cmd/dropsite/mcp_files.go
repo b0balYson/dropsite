@@ -79,6 +79,7 @@ func filesResult(r *client.FilesResult, verb string) mcp.FilesResult {
 	return mcp.NewFilesResult(mcp.FilesOutcome{
 		SiteID: r.Site.ID, DeployID: r.DeployID, Base: r.BaseDeployID, URL: r.URL, URLs: r.URLs,
 		Written: r.Written, Deleted: r.Deleted, FileCount: r.Deploy.FileCount, Fetched: fromFetched(r.Fetched),
+		Quality: r.Quality,
 	}, verb)
 }
 

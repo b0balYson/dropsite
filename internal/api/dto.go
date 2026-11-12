@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/b0balYson/dropsite/internal/domain"
+	"github.com/b0balYson/dropsite/internal/quality"
 	"github.com/b0balYson/dropsite/internal/service"
 )
 
@@ -112,6 +113,8 @@ type deployResultDTO struct {
 	URLs     []string  `json:"urls"`
 	Deploy   deployDTO `json:"deploy"`
 	Site     siteDTO   `json:"site"`
+	// Quality is the short quality report of the release, null when none.
+	Quality *quality.Summary `json:"quality"`
 }
 
 type tokenDTO struct {
@@ -278,6 +281,7 @@ func toDeployResult(res service.DeployResult) deployResultDTO {
 	return deployResultDTO{
 		DeployID: res.Deploy.ID, URL: res.Site.URL, URLs: nonNil(res.Site.URLs),
 		Deploy: toDeploy(res.Deploy, res.Site.Site.CurrentDeployID, resultPreview(res)), Site: toSite(res.Site),
+		Quality: quality.Summarize(res.Quality),
 	}
 }
 

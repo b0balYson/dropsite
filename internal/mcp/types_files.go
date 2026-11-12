@@ -1,6 +1,10 @@
 package mcp
 
-import "context"
+import (
+	"context"
+
+	"github.com/b0balYson/dropsite/internal/quality"
+)
 
 // SiteFile is one file of a release as list_site_files returns it.
 type SiteFile struct {
@@ -80,6 +84,8 @@ type FilesResult struct {
 	FileCount    int           `json:"file_count" jsonschema:"files in the new release"`
 	Fetched      []FetchedFile `json:"fetched,omitempty"`
 	Summary      string        `json:"summary" jsonschema:"short human summary to relay to the user"`
+	// Quality is the short quality report of the new release.
+	Quality *quality.Summary `json:"quality,omitempty" jsonschema:"quality check of the new version: fix the listed issues with another update; full report: get_quality_report"`
 }
 
 // Upload describes an upload session.

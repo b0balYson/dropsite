@@ -1465,3 +1465,18 @@ a.xdomain__host { text-decoration: none; border-bottom: 2px solid var(--c-ink); 
 /* Blocks that used to split into a main and a side column stack in one column. */
 .site-page .domains__grid,
 .site-page .forms-summary__grid { grid-template-columns: minmax(0, 1fr); }
+
+/* Release quality: the score badge in the history and the report screen. */
+.release__quality { font-family: var(--f-mono, monospace); font-size: var(--t-sm); padding: 0 var(--s-2); border-radius: 999px; text-decoration: none; color: var(--c-ok); background: var(--c-ok-bg); }
+.release__quality--C { color: var(--c-warn); background: var(--c-warn-bg); }
+.release__quality--D { color: var(--c-error); background: var(--c-error-bg); }
+.release__quality:hover, .release__quality:focus-visible { text-decoration: underline; }
+.quality__score { display: flex; align-items: baseline; gap: var(--s-2); margin: 0; color: var(--c-ok); }
+.quality__score--C { color: var(--c-warn); }
+.quality__score--D { color: var(--c-error); }
+.quality__grade { font-size: 3rem; font-weight: 700; line-height: 1; }
+.quality__count { font-size: var(--t-sm); color: var(--c-ink-2); font-weight: 400; }
+.quality__list { display: grid; gap: var(--s-1); padding-left: var(--s-4); margin: 0; }
+.quality__meta dt { font-weight: 600; margin-top: var(--s-2); }
+.quality__meta dd { margin: 0; color: var(--c-ink-2); }
+.quality__columns { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }

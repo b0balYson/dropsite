@@ -13,6 +13,10 @@ import (
 	"github.com/b0balYson/dropsite/internal/storage"
 )
 
+// CurrentDeploy names the release being served where a deploy ID is
+// expected (GET /sites/{ref}/deploys/current).
+const CurrentDeploy = "current"
+
 // DeployReportView is a release with its quality report (nil when the
 // release has none: published before reports existed, or analysis failed).
 type DeployReportView struct {
@@ -105,13 +109,14 @@ func (s *Service) dropReports(ctx context.Context, siteID string, ids []string) 
 }
 
 // GetDeployReport returns a release of a site the actor may see with its
-// quality report; an empty deployID means the release being served.
+// quality report; an empty deployID or CurrentDeploy means the release
+// being served.
 func (s *Service) GetDeployReport(ctx context.Context, a Actor, ref, deployID string) (DeployReportView, error) {
 	site, err := s.resolveSite(ctx, a, ref)
 	if err != nil {
 		return DeployReportView{}, err
 	}
-	if deployID == "" {
+	if deployID == "" || deployID == CurrentDeploy {
 		if site.CurrentDeployID == nil {
 			return DeployReportView{}, domain.E(domain.KindInvalid, domain.CodeSiteNotPublished,
 				"the site has no published release yet")

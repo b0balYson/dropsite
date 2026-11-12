@@ -105,7 +105,7 @@ func fromSite(s client.Site) mcp.Site {
 }
 
 func fromResult(r *client.DeployResult) mcp.DeployResult {
-	return mcp.DeployResult{SiteID: r.Site.ID, DeployID: r.DeployID, URL: r.URL, URLs: r.URLs}
+	return mcp.DeployResult{SiteID: r.Site.ID, DeployID: r.DeployID, URL: r.URL, URLs: r.URLs, Quality: r.Quality}
 }
 
 // toolError turns CLI errors into one actionable line for the model, worded
