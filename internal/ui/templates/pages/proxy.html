@@ -1,0 +1,134 @@
+{{define "title"}}{{.L.T "proxy.title"}} — {{.D.V.Site.Title}}{{end}}
+
+{{define "content"}}
+{{$v := .D.V}}{{$base := printf "/sites/%s/proxy" $v.Site.ID}}
+<nav class="crumbs" aria-label="{{.L.T "nav.breadcrumbs"}}"><a href="/sites/{{$v.Site.ID}}">← {{$v.Site.Title}}</a></nav>
+<header class="page-head">
+  <div class="page-head__text">
+    <p class="eyebrow mono addr-break">{{wbr (host $v.URL)}}</p>
+    <h1 class="display">{{.L.T "proxy.title"}}</h1>
+    <p class="lede">{{.L.T "proxy.lede"}}</p>
+  </div>
+</header>
+
+<div class="notice notice--warn proxy-warning" role="note">
+  <p class="notice__text"><strong>{{.L.T "proxy.warn.title"}}</strong> {{.L.T "proxy.warn.text"}}</p>
+</div>
+
+<section class="section" aria-labelledby="endpoints-h">
+  <h2 class="section-title" id="endpoints-h">{{.L.T "proxy.endpoints"}} <span class="muted">{{len .D.Endpoints}} / {{.D.Limit}}</span></h2>
+  {{if .D.Endpoints}}
+  <ul class="channel-list">
+    {{range .D.Endpoints}}{{$e := .Endpoint}}
+    <li class="channel proxy{{if not $e.Enabled}} channel--off{{end}}" id="proxy-{{$e.Name}}">
+      <div class="channel__head">
+        <strong class="mono">{{$e.Name}}</strong>
+        <span class="mono addr-break small">{{wbr $e.UpstreamURL}}</span>
+        {{if not $e.Enabled}}<span class="badge badge--muted">{{$.L.T "proxy.off"}}</span>
+        {{else if .SecretSet}}<span class="badge badge--ok">{{$.L.T "proxy.key.set"}}</span>
+        {{else}}<span class="badge badge--warn">{{$.L.T "proxy.key.missing"}}</span>{{end}}
+      </div>
+      <dl class="fields proxy__facts">
+        <div class="fields__row"><dt class="fields__name">{{$.L.T "proxy.call"}}</dt><dd class="fields__value mono">{{.CallURL}}</dd></div>
+        <div class="fields__row"><dt class="fields__name">{{$.L.T "proxy.methods"}}</dt><dd class="fields__value mono">{{join $e.Methods ", "}}</dd></div>
+        <div class="fields__row"><dt class="fields__name">{{$.L.T "proxy.paths"}}</dt><dd class="fields__value mono">{{if $e.Paths}}{{join $e.Paths ", "}}{{else}}{{$.L.T "proxy.paths.any"}}{{end}}</dd></div>
+        <div class="fields__row"><dt class="fields__name">{{$.L.T "proxy.hosts"}}</dt><dd class="fields__value mono">{{join $e.AllowedHosts ", "}}</dd></div>
+        <div class="fields__row"><dt class="fields__name">{{$.L.T "proxy.auth"}}</dt><dd class="fields__value">{{$.L.T (printf "proxy.auth.%s" $e.Auth)}}{{if $e.AuthName}} <span class="mono">{{$e.AuthName}}</span>{{end}}</dd></div>
+        <div class="fields__row"><dt class="fields__name">{{$.L.T "proxy.usage"}}</dt><dd class="fields__value">{{$.L.T "proxy.usage.text" "n" $e.Usage.Requests "errors" $e.Usage.Errors "rejected" $e.Usage.Rejected}}{{if $e.Usage.LastUsedAt}} · {{$.L.T "proxy.usage.last" "at" ($.L.DatePtr $e.Usage.LastUsedAt) "status" $e.Usage.LastStatus}}{{end}}</dd></div>
+        {{if .SecretSet}}<div class="fields__row"><dt class="fields__name">{{$.L.T "proxy.key"}}</dt><dd class="fields__value">{{$.L.T "proxy.key.since" "at" ($.L.DatePtr $e.SecretUpdatedAt)}}</dd></div>{{end}}
+      </dl>
+      <form class="channel__verify proxy__key" method="post" action="{{$base}}/{{$e.Name}}/secret" autocomplete="off">
+        {{template "csrf" $}}
+        <label class="field__label" for="key-{{$e.Name}}">{{if .SecretSet}}{{$.L.T "proxy.key.replace"}}{{else}}{{$.L.T "proxy.key.paste"}}{{end}}</label>
+        <div class="inline-input">
+          <input class="input mono" id="key-{{$e.Name}}" name="secret" type="password" autocomplete="off" spellcheck="false" maxlength="4096" required>
+          <button class="btn btn--small btn--primary" type="submit">{{$.L.T "proxy.key.save"}}</button>
+        </div>
+        <p class="hint">{{$.L.T "proxy.key.hint"}}</p>
+      </form>
+      <div class="channel__actions">
+        <a class="btn btn--small btn--ghost" href="{{$base}}/{{$e.Name}}/edit#proxy-form">{{$.L.T "proxy.edit"}}</a>
+        {{if .SecretSet}}
+        <form method="post" action="{{$base}}/{{$e.Name}}/secret/delete">
+          {{template "csrf" $}}
+          <button class="btn btn--small btn--ghost" type="submit">{{$.L.T "proxy.key.clear"}}</button>
+        </form>
+        {{end}}
+        <form method="post" action="{{$base}}/{{$e.Name}}/delete">
+          {{template "csrf" $}}
+          <button class="btn btn--small btn--danger-ghost" type="submit">{{$.L.T "proxy.delete"}}</button>
+        </form>
+      </div>
+    </li>
+    {{end}}
+  </ul>
+  {{else}}<p class="empty-line">{{.L.T "proxy.none"}}</p>{{end}}
+</section>
+
+<section class="section" aria-labelledby="proxy-form-h" id="proxy-form">
+  {{$f := .D.Form}}
+  <h2 class="section-title" id="proxy-form-h">{{if $f.Editing}}{{.L.T "proxy.form.edit" "name" $f.Name}}{{else}}{{.L.T "proxy.form.add"}}{{end}}</h2>
+  {{with .D.Error}}<p class="notice notice--error" role="alert">{{.}}</p>{{end}}
+  <form class="panel--tight stack proxy-form" method="post" action="{{$base}}">
+    {{template "csrf" .}}
+    {{if $f.Editing}}<input type="hidden" name="editing" value="1"><input type="hidden" name="name" value="{{$f.Name}}">{{else}}
+    <div class="field">
+      <label class="field__label" for="p-name">{{.L.T "proxy.field.name"}}</label>
+      <input class="input mono" id="p-name" name="name" required maxlength="40" pattern="[a-z0-9][a-z0-9\-]{0,39}" value="{{$f.Name}}" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="p-name-hint">
+      <p class="hint" id="p-name-hint">{{.L.T "proxy.field.name.hint"}}</p>
+    </div>{{end}}
+    <div class="field">
+      <label class="field__label" for="p-url">{{.L.T "proxy.field.url"}}</label>
+      <input class="input mono" id="p-url" name="upstream_url" type="text" inputmode="url" required maxlength="2048" placeholder="https://api.openai.com/v1" value="{{$f.UpstreamURL}}" autocomplete="off" spellcheck="false" aria-describedby="p-url-hint">
+      <p class="hint" id="p-url-hint">{{.L.T "proxy.field.url.hint"}}</p>
+    </div>
+    <div class="field">
+      <label class="field__label" for="p-auth">{{.L.T "proxy.auth"}}</label>
+      <select class="input" id="p-auth" name="auth">
+        {{range $k := (list "bearer" "header" "query" "path")}}<option value="{{$k}}" {{if eq $k $f.Auth}}selected{{end}}>{{$.L.T (printf "proxy.auth.%s" $k)}}</option>{{end}}
+      </select>
+    </div>
+    <div class="field">
+      <label class="field__label" for="p-authname">{{.L.T "proxy.field.authname"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+      <input class="input mono" id="p-authname" name="auth_name" maxlength="64" value="{{$f.AuthName}}" placeholder="X-Api-Key" autocomplete="off" spellcheck="false" aria-describedby="p-authname-hint">
+      <p class="hint" id="p-authname-hint">{{.L.T "proxy.field.authname.hint"}}</p>
+    </div>
+    <fieldset class="field">
+      <legend class="field__label">{{.L.T "proxy.methods"}}</legend>
+      <div class="proxy-methods">
+        {{range .D.Methods}}<label class="check"><input type="checkbox" name="methods" value="{{.}}" {{if index $f.Methods .}}checked{{end}}><span class="mono">{{.}}</span></label>{{end}}
+      </div>
+    </fieldset>
+    <div class="field">
+      <label class="field__label" for="p-paths">{{.L.T "proxy.paths"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+      <textarea class="input mono" id="p-paths" name="paths" rows="3" placeholder="/chat/completions" spellcheck="false" aria-describedby="p-paths-hint">{{$f.Paths}}</textarea>
+      <p class="hint" id="p-paths-hint">{{.L.T "proxy.field.paths.hint"}}</p>
+    </div>
+    <div class="field">
+      <label class="field__label" for="p-hosts">{{.L.T "proxy.field.hosts"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+      <textarea class="input mono" id="p-hosts" name="allowed_hosts" rows="2" spellcheck="false" aria-describedby="p-hosts-hint">{{$f.AllowedHosts}}</textarea>
+      <p class="hint" id="p-hosts-hint">{{.L.T "proxy.field.hosts.hint"}}</p>
+    </div>
+    <label class="check"><input type="checkbox" name="enabled" value="1" {{if $f.Enabled}}checked{{end}}><span>{{.L.T "proxy.field.enabled"}}</span></label>
+    <p class="hint">{{.L.T "proxy.form.keyhint"}}</p>
+    <div class="channel__actions">
+      <button class="btn btn--primary" type="submit">{{if $f.Editing}}{{.L.T "form.save"}}{{else}}{{.L.T "proxy.form.create"}}{{end}}</button>
+      {{if $f.Editing}}<a class="btn btn--ghost" href="{{$base}}">{{.L.T "proxy.form.cancel"}}</a>{{end}}
+    </div>
+  </form>
+</section>
+
+<section class="section" aria-labelledby="proxy-howto-h">
+  <details class="howto">
+    <summary id="proxy-howto-h">{{.L.T "proxy.howto"}}</summary>
+    <p class="small">{{.L.T "proxy.howto.text"}}</p>
+    <pre class="code code--tall" id="proxy-snippet"><code>const res = await fetch('/_dropsite/proxy/openai/chat/completions', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: question }] }),
+});
+const data = await res.json();</code></pre>
+    <button class="btn btn--small" type="button" data-copy="#proxy-snippet" data-copied="{{.L.T "copy.done"}}">{{.L.T "copy.button"}}</button>
+  </details>
+</section>
+{{end}}

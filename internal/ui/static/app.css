@@ -1465,3 +1465,12 @@ a.xdomain__host { text-decoration: none; border-bottom: 2px solid var(--c-ink); 
 /* Blocks that used to split into a main and a side column stack in one column. */
 .site-page .domains__grid,
 .site-page .forms-summary__grid { grid-template-columns: minmax(0, 1fr); }
+
+/* ---- API keys (secret proxy) ------------------------------------------- */
+
+.proxy-warning { margin-bottom: var(--s-6); max-width: 60rem; }
+.proxy__facts { grid-column: 1 / -1; margin: 0; }
+.proxy__key { grid-column: 1 / -1; }
+.proxy-methods { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4); }
+.proxy-form { max-width: 40rem; background: var(--c-surface); }
+.proxy-form fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }

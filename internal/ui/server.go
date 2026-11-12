@@ -100,6 +100,12 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /sites/{ref}/forms/channels/{id}/toggle", s.user(s.toggleChannel))
 	mux.HandleFunc("POST /sites/{ref}/forms/channels/{id}/delete", s.user(s.deleteChannel))
 	mux.HandleFunc("POST /sites/{ref}/forms/channels/{id}/secret", s.user(s.rotateChannel))
+	mux.HandleFunc("GET /sites/{ref}/proxy", s.user(s.proxyPage))
+	mux.HandleFunc("POST /sites/{ref}/proxy", s.user(s.saveProxy))
+	mux.HandleFunc("GET /sites/{ref}/proxy/{name}/edit", s.user(s.editProxy))
+	mux.HandleFunc("POST /sites/{ref}/proxy/{name}/secret", s.user(s.setProxySecret))
+	mux.HandleFunc("POST /sites/{ref}/proxy/{name}/secret/delete", s.user(s.clearProxySecret))
+	mux.HandleFunc("POST /sites/{ref}/proxy/{name}/delete", s.user(s.deleteProxy))
 
 	mux.HandleFunc("GET /connect", s.user(s.connectPage))
 	mux.HandleFunc("POST /connect/code", s.user(s.createCode))

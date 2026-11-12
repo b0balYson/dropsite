@@ -72,6 +72,8 @@
 
 {{template "site_forms" .}}
 
+{{template "site_proxy" .}}
+
 <section class="section site-block" aria-labelledby="settings-h">
   <h2 class="section-title" id="settings-h">{{.L.T "site.settings"}}</h2>
     <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/settings">
