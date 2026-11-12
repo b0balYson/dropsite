@@ -62,7 +62,7 @@ func New(svc *service.Service, o Options) http.Handler {
 			return r.RemoteAddr
 		}
 	}
-	server := mcp.NewServer(brand.Version, resolver(svc, o.Logger), mcp.Options{Files: true, Instructions: instructions})
+	server := mcp.NewServer(brand.Version, resolver(svc, o.Logger), mcp.Options{Files: true, Cabinet: true, Instructions: instructions})
 	stream := sdk.NewStreamableHTTPHandler(func(*http.Request) *sdk.Server { return server },
 		&sdk.StreamableHTTPOptions{Stateless: true, JSONResponse: true, MaxRequestBodyBytes: maxBodyBytes})
 	verify := func(ctx context.Context, token string, r *http.Request) (*auth.TokenInfo, error) {

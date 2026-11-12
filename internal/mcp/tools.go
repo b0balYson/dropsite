@@ -103,6 +103,7 @@ func (t tools) register(s *sdk.Server, o Options) {
 				"The first publication creates a site and remembers it in .dropsite.json inside the folder; " +
 				"later publications of the same folder update that site."}, t.deployFolder)
 	}
+	t.registerCabinet(s, o)
 }
 
 func (t tools) listSites(ctx context.Context, req *sdk.CallToolRequest, _ struct{}) (*sdk.CallToolResult, sitesOut, error) {
