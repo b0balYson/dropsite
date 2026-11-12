@@ -24,7 +24,9 @@ func TestWorkflow(t *testing.T) {
 
 	st, body = owner.json(http.MethodPost, "/sites/"+siteID+"/clone", map[string]string{"title": "E2E Coffee 2"})
 	must(t, st, http.StatusCreated, body, "clone")
-	s.expectBody(hostOf(str(body, "url")), "/", http.StatusOK, "E2E Coffee 2")
+	// A copy serves the same files: the new title names the site, it does not
+	// rewrite its pages.
+	s.expectBody(hostOf(str(body, "url")), "/", http.StatusOK, "E2E Coffee")
 
 	st, body = owner.json(http.MethodPost, "/uploads", map[string]string{"site": siteID})
 	must(t, st, http.StatusCreated, body, "begin upload")

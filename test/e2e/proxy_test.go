@@ -65,7 +65,8 @@ func TestSecretProxyRouting(t *testing.T) {
 		return errCode(out)
 	}
 
-	resp, b := call(http.MethodPost, "https://"+host, []byte(`{"q":1}`))
+	// The stack listens on a non-default port, so the page's origin carries it.
+	resp, b := call(http.MethodPost, "https://"+host+":"+httpsPort, []byte(`{"q":1}`))
 	if resp.StatusCode != http.StatusServiceUnavailable || errOf(b) != "proxy_secret_missing" {
 		t.Fatalf("no key: %d %s", resp.StatusCode, b)
 	}
