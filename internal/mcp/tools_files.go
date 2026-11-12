@@ -52,11 +52,10 @@ const fetchAdvice = " Put images, fonts, CSS and JS inside the site (fetch downl
 	"addresses; large photos are scaled down to 2000 px wide) instead of linking to other servers, so the site " +
 	"stays fast and keeps working."
 
-// registerFiles adds the tools for reading and editing site files. They are
-// served by the remote server (o.Files); the backend must implement
-// SiteFilesBackend.
+// registerFiles adds the tools for reading and editing site files
+// (o.SiteFiles); the backend must implement SiteFilesBackend.
 func (t tools) registerFiles(s *sdk.Server, o Options) {
-	if !o.Files {
+	if !o.SiteFiles {
 		return
 	}
 	sdk.AddTool(s, &sdk.Tool{Name: "list_site_files", Annotations: readOnly("List site files"),

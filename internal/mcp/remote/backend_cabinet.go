@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"golang.org/x/net/idna"
-
 	"github.com/b0balYson/dropsite/internal/domain"
 	"github.com/b0balYson/dropsite/internal/mcp"
 	"github.com/b0balYson/dropsite/internal/service"
@@ -76,14 +74,7 @@ func (b backend) SetSiteAccess(ctx context.Context, ref string, c mcp.AccessChan
 }
 
 func (b backend) toDomain(h domain.Hostname) mcp.Domain {
-	d := mcp.Domain{
-		Domain: h.Hostname, Status: string(h.Status()), RejectReason: h.RejectReason,
-		URL: b.svc.SiteURL(h.Hostname), AddedAt: stamp(&h.CreatedAt),
-	}
-	if u, err := idna.Display.ToUnicode(h.Hostname); err == nil && u != h.Hostname {
-		d.DisplayName = u
-	}
-	return d
+	return mcp.NewDomain(h.Hostname, string(h.Status()), h.RejectReason, b.svc.SiteURL(h.Hostname), h.CreatedAt)
 }
 
 // dnsSetup turns the service's DNS targets into records and plain steps.
@@ -236,7 +227,6 @@ func (b backend) ListConnections(ctx context.Context) ([]mcp.Connection, error) 
 	}
 	return out, nil
 }
-
 
 func (b backend) RevokeConnection(ctx context.Context, kind string, id int64) error {
 	var err error

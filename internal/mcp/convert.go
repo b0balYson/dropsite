@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"golang.org/x/net/idna"
 )
 
 // Conversions and plain-language texts shared by the remote backend
@@ -95,6 +97,15 @@ func NewSiteAccess(siteID, url string, noindex, protected bool, expiresAt *time.
 		SiteID: siteID, URL: url, HiddenFromSearch: noindex, PasswordProtected: protected,
 		ExpiresAt: Stamp(expiresAt), LastDay: LastDay(expiresAt),
 	}
+}
+
+// NewDomain describes an own domain; url is the site's address on it.
+func NewDomain(host, status, rejectReason, url string, addedAt time.Time) Domain {
+	d := Domain{Domain: host, Status: status, RejectReason: rejectReason, URL: url, AddedAt: Stamp(&addedAt)}
+	if u, err := idna.Display.ToUnicode(host); err == nil && u != host {
+		d.DisplayName = u
+	}
+	return d
 }
 
 // NewDNSSetup turns the DNS targets of a site into records and plain steps.

@@ -106,8 +106,8 @@ type UploadStart struct {
 	Base  string
 }
 
-// SiteFilesBackend reads and edits the files of published sites (remote
-// server). The tools fail when the backend does not implement it.
+// SiteFilesBackend reads and edits the files of published sites. The tools
+// fail when the backend does not implement it.
 type SiteFilesBackend interface {
 	ListSiteFiles(ctx context.Context, ref, deployID, prefix string) (SiteFileList, error)
 	ReadSiteFiles(ctx context.Context, ref, deployID string, paths []string) (SiteFileRead, error)

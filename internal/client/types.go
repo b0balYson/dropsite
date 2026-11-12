@@ -25,9 +25,14 @@ type Limits struct {
 
 // Me is the response of GET /me.
 type Me struct {
-	User      User   `json:"user"`
-	Limits    Limits `json:"limits"`
-	SiteCount int    `json:"site_count"`
+	User              User   `json:"user"`
+	Limits            Limits `json:"limits"`
+	SiteCount         int    `json:"site_count"`
+	MaxDomainsPerSite int    `json:"max_domains_per_site"`
+	MaxInlineBytes    int64  `json:"max_inline_bytes"`
+	UIURL             string `json:"ui_url"`
+	// RootSite is set for administrators when a site is on the root domain.
+	RootSite *Site `json:"root_site"`
 }
 
 // Hostname is one address of a site. Kind is default, slug, apex or
@@ -84,10 +89,14 @@ type SiteItem struct {
 	Slug         *string    `json:"slug"`
 	OwnerID      string     `json:"owner_id"`
 	OwnerEmail   string     `json:"owner_email"`
+	Hostnames    []Hostname `json:"hostnames"`
 	LastDeployAt *time.Time `json:"last_deploy_at"`
 	SizeBytes    int64      `json:"size_bytes"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
+	Noindex      bool       `json:"noindex"`
+	Protected    bool       `json:"protected"`
+	ExpiresAt    *time.Time `json:"expires_at"`
 }
 
 // Token is an API token's metadata; the secret value is never listed.
