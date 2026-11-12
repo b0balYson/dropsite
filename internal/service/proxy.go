@@ -28,6 +28,7 @@ type proxyState struct {
 	proxyClient    *http.Client
 	proxyIPLimit   *ratelimit.Window
 	proxySiteLimit *ratelimit.Window
+	proxyRejected  *rejectedUsage
 }
 
 func newProxyState(d Deps, now func() time.Time) proxyState {
@@ -39,6 +40,7 @@ func newProxyState(d Deps, now func() time.Time) proxyState {
 		proxyClient:    newProxyClient(tr),
 		proxyIPLimit:   ratelimit.New(ProxyCallsPerIP, ProxyCallsPerIPWindow).WithClock(now),
 		proxySiteLimit: ratelimit.New(ProxyCallsPerSite, ProxyCallsSiteWindow).WithClock(now),
+		proxyRejected:  newRejectedUsage(),
 	}
 }
 
@@ -98,6 +100,7 @@ func (s *Service) ListProxyEndpoints(ctx context.Context, a Actor, ref string) (
 	if err != nil {
 		return nil, err
 	}
+	s.flushProxyRejected(ctx)
 	eps, err := s.repo.ListProxyEndpoints(ctx, site.ID)
 	if err != nil {
 		return nil, err
@@ -131,6 +134,7 @@ func (s *Service) proxyEndpointOf(ctx context.Context, a Actor, ref, name string
 	if err != nil {
 		return domain.Site{}, domain.ProxyEndpoint{}, domain.ErrNotFound
 	}
+	s.flushProxyRejected(ctx)
 	e, err := s.repo.GetProxyEndpoint(ctx, site.ID, n)
 	if err != nil {
 		return domain.Site{}, domain.ProxyEndpoint{}, err
