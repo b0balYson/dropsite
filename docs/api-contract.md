@@ -80,6 +80,7 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 | `DELETE /sites/{ref}/hostnames/{hostname}` | | `204`; only external domains, any status |
 | `GET /sites/{ref}/domain-setup` | | `{site_id, cname_target, server_ips[], max_domains}` |
 | `GET /sites/{ref}/stats` | `?days` (1–400, default 30) | `Stats` |
+| `GET /sites/{ref}/attachments` | | `{site_id, forms{names[], channels, working_channels, require_altcha}, counters{own, global}}`: forms that received stored submissions, delivery channels (working = confirmed, enabled, not paused), own and global counters |
 | `GET /sites/{ref}/counters` | | `Counters` |
 | `PATCH /sites/{ref}/counters` | `{yandex_metrica_id?, google_analytics_id?}`; `""` removes one | `Counters`; a published site gets a new release |
 | `GET /sites/{ref}/files` | `?deploy_id&prefix` | `{site_id, url, deploy_id, current, files: SiteFile[], total_files, total_bytes, truncated}` |

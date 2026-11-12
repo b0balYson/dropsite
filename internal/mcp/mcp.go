@@ -25,6 +25,8 @@ type Site struct {
 	LastDeployAt  string   `json:"last_deploy_at,omitempty"`
 	UpdatedAt     string   `json:"updated_at,omitempty"`
 	SiteExtras
+	// Attached is filled by get_site only.
+	Attached *SiteAttached `json:"attached,omitempty" jsonschema:"what is attached to the site: forms, delivery channels, counters (get_site only)"`
 }
 
 // Deploy is a release.

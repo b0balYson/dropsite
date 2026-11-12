@@ -1664,6 +1664,23 @@
         }
       }
     },
+    "/sites/{ref}/attachments": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SiteRef"
+        }
+      ],
+      "get": {
+        "operationId": "getSiteAttachments",
+        "summary": "What is attached to a site: forms, delivery channels, counters",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SiteAttachments" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
     "/sites/{ref}/counters": {
       "parameters": [
         {
@@ -4133,6 +4150,31 @@
           },
           "max_domains": {
             "type": "integer"
+          }
+        }
+      },
+      "SiteAttachments": {
+        "type": "object",
+        "required": ["site_id", "forms", "counters"],
+        "properties": {
+          "site_id": { "type": "string" },
+          "forms": {
+            "type": "object",
+            "required": ["names", "channels", "working_channels", "require_altcha"],
+            "properties": {
+              "names": { "type": "array", "items": { "type": "string" }, "description": "Forms that received submissions still stored, sorted" },
+              "channels": { "type": "integer", "description": "Delivery channels of the site" },
+              "working_channels": { "type": "integer", "description": "Channels that are confirmed, enabled and not paused" },
+              "require_altcha": { "type": "boolean" }
+            }
+          },
+          "counters": {
+            "type": "object",
+            "required": ["own", "global"],
+            "properties": {
+              "own": { "$ref": "#/components/schemas/CounterIDs" },
+              "global": { "$ref": "#/components/schemas/CounterIDs" }
+            }
           }
         }
       },

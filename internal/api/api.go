@@ -78,6 +78,7 @@ func (a *api) routes() []route {
 		{Method: http.MethodDelete, Path: "/sites/{ref}/hostnames/{hostname}", handle: a.removeHostname},
 		{Method: http.MethodGet, Path: "/sites/{ref}/domain-setup", handle: a.domainSetup},
 		{Method: http.MethodGet, Path: "/sites/{ref}/stats", handle: a.siteStats},
+		{Method: http.MethodGet, Path: "/sites/{ref}/attachments", handle: a.getSiteAttachments},
 		{Method: http.MethodGet, Path: "/sites/{ref}/counters", handle: a.getCounters},
 		{Method: http.MethodPatch, Path: "/sites/{ref}/counters", handle: a.updateCounters},
 		{Method: http.MethodGet, Path: "/sites/{ref}/files", handle: a.listSiteFiles},
