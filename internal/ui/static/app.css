@@ -1382,7 +1382,16 @@ a.xdomain__host { text-decoration: none; border-bottom: 2px solid var(--c-ink); 
 }
 @media (min-width: 60rem) {
   .channel { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
-  .channel__verify { grid-column: 1 / -1; }
+  .channel__verify, .channel__paused { grid-column: 1 / -1; }
+  .channel__paused { order: 1; } /* below the row of head and actions */
+}
+.channel__paused {
+  margin: 0;
+  max-width: 60ch;
+  padding: var(--s-2) var(--s-3);
+  border-left: 4px solid var(--c-error);
+  background: var(--c-error-bg);
+  color: var(--c-ink);
 }
 .channel--off .channel__head { color: var(--c-ink-2); }
 .channel__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); min-width: 0; }

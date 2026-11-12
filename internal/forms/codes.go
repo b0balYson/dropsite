@@ -4,14 +4,9 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
-	"encoding/csv"
 	"encoding/hex"
-	"io"
 	"math/big"
 	"strings"
-	"time"
-
-	"github.com/b0balYson/dropsite/internal/domain"
 )
 
 const (
@@ -54,54 +49,6 @@ func HashCode(code string) []byte {
 // MatchCode compares a typed code with a stored hash in constant time.
 func MatchCode(hash []byte, code string) bool {
 	return len(hash) > 0 && subtle.ConstantTimeCompare(hash, HashCode(code)) == 1
-}
-
-// csvRisky are leading characters that spreadsheets interpret as formulas.
-const csvRisky = "=+-@\t\r"
-
-func csvCell(s string) string {
-	if s != "" && strings.ContainsRune(csvRisky, rune(s[0])) {
-		return "'" + s
-	}
-	return s
-}
-
-// WriteCSV writes submissions as CSV: time, form, host and one column per
-// field name (in first-seen order across all rows).
-func WriteCSV(w io.Writer, subs []domain.FormSubmission) error {
-	var names []string
-	seen := map[string]bool{}
-	for _, s := range subs {
-		for _, f := range s.Fields {
-			if !seen[f.Name] {
-				seen[f.Name] = true
-				names = append(names, f.Name)
-			}
-		}
-	}
-	cw := csv.NewWriter(w)
-	header := []string{"created_at", "form", "host"}
-	for _, n := range names {
-		header = append(header, csvCell(n))
-	}
-	if err := cw.Write(header); err != nil {
-		return err
-	}
-	for _, s := range subs {
-		vals := map[string]string{}
-		for _, f := range s.Fields {
-			vals[f.Name] = f.Value
-		}
-		row := []string{s.CreatedAt.UTC().Format(time.RFC3339), s.Form, s.Host}
-		for _, n := range names {
-			row = append(row, csvCell(vals[n]))
-		}
-		if err := cw.Write(row); err != nil {
-			return err
-		}
-	}
-	cw.Flush()
-	return cw.Error()
 }
 
 // hexOf is a small helper for tests and signatures.

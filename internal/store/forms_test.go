@@ -123,13 +123,19 @@ func TestFormSubmissionsQueueAndPurge(t *testing.T) {
 	}
 
 	now := t0.Add(time.Hour)
-	jobs, err := db.ClaimDueDeliveries(ctx, now, now.Add(2*time.Minute), 2)
-	if err != nil || len(jobs) != 2 || jobs[0].Channel.Target != "https://h.test/" || jobs[0].Submission.Fields[0].Value != "Ann" {
+	// One delivery per channel per claim; the oldest first.
+	jobs, err := db.ClaimDueDeliveries(ctx, DeliveryClaim{Now: now, LeaseUntil: now.Add(2 * time.Minute), Limit: 2})
+	if err != nil || len(jobs) != 1 || jobs[0].Channel.Target != "https://h.test/" || jobs[0].Submission.Fields[0].Value != "Ann" ||
+		!jobs[0].Submission.CreatedAt.Equal(t0) {
 		t.Fatalf("claim %+v %v", jobs, err)
 	}
-	again, _ := db.ClaimDueDeliveries(ctx, now, now.Add(2*time.Minute), 10)
-	if len(again) != 1 {
-		t.Fatalf("leased jobs were claimed again: %d", len(again))
+	busy := DeliveryClaim{Now: now, LeaseUntil: now.Add(2 * time.Minute), Limit: 10, SkipChannels: []int64{active}}
+	if again, _ := db.ClaimDueDeliveries(ctx, busy); len(again) != 0 {
+		t.Fatalf("busy channel claimed: %d", len(again))
+	}
+	again, _ := db.ClaimDueDeliveries(ctx, DeliveryClaim{Now: now, LeaseUntil: now.Add(2 * time.Minute), Limit: 10})
+	if len(again) != 1 || again[0].Delivery.ID == jobs[0].Delivery.ID {
+		t.Fatalf("leased job claimed again: %+v", again)
 	}
 	d := jobs[0].Delivery
 	sent := now

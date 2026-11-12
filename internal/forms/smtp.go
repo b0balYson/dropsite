@@ -111,7 +111,7 @@ func dialSMTP(ctx context.Context, c SMTPConfig) (*smtp.Client, error) {
 		conn, err = d.DialContext(ctx, "tcp", addr)
 	}
 	if err != nil {
-		return nil, Temporary("smtp: connection failed: " + err.Error())
+		return nil, withDetail(false, errSMTPUnreachable, "smtp: connection failed: "+err.Error())
 	}
 	_ = conn.SetDeadline(time.Now().Add(smtpTimeout))
 	cl, err := smtp.NewClient(conn, c.Host)
@@ -128,7 +128,7 @@ func converse(cl *smtp.Client, c SMTPConfig, from, to string, msg []byte) error 
 	}
 	if c.Security == SMTPStartTLS {
 		if ok, _ := cl.Extension("STARTTLS"); !ok {
-			return Permanent("smtp: the server does not offer STARTTLS")
+			return withDetail(true, errSMTPRejected, "smtp: the server does not offer STARTTLS")
 		}
 		if err := cl.StartTLS(c.tlsConfig()); err != nil {
 			return err
@@ -162,6 +162,15 @@ func heloName(from string) string {
 	return from[strings.LastIndexByte(from, '@')+1:]
 }
 
+// Public messages of SMTP failures: what the mail server said stays in the
+// server log (SendError.Detail).
+const (
+	errSMTPUnreachable = "e-mail: the mail server of this installation is unreachable"
+	errSMTPRejected    = "e-mail: the mail server of this installation refused the message"
+	errSMTPTemporary   = "e-mail: the mail server of this installation is temporarily refusing messages"
+	errSMTPFailed      = "e-mail: sending failed"
+)
+
 // smtpError classifies a protocol error: 5xx replies are permanent.
 func smtpError(err error) error {
 	var se *SendError
@@ -170,13 +179,13 @@ func smtpError(err error) error {
 	}
 	var te *textproto.Error
 	if errors.As(err, &te) {
-		msg := fmt.Sprintf("smtp: %d %s", te.Code, te.Msg)
+		detail := fmt.Sprintf("smtp: %d %s", te.Code, te.Msg)
 		if te.Code >= 500 {
-			return Permanent(msg)
+			return withDetail(true, errSMTPRejected, detail)
 		}
-		return Temporary(msg)
+		return withDetail(false, errSMTPTemporary, detail)
 	}
-	return Temporary("smtp: " + err.Error())
+	return withDetail(false, errSMTPFailed, "smtp: "+err.Error())
 }
 
 func buildMessage(from, to, subject, body string) ([]byte, error) {

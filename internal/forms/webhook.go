@@ -99,11 +99,43 @@ func ValidateWebhookURL(raw string, allow []netip.Prefix) (string, error) {
 	return u.String(), nil
 }
 
-// WebhookOptions configure the webhook client.
+// Webhook timeouts: a slow receiver holds a delivery slot for at most
+// DefaultWebhookTimeout.
+const (
+	DefaultWebhookTimeout = 10 * time.Second
+	webhookDialTimeout    = 3 * time.Second
+	webhookHeaderTimeout  = 8 * time.Second
+)
+
+// WebhookOptions configure the webhook client. Deny lists networks that are
+// refused even when Allow covers them: the addresses of the control host
+// itself, so an allowlisted private network never exposes its internal
+// listener.
 type WebhookOptions struct {
 	Allow   []netip.Prefix
+	Deny    []netip.Prefix
 	Timeout time.Duration
 	RootCAs *x509.CertPool // tests
+}
+
+// SelfPrefixes returns the networks that mean "this host": loopback and
+// unspecified ranges and every address of the local interfaces.
+func SelfPrefixes(addrs []net.Addr) []netip.Prefix {
+	out := []netip.Prefix{
+		netip.MustParsePrefix("127.0.0.0/8"), netip.MustParsePrefix("::1/128"),
+		netip.MustParsePrefix("0.0.0.0/8"), netip.MustParsePrefix("::/128"),
+	}
+	for _, a := range addrs {
+		n, ok := a.(*net.IPNet)
+		if !ok {
+			continue
+		}
+		if ip, ok := netip.AddrFromSlice(n.IP); ok {
+			ip = ip.Unmap()
+			out = append(out, netip.PrefixFrom(ip, ip.BitLen()))
+		}
+	}
+	return out
 }
 
 // WebhookClient posts signed submissions with SSRF protection: every
@@ -117,11 +149,12 @@ type WebhookClient struct {
 // NewWebhookClient builds the client.
 func NewWebhookClient(o WebhookOptions) *WebhookClient {
 	if o.Timeout <= 0 {
-		o.Timeout = 15 * time.Second
+		o.Timeout = DefaultWebhookTimeout
 	}
 	allow := append([]netip.Prefix(nil), o.Allow...)
-	public := func(ip netip.Addr) bool { return PublicAddr(ip, allow) }
-	allowedOnly := func(ip netip.Addr) bool { return inPrefixes(ip.Unmap(), allow) }
+	deny := append([]netip.Prefix(nil), o.Deny...)
+	public := func(ip netip.Addr) bool { return !inPrefixes(ip.Unmap(), deny) && PublicAddr(ip, allow) }
+	allowedOnly := func(ip netip.Addr) bool { return !inPrefixes(ip.Unmap(), deny) && inPrefixes(ip.Unmap(), allow) }
 	return &WebhookClient{
 		https: newGuardedClient(public, o),
 		plain: newGuardedClient(allowedOnly, o),
@@ -130,7 +163,7 @@ func NewWebhookClient(o WebhookOptions) *WebhookClient {
 
 func newGuardedClient(ok func(netip.Addr) bool, o WebhookOptions) *http.Client {
 	dialer := &net.Dialer{
-		Timeout: 5 * time.Second,
+		Timeout: webhookDialTimeout,
 		Control: func(_, address string, _ syscall.RawConn) error {
 			ap, err := netip.ParseAddrPort(address)
 			if err != nil || !ok(ap.Addr()) {
@@ -144,7 +177,7 @@ func newGuardedClient(ok func(netip.Addr) bool, o WebhookOptions) *http.Client {
 		DialContext:           dialer.DialContext,
 		TLSClientConfig:       &tls.Config{MinVersion: tls.VersionTLS12, RootCAs: o.RootCAs},
 		TLSHandshakeTimeout:   5 * time.Second,
-		ResponseHeaderTimeout: 10 * time.Second,
+		ResponseHeaderTimeout: webhookHeaderTimeout,
 		MaxIdleConns:          16,
 		IdleConnTimeout:       30 * time.Second,
 		ForceAttemptHTTP2:     true,

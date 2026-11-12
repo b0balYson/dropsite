@@ -167,7 +167,7 @@ In this mode every release also gets its own preview address `https://p-<release
 | `STATS_INTERVAL` | no | `1m` | How often control reads the sites access log (1s to 1h) |
 | `STATS_LOG_FILE` | no | `/logs/sites-access.log` | Sites access log inside control; `off` disables statistics |
 | `TELEGRAM_API_URL` | no | `https://api.telegram.org` | Bot API address for form delivery (proxy or tests) |
-| `FORM_WEBHOOK_ALLOW_CIDRS` | no | | Private networks form webhooks may reach (test stacks only) |
+| `FORM_WEBHOOK_ALLOW_CIDRS` | no | | Private networks form webhooks may reach — for every user (test stacks only; the control host itself is always refused) |
 
 ## Operations
 

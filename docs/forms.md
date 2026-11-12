@@ -71,7 +71,7 @@ The widget shows its status in Russian or English according to `<html lang>` or 
 Open the site in the web interface: the **Submissions** block shows the channels and the latest submissions; **Channels and all submissions** opens the full screen.
 
 - **Telegram.** Leave the chat ID empty and press *Add Telegram*: you get a `t.me/<bot>?start=<code>` link; open it and press *Start* in the chat that should receive submissions (for a group, add the bot to the group first and send the `/start <code>` command there). Alternatively enter a chat ID: the bot sends a 6-digit code to that chat, enter it on the screen. The bot can only write to chats where it was started or added.
-- **E-mail.** Enter an address; a 6-digit code arrives by mail. Codes work for 30 minutes and 5 attempts.
+- **E-mail.** Enter an address; a 6-digit code arrives by mail (subject "dropsite: код подтверждения / confirmation code", the site address is in the body). Codes work for 30 minutes and 5 attempts. If the mail server fails, you see a general message; the administrator finds the server's reply in the control log.
 - **Webhook.** Enter an `https://` address. The signing secret is shown once (rotate it any time). Every submission is a `POST` with JSON:
 
   ```json
@@ -79,22 +79,30 @@ Open the site in the web interface: the **Submissions** block shows the channels
    "created_at": "2026-11-12T10:00:00Z", "fields": {"name": "Ann"}, "field_list": [{"name": "name", "value": "Ann"}]}
   ```
 
-  and the header `X-Dropsite-Signature: sha256=<hex HMAC-SHA256 of the raw body with your secret>`. Verify it before trusting the body; use `id` to drop duplicates. Answer 2xx. Redirects are not followed; 408, 429 and 5xx are retried, other 4xx are final. Addresses in private, loopback, link-local and other reserved networks are refused, also when a public name resolves to them.
+  and the header `X-Dropsite-Signature: sha256=<hex HMAC-SHA256 of the raw body with your secret>`. Verify it before trusting the body; use `id` to drop duplicates. Answer 2xx within 10 seconds (8 seconds to the response headers). Redirects are not followed; 408, 429, 5xx and timeouts are retried, other 4xx are final. Addresses in private, loopback, link-local and other reserved networks are refused, also when a public name resolves to them.
 
-Delivery runs in the background: 8 attempts with growing pauses (30 s, 1 min, 2 min … about 2 hours in total). Each submission shows its status per channel: queued, delivered or failed with the last error. Submissions are stored even when no channel is connected. **Download CSV** exports up to 10 000 newest submissions; cells starting with `=`, `+`, `-` or `@` get a leading apostrophe so spreadsheets do not run them as formulas.
+  **Pause after failures.** After 10 failed attempts in a row the webhook channel is *paused*: nothing is sent to it, its queued submissions wait, and the channel shows "paused" with the time and the reason (the API returns `paused_at` and `consecutive_failures`). Fix the receiver and press **Resume** (API: `PATCH …/channels/{id}` with `{"enabled": true}`); queued submissions are then sent with the remaining attempts. A successful delivery resets the counter. Telegram and e-mail channels are not paused: their servers are shared by the whole installation.
+
+Delivery runs in the background: 8 attempts with growing pauses (30 s, 1 min, 2 min … about 2 hours in total). Each submission shows its status per channel: queued, delivered, failed with the last error, or cancelled. Turning a channel off cancels its queued submissions (they are not sent when it is turned on again); deleting a site cancels everything queued for it. Submissions are stored even when no channel is connected.
+
+The installation sends at most 8 deliveries at a time, at most 2 per site and 1 per channel, and takes sites in turn, so slow receivers of one site do not hold up the others.
+
+**Download CSV** exports up to 10 000 newest submissions (and at most 64 MB; a larger export ends at the last whole row). Columns: `created_at`, `form`, `host`, then one column per field name — the 100 most frequent names of the export — and, if some names did not get a column, `_other` with the remaining fields of the row as a JSON object. Cells starting with `=`, `+`, `-` or `@` get a leading apostrophe so spreadsheets do not run them as formulas.
 
 ## For administrators
 
 **Settings → Form submissions**:
 
 - **Telegram bot token** from [@BotFather](https://t.me/BotFather); it is checked with Telegram when saved. One bot serves all sites. The bot binds chats through `getUpdates`, so do not set a webhook for it and do not use it in another program.
-- **SMTP**: server, port, encryption (`STARTTLS` on 587, `TLS` on 465, or none for a local relay), optional username and password, sender address. Owners confirm recipient addresses with a code, so the server cannot be used to mail arbitrary people.
+- **SMTP**: server, port, encryption (`STARTTLS` on 587, `TLS` on 465, or none for a local relay), optional username and password, sender address. Owners confirm recipient addresses with a code, so the server cannot be used to mail arbitrary people. Users and delivery statuses only show a general error ("the mail server refused the message", "…is unreachable"); the server's reply is written to the control log (`form channel confirmation e-mail failed`, `form delivery attempt failed`).
 - **Keep submissions** (default 90 days) and the base **Altcha difficulty** (default 100 000).
 
 The bot token, SMTP password and webhook secrets are encrypted with `/state/secrets.key` and never shown again after saving (only "set"). The key is not in backups: see [backup.md](backup.md#the-form-secrets-key).
 
-Limits: 20 submissions per IP in 10 minutes, 200 per site per hour, 60 Altcha puzzles per IP in 10 minutes, 10 channels per site, 10 new channels per user per hour. Counters live in memory and reset on restart.
+Limits: 20 submissions per IP in 10 minutes, 200 per site per hour, 60 Altcha puzzles per IP in 10 minutes, 10 channels per site, 10 new channels per user per hour. Confirmation codes (e-mail and Telegram by chat ID): 3 per recipient per 24 hours and 100 per hour for the whole installation, so the platform cannot be used to send messages to strangers. Counters live in memory and reset on restart.
 
 Environment (rarely needed): `TELEGRAM_API_URL` (Bot API address for a proxy), `FORM_WEBHOOK_ALLOW_CIDRS` (private networks webhooks may reach, plain `http://` allowed there; test stacks only).
+
+**`FORM_WEBHOOK_ALLOW_CIDRS` applies to every user.** Any user who can create a site can then point a webhook at any address in those networks and see the HTTP status in the delivery error: other containers of the compose stack, the Docker host (e.g. `172.17.0.1`), services of your LAN. The addresses of the control host itself (all its interfaces, loopback, `0.0.0.0`) are always refused, so its internal listener (`INTERNAL_ADDR`, used by Caddy's `ask` and the access check) and the admin listener cannot be reached even when an allowlisted network covers them. Keep the variable empty in production; on a test stack, list only the network of the test receiver.
 
 Caddy forwards `POST /_form/*` (body capped at 64 KiB) and `GET /_form/challenge` to `control` after the password check of protected sites: a password-protected site accepts forms only from visitors who signed in to it. `/_dropsite/altcha.js` is served like the rest of `/_dropsite/*` and needs no sign-in. While `control` is down forms answer 502 and sites keep working. These requests are not counted as page views in the statistics.

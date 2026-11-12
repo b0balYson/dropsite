@@ -30,8 +30,7 @@ const (
 	formExportLimit       = 10000
 	secretsKeyFile        = "secrets.key"
 	formChannelSecretCtx  = "form-channel:"
-	formDeliveryBatch     = 20
-	formDeliveryWorkers   = 4
+	formDeliveryWorkers   = 8
 	formDeliveryTimeout   = 15 * time.Second
 	formDeliveryLease     = 2 * time.Minute
 	formDeliveryMaxTries  = 8
@@ -90,12 +89,15 @@ type formState struct {
 	channelLimit  *ratelimit.Window
 	wake          chan struct{}
 	tgOffset      int64
+	inflight      *deliveryInflight
+	confirm       confirmLimits
 }
 
 func newFormState(d Deps, now func() time.Time) formState {
 	sender := d.FormSender
 	if sender == nil {
-		hooks := forms.NewWebhookClient(forms.WebhookOptions{Allow: d.Config.FormWebhookAllow, Timeout: formDeliveryTimeout})
+		hooks := forms.NewWebhookClient(forms.WebhookOptions{Allow: d.Config.FormWebhookAllow, Deny: selfPrefixes(),
+			Timeout: forms.DefaultWebhookTimeout})
 		sender = newNetSender(d.Config.TelegramAPIURL, hooks)
 	}
 	return formState{
@@ -106,6 +108,8 @@ func newFormState(d Deps, now func() time.Time) formState {
 		challengeIP:   ratelimit.New(FormChallengesPerIP, FormPostsPerIPWindow).WithClock(now),
 		channelLimit:  ratelimit.New(FormChannelsPerHour, time.Hour).WithClock(now),
 		wake:          make(chan struct{}, 1),
+		inflight:      newDeliveryInflight(),
+		confirm:       newConfirmLimits(now),
 	}
 }
 

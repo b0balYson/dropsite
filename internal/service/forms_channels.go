@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/url"
 	"strings"
 	"time"
@@ -149,9 +148,13 @@ func (s *Service) prepareTelegram(ctx context.Context, site domain.Site, ch *dom
 	if !forms.ValidChatID(chatID) {
 		return ChannelResult{}, channelErr(domain.CodeChannelInvalid, "chat ID must be a number such as 123456789 or -1001234567890")
 	}
+	if err := s.confirm.allow("telegram:" + chatID); err != nil {
+		return ChannelResult{}, err
+	}
 	code := forms.DigitCode()
 	text := fmt.Sprintf("dropsite: код подтверждения / confirmation code %s\n%s", code, s.siteHost(ctx, site))
 	if err := s.senders.TelegramSend(ctx, cfg.telegramToken, chatID, text); err != nil {
+		s.log.Warn("form channel confirmation message failed", "site", site.ID, "err", forms.ErrDetail(err))
 		return ChannelResult{}, channelErr(domain.CodeChannelInvalid,
 			"the bot could not write to this chat: open the bot in Telegram and press Start (or add it to the group) first")
 	}
@@ -159,6 +162,9 @@ func (s *Service) prepareTelegram(ctx context.Context, site domain.Site, ch *dom
 	s.setCode(ch, code)
 	return ChannelResult{}, nil
 }
+
+// confirmSubject is the subject of confirmation e-mails.
+const confirmSubject = "dropsite: код подтверждения / confirmation code"
 
 func (s *Service) prepareEmail(ctx context.Context, site domain.Site, ch *domain.FormChannel, target string) error {
 	cfg, err := s.formConfig(ctx)
@@ -172,12 +178,18 @@ func (s *Service) prepareEmail(ctx context.Context, site domain.Site, ch *domain
 	if !ok {
 		return channelErr(domain.CodeChannelInvalid, "enter a plain e-mail address such as sales@example.com")
 	}
+	if err := s.confirm.allow("email:" + addr); err != nil {
+		return err
+	}
 	code := forms.DigitCode()
 	host := s.siteHost(ctx, site)
-	body := fmt.Sprintf("Код подтверждения: %s\nConfirmation code: %s\n\n%s\n", code, code, host)
-	if err := s.senders.Email(ctx, cfg.smtp, addr, "dropsite: "+host, body); err != nil {
-		s.log.Warn("form channel confirmation e-mail failed", "site", site.ID, "err", errText(err))
-		return channelErr(domain.CodeChannelUnavailable, "the confirmation e-mail could not be sent: "+errText(err))
+	// The subject is fixed: the site address is chosen by the user and stays
+	// in the body as plain text.
+	body := fmt.Sprintf("Код подтверждения: %s\nConfirmation code: %s\n\nСайт / site: %s\n", code, code, host)
+	if err := s.senders.Email(ctx, cfg.smtp, addr, confirmSubject, body); err != nil {
+		s.log.Warn("form channel confirmation e-mail failed", "site", site.ID, "err", forms.ErrDetail(err))
+		return channelErr(domain.CodeChannelUnavailable,
+			"the confirmation e-mail could not be sent; try again later or ask the administrator to check the mail settings")
 	}
 	ch.Target = addr
 	s.setCode(ch, code)
@@ -208,40 +220,52 @@ func (s *Service) channelOf(ctx context.Context, a Actor, ref string, id int64) 
 }
 
 // VerifyFormChannel activates a pending channel with the code sent to it.
+// Every attempt is counted atomically before the code is compared, so
+// parallel guesses cannot exceed FormCodeMaxAttempts.
 func (s *Service) VerifyFormChannel(ctx context.Context, a Actor, ref string, id int64, code string) (domain.FormChannel, error) {
-	site, ch, err := s.channelOf(ctx, a, ref, id)
+	site, _, err := s.channelOf(ctx, a, ref, id)
 	if err != nil {
 		return domain.FormChannel{}, err
 	}
 	now := s.now()
-	if ch.Status != domain.ChannelPending || ch.Target == "" || len(ch.VerifyHash) == 0 ||
-		ch.VerifyExpiresAt == nil || !now.Before(*ch.VerifyExpiresAt) {
-		return domain.FormChannel{}, errChannelCode
-	}
-	ch.UpdatedAt = now
-	if !forms.MatchCode(ch.VerifyHash, code) {
-		ch.VerifyAttempts++
-		if ch.VerifyAttempts >= FormCodeMaxAttempts {
-			ch.VerifyHash, ch.VerifyExpiresAt = nil, nil
-		}
-		if err := s.repo.UpdateFormChannel(ctx, ch); err != nil {
-			return domain.FormChannel{}, err
-		}
-		return domain.FormChannel{}, errChannelCode
-	}
-	ch.Status, ch.VerifyHash, ch.VerifyExpiresAt, ch.VerifyAttempts = domain.ChannelActive, nil, nil, 0
-	if err := s.repo.UpdateFormChannel(ctx, ch); err != nil {
+	ch, ok, err := s.repo.ConsumeVerifyAttempt(ctx, site.ID, id, FormCodeMaxAttempts, now)
+	if err != nil {
 		return domain.FormChannel{}, err
 	}
+	if !ok || ch.Target == "" || len(ch.VerifyHash) == 0 || ch.VerifyExpiresAt == nil ||
+		!now.Before(*ch.VerifyExpiresAt) || !forms.MatchCode(ch.VerifyHash, code) {
+		return domain.FormChannel{}, errChannelCode
+	}
+	activated, err := s.repo.ActivateFormChannel(ctx, site.ID, id, now)
+	if err != nil {
+		return domain.FormChannel{}, err
+	}
+	if !activated {
+		return domain.FormChannel{}, errChannelCode
+	}
 	s.audit(ctx, a, "form.channel.verify", siteTarget(site.ID), map[string]any{"channel_id": id, "kind": string(ch.Kind)})
+	ch, err = s.repo.GetFormChannel(ctx, site.ID, id)
+	if err != nil {
+		return domain.FormChannel{}, err
+	}
 	return public(ch), nil
 }
 
-// SetFormChannelEnabled switches delivery to a channel on or off.
+// SetFormChannelEnabled switches delivery to a channel on or off. Turning
+// a channel on also resumes it after the circuit breaker paused it; queued
+// deliveries of a channel turned off are cancelled.
 func (s *Service) SetFormChannelEnabled(ctx context.Context, a Actor, ref string, id int64, enabled bool) (domain.FormChannel, error) {
 	site, ch, err := s.channelOf(ctx, a, ref, id)
 	if err != nil {
 		return domain.FormChannel{}, err
+	}
+	if enabled && ch.PausedAt != nil {
+		if err := s.repo.ResumeFormChannel(ctx, site.ID, id, s.now()); err != nil {
+			return domain.FormChannel{}, err
+		}
+		ch.PausedAt, ch.ConsecutiveFailures = nil, 0
+		s.audit(ctx, a, "form.channel.resume", siteTarget(site.ID), map[string]any{"channel_id": id})
+		s.wakeDelivery()
 	}
 	if ch.Enabled == enabled {
 		return public(ch), nil
@@ -251,6 +275,7 @@ func (s *Service) SetFormChannelEnabled(ctx context.Context, a Actor, ref string
 		return domain.FormChannel{}, err
 	}
 	s.audit(ctx, a, "form.channel.update", siteTarget(site.ID), map[string]any{"channel_id": id, "enabled": enabled})
+	s.wakeDelivery() // cancel or resume its queue promptly
 	return public(ch), nil
 }
 
@@ -324,32 +349,6 @@ func (s *Service) ListFormNames(ctx context.Context, a Actor, ref string) ([]str
 		return nil, err
 	}
 	return s.repo.ListFormNames(ctx, site.ID)
-}
-
-// ExportFormSubmissions writes up to 10 000 newest submissions as CSV and
-// returns the site ID (for the file name).
-func (s *Service) ExportFormSubmissions(ctx context.Context, a Actor, ref, form string, w io.Writer) (string, error) {
-	site, err := s.resolveSite(ctx, a, ref)
-	if err != nil {
-		return "", err
-	}
-	var all []domain.FormSubmission
-	for offset := 0; offset < formExportLimit; offset += store.MaxPageSize {
-		page, _, err := s.repo.ListFormSubmissions(ctx, store.FormSubmissionFilter{
-			SiteID: site.ID, Form: form, Page: store.Page{Limit: store.MaxPageSize, Offset: offset},
-		})
-		if err != nil {
-			return "", err
-		}
-		all = append(all, page...)
-		if len(page) < store.MaxPageSize {
-			break
-		}
-	}
-	if err := forms.WriteCSV(w, all); err != nil {
-		return "", fmt.Errorf("write csv: %w", err)
-	}
-	return site.ID, nil
 }
 
 // purgeForms applies the retention setting (called by Housekeeping).

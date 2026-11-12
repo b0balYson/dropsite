@@ -10,51 +10,160 @@ import (
 	"github.com/b0balYson/dropsite/internal/store"
 )
 
-// RunFormDelivery delivers queued submissions and binds Telegram chats
-// until ctx is done. It wakes on new submissions and every few seconds.
+// Delivery scheduling. A continuous pool of formDeliveryWorkers attempts
+// runs at a time; a channel has at most one attempt in flight and a site at
+// most formDeliveryPerSite, and claims interleave sites, so one owner with
+// slow or failing receivers cannot hold up the others.
+const (
+	formDeliveryPerSite = 2
+	// formChannelPauseAfter consecutive failed attempts pause a webhook
+	// channel until its owner resumes it.
+	formChannelPauseAfter = 10
+)
+
+// deliveryInflight tracks attempts in flight per channel and per site.
+type deliveryInflight struct {
+	mu       sync.Mutex
+	channels map[int64]bool
+	sites    map[string]int
+}
+
+func newDeliveryInflight() *deliveryInflight {
+	return &deliveryInflight{channels: map[int64]bool{}, sites: map[string]int{}}
+}
+
+func (f *deliveryInflight) busyChannels() []int64 {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := make([]int64, 0, len(f.channels))
+	for id := range f.channels {
+		out = append(out, id)
+	}
+	return out
+}
+
+// take marks a job as in flight unless its channel or site is at its cap.
+func (f *deliveryInflight) take(j store.DeliveryJob) bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.channels[j.Channel.ID] || f.sites[j.Channel.SiteID] >= formDeliveryPerSite {
+		return false
+	}
+	f.channels[j.Channel.ID] = true
+	f.sites[j.Channel.SiteID]++
+	return true
+}
+
+func (f *deliveryInflight) release(j store.DeliveryJob) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.channels, j.Channel.ID)
+	if f.sites[j.Channel.SiteID]--; f.sites[j.Channel.SiteID] <= 0 {
+		delete(f.sites, j.Channel.SiteID)
+	}
+}
+
+// claimDeliveries leases up to slots due deliveries and marks them in flight.
+func (s *Service) claimDeliveries(ctx context.Context, slots int) ([]store.DeliveryJob, error) {
+	now := s.now()
+	return s.repo.ClaimDueDeliveries(ctx, store.DeliveryClaim{
+		Now: now, LeaseUntil: now.Add(formDeliveryLease), Limit: slots,
+		SkipChannels: s.inflight.busyChannels(), Accept: s.inflight.take,
+	})
+}
+
+// RunFormDelivery delivers queued submissions until ctx is done, keeping up
+// to formDeliveryWorkers attempts running. It wakes on new submissions, on
+// finished attempts and every few seconds; Telegram bindings are polled
+// separately so a slow Bot API call never stalls deliveries.
 func (s *Service) RunFormDelivery(ctx context.Context) {
+	var wg sync.WaitGroup
+	defer wg.Wait()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		s.runTelegramPoll(ctx)
+	}()
 	t := time.NewTicker(formPollInterval)
 	defer t.Stop()
+	done := make(chan struct{}, formDeliveryWorkers)
+	running := 0
 	for {
-		for {
-			n, err := s.DeliverDueForms(ctx)
-			if err != nil {
-				s.log.Error("form delivery failed", "err", err)
-			}
-			if err != nil || n < formDeliveryBatch {
-				break
-			}
-		}
-		if err := s.PollTelegramLinks(ctx); err != nil {
-			s.log.Warn("telegram binding poll failed", "err", errText(err))
+		if free := formDeliveryWorkers - running; free > 0 {
+			running += s.startDeliveries(ctx, free, &wg, done)
 		}
 		select {
 		case <-ctx.Done():
 			return
+		case <-done:
+			running--
 		case <-t.C:
 		case <-s.wake:
 		}
 	}
 }
 
-// DeliverDueForms sends one batch of due deliveries and returns its size.
+func (s *Service) startDeliveries(ctx context.Context, free int, wg *sync.WaitGroup, done chan<- struct{}) int {
+	jobs, err := s.claimDeliveries(ctx, free)
+	if err != nil {
+		s.log.Error("form delivery claim failed", "err", err)
+		return 0
+	}
+	if len(jobs) == 0 {
+		return 0
+	}
+	cfg, err := s.formConfig(ctx)
+	if err != nil {
+		s.log.Error("form delivery config failed", "err", err)
+		cfg = formConfig{} // attempts fail as "not configured" and are retried
+	}
+	for _, j := range jobs {
+		wg.Add(1)
+		go func(j store.DeliveryJob) {
+			defer wg.Done()
+			s.deliver(ctx, cfg, j)
+			s.inflight.release(j)
+			done <- struct{}{}
+		}(j)
+	}
+	return len(jobs)
+}
+
+func (s *Service) runTelegramPoll(ctx context.Context) {
+	t := time.NewTicker(formPollInterval)
+	defer t.Stop()
+	for {
+		if err := s.PollTelegramLinks(ctx); err != nil && ctx.Err() == nil {
+			s.log.Warn("telegram binding poll failed", "err", forms.ErrDetail(err))
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+	}
+}
+
+// DeliverDueForms runs one claim round synchronously (tests and tools) and
+// returns the number of attempts made.
 func (s *Service) DeliverDueForms(ctx context.Context) (int, error) {
-	now := s.now()
-	jobs, err := s.repo.ClaimDueDeliveries(ctx, now, now.Add(formDeliveryLease), formDeliveryBatch)
+	jobs, err := s.claimDeliveries(ctx, formDeliveryWorkers)
 	if err != nil || len(jobs) == 0 {
 		return 0, err
 	}
 	cfg, err := s.formConfig(ctx)
 	if err != nil {
+		for _, j := range jobs {
+			s.inflight.release(j)
+		}
 		return 0, err
 	}
-	sem := make(chan struct{}, formDeliveryWorkers)
 	var wg sync.WaitGroup
 	for _, j := range jobs {
 		wg.Add(1)
-		sem <- struct{}{}
 		go func(j store.DeliveryJob) {
-			defer func() { <-sem; wg.Done() }()
+			defer wg.Done()
+			defer s.inflight.release(j)
 			s.deliver(ctx, cfg, j)
 		}(j)
 	}
@@ -90,10 +199,32 @@ func (s *Service) deliver(ctx context.Context, cfg formConfig, j store.DeliveryJ
 	}
 	if err != nil {
 		s.log.Warn("form delivery attempt failed", "site", sub.SiteID, "submission", sub.ID,
-			"channel", j.Channel.ID, "kind", string(j.Channel.Kind), "attempt", d.Attempts, "err", errText(err))
+			"channel", j.Channel.ID, "kind", string(j.Channel.Kind), "attempt", d.Attempts, "err", forms.ErrDetail(err))
 	}
 	if err := s.repo.FinishDelivery(context.WithoutCancel(ctx), d); err != nil {
 		s.log.Error("store delivery result", "delivery", d.ID, "err", err)
+	}
+	s.recordChannelResult(context.WithoutCancel(ctx), j.Channel, err == nil)
+}
+
+// recordChannelResult feeds the circuit breaker of webhook channels: their
+// receivers are chosen by site owners, while Telegram and SMTP are shared
+// by the whole installation and their outages must not pause every channel.
+func (s *Service) recordChannelResult(ctx context.Context, ch domain.FormChannel, ok bool) {
+	if ch.Kind != domain.ChannelWebhook {
+		return
+	}
+	paused, err := s.repo.RecordChannelResult(ctx, ch.ID, ok, formChannelPauseAfter, s.now())
+	if err != nil {
+		s.log.Error("record channel result", "channel", ch.ID, "err", err)
+		return
+	}
+	if paused {
+		s.log.Warn("form channel paused after repeated failures", "site", ch.SiteID, "channel", ch.ID,
+			"failures", formChannelPauseAfter)
+		s.audit(ctx, Actor{}, "form.channel.pause", siteTarget(ch.SiteID), map[string]any{
+			"channel_id": ch.ID, "kind": string(ch.Kind), "failures": formChannelPauseAfter,
+		})
 	}
 }
 
@@ -181,6 +312,6 @@ func (s *Service) bindTelegram(ctx context.Context, cfg formConfig, ch domain.Fo
 	}
 	text := "Готово: заявки с сайта " + host + " будут приходить в этот чат.\nDone: submissions from " + host + " will arrive in this chat."
 	if err := s.senders.TelegramSend(ctx, cfg.telegramToken, chatID, text); err != nil {
-		s.log.Warn("telegram binding confirmation failed", "channel", ch.ID, "err", errText(err))
+		s.log.Warn("telegram binding confirmation failed", "channel", ch.ID, "err", forms.ErrDetail(err))
 	}
 }

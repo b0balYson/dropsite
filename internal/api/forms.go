@@ -1,7 +1,7 @@
 package api
 
 import (
-	"bytes"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -11,19 +11,22 @@ import (
 )
 
 type channelDTO struct {
-	ID        string    `json:"id"`
-	Kind      string    `json:"kind"`
-	Target    string    `json:"target"`
-	Status    string    `json:"status"`
-	Enabled   bool      `json:"enabled"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID      string `json:"id"`
+	Kind    string `json:"kind"`
+	Target  string `json:"target"`
+	Status  string `json:"status"`
+	Enabled bool   `json:"enabled"`
+	// Failures and PausedAt expose the circuit breaker.
+	Failures  int        `json:"consecutive_failures"`
+	PausedAt  *time.Time `json:"paused_at"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
 }
 
 func toChannel(c domain.FormChannel) channelDTO {
 	return channelDTO{
 		ID: strconv.FormatInt(c.ID, 10), Kind: string(c.Kind), Target: c.Target, Status: string(c.Status),
-		Enabled: c.Enabled, CreatedAt: c.CreatedAt, UpdatedAt: c.UpdatedAt,
+		Enabled: c.Enabled, Failures: c.ConsecutiveFailures, PausedAt: c.PausedAt, CreatedAt: c.CreatedAt, UpdatedAt: c.UpdatedAt,
 	}
 }
 
@@ -240,16 +243,22 @@ func (a *api) listSubmissions(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (a *api) exportSubmissions(w http.ResponseWriter, r *http.Request) error {
-	var buf bytes.Buffer
-	siteID, err := a.svc.ExportFormSubmissions(r.Context(), actorFrom(r.Context()), r.PathValue("ref"), r.URL.Query().Get("form"), &buf)
-	if err != nil {
-		return err
+	started := false
+	err := a.svc.ExportFormSubmissions(r.Context(), actorFrom(r.Context()), r.PathValue("ref"), r.URL.Query().Get("form"),
+		func(siteID string) io.Writer {
+			started = true
+			w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+			w.Header().Set("Content-Disposition", `attachment; filename="`+siteID+`-submissions.csv"`)
+			w.Header().Set("Cache-Control", "no-store")
+			w.WriteHeader(http.StatusOK)
+			return w
+		})
+	if err != nil && started {
+		// The status line is gone: the client sees a truncated file.
+		a.log.Warn("form export interrupted", "err", err)
+		return nil
 	}
-	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", `attachment; filename="`+siteID+`-submissions.csv"`)
-	w.WriteHeader(http.StatusOK)
-	_, _ = buf.WriteTo(w)
-	return nil
+	return err
 }
 
 type telegramSettingsDTO struct {

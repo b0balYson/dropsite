@@ -43,10 +43,10 @@ Token    {id, name, prefix, created_at, last_used_at|null, expires_at|null, revo
 Audit    {id, actor_id|null, actor_email, action, target, meta{}, ip, created_at}
 List     {items[], total}
 Stats    {site_id, from, to, days[{date, views, visitors}], totals{views, visitors}, top_pages[{name, views}], top_referrers[{name, views}]}
-Channel  {id, kind, target, status, enabled, created_at, updated_at}
+Channel  {id, kind, target, status, enabled, consecutive_failures, paused_at|null, created_at, updated_at}
                                                 kind: telegram | email | webhook; status: pending | active
 Submission {id, form, host, created_at, fields[{name, value}], deliveries[{channel_id, kind, target, status, attempts, last_error, next_attempt_at|null, sent_at|null}]}
-                                                delivery status: pending | sent | failed
+                                                delivery status: pending | sent | failed | cancelled
 FormSettings {telegram{bot, token_set}, smtp{host, port, username, password_set, from, security}, retention_days, altcha_max_number, secrets_unreadable}
 ```
 
@@ -74,14 +74,14 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 | `GET /sites/{ref}/stats` | `?days` (1–400, default 30) | `Stats` |
 | `GET /sites/{ref}/forms/channels` | | `List<Channel>` (no secrets) |
 | `POST /sites/{ref}/forms/channels` | `{kind, target?}` | `201 {channel: Channel, secret?, link?}` |
-| `PATCH /sites/{ref}/forms/channels/{id}` | `{enabled}` | `Channel` |
+| `PATCH /sites/{ref}/forms/channels/{id}` | `{enabled}` | `Channel`; `true` also resumes a paused channel |
 | `DELETE /sites/{ref}/forms/channels/{id}` | | `204` |
 | `POST /sites/{ref}/forms/channels/{id}/verify` | `{code}` | `Channel` |
 | `POST /sites/{ref}/forms/channels/{id}/secret` | | `{channel: Channel, secret}` (webhooks only) |
 | `GET /sites/{ref}/forms/settings` | | `{require_altcha}` |
 | `PATCH /sites/{ref}/forms/settings` | `{require_altcha}` | `{require_altcha}` |
 | `GET /sites/{ref}/forms/submissions` | `?form&limit&offset` | `List<Submission>` (newest first) |
-| `GET /sites/{ref}/forms/submissions.csv` | `?form` | `text/csv`, up to 10 000 newest |
+| `GET /sites/{ref}/forms/submissions.csv` | `?form` | `text/csv`, up to 10 000 newest and 64 MB, streamed; 100 field columns + `_other` (JSON) |
 | `GET /tokens` | | `List<Token>` |
 | `POST /tokens` | `{name, expires_in_days?}` | `201 {token: Token, value}`; `value` is shown once |
 | `DELETE /tokens/{id}` | | `204` |
@@ -124,4 +124,4 @@ External domains (see `docs/external-domains.md`): `hostname` is normalised (low
 
 Outside `/api/v1` the API host also serves `/mcp`, `/.well-known/oauth-protected-resource[/mcp]`, `/.well-known/oauth-authorization-server` and `/oauth/*` (see [ai-clients.md](ai-clients.md)).
 
-Site forms (see `docs/forms.md`): a webhook channel returns its signing `secret` only on creation and rotation; a Telegram channel created without `target` returns a binding `link` (`https://t.me/<bot>?start=<code>`). Telegram channels with a chat ID and e-mail channels start `pending` and become `active` after `verify` with the code sent to them (30 minutes, 5 attempts; `channel_code_invalid`). Other codes: `channel_invalid`, `channel_unavailable` (Telegram or SMTP not configured, or the code could not be sent), `channel_limit_reached` (10 per site, 403), `telegram_token_invalid`, `setting_invalid`. In `PATCH /admin/forms/settings` a missing field keeps the value and an empty string clears it; the bot token and SMTP password are never returned. Visitor endpoints on site hosts (`POST /_form/<name>`, `GET /_form/challenge`, `GET /_dropsite/altcha.js`) are not part of API v1.
+Site forms (see `docs/forms.md`): a webhook channel returns its signing `secret` only on creation and rotation; a Telegram channel created without `target` returns a binding `link` (`https://t.me/<bot>?start=<code>`). Telegram channels with a chat ID and e-mail channels start `pending` and become `active` after `verify` with the code sent to them (30 minutes, 5 attempts; `channel_code_invalid`). A webhook channel is paused (`paused_at` set) after 10 failed attempts in a row; turning a channel off cancels its queued deliveries. Confirmation codes are limited to 3 per recipient per 24 hours and 100 per installation per hour (`rate_limited`). Other codes: `channel_invalid`, `channel_unavailable` (Telegram or SMTP not configured, or the code could not be sent), `channel_limit_reached` (10 per site, 403), `telegram_token_invalid`, `setting_invalid`. In `PATCH /admin/forms/settings` a missing field keeps the value and an empty string clears it; the bot token and SMTP password are never returned. Visitor endpoints on site hosts (`POST /_form/<name>`, `GET /_form/challenge`, `GET /_dropsite/altcha.js`) are not part of API v1.

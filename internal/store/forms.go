@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -37,10 +38,27 @@ type FormRepository interface {
 	ListFormSubmissions(ctx context.Context, f FormSubmissionFilter) ([]domain.FormSubmission, int, error)
 	ListFormNames(ctx context.Context, siteID string) ([]string, error)
 
-	// ClaimDueDeliveries returns up to limit pending deliveries due at now
-	// and pushes their next attempt to leaseUntil, so a crash retries them.
-	ClaimDueDeliveries(ctx context.Context, now, leaseUntil time.Time, limit int) ([]DeliveryJob, error)
+	// ConsumeVerifyAttempt atomically counts one confirmation attempt of a
+	// pending channel and returns the channel as it was stored before the
+	// attempt. ok is false when the channel is not pending or has used max
+	// attempts already.
+	ConsumeVerifyAttempt(ctx context.Context, siteID string, id int64, max int, now time.Time) (ch domain.FormChannel, ok bool, err error)
+	// ActivateFormChannel confirms a pending channel; false if it was not pending.
+	ActivateFormChannel(ctx context.Context, siteID string, id int64, now time.Time) (bool, error)
+	// ResumeFormChannel clears the circuit breaker of a channel.
+	ResumeFormChannel(ctx context.Context, siteID string, id int64, now time.Time) error
+	// RecordChannelResult resets (ok) or increments the channel's run of
+	// failures; when a failure brings it to pauseAfter (> 0) the channel is
+	// paused at now. It reports whether this call paused the channel.
+	RecordChannelResult(ctx context.Context, channelID int64, ok bool, pauseAfter int, now time.Time) (bool, error)
+
+	// ClaimDueDeliveries cancels queued deliveries of turned-off channels and
+	// deleted sites, then leases due deliveries fairly (see DeliveryClaim).
+	ClaimDueDeliveries(ctx context.Context, c DeliveryClaim) ([]DeliveryJob, error)
 	FinishDelivery(ctx context.Context, d domain.FormDelivery) error
+	// ListSubmissionsBefore returns up to limit submissions of the site (and
+	// form, if set) with ID below beforeID, newest first, without deliveries.
+	ListSubmissionsBefore(ctx context.Context, siteID, form string, beforeID int64, limit int) ([]domain.FormSubmission, error)
 
 	// UseAltchaSolution records a solution signature; a second use before
 	// it expires returns false.
@@ -57,6 +75,22 @@ type FormSubmissionFilter struct {
 	Page
 }
 
+// DeliveryClaim selects deliveries to lease. At most one due delivery per
+// channel is considered, channels in SkipChannels (attempts in flight) and
+// paused channels are left out, and candidates are ordered so that every
+// site gets its oldest delivery before any site gets a second one. Accept,
+// if set, may still refuse a candidate (per-site caps); only accepted ones
+// are leased, up to Limit.
+type DeliveryClaim struct {
+	Now, LeaseUntil time.Time
+	Limit           int
+	SkipChannels    []int64
+	Accept          func(DeliveryJob) bool
+}
+
+// DeliveryCancelledMsg is the last_error of cancelled deliveries.
+const DeliveryCancelledMsg = "not sent: the channel was turned off or the site was deleted"
+
 // DeliveryJob is a claimed delivery with what the sender needs.
 type DeliveryJob struct {
 	Delivery   domain.FormDelivery
@@ -66,17 +100,17 @@ type DeliveryJob struct {
 }
 
 const channelCols = `id, site_id, kind, target, secret_enc, status, enabled, verify_hash,
-	verify_expires_at, verify_attempts, created_at, updated_at`
+	verify_expires_at, verify_attempts, consecutive_failures, paused_at, created_at, updated_at`
 
 func scanChannel(s rowScanner) (domain.FormChannel, error) {
 	var c domain.FormChannel
-	var expires sql.NullInt64
+	var expires, paused sql.NullInt64
 	var created, updated int64
 	if err := s.Scan(&c.ID, &c.SiteID, &c.Kind, &c.Target, &c.SecretEnc, &c.Status, &c.Enabled,
-		&c.VerifyHash, &expires, &c.VerifyAttempts, &created, &updated); err != nil {
+		&c.VerifyHash, &expires, &c.VerifyAttempts, &c.ConsecutiveFailures, &paused, &created, &updated); err != nil {
 		return domain.FormChannel{}, err
 	}
-	c.VerifyExpiresAt = fromNullMS(expires)
+	c.VerifyExpiresAt, c.PausedAt = fromNullMS(expires), fromNullMS(paused)
 	c.CreatedAt, c.UpdatedAt = fromMS(created), fromMS(updated)
 	return c, nil
 }
@@ -180,12 +214,14 @@ func (db *DB) ListPendingTelegramLinks(ctx context.Context, now time.Time) ([]do
 		AND verify_expires_at > ? AND site_id IN (SELECT id FROM sites WHERE deleted_at IS NULL)`, toMS(now))
 }
 
-// UpdateFormChannel stores the mutable columns of ch.
+// UpdateFormChannel stores the mutable columns of ch. The attempt counter
+// and the circuit breaker columns are changed only atomically, by
+// ConsumeVerifyAttempt, RecordChannelResult and ResumeFormChannel.
 func (db *DB) UpdateFormChannel(ctx context.Context, ch domain.FormChannel) error {
 	res, err := db.w.ExecContext(ctx, `UPDATE form_channels SET target = ?, secret_enc = ?, status = ?, enabled = ?,
-		verify_hash = ?, verify_expires_at = ?, verify_attempts = ?, updated_at = ? WHERE id = ? AND site_id = ?`,
+		verify_hash = ?, verify_expires_at = ?, updated_at = ? WHERE id = ? AND site_id = ?`,
 		ch.Target, ch.SecretEnc, string(ch.Status), ch.Enabled, ch.VerifyHash, nullMS(ch.VerifyExpiresAt),
-		ch.VerifyAttempts, toMS(ch.UpdatedAt), ch.ID, ch.SiteID)
+		toMS(ch.UpdatedAt), ch.ID, ch.SiteID)
 	return expectAffected(res, err, "update form channel")
 }
 
@@ -329,55 +365,112 @@ func (db *DB) ListFormNames(ctx context.Context, siteID string) ([]string, error
 	return collectStrings(rows, "list form names")
 }
 
-// ClaimDueDeliveries leases due deliveries.
-func (db *DB) ClaimDueDeliveries(ctx context.Context, now, leaseUntil time.Time, limit int) ([]DeliveryJob, error) {
+// claimCandidatesSQL picks the oldest due delivery of every eligible
+// channel and ranks them per site, so the result interleaves sites.
+var claimCandidatesSQL = `WITH due AS (
+		SELECT d.id, s.site_id, d.next_attempt_at,
+			ROW_NUMBER() OVER (PARTITION BY d.channel_id ORDER BY d.next_attempt_at, d.id) AS ch_rank
+		FROM form_deliveries d
+		JOIN form_channels c ON c.id = d.channel_id
+		JOIN form_submissions s ON s.id = d.submission_id
+		WHERE d.status = 'pending' AND d.next_attempt_at <= ? AND c.paused_at IS NULL %s
+	), heads AS (
+		SELECT id, next_attempt_at,
+			ROW_NUMBER() OVER (PARTITION BY site_id ORDER BY next_attempt_at, id) AS site_rank
+		FROM due WHERE ch_rank = 1
+	)
+	SELECT ` + deliveryCols + ", " + jobChannelCols + `, s.id, s.site_id, s.host, s.form, s.fields_json, s.created_at, u.lang
+	FROM heads h
+	JOIN form_deliveries d ON d.id = h.id
+	JOIN form_channels c ON c.id = d.channel_id
+	JOIN form_submissions s ON s.id = d.submission_id
+	JOIN sites st ON st.id = s.site_id
+	JOIN users u ON u.id = st.owner_id
+	ORDER BY h.site_rank, h.next_attempt_at, h.id LIMIT ?`
+
+var jobChannelCols = prefixed("c", channelCols)
+
+// cancelStaleSQL drops queued deliveries that must not be sent any more.
+const cancelStaleSQL = `UPDATE form_deliveries SET status = 'cancelled', last_error = ?
+	WHERE status = 'pending' AND channel_id IN (
+		SELECT c.id FROM form_channels c JOIN sites st ON st.id = c.site_id
+		WHERE c.enabled = 0 OR c.status <> 'active' OR st.deleted_at IS NOT NULL)`
+
+// claimOverfetch is how many candidates are read per lease slot, so that
+// candidates refused by Accept do not starve the claim.
+const claimOverfetch = 4
+
+// ClaimDueDeliveries cancels stale deliveries and leases due ones fairly.
+func (db *DB) ClaimDueDeliveries(ctx context.Context, c DeliveryClaim) ([]DeliveryJob, error) {
+	if c.Limit <= 0 {
+		return nil, nil
+	}
+	skip := ""
+	if len(c.SkipChannels) > 0 {
+		ids := make([]string, len(c.SkipChannels))
+		for i, id := range c.SkipChannels {
+			ids[i] = strconv.FormatInt(id, 10)
+		}
+		skip = "AND d.channel_id NOT IN (" + strings.Join(ids, ",") + ")"
+	}
 	var jobs []DeliveryJob
 	err := db.withTx(ctx, func(tx *sql.Tx) error {
-		rows, err := tx.QueryContext(ctx, "SELECT "+deliveryCols+", "+prefixed("c", channelCols)+ //nolint:gosec // G202: column lists are constants
-
-			", s.id, s.site_id, s.host, s.form, s.fields_json, s.created_at, u.lang"+` FROM form_deliveries d
-			JOIN form_channels c ON c.id = d.channel_id
-			JOIN form_submissions s ON s.id = d.submission_id
-			JOIN sites st ON st.id = s.site_id
-			JOIN users u ON u.id = st.owner_id
-			WHERE d.status = 'pending' AND d.next_attempt_at <= ? ORDER BY d.next_attempt_at, d.id LIMIT ?`,
-			toMS(now), limit)
+		if _, err := tx.ExecContext(ctx, cancelStaleSQL, DeliveryCancelledMsg); err != nil {
+			return fmt.Errorf("cancel stale deliveries: %w", err)
+		}
+		candidates, err := queryJobs(ctx, tx, fmt.Sprintf(claimCandidatesSQL, skip), toMS(c.Now), c.Limit*claimOverfetch)
 		if err != nil {
-			return fmt.Errorf("claim deliveries: %w", err)
+			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			j, err := scanJob(rows)
-			if err != nil {
-				return err
+		for _, j := range candidates {
+			if len(jobs) == c.Limit {
+				break
 			}
-			jobs = append(jobs, j)
-		}
-		if err := rows.Err(); err != nil {
-			return fmt.Errorf("claim deliveries: %w", err)
-		}
-		for _, j := range jobs {
+			if c.Accept != nil && !c.Accept(j) {
+				continue
+			}
 			if _, err := tx.ExecContext(ctx, "UPDATE form_deliveries SET next_attempt_at = ? WHERE id = ?",
-				toMS(leaseUntil), j.Delivery.ID); err != nil {
+				toMS(c.LeaseUntil), j.Delivery.ID); err != nil {
 				return fmt.Errorf("lease delivery: %w", err)
 			}
+			jobs = append(jobs, j)
 		}
 		return nil
 	})
 	return jobs, err
 }
 
+func queryJobs(ctx context.Context, tx *sql.Tx, query string, args ...any) ([]DeliveryJob, error) {
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("claim deliveries: %w", err)
+	}
+	defer rows.Close()
+	var out []DeliveryJob
+	for rows.Next() {
+		j, err := scanJob(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, j)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("claim deliveries: %w", err)
+	}
+	return out, nil
+}
+
 func scanJob(rows *sql.Rows) (DeliveryJob, error) {
 	var j DeliveryJob
 	var next int64
-	var sent, expires sql.NullInt64
+	var sent, expires, paused sql.NullInt64
 	var created, updated, subCreated int64
 	var fields string
 	d, c, s := &j.Delivery, &j.Channel, &j.Submission
 	err := rows.Scan(&d.ID, &d.SubmissionID, &d.ChannelID, &d.ChannelKind, &d.ChannelTarget, &d.Status,
 		&d.Attempts, &next, &d.LastError, &sent,
 		&c.ID, &c.SiteID, &c.Kind, &c.Target, &c.SecretEnc, &c.Status, &c.Enabled, &c.VerifyHash,
-		&expires, &c.VerifyAttempts, &created, &updated,
+		&expires, &c.VerifyAttempts, &c.ConsecutiveFailures, &paused, &created, &updated,
 		&s.ID, &s.SiteID, &s.Host, &s.Form, &fields, &subCreated, &j.OwnerLang)
 	if err != nil {
 		return DeliveryJob{}, fmt.Errorf("scan delivery job: %w", err)
@@ -386,7 +479,7 @@ func scanJob(rows *sql.Rows) (DeliveryJob, error) {
 		return DeliveryJob{}, fmt.Errorf("decode form fields: %w", err)
 	}
 	d.NextAttemptAt, d.SentAt = fromMS(next), fromNullMS(sent)
-	c.VerifyExpiresAt = fromNullMS(expires)
+	c.VerifyExpiresAt, c.PausedAt = fromNullMS(expires), fromNullMS(paused)
 	c.CreatedAt, c.UpdatedAt, s.CreatedAt = fromMS(created), fromMS(updated), fromMS(subCreated)
 	return j, nil
 }

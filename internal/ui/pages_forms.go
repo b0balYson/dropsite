@@ -1,7 +1,7 @@
 package ui
 
 import (
-	"bytes"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -162,7 +162,10 @@ func (s *server) verifyChannel(w http.ResponseWriter, r *http.Request, rc *reqCt
 func (s *server) toggleChannel(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	enabled := r.PostFormValue("enabled") == "1"
 	key := "forms.channel.disabled"
-	if enabled {
+	switch {
+	case enabled && r.PostFormValue("resume") == "1":
+		key = "forms.channel.resumed"
+	case enabled:
 		key = "forms.channel.enabled"
 	}
 	s.channelAction(w, r, rc, func(id int64) error {
@@ -206,15 +209,20 @@ func (s *server) formSiteSettings(w http.ResponseWriter, r *http.Request, rc *re
 }
 
 func (s *server) exportForms(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
-	var buf bytes.Buffer
-	siteID, err := s.svc.ExportFormSubmissions(r.Context(), rc.actor, r.PathValue("ref"), r.URL.Query().Get("form"), &buf)
-	if err != nil {
+	started := false
+	err := s.svc.ExportFormSubmissions(r.Context(), rc.actor, r.PathValue("ref"), r.URL.Query().Get("form"),
+		func(siteID string) io.Writer {
+			started = true
+			h := w.Header()
+			h.Set("Content-Type", "text/csv; charset=utf-8")
+			h.Set("Content-Disposition", `attachment; filename="`+url.PathEscape(siteID)+`-submissions.csv"`)
+			h.Set("Cache-Control", "no-store")
+			return w
+		})
+	switch {
+	case err != nil && started:
+		s.log.Warn("form export interrupted", "err", err) // the file is truncated
+	case err != nil:
 		s.failPage(w, r, rc, err)
-		return
 	}
-	h := w.Header()
-	h.Set("Content-Type", "text/csv; charset=utf-8")
-	h.Set("Content-Disposition", `attachment; filename="`+url.PathEscape(siteID)+`-submissions.csv"`)
-	h.Set("Cache-Control", "no-store")
-	_, _ = buf.WriteTo(w)
 }

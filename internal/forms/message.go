@@ -11,11 +11,14 @@ import (
 	"github.com/b0balYson/dropsite/internal/domain"
 )
 
-// SendError is a delivery failure. Its message never contains credentials
-// or full URLs and is shown to the site owner.
+// SendError is a delivery failure. Msg never contains credentials, full
+// URLs or internals of the installation and is shown to the site owner;
+// Detail carries such internals (server replies, network errors) for the
+// server log only.
 type SendError struct {
 	Permanent bool
 	Msg       string
+	Detail    string
 }
 
 func (e *SendError) Error() string { return e.Msg }
@@ -35,6 +38,26 @@ func Temporary(msg string) error { return &SendError{Msg: truncate(msg, maxError
 
 // Permanent returns a SendError that must not be retried.
 func Permanent(msg string) error { return &SendError{Permanent: true, Msg: truncate(msg, maxErrorLen)} }
+
+// withDetail returns a SendError with a public message and a log-only detail.
+func withDetail(permanent bool, msg, detail string) error {
+	return &SendError{Permanent: permanent, Msg: msg, Detail: truncate(detail, maxErrorLen)}
+}
+
+// ErrDetail describes err for the server log, internals included.
+func ErrDetail(err error) string {
+	var se *SendError
+	if !errors.As(err, &se) {
+		if err == nil {
+			return ""
+		}
+		return err.Error()
+	}
+	if se.Detail == "" {
+		return se.Msg
+	}
+	return se.Msg + " (" + se.Detail + ")"
+}
 
 // IsPermanent reports whether err must not be retried.
 func IsPermanent(err error) bool {
