@@ -92,6 +92,8 @@ What stays with people:
 - confirming a delivery channel: pressing Start in Telegram or reading the code from the e-mail;
 - installation settings (Telegram bot, mail server, users, limits), which an administrator sets in the web interface. Through a chat even an administrator manages only their own sites; the only installation-level action is the root domain.
 
+A site can also start from one of five built-in templates, be copied into a new site, go live at a given time (a prepared version waits, then the site switches), and, when the optional renderer is enabled, be checked by the assistant with screenshots and a before/after comparison: [docs/screenshots.md](docs/screenshots.md).
+
 How the assistant learns the rules (server instructions, the `get_guide` tool, tool descriptions) and what each chat supports: [docs/ai-clients.md](docs/ai-clients.md).
 
 ## Publishing

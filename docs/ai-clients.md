@@ -46,7 +46,7 @@ Chats differ in which MCP features reach the model (checked November 2026):
 So dropsite delivers its rules three ways, from one source:
 
 1. **Server instructions** sent on `initialize` by both servers: the essentials in the first paragraph (plain language, give the link, confirm before deleting, call `get_guide`), then short rules for every task.
-2. **`get_guide`**, a read-only tool that works even before the user has connected. `topic` is one of `overview`, `create`, `update`, `large_sites`, `assets`, `forms`, `stats`, `addresses`, `protection`, `rollback`, `account`, `errors`, or `all` (default).
+2. **`get_guide`**, a read-only tool that works even before the user has connected. `topic` is one of `overview`, `create`, `update`, `large_sites`, `assets`, `forms`, `stats`, `addresses`, `protection`, `rollback`, `workflow`, `account`, `errors`, or `all` (default).
 3. **Tool descriptions** say when to call each tool and what to tell the user, and point to `get_guide`.
 
 The guide lives in `skills/guide/*.md` and is embedded into both binaries. Its sections on self-contained sites and on forms are also part of the `dropsite-publish` skill and the Codex snippet: `skills/dropsite-publish/SKILL.md` and `skills/codex/AGENTS.md` are generated from `skills/parts/*.md` and those sections. After editing any of them run `go test ./skills -update`; the tests fail while the files are out of date.
@@ -125,6 +125,18 @@ The assistant does not need the original files: it reads the published ones.
 If the site changed after the assistant read it (another publication, a rollback, a parallel edit), `update_site_files` and a `patch` commit fail with `deploy_conflict` and the current release ID; the assistant reads the files again and repeats the change. Of two simultaneous edits of the same release exactly one is published.
 
 Every new release passes the same checks as an uploaded archive (paths, `index.html`, the owner's `MAX_SITE_BYTES`, `MAX_FILE_BYTES`, `MAX_FILES`, 30 publications per hour). Paths that look like secrets (`.env*`, keys, credentials) and service files (`.git/`, `node_modules/`) cannot be written from chat.
+
+### Templates, copies, schedules and screenshots
+
+Details: [screenshots.md](screenshots.md).
+
+| Tool | What it does |
+| --- | --- |
+| `list_templates`, `create_site_from_template` | five built-in starter sites (cafe, services, event, portfolio, links) in Russian or English, created and published in one call |
+| `clone_site` | a new site from the served release of a site; only files are copied |
+| `schedule_publish` | `publish_at` (RFC 3339 with the user's zone) plus `upload_id` (the session becomes a prepared release) or `site` + `deploy_id` |
+| `list_scheduled_publishes`, `cancel_scheduled_publish` | waiting and recent publishes; cancel a waiting one |
+| `screenshot_site`, `compare_versions` | the first screen of a release as an image block, and "before \| after" with the share of changed pixels; `renderer_unavailable` when the server has no renderer |
 
 Upload sessions: at most 50 open per user, closed after 24 idle hours (every `upload_files` call extends a session) and on a restart of `control`; their files live in the upload directory of the state volume and are removed by housekeeping.
 
