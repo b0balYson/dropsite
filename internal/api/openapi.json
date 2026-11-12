@@ -663,6 +663,71 @@
         }
       }
     },
+    "/sheets": {
+      "get": {
+        "operationId": "getSheetsStatus",
+        "summary": "Whether Google Sheets is set up and the service account address to share spreadsheets with",
+        "description": "The service account key itself is set only by an administrator in the web interface and is never returned.",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SheetsStatus" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/sites/{ref}/collections/{name}/sheet": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }, { "$ref": "#/components/parameters/CollectionName" }],
+      "get": {
+        "operationId": "getSheetLink",
+        "summary": "The Google Sheet linked to a collection and the last synchronization",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SheetLink" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      },
+      "put": {
+        "operationId": "putSheetLink",
+        "summary": "Link a public collection to a sheet (or change the link) and synchronize it now",
+        "description": "The sheet becomes the source of truth: its rows replace the collection's documents (row 1 holds the field names; a column named id sets document IDs). The service account must be able to read the spreadsheet (sheets_access_denied otherwise). Bad rows do not fail the request: they are reported in last_sync and the documents stay unchanged. Errors: sheets_not_configured, sheets_invalid_url, sheets_access_denied, sheets_invalid (moderated collection, interval), sheets_unavailable, rate_limited (30 links and synchronizations per site and hour).",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SheetLinkRequest" } } } },
+        "responses": {
+          "200": { "description": "Link changed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SheetLink" } } } },
+          "201": { "description": "Link created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SheetLink" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      },
+      "delete": {
+        "operationId": "deleteSheetLink",
+        "summary": "Unlink the collection; its documents stay",
+        "responses": {
+          "204": { "description": "Unlinked" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/sites/{ref}/collections/{name}/sheet/sync": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }, { "$ref": "#/components/parameters/CollectionName" }],
+      "post": {
+        "operationId": "syncSheet",
+        "summary": "Replace the collection's documents with the rows of its sheet now",
+        "description": "The outcome is in last_sync: status ok, or failed with a message and row errors (documents unchanged).",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SheetLink" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
     "/tokens": {
       "get": {
         "operationId": "listTokens",
@@ -3062,6 +3127,60 @@
       }
     },
     "schemas": {
+      "SheetsStatus": {
+        "type": "object",
+        "required": ["configured", "service_account_email"],
+        "properties": {
+          "configured": { "type": "boolean" },
+          "service_account_email": { "type": ["string", "null"], "description": "Share spreadsheets with this address (Editor for form submissions, Viewer for collections)" }
+        }
+      },
+      "SheetLinkRequest": {
+        "type": "object",
+        "required": ["url"],
+        "properties": {
+          "url": { "type": "string", "description": "Spreadsheet link, e.g. https://docs.google.com/spreadsheets/d/<id>/edit#gid=0; without gid the first sheet is used" },
+          "interval_minutes": { "type": "integer", "description": "0 = manual synchronization only, otherwise 5-1440", "default": 0 }
+        }
+      },
+      "SheetRowError": {
+        "type": "object",
+        "required": ["row", "field", "message"],
+        "properties": {
+          "row": { "type": "integer", "description": "Row number in the sheet (1 is the header row, 0 the whole sheet)" },
+          "field": { "type": "string" },
+          "message": { "type": "string" }
+        }
+      },
+      "SheetSync": {
+        "type": "object",
+        "required": ["at", "status", "trigger", "rows", "message", "errors"],
+        "properties": {
+          "at": { "type": "string", "format": "date-time" },
+          "status": { "type": "string", "enum": ["ok", "failed"] },
+          "trigger": { "type": "string", "enum": ["manual", "schedule"] },
+          "rows": { "type": "integer", "description": "Documents written (0 when failed)" },
+          "message": { "type": "string" },
+          "errors": { "type": "array", "maxItems": 50, "items": { "$ref": "#/components/schemas/SheetRowError" } }
+        }
+      },
+      "SheetLink": {
+        "type": "object",
+        "required": ["collection", "url", "spreadsheet_id", "sheet_gid", "sheet_title", "interval_minutes", "next_sync_at", "last_sync", "service_account_email", "created_at", "updated_at"],
+        "properties": {
+          "collection": { "type": "string" },
+          "url": { "type": "string" },
+          "spreadsheet_id": { "type": "string" },
+          "sheet_gid": { "type": ["integer", "null"] },
+          "sheet_title": { "type": "string" },
+          "interval_minutes": { "type": "integer" },
+          "next_sync_at": { "type": ["string", "null"], "format": "date-time" },
+          "last_sync": { "oneOf": [{ "$ref": "#/components/schemas/SheetSync" }, { "type": "null" }] },
+          "service_account_email": { "type": ["string", "null"] },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
       "Collection": {
         "type": "object",
         "required": ["name", "title", "mode", "schema", "documents", "pending", "public_url", "created_at", "updated_at"],
@@ -4902,12 +5021,13 @@
             "enum": [
               "telegram",
               "email",
-              "webhook"
+              "webhook",
+              "sheets"
             ]
           },
           "target": {
             "type": "string",
-            "description": "Telegram chat ID (empty while a link binding is pending), e-mail address or webhook URL"
+            "description": "Telegram chat ID (empty while a link binding is pending), e-mail address, webhook URL or Google spreadsheet link"
           },
           "status": {
             "type": "string",
@@ -4989,11 +5109,13 @@
             "enum": [
               "telegram",
               "email",
-              "webhook"
+              "webhook",
+              "sheets"
             ]
           },
           "target": {
-            "type": "string"
+            "type": "string",
+            "description": "telegram: chat ID or empty for a link; email: address; webhook: https URL; sheets: Google spreadsheet link (share it with the service account from GET /sheets as Editor), activated by a test write of the header row"
           }
         }
       },

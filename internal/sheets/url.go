@@ -69,7 +69,8 @@ func (r Ref) URL() string {
 	return u
 }
 
-// QuoteSheet returns a sheet title as an A1 range prefix: 'It''s here'.
+// QuoteSheet returns a sheet title as an A1 range prefix: the title in
+// single quotes, with every single quote inside doubled.
 func QuoteSheet(title string) string {
 	return "'" + strings.ReplaceAll(title, "'", "''") + "'"
 }

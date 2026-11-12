@@ -45,7 +45,10 @@ func TestSheetsServiceAccount(t *testing.T) {
 	wantNotFound(t, func() error { _, err := e.svc.SetSheetsServiceAccount(ctx, ann, string(sheetstest.Key())); return err }())
 	viaMCP := e.admin
 	viaMCP.ViaMCP = true
-	wantNotFound(t, func() error { _, err := e.svc.SetSheetsServiceAccount(ctx, viaMCP, string(sheetstest.Key())); return err }())
+	wantNotFound(t, func() error {
+		_, err := e.svc.SetSheetsServiceAccount(ctx, viaMCP, string(sheetstest.Key()))
+		return err
+	}())
 	_, err = e.svc.SetSheetsServiceAccount(ctx, e.admin, `{"type":"service_account"}`)
 	wantCode(t, err, domain.CodeSheetsInvalid)
 

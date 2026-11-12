@@ -102,6 +102,7 @@ type options struct {
 	sender service.FormSender
 	proxy  http.RoundTripper
 	render service.Screenshotter
+	sheets http.RoundTripper
 }
 
 // WithRenderer sets the screenshot renderer (none by default).
@@ -117,6 +118,11 @@ func WithFormSender(s service.FormSender) Option {
 // WithProxyTransport replaces the upstream transport of the secret proxy.
 func WithProxyTransport(tr http.RoundTripper) Option {
 	return func(o *options) { o.proxy = tr }
+}
+
+// WithSheetsTransport replaces the transport to Google Sheets.
+func WithSheetsTransport(tr http.RoundTripper) Option {
+	return func(o *options) { o.sheets = tr }
 }
 
 // WithEnv sets an environment variable read by config.Load.
@@ -183,10 +189,11 @@ func start(t testing.TB, cfg *config.Config, o *options) *Env {
 	dns.Set(cfg.APIHost, ServerIP)
 	svc := service.New(service.Deps{
 		Config: cfg, Repo: db, Files: storage.NewFS(cfg.SitesDir), Now: clock.Now, UploadDir: uploads,
-		Resolver:       dns,
-		FormSender:     o.sender,
-		ProxyTransport: o.proxy,
-		Renderer:       o.render,
+		Resolver:        dns,
+		FormSender:      o.sender,
+		ProxyTransport:  o.proxy,
+		Renderer:        o.render,
+		SheetsTransport: o.sheets,
 	})
 	if err := svc.Start(ctx); err != nil {
 		t.Fatalf("testenv: start service: %v", err)
