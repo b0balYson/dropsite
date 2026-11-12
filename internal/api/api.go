@@ -104,6 +104,7 @@ func (a *api) routes() []route {
 		{Method: http.MethodGet, Path: "/sites/{ref}/forms/submissions.csv", handle: a.exportSubmissions},
 		{Method: http.MethodGet, Path: "/sites/{ref}/forms/submissions/search", handle: a.searchSubmissions},
 		{Method: http.MethodGet, Path: "/sites/{ref}/forms/submissions/export", handle: a.exportSubmissionsText},
+		{Method: http.MethodGet, Path: "/collection-templates", handle: a.listCollectionTemplates},
 		{Method: http.MethodGet, Path: "/sites/{ref}/collections", handle: a.listCollections},
 		{Method: http.MethodPost, Path: "/sites/{ref}/collections", handle: a.createCollection},
 		{Method: http.MethodPatch, Path: "/sites/{ref}/collections/{name}", handle: a.updateCollection},
