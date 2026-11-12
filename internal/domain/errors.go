@@ -45,6 +45,7 @@ const (
 	CodeNoPrevious     = "no_previous_deploy"
 	CodeTokenInvalid   = "token_name_invalid"
 	CodeSettingInvalid = "setting_invalid"
+	CodeCounterInvalid = "counter_id_invalid"
 
 	// Archive validation codes (produced by internal/archive).
 	CodeArchiveFormat      = "archive_unsupported_format"

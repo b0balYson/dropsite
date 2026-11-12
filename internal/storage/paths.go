@@ -36,6 +36,7 @@ type Storage interface {
 	Init(ctx context.Context) error
 	StagingDir(siteID, deployID string) (string, error)
 	CommitRelease(siteID, deployID string) error
+	CopyRelease(siteID, fromID, toID string) (CopyResult, error)
 	DiscardStaging(siteID, deployID string) error
 	ActivateRelease(siteID, deployID string) error
 	ActivateEmpty(siteID string) error

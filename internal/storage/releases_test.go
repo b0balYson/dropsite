@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestStagingCommitDiscard(t *testing.T) {
@@ -150,5 +151,65 @@ func TestSiteSize(t *testing.T) {
 	}
 	if n != 8 {
 		t.Fatalf("size = %d, want 8", n)
+	}
+}
+
+func TestCopyRelease(t *testing.T) {
+	f, root := newTestFS(t)
+	makeRelease(t, f, siteA, deploy1, "index")
+	src := filepath.Join(root, "sites", siteA, "releases", deploy1)
+	if err := os.MkdirAll(filepath.Join(src, "a", "b"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(src, "a", "b", "c.css"), []byte("body{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	old := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	for _, p := range []string{"index.html", "a/b/c.css", "a/b", "a"} {
+		if err := os.Chtimes(filepath.Join(src, p), old, old); err != nil {
+			t.Fatal(err)
+		}
+	}
+	res, err := f.CopyRelease(siteA, deploy1, deploy2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Files != 2 || res.Bytes != int64(len("index")+len("body{}")) {
+		t.Fatalf("result %+v", res)
+	}
+	staging := filepath.Join(root, "sites", siteA, "releases", deploy2+".tmp")
+	for _, p := range []string{"index.html", "a/b/c.css", "a"} {
+		fi, err := os.Stat(filepath.Join(staging, p))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !fi.ModTime().Equal(old) {
+			t.Errorf("%s mtime %s, want %s", p, fi.ModTime(), old)
+		}
+		want := os.FileMode(0o644)
+		if fi.IsDir() {
+			want = 0o755
+		}
+		if fi.Mode().Perm() != want {
+			t.Errorf("%s mode %v", p, fi.Mode())
+		}
+	}
+	if got := readFile(t, filepath.Join(staging, "a", "b", "c.css")); got != "body{}" {
+		t.Fatalf("content %q", got)
+	}
+	if err := f.CommitRelease(siteA, deploy2); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.CopyRelease(siteA, deploy3, "20261112-101533-qqq111"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("missing source: %v", err)
+	}
+	if _, err := f.CopyRelease(siteA, "../x", deploy3); err == nil {
+		t.Fatal("invalid id accepted")
+	}
+	if err := os.MkdirAll(filepath.Join(root, "sites", siteA, "releases", deploy3+".tmp"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.CopyRelease(siteA, deploy1, deploy3); !errors.Is(err, ErrExists) {
+		t.Fatalf("existing staging: %v", err)
 	}
 }

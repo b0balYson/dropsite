@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/net/idna"
 
@@ -26,6 +27,12 @@ const (
 	// MinKeepReleases guarantees the previous release survives a switch, so a
 	// visitor never resolves a symlink into a deleted directory.
 	MinKeepReleases = 2
+
+	// DefaultStatsLogFile is where Caddy writes the sites access log.
+	DefaultStatsLogFile  = "/logs/sites-access.log"
+	DefaultStatsInterval = time.Minute
+	minStatsInterval     = time.Second
+	maxStatsInterval     = time.Hour
 
 	TLSModeOnDemand = "ondemand"
 	TLSModeWildcard = "wildcard"
@@ -54,6 +61,11 @@ type Config struct {
 	AdminAddr    string
 
 	TrustedProxies []netip.Prefix
+
+	// StatsLogFile is the sites access log read for visit statistics; empty
+	// disables collection. StatsInterval is how often it is read.
+	StatsLogFile  string
+	StatsInterval time.Duration
 }
 
 // Getenv is the environment lookup function, injectable for tests.
@@ -131,6 +143,11 @@ func Load(get Getenv) (*Config, error) {
 	}
 	c.LogLevel = r.logLevel()
 	c.ReservedSlugs = splitList(r.str("RESERVED_SLUGS", ""))
+	c.StatsLogFile = r.str("STATS_LOG_FILE", DefaultStatsLogFile)
+	if strings.EqualFold(c.StatsLogFile, "off") {
+		c.StatsLogFile = ""
+	}
+	c.StatsInterval = r.duration("STATS_INTERVAL", DefaultStatsInterval, minStatsInterval, maxStatsInterval)
 	c.TrustedProxies = r.prefixes("TRUSTED_PROXIES", "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8,::1/128")
 
 	switch c.TLSMode {
@@ -225,6 +242,19 @@ func (r *reader) logLevel() slog.Level {
 		return slog.LevelInfo
 	}
 	return lvl
+}
+
+func (r *reader) duration(key string, def, lo, hi time.Duration) time.Duration {
+	raw := r.str(key, "")
+	if raw == "" {
+		return def
+	}
+	d, err := time.ParseDuration(raw)
+	if err != nil || d < lo || d > hi {
+		r.fail(key, "must be a duration between %s and %s such as 1m, got %q", lo, hi, raw)
+		return def
+	}
+	return d
 }
 
 func (r *reader) prefixes(key, def string) []netip.Prefix {

@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
+	"time"
 )
 
 func env(kv map[string]string) Getenv {
@@ -139,6 +140,28 @@ func TestUIURLMustNotBeOnBaseDomain(t *testing.T) {
 		e["UI_URL"] = u
 		if _, err := Load(env(e)); err != nil {
 			t.Errorf("%s: %v", u, err)
+		}
+	}
+}
+
+func TestStatsSettings(t *testing.T) {
+	c, err := Load(env(base()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.StatsLogFile != DefaultStatsLogFile || c.StatsInterval != DefaultStatsInterval {
+		t.Fatalf("defaults: %q %s", c.StatsLogFile, c.StatsInterval)
+	}
+	kv := base()
+	kv["STATS_LOG_FILE"] = "off"
+	kv["STATS_INTERVAL"] = "5s"
+	if c, err = Load(env(kv)); err != nil || c.StatsLogFile != "" || c.StatsInterval != 5*time.Second {
+		t.Fatalf("overrides: %+v %v", c, err)
+	}
+	for _, bad := range []string{"abc", "500ms", "2h", "-1m"} {
+		kv["STATS_INTERVAL"] = bad
+		if _, err := Load(env(kv)); err == nil || !strings.Contains(err.Error(), "STATS_INTERVAL") {
+			t.Errorf("STATS_INTERVAL=%q: %v", bad, err)
 		}
 	}
 }
