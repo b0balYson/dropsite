@@ -33,6 +33,12 @@ func uploadLimit(l domain.Limits) int64 {
 // Deploy publishes an archive read from r as a new release of the site.
 // On any failure the current release stays untouched.
 func (s *Service) Deploy(ctx context.Context, a Actor, ref string, r io.Reader, source domain.DeploySource) (DeployResult, error) {
+	return s.DeployWith(ctx, a, ref, r, source, PublishOptions{})
+}
+
+// DeployWith is Deploy with publish options (a draft instead of going live).
+func (s *Service) DeployWith(ctx context.Context, a Actor, ref string, r io.Reader, source domain.DeploySource,
+	opts PublishOptions) (DeployResult, error) {
 	if !source.Valid() {
 		source = domain.SourceAPI
 	}
@@ -60,14 +66,16 @@ func (s *Service) Deploy(ctx context.Context, a Actor, ref string, r io.Reader, 
 
 	unlock := s.siteLocks.lock(site.ID)
 	defer unlock()
-	d, err := s.publish(ctx, a, site, upload, lim, source)
+	d, err := s.publishIn(ctx, a, site, upload, lim, source, opts.mode())
 	if err != nil {
 		return DeployResult{}, err
 	}
 	s.prune(ctx, site.ID, lim.KeepReleases)
-	s.audit(ctx, a, "deploy.create", siteTarget(site.ID), map[string]any{
-		"deploy": d.ID, "source": source, "files": d.FileCount, "bytes": d.SizeBytes,
-	})
+	meta := map[string]any{"deploy": d.ID, "source": source, "files": d.FileCount, "bytes": d.SizeBytes}
+	if opts.Draft {
+		meta["draft"] = true
+	}
+	s.audit(ctx, a, "deploy.create", siteTarget(site.ID), meta)
 	site, err = s.repo.GetSite(ctx, site.ID)
 	if err != nil {
 		return DeployResult{}, err
@@ -197,7 +205,7 @@ func (s *Service) prune(ctx context.Context, siteID string, keep int) {
 		s.log.Error("prune: list deploys", "site", siteID, "err", err)
 		return
 	}
-	scheduled, err := s.repo.PendingScheduledDeploys(ctx, siteID)
+	scheduled, err := s.heldDeploys(ctx, siteID)
 	if err != nil {
 		s.log.Error("prune: list scheduled", "site", siteID, "err", err)
 		return
@@ -302,7 +310,7 @@ func (s *Service) rollbackTarget(ctx context.Context, site domain.Site, deployID
 	if err != nil {
 		return domain.Deploy{}, err
 	}
-	scheduled, err := s.repo.PendingScheduledDeploys(ctx, site.ID)
+	scheduled, err := s.heldDeploys(ctx, site.ID)
 	if err != nil {
 		return domain.Deploy{}, err
 	}

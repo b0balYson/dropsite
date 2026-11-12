@@ -165,9 +165,10 @@ http:// {
 	}
 
 	# Release preview addresses (wildcard mode, see internal/domain
-	# PreviewLabel) are never indexed. The pattern cannot match a slug:
-	# slug validation rejects it.
-	@preview header_regexp Host ^p-[0-9]{8}-[0-9]{6}-[a-z0-9]{6}-[a-z0-9]{10}\.
+	# PreviewLabel) and the stable draft preview of a site (both modes,
+	# DraftPreviewLabel: p-<site id>) are never indexed. The pattern cannot
+	# match a slug: slug validation rejects both forms.
+	@preview header_regexp Host ^p-([0-9]{8}-[0-9]{6}-[a-z0-9]{6}-)?[a-z0-9]{10}\.
 	header @preview X-Robots-Tag noindex
 
 	handle @site {

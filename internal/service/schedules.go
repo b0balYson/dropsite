@@ -121,7 +121,7 @@ func (s *Service) ScheduleUpload(ctx context.Context, a Actor, uploadID string, 
 				WithParams(map[string]any{"limit": MaxPendingSchedules})
 		}
 	}
-	res, err := s.finishUpload(ctx, a, uploadID, nil, true)
+	res, err := s.finishUpload(ctx, a, uploadID, nil, modePrepared)
 	if err != nil {
 		return ScheduleView{}, err
 	}

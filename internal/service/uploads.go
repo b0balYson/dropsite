@@ -269,12 +269,17 @@ func (u *uploadSession) write(overlay map[string]overlayFile) error {
 // CommitUpload publishes a session and closes it. A rate-limited commit
 // keeps the session so it can be retried.
 func (s *Service) CommitUpload(ctx context.Context, a Actor, id string, deletes []string) (UpdateResult, error) {
-	return s.finishUpload(ctx, a, id, deletes, false)
+	return s.CommitUploadWith(ctx, a, id, deletes, PublishOptions{})
 }
 
-// finishUpload closes a session into a new release: the current one, or with
-// prepare a release the site is not switched to.
-func (s *Service) finishUpload(ctx context.Context, a Actor, id string, deletes []string, prepare bool) (UpdateResult, error) {
+// CommitUploadWith is CommitUpload with publish options.
+func (s *Service) CommitUploadWith(ctx context.Context, a Actor, id string, deletes []string, opts PublishOptions) (UpdateResult, error) {
+	return s.finishUpload(ctx, a, id, deletes, opts.mode())
+}
+
+// finishUpload closes a session into a new release: the current one, or a
+// prepared release or draft the site is not switched to.
+func (s *Service) finishUpload(ctx context.Context, a Actor, id string, deletes []string, mode publishMode) (UpdateResult, error) {
 	u, err := s.session(a, id, s.now())
 	if err != nil {
 		return UpdateResult{}, err
@@ -292,7 +297,7 @@ func (s *Service) finishUpload(ctx context.Context, a Actor, id string, deletes 
 		u.mu.Unlock()
 		return UpdateResult{}, errUploadExpired()
 	}
-	res, err := s.commitSession(ctx, a, u, deletes, prepare)
+	res, err := s.commitSession(ctx, a, u, deletes, mode)
 	de := domain.AsError(err)
 	retry := err != nil && (de.Kind == domain.KindRateLimited || de.Kind == domain.KindInternal)
 	if retry {
@@ -311,7 +316,7 @@ func (s *Service) finishUpload(ctx context.Context, a Actor, id string, deletes 
 	return res, err
 }
 
-func (s *Service) commitSession(ctx context.Context, a Actor, u *uploadSession, deletes []string, prepare bool) (UpdateResult, error) {
+func (s *Service) commitSession(ctx context.Context, a Actor, u *uploadSession, deletes []string, mode publishMode) (UpdateResult, error) {
 	if u.mode == UploadReplace && len(deletes) > 0 {
 		return UpdateResult{}, domain.E(domain.KindInvalid, domain.CodeInvalidInput,
 			"delete is only for patch uploads: a replace upload publishes exactly the uploaded files")
@@ -354,7 +359,7 @@ func (s *Service) commitSession(ctx context.Context, a Actor, u *uploadSession, 
 	} else if _, err := s.resolveSite(ctx, a, siteID); err != nil {
 		return UpdateResult{}, err
 	}
-	res, err := s.publishEditAs(ctx, a, siteID, u.base, dels, overlay, u.lim, "mcp_upload", prepare)
+	res, err := s.publishEditAs(ctx, a, siteID, u.base, dels, overlay, u.lim, "mcp_upload", mode)
 	if err != nil {
 		return UpdateResult{}, err
 	}

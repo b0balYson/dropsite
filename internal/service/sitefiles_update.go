@@ -82,7 +82,13 @@ func (s *Service) checkBase(ctx context.Context, siteID, base string) (domain.Si
 		cur = *site.CurrentDeployID
 	}
 	if cur != base {
-		return domain.Site{}, errConflict(cur)
+		ok, err := s.isDraftBase(ctx, site, base)
+		if err != nil {
+			return domain.Site{}, err
+		}
+		if !ok {
+			return domain.Site{}, errConflict(cur)
+		}
 	}
 	return site, nil
 }
@@ -147,6 +153,13 @@ func checkDeletes(paths []string, taken map[string]bool) ([]string, error) {
 // changes, through the regular pipeline. It fails with deploy_conflict when
 // the site's current release is no longer base.
 func (s *Service) UpdateSiteFiles(ctx context.Context, a Actor, ref, base string, ch FileChanges) (UpdateResult, error) {
+	return s.UpdateSiteFilesWith(ctx, a, ref, base, ch, PublishOptions{})
+}
+
+// UpdateSiteFilesWith is UpdateSiteFiles with publish options. base may also
+// be the site's draft, to keep working on it.
+func (s *Service) UpdateSiteFilesWith(ctx context.Context, a Actor, ref, base string, ch FileChanges,
+	opts PublishOptions) (UpdateResult, error) {
 	site, err := s.resolveSite(ctx, a, ref)
 	if err != nil {
 		return UpdateResult{}, err
@@ -189,7 +202,7 @@ func (s *Service) UpdateSiteFiles(ctx context.Context, a Actor, ref, base string
 	for _, f := range got {
 		overlay[f.Path] = overlayFile{data: f.Data}
 	}
-	res, err := s.publishEdit(ctx, a, site.ID, base, dels, overlay, lim, "mcp_update")
+	res, err := s.publishEditAs(ctx, a, site.ID, base, dels, overlay, lim, "mcp_update", opts.mode())
 	if err != nil {
 		return UpdateResult{}, err
 	}
@@ -202,13 +215,13 @@ func (s *Service) UpdateSiteFiles(ctx context.Context, a Actor, ref, base string
 // replacement), packs base − dels + overlay and publishes it.
 func (s *Service) publishEdit(ctx context.Context, a Actor, siteID, base string, dels []string,
 	overlay map[string]overlayFile, lim domain.Limits, reason string) (UpdateResult, error) {
-	return s.publishEditAs(ctx, a, siteID, base, dels, overlay, lim, reason, false)
+	return s.publishEditAs(ctx, a, siteID, base, dels, overlay, lim, reason, modeLive)
 }
 
-// publishEditAs is publishEdit; with prepare the release is created without
-// switching the site to it (a scheduled publish switches later).
+// publishEditAs is publishEdit with a publish mode: prepared releases (a
+// scheduled publish switches later) and drafts do not switch the site.
 func (s *Service) publishEditAs(ctx context.Context, a Actor, siteID, base string, dels []string,
-	overlay map[string]overlayFile, lim domain.Limits, reason string, prepare bool) (UpdateResult, error) {
+	overlay map[string]overlayFile, lim domain.Limits, reason string, mode publishMode) (UpdateResult, error) {
 	unlock := s.siteLocks.lock(siteID)
 	defer unlock()
 	site, err := s.repo.GetSite(ctx, siteID)
@@ -234,24 +247,22 @@ func (s *Service) publishEditAs(ctx context.Context, a Actor, siteID, base strin
 		return UpdateResult{}, err
 	}
 	defer s.removeUpload(upload)
-	var d domain.Deploy
-	if prepare {
-		d, err = s.prepareRelease(ctx, a, site, upload, lim, domain.SourceMCP)
-	} else {
-		d, err = s.publish(ctx, a, site, upload, lim, domain.SourceMCP)
-	}
+	d, err := s.publishIn(ctx, a, site, upload, lim, domain.SourceMCP, mode)
 	if err != nil {
 		return UpdateResult{}, err
 	}
-	if !prepare {
+	if mode != modePrepared {
 		s.prune(ctx, site.ID, lim.KeepReleases)
 	}
 	meta := map[string]any{
 		"deploy": d.ID, "source": domain.SourceMCP, "files": d.FileCount, "bytes": d.SizeBytes,
 		"from": base, "reason": reason, "written": len(overlay), "deleted": removed,
 	}
-	if prepare {
+	switch mode {
+	case modePrepared:
 		meta["prepared"] = true
+	case modeDraft:
+		meta["draft"] = true
 	}
 	s.audit(ctx, a, "deploy.create", siteTarget(site.ID), meta)
 	if site, err = s.repo.GetSite(ctx, site.ID); err != nil {

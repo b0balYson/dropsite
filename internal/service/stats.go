@@ -186,6 +186,9 @@ func (s *Service) hostIndex(ctx context.Context) (stats.SiteFunc, error) {
 // requests are skipped (isPreviewHost), but links from a preview to the site
 // are internal navigation rather than a referrer.
 func (s *Service) previewSite(host string) (string, bool) {
+	if id, ok := s.draftPreviewSite(host); ok {
+		return id, true
+	}
 	label, ok := strings.CutSuffix(host, "."+s.cfg.BaseDomain)
 	if !ok || !domain.IsPreviewLabel(label) {
 		return "", false

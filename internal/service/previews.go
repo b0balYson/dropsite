@@ -97,6 +97,9 @@ func (s *Service) previewHosts(ctx context.Context, siteID string) ([]string, er
 // siteOfPreview resolves the preview hostname of a ready release to its
 // active site (wildcard mode only).
 func (s *Service) siteOfPreview(ctx context.Context, host string) (domain.Site, error) {
+	if site, ok, err := s.siteOfDraftHost(ctx, host); ok {
+		return site, err
+	}
 	label, rest, ok := strings.Cut(host, ".")
 	if !ok || rest != s.cfg.BaseDomain || !s.cfg.Wildcard() || !domain.IsPreviewLabel(label) {
 		return domain.Site{}, domain.ErrNotFound

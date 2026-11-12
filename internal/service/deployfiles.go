@@ -120,6 +120,12 @@ func buildInlineArchive(files []InlineFile) ([]byte, error) {
 // mcp. Without ref a new site titled title is created first (only after the
 // files passed validation). The archive goes through the regular pipeline.
 func (s *Service) DeployFiles(ctx context.Context, a Actor, ref, title string, files []InlineFile) (DeployResult, error) {
+	return s.DeployFilesWith(ctx, a, ref, title, files, PublishOptions{})
+}
+
+// DeployFilesWith is DeployFiles with publish options.
+func (s *Service) DeployFilesWith(ctx context.Context, a Actor, ref, title string, files []InlineFile,
+	opts PublishOptions) (DeployResult, error) {
 	archive, err := buildInlineArchive(files)
 	if err != nil {
 		return DeployResult{}, err
@@ -134,5 +140,5 @@ func (s *Service) DeployFiles(ctx context.Context, a Actor, ref, title string, f
 		}
 		ref = v.Site.ID
 	}
-	return s.Deploy(ctx, a, ref, bytes.NewReader(archive), domain.SourceMCP)
+	return s.DeployWith(ctx, a, ref, bytes.NewReader(archive), domain.SourceMCP, opts)
 }

@@ -23,6 +23,9 @@ type SiteView struct {
 	// CurrentPreviewURL is the preview address of Current (wildcard TLS mode
 	// only), otherwise empty.
 	CurrentPreviewURL string
+	// Draft is the site's draft release (change staged-publish), nil when
+	// there is none.
+	Draft *DraftView
 }
 
 const maxSiteIDAttempts = 5
@@ -74,6 +77,9 @@ func (s *Service) view(ctx context.Context, site domain.Site) (SiteView, error) 
 		}
 		v.Current = &d
 		v.CurrentPreviewURL = s.PreviewURL(d)
+	}
+	if v.Draft, err = s.draftView(ctx, site); err != nil {
+		return SiteView{}, err
 	}
 	return v, nil
 }
@@ -378,6 +384,9 @@ func (s *Service) softDeleteLocked(ctx context.Context, a Actor, site domain.Sit
 	}
 	if err := s.unlinkPreviews(ctx, site.ID, deploys); err != nil {
 		return fmt.Errorf("unlink previews: %w", err)
+	}
+	if err := s.unlinkDraftHost(ctx, site.ID); err != nil {
+		return fmt.Errorf("unlink draft preview: %w", err)
 	}
 	s.audit(ctx, a, action, siteTarget(site.ID), map[string]any{"title": site.Title, "hosts": removed})
 	return nil
