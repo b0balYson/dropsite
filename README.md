@@ -94,6 +94,8 @@ What stays with people:
 
 A site can also start from one of five built-in templates, be copied into a new site, go live at a given time (a prepared version waits, then the site switches), and, when the optional renderer is enabled, be checked by the assistant with screenshots and a before/after comparison: [docs/screenshots.md](docs/screenshots.md).
 
+Teams share sites through workspaces: any user creates one and adds colleagues who already have an account; every member has owner rights on every site of the workspace (there are no roles). A site is personal or belongs to one workspace; its creator can move it in and out without touching its addresses, releases or data, and it always counts against the creator's limits. Workspaces are available in the web interface (Workspaces), the API (`/api/v1/workspaces`), both MCP servers and the CLI (`dropsite workspaces`, `--workspace`).
+
 How the assistant learns the rules (server instructions, the `get_guide` tool, tool descriptions) and what each chat supports: [docs/ai-clients.md](docs/ai-clients.md).
 
 ## Publishing

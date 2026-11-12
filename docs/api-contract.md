@@ -35,9 +35,11 @@ DNSCheck {hostname, verdict, addresses[], cname|null, expected[]}
                                                 verdict: points_here | points_elsewhere | no_records | failed | unknown
 Deploy   {id, site_id, source, size_bytes, file_count, status, created_at, created_by, current, preview_url|null}
 Site     {id, title, url, urls[], slug|null, hostnames[], owner_id, created_at, updated_at, current_deploy: Deploy|null,
-          noindex, protected, expires_at|null}
+          noindex, protected, expires_at|null, workspace_id|null, workspace_name|null}
 SiteItem {id, title, url, urls[], slug|null, owner_id, owner_email, hostnames[], last_deploy_at|null, size_bytes, created_at,
-          updated_at, noindex, protected, expires_at|null}
+          updated_at, noindex, protected, expires_at|null, workspace_id|null, workspace_name|null}
+Workspace {id, name, member_count, site_count, created_at, updated_at, members[{user_id, email, added_at}]?}
+                                                members: single-workspace responses only
 LimitOverrides {max_site_bytes|null, max_file_bytes|null, max_files|null, max_sites_per_user|null, keep_releases|null}
 Token    {id, name, prefix, created_at, last_used_at|null, expires_at|null, revoked_at|null}
 Audit    {id, actor_id|null, actor_email, action, target, meta{}, ip, created_at}
@@ -71,8 +73,16 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 | --- | --- | --- |
 | `POST /connect/exchange` | `{code, name?}`, no token | `201 {token: Token, value, user: User}`; `value` is shown once |
 | `GET /me` | | `{user: User, limits: Limits, site_count, max_domains_per_site, max_inline_bytes, ui_url, root_site: Site\|null}`; `root_site` only for administrators |
-| `GET /sites` | `?limit&offset` | `List<SiteItem>` (own sites) |
-| `POST /sites` | `{title, slug?}` | `201 Site` |
+| `GET /sites` | `?limit&offset&workspace` (`personal` or a workspace ID) | `List<SiteItem>` (own sites and sites of own workspaces) |
+| `POST /sites` | `{title, slug?, workspace_id?}` | `201 Site` |
+| `POST /sites/{ref}/move` | `{workspace_id: string\|null}` | `Site` (creator or administrator; `409 workspace_move_forbidden` otherwise) |
+| `GET /workspaces` | `?all=true` (administrators) | `List<Workspace>` |
+| `POST /workspaces` | `{name}` | `201 Workspace` |
+| `GET /workspaces/{id}` | | `Workspace` with members |
+| `PATCH /workspaces/{id}` | `{name}` | `Workspace` |
+| `DELETE /workspaces/{id}` | | `204` (`409 workspace_not_empty` while it has sites) |
+| `POST /workspaces/{id}/members` | `{email}` | `201 Workspace` (`400 workspace_user_not_found`, `409 workspace_member_exists`) |
+| `DELETE /workspaces/{id}/members/{user_id}` | | `{workspace_deleted}` (own ID: leave; `409 workspace_last_member`) |
 | `GET /sites/{ref}` | | `Site` |
 | `PATCH /sites/{ref}` | `{title?, slug?, noindex?, protected?, password?, expires_at?}`; `slug: ""` or `null` removes it | `Site` |
 | `DELETE /sites/{ref}` | | `204` |
@@ -172,6 +182,10 @@ External domains (see `docs/external-domains.md`): `hostname` is normalised (low
 `GET /sites/{ref}/stats` counts page views of HTML pages from the sites access log (bots and assets excluded), by UTC day; `days` lists every day of the period ending today, oldest first, including days without views. `visitors` is the approximate number of unique visitors of a day (hash of IP and User-Agent with a daily salt); the total is the sum of daily values. In `top_referrers` an empty `name` is a direct visit; in both tops `*` stands for everything beyond the rows stored per day (500 pages, 200 referrers). Statistics lag behind by up to one collection interval (`STATS_INTERVAL`, default one minute).
 
 `preview_url` is the address that serves exactly this release, `https://p-<deploy id>-<site id>.<BASE_DOMAIN>/` (with `X-Robots-Tag: noindex`). It is set only when the installation runs with `TLS_MODE=wildcard` and the release is `ready`; otherwise it is `null` (see `docs/tls.md`).
+
+## Shared workspaces
+
+A site is personal (`workspace_id: null`) or belongs to one workspace. Every member of a workspace has owner rights on all its sites; a workspace or a workspace site of which the user is not a member answers 404, also for its creator after leaving. `owner_id` is the creator: limits on site count and size count against the creator. `POST /sites`, `POST /sites/{ref}/clone` and `POST /templates/{name}/sites` take `workspace_id` of a workspace the user belongs to. A user belongs to at most 50 workspaces and a workspace has at most 100 members (`403 workspace_limit_reached`). Audit entries of workspace sites carry `meta.workspace_id`; workspace events are `workspace.create`, `workspace.rename`, `workspace.delete`, `workspace.member.add`, `workspace.member.remove` and `site.move`.
 
 ## Site access and limits
 
