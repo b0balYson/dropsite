@@ -268,3 +268,11 @@ func TestLanguageSwitch(t *testing.T) {
 	}
 	wantContains(t, h.get("/").body, "My sites")
 }
+
+func TestBreakableEscapesAndAddsBreaks(t *testing.T) {
+	got := string(breakable(`a.b@c.d:8443/<script>"`))
+	want := `a.<wbr>b@<wbr>c.<wbr>d<wbr>:8443/<wbr>&lt;script&gt;&#34;`
+	if got != want {
+		t.Fatalf("breakable = %q, want %q", got, want)
+	}
+}

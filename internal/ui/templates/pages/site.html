@@ -1,6 +1,6 @@
 {{define "title"}}{{.D.V.Site.Title}}{{end}}
 
-{{define "flash_link"}}<p><a class="btn btn--small btn--ok" href="{{.D.V.URL}}" target="_blank" rel="noopener noreferrer">{{.L.T "deploy.open"}} <span class="mono addr-break">{{host .D.V.URL}}</span> <span aria-hidden="true">↗</span></a></p>{{end}}
+{{define "flash_link"}}<p><a class="btn btn--small btn--ok" href="{{.D.V.URL}}" target="_blank" rel="noopener noreferrer">{{.L.T "deploy.open"}} <span class="mono addr-break">{{wbr (host .D.V.URL)}}</span> <span aria-hidden="true">↗</span></a></p>{{end}}
 
 {{define "content"}}
 {{$v := .D.V}}
@@ -10,7 +10,7 @@
   <h1 class="display display--site">{{$v.Site.Title}}</h1>
   <ul class="addr-list addr-list--lg">
     {{range $i, $u := $v.URLs}}
-    <li><a class="addr{{if eq $i 0}} addr--primary{{end}} mono" href="{{$u}}" title="{{$u}}" target="_blank" rel="noopener noreferrer">{{host $u}}</a></li>
+    <li><a class="addr{{if eq $i 0}} addr--primary{{end}} mono" href="{{$u}}" title="{{$u}}" target="_blank" rel="noopener noreferrer">{{wbr (host $u)}}</a></li>
     {{end}}
   </ul>
   {{template "site_meta" .}}

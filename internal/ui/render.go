@@ -21,8 +21,26 @@ const fragmentSet = "_fragments"
 
 var funcs = template.FuncMap{
 	"host": displayHost,
+	"wbr":  breakable,
 	"inc":  func(i int) int { return i + 1 },
 	"join": strings.Join,
+}
+
+// breakable escapes s and adds line-break opportunities after dots, "@" and
+// "/" and before ":", so long host names and emails wrap between labels
+// instead of in the middle of a word.
+func breakable(s string) template.HTML {
+	var b strings.Builder
+	for _, r := range s {
+		if r == ':' {
+			b.WriteString("<wbr>")
+		}
+		b.WriteString(template.HTMLEscapeString(string(r)))
+		if r == '.' || r == '@' || r == '/' {
+			b.WriteString("<wbr>")
+		}
+	}
+	return template.HTML(b.String()) //nolint:gosec // every rune is escaped above; only <wbr> is added
 }
 
 // displayHost strips the scheme and trailing slash from a site URL.

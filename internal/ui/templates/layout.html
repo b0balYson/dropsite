@@ -53,8 +53,10 @@
 {{template "content" .}}
 </main>
 <footer class="foot">
-  <span>{{.Product}}</span>
-  <span class="foot__note">{{.L.T "foot.note"}}</span>
+  <div class="foot__inner">
+    <span>{{.Product}}</span>
+    <span class="foot__note">{{.L.T "foot.note"}}</span>
+  </div>
 </footer>
 </body>
 </html>

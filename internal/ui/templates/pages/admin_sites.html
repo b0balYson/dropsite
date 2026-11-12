@@ -23,11 +23,11 @@
     <div class="site-row__main">
       <h2 class="site-row__title"><a href="/sites/{{$s.ID}}">{{$s.Title}}</a>{{if $s.HasApex}} <span class="badge badge--current">{{$.L.T "allsites.apex.badge"}}</span>{{end}}</h2>
       <ul class="addr-list">
-        {{range $j, $u := $s.URLs}}<li><a class="addr{{if eq $j 0}} addr--primary{{end}} mono" href="{{$u}}" title="{{$u}}" target="_blank" rel="noopener noreferrer">{{host $u}}</a></li>{{end}}
+        {{range $j, $u := $s.URLs}}<li><a class="addr{{if eq $j 0}} addr--primary{{end}} mono" href="{{$u}}" title="{{$u}}" target="_blank" rel="noopener noreferrer">{{wbr (host $u)}}</a></li>{{end}}
       </ul>
     </div>
     <dl class="site-row__meta">
-      <div class="kv"><dt>{{$.L.T "allsites.owner"}}</dt><dd class="mono addr-break">{{$s.OwnerEmail}}</dd></div>
+      <div class="kv"><dt>{{$.L.T "allsites.owner"}}</dt><dd class="mono addr-break">{{wbr $s.OwnerEmail}}</dd></div>
       <div class="kv"><dt>{{$.L.T "sites.lastdeploy"}}</dt><dd>{{if $s.LastDeployAt}}{{$.L.DatePtr $s.LastDeployAt}}{{else}}<span class="muted">{{$.L.T "sites.nodeploy"}}</span>{{end}}</dd></div>
       <div class="kv"><dt>{{$.L.T "sites.size"}}</dt><dd class="mono">{{if $s.SizeBytes}}{{$.L.Size $s.SizeBytes}}{{else}}—{{end}}</dd></div>
     </dl>

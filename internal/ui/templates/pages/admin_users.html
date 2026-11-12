@@ -58,7 +58,7 @@
       <tbody>
       {{range .D.Users}}
       <tr class="{{if eq .Status "blocked"}}row--muted{{end}}">
-        <td data-label="{{$.L.T "login.email"}}" class="mono addr-break">{{.Email}}</td>
+        <td data-label="{{$.L.T "login.email"}}" class="mono addr-break">{{wbr .Email}}</td>
         <td data-label="{{$.L.T "users.role"}}">{{$.L.T (printf "role.%s" .Role)}}</td>
         <td data-label="{{$.L.T "users.status"}}"><span class="badge badge--{{if eq .Status "active"}}ok{{else if eq .Status "blocked"}}error{{else}}warn{{end}}">{{$.L.T (printf "status.%s" .Status)}}</span></td>
         <td data-label="{{$.L.T "users.sites"}}" class="mono">{{.SiteCount}}</td>

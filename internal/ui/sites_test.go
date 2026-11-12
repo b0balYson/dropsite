@@ -113,7 +113,7 @@ func TestSlugCheck(t *testing.T) {
 		{"/slug-check?slug=taken", "Этот адрес уже занят"},
 		{"/slug-check?slug=www", "зарезервирован"},
 		{"/slug-check?slug=A_B", "только латинские буквы"},
-		{"/slug-check?slug=free-one", "free-one.pp.test"},
+		{"/slug-check?slug=free-one", "free-one.<wbr>pp.<wbr>test"},
 		{"/slug-check?slug=" + v.Site.ID, "Этот адрес уже занят"},
 		{"/sites/" + v.Site.ID + "/slug-check?slug=mine", "свободен"},
 		{"/slug-check?slug=mine", "Этот адрес уже занят"},

@@ -84,6 +84,7 @@
   --r-sm: 2px;
   --r-md: 4px;
   --rule-thick: 3px;
+  --control-h: 2.75rem; /* shared height of inputs, choices and buttons */
   --rule-thin: 1px;
 
   --dur-fast: 120ms;
@@ -161,7 +162,9 @@ main:focus { outline: none; }
 
 .muted { color: var(--c-ink-2); }
 .small { font-size: var(--t-sm); }
-.addr-break { overflow-wrap: anywhere; word-break: break-word; }
+/* Host names and emails wrap at <wbr> points (after dots, "@", before ":"),
+   falling back to arbitrary breaks only for a single overlong label. */
+.addr-break { overflow-wrap: anywhere; word-break: normal; }
 [hidden] { display: none !important; }
 
 /* ---- masthead ------------------------------------------------------------ */
@@ -293,19 +296,19 @@ main:focus { outline: none; }
   margin: 0 auto;
   padding: var(--s-6) var(--gutter) var(--s-8);
 }
-.foot {
+.foot { border-top: var(--rule-thin) solid var(--c-hair); }
+.foot__inner {
   max-width: var(--page-max);
   width: 100%;
   margin: 0 auto;
   padding: var(--s-5) var(--gutter);
-  border-top: var(--rule-thin) solid var(--c-hair);
   display: flex;
   flex-wrap: wrap;
   gap: var(--s-2) var(--s-5);
   font-size: var(--t-xs);
   color: var(--c-ink-2);
 }
-.foot span:first-child { font-weight: 700; color: var(--c-ink); }
+.foot__inner span:first-child { font-weight: 700; color: var(--c-ink); }
 
 .page-head {
   display: flex;
@@ -393,7 +396,7 @@ main:focus { outline: none; }
   align-items: center;
   justify-content: center;
   gap: var(--s-2);
-  min-height: 2.75rem;
+  min-height: var(--control-h);
   padding: 0.55rem 1.1rem;
   border: 1.5px solid var(--btn-bd);
   border-radius: var(--r-sm);
@@ -431,7 +434,7 @@ main:focus { outline: none; }
 .optional { font-weight: 400; color: var(--c-ink-2); }
 .input {
   width: 100%;
-  min-height: 2.75rem;
+  min-height: var(--control-h);
   padding: 0.55rem 0.75rem;
   border: 1.5px solid var(--c-ink);
   border-radius: var(--r-sm);
@@ -457,14 +460,23 @@ select.input { padding-right: 2rem; }
   .form-grid--inline { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; align-items: end; }
   .form-grid--inline > .form-grid__full:last-child { grid-column: auto; }
 }
+@media (min-width: 48rem) and (max-width: 63.99rem) {
+  .form-grid--token { grid-template-columns: minmax(0, 1fr); }
+}
+@media (min-width: 64rem) {
+  .form-grid--token { grid-template-columns: minmax(0, 1fr) auto auto; align-items: end; }
+  .form-grid--token > .form-grid__submit { grid-column: auto; }
+}
 
+/* A floated legend becomes a flex item, so the fieldset gap spaces it like a label. */
+legend.field__label { float: left; width: 100%; }
 .choice__row { display: flex; flex-wrap: wrap; gap: var(--s-2); }
 .choice__item { position: relative; cursor: pointer; }
 .choice__item input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
 .choice__item span {
   display: inline-flex;
   align-items: center;
-  min-height: 2.5rem;
+  min-height: var(--control-h);
   padding: 0.4rem 0.9rem;
   border: 1.5px solid var(--c-ink);
   border-radius: var(--r-sm);
@@ -559,7 +571,7 @@ select.input { padding-right: 2rem; }
   color: var(--c-ink-2);
   text-decoration: none;
   overflow-wrap: anywhere;
-  word-break: break-all;
+  word-break: normal;
   border-bottom: 1px solid transparent;
   transition: border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
@@ -573,7 +585,7 @@ select.input { padding-right: 2rem; }
   border-bottom: 2px solid var(--c-ink);
 }
 .addr--primary::after { content: " \2197"; font-weight: 400; color: var(--c-ink-3); }
-.addr-list--lg .addr--primary { font-size: var(--t-xl); }
+.addr-list--lg .addr--primary { font-size: clamp(var(--t-lg), 1rem + 1.6vw, var(--t-xl)); }
 .addr-list--lg .addr:not(.addr--primary) { font-size: var(--t-base); }
 
 /* ---- my sites list ------------------------------------------------------- */
@@ -885,12 +897,9 @@ select.input { padding-right: 2rem; }
 }
 .chips { display: flex; flex-wrap: wrap; gap: var(--s-2); margin: var(--s-2) 0 var(--s-5); }
 .chip { padding: 0.15rem 0.5rem; border: 1px solid var(--c-hair); border-radius: var(--r-sm); font-size: var(--t-xs); background: var(--c-surface); }
-.sticky-actions {
-  position: sticky;
-  bottom: 0;
+.form-actions {
   margin-top: var(--s-6);
-  padding: var(--s-4) 0;
-  background: var(--c-paper);
+  padding-top: var(--s-5);
   border-top: var(--rule-thick) solid var(--c-rule);
 }
 

@@ -18,7 +18,7 @@
     {{with .D.Error}}<p class="notice notice--error" role="alert">{{.}}</p>{{end}}
     <div class="field">
       <span class="field__label">{{.L.T "login.email"}}</span>
-      <p class="readonly mono addr-break">{{.D.Email}}</p>
+      <p class="readonly mono addr-break">{{wbr .D.Email}}</p>
       <input type="hidden" name="email" value="{{.D.Email}}" autocomplete="username">
     </div>
     <div class="field">

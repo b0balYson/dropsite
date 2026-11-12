@@ -15,4 +15,4 @@
 </nav>
 {{end}}{{end}}{{end}}
 
-{{define "slug_status"}}{{with .D}}{{if .Slug}}{{if .Available}}<span class="status status--ok"><span class="status__icon" aria-hidden="true">✓</span> <span class="mono addr-break">{{.Host}}</span> — {{$.L.T "slug.available"}}</span>{{else}}<span class="status status--error"><span class="status__icon" aria-hidden="true">✕</span> {{.Message}}</span>{{end}}{{end}}{{end}}{{end}}
+{{define "slug_status"}}{{with .D}}{{if .Slug}}{{if .Available}}<span class="status status--ok"><span class="status__icon" aria-hidden="true">✓</span> <span class="mono addr-break">{{wbr .Host}}</span> — {{$.L.T "slug.available"}}</span>{{else}}<span class="status status--error"><span class="status__icon" aria-hidden="true">✕</span> {{.Message}}</span>{{end}}{{end}}{{end}}{{end}}

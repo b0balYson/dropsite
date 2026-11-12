@@ -43,7 +43,7 @@
     <div class="log__main">
       <p class="log__what"><strong>{{.Label}}</strong> <span class="mono muted small">{{.Action}}</span></p>
       <p class="log__who small">
-        <span class="mono addr-break">{{if .ActorEmail}}{{.ActorEmail}}{{else}}{{$.L.T "audit.system"}}{{end}}</span>
+        <span class="mono addr-break">{{if .ActorEmail}}{{wbr .ActorEmail}}{{else}}{{$.L.T "audit.system"}}{{end}}</span>
         {{if .Target}} → <span class="mono addr-break">{{.Target}}</span>{{end}}
         {{if .IP}} · <span class="mono">{{.IP}}</span>{{end}}
       </p>
