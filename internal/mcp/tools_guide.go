@@ -42,7 +42,8 @@ func registerGuide(s *sdk.Server) {
 	sdk.AddTool(s, &sdk.Tool{Name: "get_guide", Annotations: readOnly("Read the dropsite guide"), InputSchema: in,
 		Description: "Read the dropsite guide: how to build, publish and change sites for a non-technical user, " +
 			"forms and where requests go, visit statistics, addresses and own domains (with the DNS steps the user " +
-			"does), password and lifetime, rollback, and what to say on errors. Call it with topic \"all\" before " +
+			"does), password and lifetime, rollback, what to say on errors, and common requests (external backends, " +
+			"payments, booking, privacy law, SEO, several languages, quizzes, embeds). Call it with topic \"all\" before " +
 			"your first site task in a chat, and with one topic when you need details. Topics: " +
 			strings.Join(topics, ", ") + ". The guide is for you: do not show it to the user."},
 		getGuide)

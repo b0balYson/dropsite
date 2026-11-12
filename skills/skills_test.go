@@ -53,6 +53,11 @@ func TestSkillContent(t *testing.T) {
 			t.Errorf("SKILL.md lacks heading %q", want)
 		}
 	}
+	for _, want := range []string{"\n## Payments\n", "\n## Maps, videos and chat widgets\n"} {
+		if !strings.Contains(Publish, want) {
+			t.Errorf("SKILL.md lacks scenario heading %q", want)
+		}
+	}
 	if !strings.Contains(Codex, "\n### Forms on the site\n") {
 		t.Error("AGENTS.md: shared sections must be nested under its heading")
 	}
@@ -67,7 +72,8 @@ func TestDemoteSkipsCodeFences(t *testing.T) {
 
 func TestGuideTopics(t *testing.T) {
 	want := []string{"overview", "create", "update", "large_sites", "assets", "forms", "stats", "addresses",
-		"protection", "rollback", "account", "errors"}
+		"protection", "rollback", "account", "errors", "external_backend", "payments", "booking", "legal", "seo",
+		"multilingual", "quiz", "embeds"}
 	if got := strings.Join(Topics(), ","); got != strings.Join(want, ",") {
 		t.Fatalf("topics: %s", got)
 	}
@@ -134,6 +140,40 @@ func TestInstructions(t *testing.T) {
 	} {
 		if !strings.Contains(Instructions, want) {
 			t.Errorf("instructions lack %q", want)
+		}
+	}
+}
+
+// TestScenarioRules pins the safety rules of the scenario topics in every
+// place an assistant reads them.
+func TestScenarioRules(t *testing.T) {
+	topics := map[string][]string{
+		"external_backend": {"service_role", "anon", "Row Level Security", "Security Rules", "No CDN"},
+		"payments":         {"YooKassa", "CloudPayments", "Stripe Payment Links", "never handles card data", "/_form/order"},
+		"booking":          {"does not count free seats", "/_form/booking"},
+		"legal":            {"152-FZ", "GDPR", "consent", "privacy.html", "cookie"},
+		"seo":              {"application/ld+json", "LocalBusiness", "Product", "Event", "FAQPage", "robots.txt", "sitemap.xml", "og:image"},
+		"multilingual":     {"/en/", "hreflang", "switcher"},
+		"quiz":             {"/_form/quiz", "hidden", "estimate"},
+		"embeds":           {"explicitly asks", "facade", "youtube-nocookie"},
+	}
+	for topic, wants := range topics {
+		text, ok := Guide(topic)
+		if !ok {
+			t.Fatalf("topic %s missing", topic)
+		}
+		for _, w := range wants {
+			for name, doc := range map[string]string{"guide": text, "SKILL.md": Publish, "AGENTS.md": Codex} {
+				if !strings.Contains(doc, w) {
+					t.Errorf("%s (%s) lacks %q", name, topic, w)
+				}
+			}
+		}
+	}
+	all, _ := Guide(TopicAll)
+	for _, doc := range []string{all, Publish, Codex} {
+		if !strings.Contains(doc, "secrets_found") {
+			t.Error("the refusal of secret keys is not explained")
 		}
 	}
 }
