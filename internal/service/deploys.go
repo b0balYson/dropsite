@@ -273,3 +273,13 @@ func (s *Service) CleanUploads() error {
 	}
 	return nil
 }
+
+// UploadLimit is the largest request body a deploy may send, so adapters can
+// reject oversized uploads before reading them.
+func (s *Service) UploadLimit(ctx context.Context) (int64, error) {
+	lim, err := s.Limits(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return uploadLimit(lim), nil
+}
