@@ -257,15 +257,18 @@ func TestErrorsFromEveryMethod(t *testing.T) {
 	})
 	ctx := context.Background()
 	calls := map[string]func() error{
-		"ListSites":   func() error { _, err := c.ListSites(ctx, ListOptions{}); return err },
-		"CreateSite":  func() error { _, err := c.CreateSite(ctx, CreateSiteRequest{}); return err },
-		"GetSite":     func() error { _, err := c.GetSite(ctx, "s"); return err },
-		"UpdateSite":  func() error { _, err := c.UpdateSite(ctx, "s", UpdateSiteRequest{}); return err },
-		"DeleteSite":  func() error { return c.DeleteSite(ctx, "s") },
-		"ListDeploys": func() error { _, err := c.ListDeploys(ctx, "s"); return err },
-		"Rollback":    func() error { _, err := c.Rollback(ctx, "s", ""); return err },
-		"ListTokens":  func() error { _, err := c.ListTokens(ctx); return err },
-		"Deploy":      func() error { _, err := c.Deploy(ctx, "s", strings.NewReader("x"), nil); return err },
+		"ListSites":      func() error { _, err := c.ListSites(ctx, ListOptions{}); return err },
+		"CreateSite":     func() error { _, err := c.CreateSite(ctx, CreateSiteRequest{}); return err },
+		"GetSite":        func() error { _, err := c.GetSite(ctx, "s"); return err },
+		"UpdateSite":     func() error { _, err := c.UpdateSite(ctx, "s", UpdateSiteRequest{}); return err },
+		"DeleteSite":     func() error { return c.DeleteSite(ctx, "s") },
+		"ListDeploys":    func() error { _, err := c.ListDeploys(ctx, "s"); return err },
+		"Rollback":       func() error { _, err := c.Rollback(ctx, "s", ""); return err },
+		"ListTokens":     func() error { _, err := c.ListTokens(ctx); return err },
+		"ListHostnames":  func() error { _, err := c.ListHostnames(ctx, "s"); return err },
+		"AddHostname":    func() error { _, err := c.AddHostname(ctx, "s", "x.example.ru"); return err },
+		"RemoveHostname": func() error { return c.RemoveHostname(ctx, "s", "x.example.ru") },
+		"Deploy":         func() error { _, err := c.Deploy(ctx, "s", strings.NewReader("x"), nil); return err },
 	}
 	for name, call := range calls {
 		var ae *APIError

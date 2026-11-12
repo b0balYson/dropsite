@@ -127,6 +127,8 @@ func TestStage1(t *testing.T) {
 		}
 	})
 
+	t.Run("visit statistics", func(t *testing.T) { visitStatistics(t, s, ann, bob, siteID, siteHost) })
+
 	t.Run("sites survive control outage and caddy restart", func(t *testing.T) {
 		run(t, s.ctx, "stop", "control")
 		defer run(t, s.ctx, "up", "-d", "--wait", "control")

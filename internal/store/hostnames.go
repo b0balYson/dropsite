@@ -12,32 +12,40 @@ import (
 )
 
 const (
-	hostCols  = "hostname, site_id, kind, verified, created_at"
+	hostCols  = "hostname, site_id, kind, verified, created_at, reject_reason, reviewed_at, reviewed_by"
 	hostOrder = ` ORDER BY site_id, CASE kind WHEN 'default' THEN 0 WHEN 'slug' THEN 1 WHEN 'apex' THEN 2 ELSE 3 END, hostname`
 )
 
 func scanHost(s rowScanner) (domain.Hostname, error) {
 	var h domain.Hostname
 	var created int64
-	if err := s.Scan(&h.Hostname, &h.SiteID, &h.Kind, &h.Verified, &created); err != nil {
+	var reviewedAt, reviewedBy sql.NullInt64
+	if err := s.Scan(&h.Hostname, &h.SiteID, &h.Kind, &h.Verified, &created,
+		&h.RejectReason, &reviewedAt, &reviewedBy); err != nil {
 		return domain.Hostname{}, err
 	}
 	h.CreatedAt = fromMS(created)
+	h.ReviewedAt, h.ReviewedBy = fromNullMS(reviewedAt), fromNullInt(reviewedBy)
 	return h, nil
 }
 
 // insertHost inserts h. A taken hostname, or a slug label equal to any site ID
-// (tombstones included), → CodeSlugTaken.
+// (tombstones included), → CodeSlugTaken (CodeDomainTaken for external hosts).
 func insertHost(ctx context.Context, tx *sql.Tx, h domain.Hostname) error {
 	if h.Kind == domain.HostSlug {
 		if err := checkSlugLabel(ctx, tx, h.Hostname); err != nil {
 			return err
 		}
 	}
-	_, err := tx.ExecContext(ctx, "INSERT INTO hostnames ("+hostCols+") VALUES (?, ?, ?, ?, ?)",
-		h.Hostname, h.SiteID, string(h.Kind), h.Verified, toMS(h.CreatedAt))
+	conflict := errSlugTaken
+	if h.Kind == domain.HostExternal {
+		conflict = errDomainTaken
+	}
+	_, err := tx.ExecContext(ctx, "INSERT INTO hostnames ("+hostCols+") VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+		h.Hostname, h.SiteID, string(h.Kind), h.Verified, toMS(h.CreatedAt),
+		h.RejectReason, nullMS(h.ReviewedAt), h.ReviewedBy)
 	if err != nil {
-		return mapUnique(err, errSlugTaken, "insert hostname")
+		return mapUnique(err, conflict, "insert hostname")
 	}
 	return nil
 }
@@ -91,7 +99,8 @@ func deleteHost(ctx context.Context, tx *sql.Tx, hostname string) error {
 	return nil
 }
 
-// ListHostnames returns the site's hostnames: default, slug, apex, external.
+// ListHostnames returns the site's hostnames in every status: default, slug,
+// apex, external.
 // A deleted site has none.
 func (db *DB) ListHostnames(ctx context.Context, siteID string) ([]domain.Hostname, error) {
 	rows, err := db.r.QueryContext(ctx, "SELECT "+hostCols+" FROM hostnames WHERE site_id = ?"+hostOrder, siteID)

@@ -13,6 +13,7 @@ import (
 
 	"github.com/b0balYson/dropsite/internal/archive"
 	"github.com/b0balYson/dropsite/internal/config"
+	"github.com/b0balYson/dropsite/internal/dnscheck"
 	"github.com/b0balYson/dropsite/internal/domain"
 	"github.com/b0balYson/dropsite/internal/ratelimit"
 	"github.com/b0balYson/dropsite/internal/storage"
@@ -52,6 +53,8 @@ type Deps struct {
 	Extract ExtractFunc
 	// UploadDir holds temporary uploads; it must be on the state volume.
 	UploadDir string
+	// Resolver answers DNS checks of external domains; nil means the system resolver.
+	Resolver dnscheck.Resolver
 }
 
 // Service implements the use cases.
@@ -75,6 +78,8 @@ type Service struct {
 	siteLocks    keyedMutex
 	settingsMu   sync.RWMutex
 	settingsData *effectiveSettings
+	dns          *dnscheck.Checker
+	ipCache      serverIPCache
 }
 
 // New builds a Service.
@@ -106,6 +111,7 @@ func New(d Deps) *Service {
 		codeLimit:    ratelimit.New(FailedCodesPerIP, FailedCodesWindow).WithClock(now),
 		regLimit:     ratelimit.New(RegistrationsPerIP, RegistrationWindow).WithClock(now),
 		hasher:       newPasswordHasher(),
+		dns:          dnscheck.New(d.Resolver, dnscheck.DefaultTimeout),
 	}
 }
 

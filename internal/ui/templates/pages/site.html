@@ -70,13 +70,35 @@
       </div>
       <button class="btn btn--primary" type="submit">{{.L.T "form.save"}}</button>
     </form>
+
+    <h2 class="section-title section-title--sub" id="counters-h">{{.L.T "counters.title"}}</h2>
+    <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/counters" aria-labelledby="counters-h">
+      {{template "csrf" .}}
+      <div class="field">
+        <label class="field__label" for="metrika_id">{{.L.T "counters.metrika"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+        <input class="input mono" id="metrika_id" name="metrika_id" value="{{.D.Counters.Own.MetrikaID}}" inputmode="numeric" pattern="[1-9][0-9]{3,11}" maxlength="12" autocomplete="off" spellcheck="false" placeholder="12345678">
+      </div>
+      <div class="field">
+        <label class="field__label" for="ga4_id">{{.L.T "counters.ga4"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+        <input class="input mono" id="ga4_id" name="ga4_id" value="{{.D.Counters.Own.GA4ID}}" pattern="[Gg]-[A-Za-z0-9]{4,16}" maxlength="18" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="G-XXXXXXXXXX" aria-describedby="counters-hint">
+        <p class="hint" id="counters-hint">{{.L.T "counters.hint"}}{{if $v.Current}} {{.L.T "counters.hint.release"}}{{end}}</p>
+        {{with .D.Counters.Global}}{{if or .MetrikaID .GA4ID}}
+        <p class="hint">{{$.L.T "counters.global"}} <span class="mono">{{if .MetrikaID}}{{.MetrikaID}}{{end}}{{if and .MetrikaID .GA4ID}}, {{end}}{{if .GA4ID}}{{.GA4ID}}{{end}}</span></p>
+        {{end}}{{end}}
+      </div>
+      <button class="btn btn--ghost" type="submit">{{.L.T "counters.save"}}</button>
+    </form>
   </section>
 </div>
+
+{{template "site_stats" .}}
 
 <section class="section" aria-labelledby="history-h">
   <h2 class="section-title" id="history-h">{{.L.T "history.title"}}</h2>
   <div id="history">{{template "history" .}}</div>
 </section>
+
+{{template "site_domains" .}}
 
 <section class="section danger" aria-labelledby="delete-h">
   <details class="danger__box">
