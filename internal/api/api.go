@@ -55,6 +55,7 @@ func New(svc *service.Service, log *slog.Logger, mounts ...Mount) http.Handler {
 		return r.RemoteAddr
 	}))
 	a.registerSitePaths(mux)
+	a.registerProxyPath(mux)
 	return a.middleware(mux)
 }
 
@@ -98,6 +99,9 @@ func (a *api) routes() []route {
 		{Method: http.MethodGet, Path: "/sites/{ref}/forms/submissions.csv", handle: a.exportSubmissions},
 		{Method: http.MethodGet, Path: "/sites/{ref}/forms/submissions/search", handle: a.searchSubmissions},
 		{Method: http.MethodGet, Path: "/sites/{ref}/forms/submissions/export", handle: a.exportSubmissionsText},
+		{Method: http.MethodGet, Path: "/sites/{ref}/proxy/endpoints", handle: a.listProxyEndpoints},
+		{Method: http.MethodPut, Path: "/sites/{ref}/proxy/endpoints/{name}", handle: a.putProxyEndpoint},
+		{Method: http.MethodDelete, Path: "/sites/{ref}/proxy/endpoints/{name}", handle: a.deleteProxyEndpoint},
 		{Method: http.MethodGet, Path: "/tokens", handle: a.listTokens},
 		{Method: http.MethodPost, Path: "/tokens", handle: a.createToken},
 		{Method: http.MethodDelete, Path: "/tokens/{id}", handle: a.revokeToken},

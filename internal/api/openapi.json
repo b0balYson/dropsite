@@ -1737,6 +1737,128 @@
         }
       }
     },
+    "/sites/{ref}/proxy/endpoints": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SiteRef"
+        }
+      ],
+      "get": {
+        "operationId": "listProxyEndpoints",
+        "summary": "Secret proxy endpoints of a site, with usage counters (keys are never returned)",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProxyEndpointList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/sites/{ref}/proxy/endpoints/{name}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SiteRef"
+        },
+        {
+          "name": "name",
+          "in": "path",
+          "required": true,
+          "description": "Endpoint name: 1-40 characters a-z, 0-9 and hyphens",
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,39}$"
+          }
+        }
+      ],
+      "put": {
+        "operationId": "putProxyEndpoint",
+        "summary": "Create an endpoint or replace its configuration",
+        "description": "Pages of the site call https://<site>/_dropsite/proxy/<name>/<path>; the request goes to upstream_url + /<path> with the stored key added. The key is pasted only in the web interface (secret_url): a body with a `secret` field is refused with `proxy_secret_ui_only`. Changing upstream_url, allowed_hosts, auth or auth_name removes a stored key; methods, paths and enabled keep it. Omitted optional fields get their defaults.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutProxyEndpointRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProxyEndpoint"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProxyEndpoint"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/LimitReached"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteProxyEndpoint",
+        "summary": "Delete an endpoint together with its key",
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
     "/sites/{ref}/files": {
       "parameters": [
         {
@@ -3675,6 +3797,212 @@
           },
           "limit_overrides": {
             "$ref": "#/components/schemas/LimitOverrides"
+          }
+        }
+      },
+      "ProxyEndpoint": {
+        "type": "object",
+        "required": [
+          "name",
+          "upstream_url",
+          "allowed_hosts",
+          "methods",
+          "paths",
+          "auth",
+          "auth_name",
+          "enabled",
+          "secret_set",
+          "secret_updated_at",
+          "secret_url",
+          "call_url",
+          "usage",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "upstream_url": {
+            "type": "string",
+            "description": "https base address; with auth path it contains {secret}"
+          },
+          "allowed_hosts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Exact https hosts the request and its redirects may reach; the upstream host comes first"
+          },
+          "methods": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Allowed methods"
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Allowed path prefixes; empty allows every path"
+          },
+          "auth": {
+            "type": "string",
+            "enum": [
+              "header",
+              "query",
+              "bearer",
+              "path"
+            ]
+          },
+          "auth_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Header or query parameter name (header and query)"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "secret_set": {
+            "type": "boolean",
+            "description": "Whether a key is stored; the key itself is never returned"
+          },
+          "secret_updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "secret_url": {
+            "type": "string",
+            "description": "Web interface screen where the user pastes the key"
+          },
+          "call_url": {
+            "type": "string",
+            "description": "Address a page of the site calls, followed by the upstream path"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/ProxyUsage"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ProxyUsage": {
+        "type": "object",
+        "required": [
+          "requests",
+          "errors",
+          "rejected",
+          "last_used_at",
+          "last_status"
+        ],
+        "properties": {
+          "requests": {
+            "type": "integer",
+            "description": "Calls forwarded upstream"
+          },
+          "errors": {
+            "type": "integer",
+            "description": "Forwarded calls that failed (upstream 5xx or unreachable)"
+          },
+          "rejected": {
+            "type": "integer",
+            "description": "Calls refused before forwarding (method, path, origin, rate, missing key, size)"
+          },
+          "last_used_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "last_status": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "HTTP status of the last call"
+          }
+        }
+      },
+      "ProxyEndpointList": {
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProxyEndpoint"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      },
+      "PutProxyEndpointRequest": {
+        "type": "object",
+        "required": [
+          "upstream_url",
+          "auth"
+        ],
+        "properties": {
+          "upstream_url": {
+            "type": "string",
+            "description": "https://host/base; no key in the query"
+          },
+          "allowed_hosts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Extra exact hosts for redirects (the upstream host is always included); at most 10"
+          },
+          "methods": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Subset of GET, HEAD, POST, PUT, PATCH, DELETE; default GET and POST"
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Up to 10 path prefixes starting with /; default: every path"
+          },
+          "auth": {
+            "type": "string",
+            "enum": [
+              "header",
+              "query",
+              "bearer",
+              "path"
+            ]
+          },
+          "auth_name": {
+            "type": "string",
+            "description": "Header name (auth header) or query parameter (auth query)"
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true
           }
         }
       },

@@ -140,9 +140,14 @@ http:// {
 	# Paths reserved for the platform; other /_* paths (e.g. /_next/) are
 	# ordinary site files. /_dropsite/* is served by control (visitor login of
 	# protected sites, the Altcha widget script); of /_form/* only the routes
-	# below reach control, the rest answers 404.
+	# below reach control, the rest answers 404. The secret proxy
+	# /_dropsite/proxy/* is left out of @platform: it is proxied after
+	# forward_auth below, so protected sites stay protected.
 	@reserved path /_form /_form/*
-	@platform path /_dropsite /_dropsite/*
+	@platform {
+		path /_dropsite /_dropsite/*
+		not path /_dropsite/proxy/*
+	}
 
 	# Per-host flags: control creates and removes marker files, Caddy only
 	# checks them (no reload). Without a trailing "/" try_files matches
@@ -209,6 +214,16 @@ http:// {
 			}
 			reverse_proxy @formPost control:8080
 			reverse_proxy @formChallenge control:8080
+
+			# Secret proxy: pages call /_dropsite/proxy/<name>/... with any of
+			# the methods control allows for the endpoint; control adds the
+			# stored key and forwards upstream. Bodies are capped here too
+			# (control enforces the same 1 MiB). After forward_auth on purpose.
+			@proxy path /_dropsite/proxy/*
+			request_body @proxy {
+				max_size 1MiB
+			}
+			reverse_proxy @proxy control:8080
 
 			error @hidden 404
 			error @reserved 404

@@ -22,7 +22,10 @@ func TestCaddyfileMatchesPaths(t *testing.T) {
 	for _, want := range []string{
 		"forward_auth @protected control:8081",
 		"uri /internal/auth-check",
-		"@platform path " + strings.TrimSuffix(Prefix, "/") + " " + Prefix + "*",
+		"path " + strings.TrimSuffix(Prefix, "/") + " " + Prefix + "*",
+		"not path " + service.ProxyPathPrefix + "*",
+		"@proxy path " + service.ProxyPathPrefix + "*",
+		"reverse_proxy @proxy control:8080",
 		"reverse_proxy @platform control:8080",
 		"header_down -X-Robots-Tag",
 		"root /data/flags/noindex",
@@ -33,6 +36,10 @@ func TestCaddyfileMatchesPaths(t *testing.T) {
 		if !strings.Contains(cf, want) {
 			t.Errorf("deploy/Caddyfile lacks %q", want)
 		}
+	}
+	// The secret proxy must be reached only after the access check.
+	if i, j := strings.Index(cf, "forward_auth @protected"), strings.Index(cf, "reverse_proxy @proxy"); i < 0 || j < 0 || i > j {
+		t.Error("forward_auth must precede the secret proxy")
 	}
 	// The flags must come before the error/serve rules of the route.
 	if i, j := strings.Index(cf, "forward_auth @protected"), strings.Index(cf, "error @hidden 404"); i < 0 || j < 0 || i > j {

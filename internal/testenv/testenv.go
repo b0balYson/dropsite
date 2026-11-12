@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -99,11 +100,17 @@ type options struct {
 	env    map[string]string
 	mutate []func(*config.Config)
 	sender service.FormSender
+	proxy  http.RoundTripper
 }
 
 // WithFormSender replaces the transports used for form delivery.
 func WithFormSender(s service.FormSender) Option {
 	return func(o *options) { o.sender = s }
+}
+
+// WithProxyTransport replaces the upstream transport of the secret proxy.
+func WithProxyTransport(tr http.RoundTripper) Option {
+	return func(o *options) { o.proxy = tr }
 }
 
 // WithEnv sets an environment variable read by config.Load.
@@ -132,7 +139,7 @@ func New(t testing.TB, opts ...Option) *Env {
 		opt(o)
 	}
 	cfg := loadConfig(t, o)
-	return start(t, cfg, o.sender)
+	return start(t, cfg, o)
 }
 
 func loadConfig(t testing.TB, o *options) *config.Config {
@@ -150,7 +157,7 @@ func loadConfig(t testing.TB, o *options) *config.Config {
 	return cfg
 }
 
-func start(t testing.TB, cfg *config.Config, sender service.FormSender) *Env {
+func start(t testing.TB, cfg *config.Config, o *options) *Env {
 	t.Helper()
 	ctx := context.Background()
 	uploads := filepath.Join(cfg.StateDir, "uploads")
@@ -170,8 +177,9 @@ func start(t testing.TB, cfg *config.Config, sender service.FormSender) *Env {
 	dns.Set(cfg.APIHost, ServerIP)
 	svc := service.New(service.Deps{
 		Config: cfg, Repo: db, Files: storage.NewFS(cfg.SitesDir), Now: clock.Now, UploadDir: uploads,
-		Resolver:   dns,
-		FormSender: sender,
+		Resolver:       dns,
+		FormSender:     o.sender,
+		ProxyTransport: o.proxy,
 	})
 	if err := svc.Start(ctx); err != nil {
 		t.Fatalf("testenv: start service: %v", err)
