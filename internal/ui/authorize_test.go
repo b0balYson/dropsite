@@ -123,8 +123,10 @@ func TestConsentApproveAndBadResource(t *testing.T) {
 	if !strings.Contains(resp.Header.Get("Content-Security-Policy"), "form-action 'self' http://127.0.0.1:7777") {
 		t.Fatalf("csp: %s", resp.Header.Get("Content-Security-Policy"))
 	}
-	if consentCSP("::bad") != csp {
-		t.Fatal("bad redirect CSP")
+	for _, bad := range []string{"::bad", "https://a.com;script-src/cb", "https://*/cb", "https://'self'/cb", "http://example.com/cb"} {
+		if consentCSP(bad) != csp {
+			t.Fatalf("bad redirect %q changed the CSP: %s", bad, consentCSP(bad))
+		}
 	}
 	// Errors that can be reported to the client are redirected.
 	q := url.Values{"response_type": {"token"}, "client_id": {r.client}}

@@ -17,24 +17,40 @@ import (
 // revoked by the call that returns it.
 var ErrCredentialReused = errors.New("oauth credential reused")
 
+// ErrOAuthClientLimit reports that the client registration cap is reached
+// and no client can be evicted.
+var ErrOAuthClientLimit = errors.New("oauth client limit reached")
+
+// OAuthCodeAccept checks a redeemed authorization code and returns the grant
+// and tokens to issue for it. It runs inside the write transaction and must
+// not write through the repository.
+type OAuthCodeAccept func(domain.OAuthCode) (domain.OAuthGrant, []domain.OAuthToken, error)
+
 // OAuthRepository stores the OAuth authorization server state.
 type OAuthRepository interface {
 	CreateOAuthClient(ctx context.Context, c domain.OAuthClient) error
 	GetOAuthClient(ctx context.Context, id string) (domain.OAuthClient, error)
 	CountOAuthClients(ctx context.Context) (int, error)
-	// DeleteUnusedOAuthClients removes clients registered before the given
-	// time that have no active grant.
-	DeleteUnusedOAuthClients(ctx context.Context, before time.Time) (int, error)
+	// CreateOAuthClientCapped stores a client while keeping at most max
+	// clients: at the cap it first evicts the oldest client registered before
+	// evictBefore that has no active grant, and returns its ID. When nothing
+	// can be evicted it stores nothing and returns ErrOAuthClientLimit.
+	CreateOAuthClientCapped(ctx context.Context, c domain.OAuthClient, maxClients int, evictBefore time.Time) (string, error)
+	// DeleteUnusedOAuthClients removes clients registered before
+	// neverGrantedBefore that were never granted access, and clients
+	// registered before staleBefore that have no active grant.
+	DeleteUnusedOAuthClients(ctx context.Context, neverGrantedBefore, staleBefore time.Time) (int, error)
 
 	CreateOAuthCode(ctx context.Context, c domain.OAuthCode) (int64, error)
-	// RedeemOAuthCode marks a usable code used and returns it. An unknown or
-	// expired code → ErrNotFound; a used one revokes the grant issued for it
-	// and returns ErrCredentialReused.
-	RedeemOAuthCode(ctx context.Context, hash []byte, now time.Time) (domain.OAuthCode, error)
-	// IssueOAuthGrant creates a grant for a redeemed code, revokes earlier
-	// active grants of the same user and client, links the code to the grant
-	// and stores the tokens, atomically. It returns the grant ID.
-	IssueOAuthGrant(ctx context.Context, codeID int64, g domain.OAuthGrant, tokens []domain.OAuthToken) (int64, error)
+	// ExchangeOAuthCode redeems an authorization code and issues its grant in
+	// one transaction, so a concurrent replay always finds the grant to
+	// revoke. An unknown or expired code → ErrNotFound; a used one revokes
+	// the grant issued for it and returns ErrCredentialReused. Otherwise the
+	// code is marked used and accept decides: an error from accept is
+	// returned (the code stays used); otherwise the grant it returns is
+	// created, earlier active grants of the same user and client are
+	// revoked, and the tokens are stored. It returns the grant ID.
+	ExchangeOAuthCode(ctx context.Context, hash []byte, now time.Time, accept OAuthCodeAccept) (int64, error)
 	// GetOAuthToken loads a token and its grant by the token hash.
 	GetOAuthToken(ctx context.Context, hash []byte) (domain.OAuthToken, domain.OAuthGrant, error)
 	// RotateOAuthRefresh marks the refresh token used and stores the new
@@ -53,16 +69,50 @@ type OAuthRepository interface {
 
 // CreateOAuthClient stores a registered client.
 func (db *DB) CreateOAuthClient(ctx context.Context, c domain.OAuthClient) error {
+	return db.withTx(ctx, func(tx *sql.Tx) error { return insertOAuthClient(ctx, tx, c) })
+}
+
+func insertOAuthClient(ctx context.Context, tx *sql.Tx, c domain.OAuthClient) error {
 	uris, err := json.Marshal(c.RedirectURIs)
 	if err != nil {
 		return fmt.Errorf("encode redirect uris: %w", err)
 	}
-	_, err = db.w.ExecContext(ctx, `INSERT INTO oauth_clients (id, name, redirect_uris, created_at, created_ip)
+	_, err = tx.ExecContext(ctx, `INSERT INTO oauth_clients (id, name, redirect_uris, created_at, created_ip)
 		VALUES (?, ?, ?, ?, ?)`, c.ID, c.Name, string(uris), toMS(c.CreatedAt), c.CreatedIP)
 	if err != nil {
 		return fmt.Errorf("insert oauth client: %w", err)
 	}
 	return nil
+}
+
+// noActiveGrant selects clients without an active grant.
+const noActiveGrant = "NOT EXISTS (SELECT 1 FROM oauth_grants g WHERE g.client_id = oauth_clients.id AND g.revoked_at IS NULL)"
+
+// CreateOAuthClientCapped stores a client under the cap (see the interface).
+func (db *DB) CreateOAuthClientCapped(ctx context.Context, c domain.OAuthClient, maxClients int, evictBefore time.Time) (string, error) {
+	evicted := ""
+	err := db.withTx(ctx, func(tx *sql.Tx) error {
+		var n int
+		if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM oauth_clients").Scan(&n); err != nil {
+			return fmt.Errorf("count oauth clients: %w", err)
+		}
+		if n >= maxClients {
+			err := tx.QueryRowContext(ctx, `DELETE FROM oauth_clients WHERE id = (
+				SELECT id FROM oauth_clients WHERE created_at < ? AND `+noActiveGrant+`
+				ORDER BY created_at, id LIMIT 1) RETURNING id`, toMS(evictBefore)).Scan(&evicted)
+			if errors.Is(err, sql.ErrNoRows) {
+				return ErrOAuthClientLimit
+			}
+			if err != nil {
+				return fmt.Errorf("evict oauth client: %w", err)
+			}
+		}
+		return insertOAuthClient(ctx, tx, c)
+	})
+	if err != nil {
+		return "", err
+	}
+	return evicted, nil
 }
 
 // GetOAuthClient loads a registered client.
@@ -91,10 +141,12 @@ func (db *DB) CountOAuthClients(ctx context.Context) (int, error) {
 	return n, nil
 }
 
-// DeleteUnusedOAuthClients drops stale registrations without active grants.
-func (db *DB) DeleteUnusedOAuthClients(ctx context.Context, before time.Time) (int, error) {
-	res, err := db.w.ExecContext(ctx, `DELETE FROM oauth_clients WHERE created_at < ?
-		AND id NOT IN (SELECT client_id FROM oauth_grants WHERE revoked_at IS NULL)`, toMS(before))
+// DeleteUnusedOAuthClients drops registrations that were never used and
+// stale ones without active grants (see the interface).
+func (db *DB) DeleteUnusedOAuthClients(ctx context.Context, neverGrantedBefore, staleBefore time.Time) (int, error) {
+	res, err := db.w.ExecContext(ctx, `DELETE FROM oauth_clients WHERE
+		(created_at < ? AND NOT EXISTS (SELECT 1 FROM oauth_grants g WHERE g.client_id = oauth_clients.id))
+		OR (created_at < ? AND `+noActiveGrant+`)`, toMS(neverGrantedBefore), toMS(staleBefore))
 	return affected(res, err, "delete unused oauth clients")
 }
 
@@ -134,13 +186,13 @@ func scanOAuthCode(s rowScanner) (domain.OAuthCode, error) {
 	return c, nil
 }
 
-// RedeemOAuthCode consumes an authorization code (see the interface).
-func (db *DB) RedeemOAuthCode(ctx context.Context, hash []byte, now time.Time) (domain.OAuthCode, error) {
-	var c domain.OAuthCode
-	reused := false
+// ExchangeOAuthCode redeems a code and issues its grant (see the interface).
+func (db *DB) ExchangeOAuthCode(ctx context.Context, hash []byte, now time.Time, accept OAuthCodeAccept) (int64, error) {
+	var id int64
+	var reused bool
+	var rejected error
 	err := db.withTx(ctx, func(tx *sql.Tx) error {
-		var err error
-		c, err = scanOAuthCode(tx.QueryRowContext(ctx, "SELECT "+oauthCodeCols+" FROM oauth_codes WHERE hash = ?", hash))
+		c, err := scanOAuthCode(tx.QueryRowContext(ctx, "SELECT "+oauthCodeCols+" FROM oauth_codes WHERE hash = ?", hash))
 		if err != nil {
 			return mapNoRows(err, "get oauth code")
 		}
@@ -159,15 +211,24 @@ func (db *DB) RedeemOAuthCode(ctx context.Context, hash []byte, now time.Time) (
 		}
 		used := now
 		c.UsedAt = &used
-		return nil
+		var g domain.OAuthGrant
+		var tokens []domain.OAuthToken
+		// A rejected code is still spent: the used mark is committed.
+		if g, tokens, rejected = accept(c); rejected != nil {
+			return nil //nolint:nilerr // commit, then return the rejection after the transaction
+		}
+		id, err = issueGrant(ctx, tx, c.ID, g, tokens)
+		return err
 	})
-	if err != nil {
-		return domain.OAuthCode{}, err
+	switch {
+	case err != nil:
+		return 0, err
+	case reused:
+		return 0, ErrCredentialReused
+	case rejected != nil:
+		return 0, rejected
 	}
-	if reused {
-		return domain.OAuthCode{}, ErrCredentialReused
-	}
-	return c, nil
+	return id, nil
 }
 
 func revokeGrant(ctx context.Context, tx *sql.Tx, grantID int64, now time.Time) error {
@@ -188,31 +249,29 @@ func insertOAuthTokens(ctx context.Context, tx *sql.Tx, grantID int64, tokens []
 	return nil
 }
 
-// IssueOAuthGrant creates the grant for a redeemed code (see the interface).
-func (db *DB) IssueOAuthGrant(ctx context.Context, codeID int64, g domain.OAuthGrant, tokens []domain.OAuthToken) (int64, error) {
-	var id int64
-	err := db.withTx(ctx, func(tx *sql.Tx) error {
-		if _, err := tx.ExecContext(ctx, `UPDATE oauth_grants SET revoked_at = ?
-			WHERE user_id = ? AND client_id = ? AND revoked_at IS NULL`,
-			toMS(g.CreatedAt), g.UserID, g.ClientID); err != nil {
-			return fmt.Errorf("revoke previous grants: %w", err)
-		}
-		res, err := tx.ExecContext(ctx, `INSERT INTO oauth_grants
-			(user_id, client_id, client_name, redirect_host, scope, resource, created_at, last_used_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-			g.UserID, g.ClientID, g.ClientName, g.RedirectHost, g.Scope, g.Resource, toMS(g.CreatedAt), toMS(g.CreatedAt))
-		if err != nil {
-			return fmt.Errorf("insert oauth grant: %w", err)
-		}
-		if id, err = res.LastInsertId(); err != nil {
-			return fmt.Errorf("insert oauth grant: last id: %w", err)
-		}
-		if _, err := tx.ExecContext(ctx, "UPDATE oauth_codes SET grant_id = ? WHERE id = ?", id, codeID); err != nil {
-			return fmt.Errorf("link oauth code: %w", err)
-		}
-		return insertOAuthTokens(ctx, tx, id, tokens)
-	})
-	return id, err
+// issueGrant creates the grant for a redeemed code, revokes earlier active
+// grants of the same user and client, links the code and stores the tokens.
+func issueGrant(ctx context.Context, tx *sql.Tx, codeID int64, g domain.OAuthGrant, tokens []domain.OAuthToken) (int64, error) {
+	if _, err := tx.ExecContext(ctx, `UPDATE oauth_grants SET revoked_at = ?
+		WHERE user_id = ? AND client_id = ? AND revoked_at IS NULL`,
+		toMS(g.CreatedAt), g.UserID, g.ClientID); err != nil {
+		return 0, fmt.Errorf("revoke previous grants: %w", err)
+	}
+	res, err := tx.ExecContext(ctx, `INSERT INTO oauth_grants
+		(user_id, client_id, client_name, redirect_host, scope, resource, created_at, last_used_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		g.UserID, g.ClientID, g.ClientName, g.RedirectHost, g.Scope, g.Resource, toMS(g.CreatedAt), toMS(g.CreatedAt))
+	if err != nil {
+		return 0, fmt.Errorf("insert oauth grant: %w", err)
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("insert oauth grant: last id: %w", err)
+	}
+	if _, err := tx.ExecContext(ctx, "UPDATE oauth_codes SET grant_id = ? WHERE id = ?", id, codeID); err != nil {
+		return 0, fmt.Errorf("link oauth code: %w", err)
+	}
+	return id, insertOAuthTokens(ctx, tx, id, tokens)
 }
 
 const oauthGrantCols = "g.id, g.user_id, g.client_id, g.client_name, g.redirect_host, g.scope, g.resource, " +

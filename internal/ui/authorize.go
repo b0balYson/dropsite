@@ -96,9 +96,9 @@ func (a *authorizer) render(w http.ResponseWriter, r *http.Request, rc *reqCtx, 
 
 // consentCSP is the UI policy with the client's redirect origin allowed as a
 // form target: browsers apply form-action to the redirect after the POST.
+// Only a validated origin (scheme, DNS name or IP literal, port) is added.
 func consentCSP(redirectURI string) string {
-	if u, err := url.Parse(redirectURI); err == nil && u.Scheme != "" && u.Host != "" {
-		origin := u.Scheme + "://" + u.Host
+	if origin := service.RedirectOrigin(redirectURI); origin != "" {
 		return strings.Replace(csp, "form-action 'self'", "form-action 'self' "+origin, 1)
 	}
 	return csp

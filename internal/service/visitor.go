@@ -179,12 +179,12 @@ type VisitorCookie struct {
 
 var errVisitorPassword = domain.E(domain.KindUnauthorized, domain.CodeBadCredentials, "wrong password")
 
-func visitorIPKey(ip, siteID string) string { return "visitor:" + siteID + ":" + ip }
+func visitorIPKey(ip, siteID string) string { return "visitor:" + siteID + ":" + ipKey(ip) }
 
 // beginVisitorLogin reserves one failure against both limits before the slow
 // password check; the caller cancels the reservations on success.
 func (s *Service) beginVisitorLogin(siteID, ip string) (func(), func(), error) {
-	release, ok := s.loginBusy.tryAcquire("visitor:" + ip)
+	release, ok := s.loginBusy.tryAcquire("visitor:" + ipKey(ip))
 	if !ok {
 		return nil, nil, domain.ErrRateLimited.WithRetryAfter(LoginBusyRetryAfter)
 	}

@@ -74,6 +74,10 @@ type Service struct {
 	accountLimit *ratelimit.Window
 	tokenLimit   *ratelimit.Window
 	codeLimit    *ratelimit.Window
+	// codeAudit lets one failed connect code per network and window into
+	// the audit log, so guessing cannot flood it.
+	codeAudit    *ratelimit.Window
+	cimdLimit    *ratelimit.Window
 	regLimit     *ratelimit.Window
 	loginBusy    keyedTryLock
 	hasher       *passwordHasher
@@ -117,6 +121,8 @@ func New(d Deps) *Service {
 		accountLimit: ratelimit.New(FailedLoginsPerAccount, FailedLoginsWindow).WithClock(now),
 		tokenLimit:   ratelimit.New(FailedTokensPerIP, FailedLoginsWindow).WithClock(now),
 		codeLimit:    ratelimit.New(FailedCodesPerIP, FailedCodesWindow).WithClock(now),
+		codeAudit:    ratelimit.New(1, FailedCodesWindow).WithClock(now),
+		cimdLimit:    ratelimit.New(ClientMetadataFetchesPerIP, ClientMetadataFetchWindow).WithClock(now),
 		regLimit:     ratelimit.New(RegistrationsPerIP, RegistrationWindow).WithClock(now),
 		hasher:       newPasswordHasher(),
 		dns:          dnscheck.New(d.Resolver, dnscheck.DefaultTimeout),
