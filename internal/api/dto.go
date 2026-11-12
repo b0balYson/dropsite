@@ -36,6 +36,13 @@ type meDTO struct {
 	User      userDTO   `json:"user"`
 	Limits    limitsDTO `json:"limits"`
 	SiteCount int       `json:"site_count"`
+	// Server-wide facts an assistant tells the user.
+	MaxDomainsPerSite int    `json:"max_domains_per_site"`
+	MaxInlineBytes    int64  `json:"max_inline_bytes"`
+	UIURL             string `json:"ui_url"`
+	// RootSite is the site on the root domain, for administrators only;
+	// null otherwise or when there is none.
+	RootSite *siteDTO `json:"root_site"`
 }
 
 // hostnameDTO is an address of a site. Status is active for every kind
@@ -82,20 +89,21 @@ type siteDTO struct {
 }
 
 type siteItemDTO struct {
-	ID           string     `json:"id"`
-	Title        string     `json:"title"`
-	URL          string     `json:"url"`
-	URLs         []string   `json:"urls"`
-	Slug         *string    `json:"slug"`
-	OwnerID      string     `json:"owner_id"`
-	OwnerEmail   string     `json:"owner_email"`
-	LastDeployAt *time.Time `json:"last_deploy_at"`
-	SizeBytes    int64      `json:"size_bytes"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
-	Noindex      bool       `json:"noindex"`
-	Protected    bool       `json:"protected"`
-	ExpiresAt    *time.Time `json:"expires_at"`
+	ID           string        `json:"id"`
+	Title        string        `json:"title"`
+	URL          string        `json:"url"`
+	URLs         []string      `json:"urls"`
+	Slug         *string       `json:"slug"`
+	OwnerID      string        `json:"owner_id"`
+	OwnerEmail   string        `json:"owner_email"`
+	Hostnames    []hostnameDTO `json:"hostnames"`
+	LastDeployAt *time.Time    `json:"last_deploy_at"`
+	SizeBytes    int64         `json:"size_bytes"`
+	CreatedAt    time.Time     `json:"created_at"`
+	UpdatedAt    time.Time     `json:"updated_at"`
+	Noindex      bool          `json:"noindex"`
+	Protected    bool          `json:"protected"`
+	ExpiresAt    *time.Time    `json:"expires_at"`
 }
 
 type deployResultDTO struct {
@@ -257,8 +265,9 @@ func toSiteItems(rows []service.SiteSummaryView) []siteItemDTO {
 	for _, r := range rows {
 		out = append(out, siteItemDTO{
 			ID: r.ID, Title: r.Title, URL: r.URL, URLs: nonNil(r.URLs), Slug: optional(r.Slug),
-			OwnerID: idString(r.OwnerID), OwnerEmail: r.OwnerEmail, LastDeployAt: utcPtr(r.LastDeployAt),
-			SizeBytes: r.SizeBytes, CreatedAt: utc(r.CreatedAt), UpdatedAt: utc(r.UpdatedAt),
+			OwnerID: idString(r.OwnerID), OwnerEmail: r.OwnerEmail, Hostnames: toHostnames(r.Hostnames),
+			LastDeployAt: utcPtr(r.LastDeployAt),
+			SizeBytes:    r.SizeBytes, CreatedAt: utc(r.CreatedAt), UpdatedAt: utc(r.UpdatedAt),
 			Noindex: r.Noindex, Protected: r.Protected, ExpiresAt: utcPtr(r.ExpiresAt),
 		})
 	}

@@ -132,7 +132,7 @@ func call(t *testing.T, cs *sdk.ClientSession, name string, args any) (map[strin
 func TestToolsOverInMemoryTransport(t *testing.T) {
 	f := newFake()
 	cs := connect(t, NewServer("test", func(context.Context, *sdk.CallToolRequest) (Backend, error) { return f, nil },
-		Options{Files: true, Instructions: "hello"}))
+		Options{Files: true, SiteFiles: true, Instructions: "hello"}))
 	if cs.InitializeResult().Instructions != "hello" || cs.InitializeResult().ServerInfo.Name != "dropsite" {
 		t.Fatalf("init: %+v", cs.InitializeResult())
 	}

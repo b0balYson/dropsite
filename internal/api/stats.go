@@ -58,8 +58,9 @@ func toSiteStats(st service.SiteStats) siteStatsDTO {
 func (a *api) siteStats(w http.ResponseWriter, r *http.Request) error {
 	days := service.StatsDefaultDays
 	if v := r.URL.Query().Get("days"); v != "" {
+		// The service checks the range, with the same message as the MCP tool.
 		n, err := strconv.Atoi(v)
-		if err != nil || n < 1 || n > service.StatsMaxDays {
+		if err != nil {
 			return invalidField("days", "days must be an integer from 1 to "+strconv.Itoa(service.StatsMaxDays))
 		}
 		days = n

@@ -90,12 +90,16 @@ type Folder struct {
 // an error the model can act on.
 type Resolver func(ctx context.Context, req *sdk.CallToolRequest) (Backend, error)
 
-// Options selects the publication tool.
+// Options selects the tool groups. Both servers offer the same tools except
+// the publication tool: deploy_files (remote) or deploy_folder (stdio).
 type Options struct {
 	// Files adds deploy_files; the backend must implement FilesDeployer.
 	Files bool
 	// Folder adds deploy_folder; the backend must implement FolderDeployer.
 	Folder bool
+	// SiteFiles adds the tools that read and edit site files and upload
+	// large sites in parts; the backend must implement SiteFilesBackend.
+	SiteFiles bool
 	// Forms adds the forms tools; the backend must implement FormsBackend.
 	Forms bool
 	// Cabinet adds the account and site settings tools; the backend must

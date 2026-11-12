@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// FormsBackend manages the forms of the user's sites (remote server only).
+// FormsBackend manages the forms of the user's sites.
 type FormsBackend interface {
 	GetFormSettings(ctx context.Context, ref string) (FormSettings, error)
 	SetFormSettings(ctx context.Context, ref string, requireAltcha bool) (FormSettings, error)

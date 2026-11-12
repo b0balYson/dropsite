@@ -3,10 +3,6 @@ package remote
 import (
 	"context"
 	"errors"
-	"net/netip"
-	"time"
-
-	"golang.org/x/net/idna"
 
 	"github.com/b0balYson/dropsite/internal/domain"
 	"github.com/b0balYson/dropsite/internal/mcp"
@@ -17,25 +13,11 @@ var _ mcp.Cabinet = backend{}
 
 // siteExtras are the access flags and own domains of a site.
 func siteExtras(site domain.Site, hosts []domain.Hostname) mcp.SiteExtras {
-	x := mcp.SiteExtras{HiddenFromSearch: site.Noindex, PasswordProtected: site.Protected, ExpiresAt: stamp(site.ExpiresAt)}
+	hs := make([]mcp.Host, 0, len(hosts))
 	for _, h := range hosts {
-		switch h.Kind {
-		case domain.HostApex:
-			x.RootDomain = true
-		case domain.HostExternal:
-			x.OwnDomains = append(x.OwnDomains, mcp.DomainBrief{Domain: h.Hostname, Status: string(h.Status())})
-		}
+		hs = append(hs, mcp.Host{Name: h.Hostname, Kind: string(h.Kind), Status: string(h.Status())})
 	}
-	return x
-}
-
-// lastDay is the last day a site with this expiry works (the expiry is the
-// first instant after that day).
-func lastDay(at *time.Time) string {
-	if at == nil {
-		return ""
-	}
-	return at.UTC().Add(-time.Nanosecond).Format(time.DateOnly)
+	return mcp.NewSiteExtras(site.Noindex, site.Protected, site.ExpiresAt, hs)
 }
 
 func (b backend) GetAccount(ctx context.Context) (mcp.Account, error) {
@@ -88,51 +70,20 @@ func (b backend) SetSiteAccess(ctx context.Context, ref string, c mcp.AccessChan
 	if err != nil {
 		return mcp.SiteAccess{}, b.toolError(err)
 	}
-	return mcp.SiteAccess{
-		SiteID: v.Site.ID, URL: v.URL, HiddenFromSearch: v.Site.Noindex, PasswordProtected: v.Site.Protected,
-		ExpiresAt: stamp(v.Site.ExpiresAt), LastDay: lastDay(v.Site.ExpiresAt),
-	}, nil
+	return mcp.NewSiteAccess(v.Site.ID, v.URL, v.Site.Noindex, v.Site.Protected, v.Site.ExpiresAt), nil
 }
 
 func (b backend) toDomain(h domain.Hostname) mcp.Domain {
-	d := mcp.Domain{
-		Domain: h.Hostname, Status: string(h.Status()), RejectReason: h.RejectReason,
-		URL: b.svc.SiteURL(h.Hostname), AddedAt: stamp(&h.CreatedAt),
-	}
-	if u, err := idna.Display.ToUnicode(h.Hostname); err == nil && u != h.Hostname {
-		d.DisplayName = u
-	}
-	return d
+	return mcp.NewDomain(h.Hostname, string(h.Status()), h.RejectReason, b.svc.SiteURL(h.Hostname), h.CreatedAt)
 }
 
 // dnsSetup turns the service's DNS targets into records and plain steps.
 func dnsSetup(setup service.DomainSetup) mcp.DNSSetup {
-	d := mcp.DNSSetup{
-		Subdomain:      []mcp.DNSRecord{{Type: "CNAME", Name: "<your subdomain, e.g. shop.example.com>", Value: setup.CNAMETarget}},
-		RootDomain:     []mcp.DNSRecord{},
-		ServerIPsKnown: len(setup.ServerIPs) > 0,
-	}
+	ips := make([]string, 0, len(setup.ServerIPs))
 	for _, ip := range setup.ServerIPs {
-		d.RootDomain = append(d.RootDomain, mcp.DNSRecord{Type: recordType(ip), Name: "<your domain, e.g. example.com>", Value: ip.String()})
+		ips = append(ips, ip.String())
 	}
-	d.Steps = "At the company where the domain is registered (its DNS settings), create a CNAME record pointing " +
-		"to " + setup.CNAMETarget + " for a subdomain such as shop.example.com"
-	if d.ServerIPsKnown {
-		d.Steps += ", or for a root domain such as example.com the A/AAAA records from for_root_domain"
-	} else {
-		d.Steps += "; for a root domain such as example.com ask the administrator for the server's IP address " +
-			"and create an A record with it"
-	}
-	d.Steps += ". DNS changes can take up to a few hours. The domain starts opening the site after an " +
-		"administrator approves it; HTTPS is set up automatically on the first visit."
-	return d
-}
-
-func recordType(ip netip.Addr) string {
-	if ip.Is4() {
-		return "A"
-	}
-	return "AAAA"
+	return mcp.NewDNSSetup(setup.CNAMETarget, ips)
 }
 
 func (b backend) ListDomains(ctx context.Context, ref string) (mcp.DomainList, error) {
@@ -176,7 +127,7 @@ func (b backend) notFound(err error, msg string) error {
 
 func (b backend) RemoveDomain(ctx context.Context, ref, name string) error {
 	return b.notFound(b.svc.RemoveDomain(ctx, b.actor, ref, name),
-		"not found: no such site among this user's sites, or the domain is not attached to it; call list_domains")
+		mcp.NotFoundDomain)
 }
 
 func namedViews(in []domain.NamedCount) []mcp.NamedViews {
@@ -192,18 +143,12 @@ func (b backend) GetSiteStats(ctx context.Context, ref string, days int) (mcp.Si
 	if err != nil {
 		return mcp.SiteStats{}, b.toolError(err)
 	}
-	out := mcp.SiteStats{
-		SiteID: st.SiteID, From: st.From, To: st.To, TotalViews: st.Views, TotalVisitors: st.Visitors,
-		Daily: make([]mcp.DayViews, 0, len(st.Days)), TopPages: namedViews(st.TopPages), TopSources: namedViews(st.TopReferrers),
-	}
+	daily := make([]mcp.DayViews, 0, len(st.Days))
 	for _, d := range st.Days {
-		dv := mcp.DayViews{Date: d.Day, Views: d.Views, Visitors: d.Visitors}
-		out.Daily = append(out.Daily, dv)
-		if d.Views > 0 && (out.BusiestDay == nil || d.Views > out.BusiestDay.Views) {
-			out.BusiestDay = &dv
-		}
+		daily = append(daily, mcp.DayViews{Date: d.Day, Views: d.Views, Visitors: d.Visitors})
 	}
-	return out, nil
+	return mcp.NewStats(st.SiteID, st.From, st.To, st.Views, st.Visitors, daily,
+		namedViews(st.TopPages), namedViews(st.TopReferrers)), nil
 }
 
 func counterIDs(c domain.Counters) mcp.CounterIDs {
@@ -283,8 +228,6 @@ func (b backend) ListConnections(ctx context.Context) ([]mcp.Connection, error) 
 	return out, nil
 }
 
-const errNoConnection = "not found: no such active connection; call list_connections to see valid kinds and IDs"
-
 func (b backend) RevokeConnection(ctx context.Context, kind string, id int64) error {
 	var err error
 	switch kind {
@@ -295,7 +238,7 @@ func (b backend) RevokeConnection(ctx context.Context, kind string, id int64) er
 	default:
 		err = domain.ErrNotFound
 	}
-	return b.notFound(err, errNoConnection)
+	return b.notFound(err, mcp.NotFoundConnection)
 }
 
 func (b backend) rootURL() string { return b.svc.SiteURL(b.svc.Config().BaseDomain) }

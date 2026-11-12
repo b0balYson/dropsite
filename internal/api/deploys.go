@@ -16,6 +16,7 @@ const (
 	multipartOverhead = 64 << 10
 	archiveField      = "archive"
 	clientHeader      = "X-Dropsite-Client"
+	assistantHeader   = "X-Dropsite-Assistant"
 	cliClientPrefix   = "cli/"
 )
 
@@ -92,7 +93,13 @@ func (b *limitedBody) Read(p []byte) (int, error) {
 	return n, err
 }
 
+// isAssistant reports whether the request is made for an AI assistant.
+func isAssistant(r *http.Request) bool { return r.Header.Get(assistantHeader) == "mcp" }
+
 func deploySource(r *http.Request) domain.DeploySource {
+	if isAssistant(r) {
+		return domain.SourceMCP
+	}
 	if strings.HasPrefix(r.Header.Get(clientHeader), cliClientPrefix) {
 		return domain.SourceCLI
 	}

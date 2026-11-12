@@ -166,7 +166,7 @@ type Connection struct {
 }
 
 // Cabinet is implemented by backends that offer the account and site
-// settings tools (the remote server). The stdio server does not.
+// settings tools (both the remote and the stdio server).
 type Cabinet interface {
 	GetAccount(ctx context.Context) (Account, error)
 	UpdateSite(ctx context.Context, ref string, title, slug *string) (Site, error)

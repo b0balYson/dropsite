@@ -3,7 +3,7 @@
   "info": {
     "title": "Dropsite API",
     "version": "1",
-    "description": "Publish static sites. Every endpoint except GET /openapi.json and POST /connect/exchange requires `Authorization: Bearer <token>`. Times are RFC 3339 in UTC. IDs are strings. Resources of other users and admin endpoints for non-admins answer 404."
+    "description": "Publish static sites. Every endpoint except GET /openapi.json and POST /connect/exchange requires `Authorization: Bearer <token>`. Times are RFC 3339 in UTC. IDs are strings. Resources of other users and admin endpoints for non-admins answer 404. A request with `X-Dropsite-Assistant: mcp` (made for an AI assistant) gets the rights of the MCP endpoint: no administrator powers except the root domain."
   },
   "servers": [
     {
@@ -1444,7 +1444,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/FormSiteSettings"
+                "$ref": "#/components/schemas/FormSiteSettingsUpdate"
               }
             }
           }
@@ -1625,6 +1625,731 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/sites/{ref}/domain-setup": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SiteRef"
+        }
+      ],
+      "get": {
+        "operationId": "getDomainSetup",
+        "summary": "DNS records that point an own domain at the site",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DomainSetup"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/sites/{ref}/counters": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SiteRef"
+        }
+      ],
+      "get": {
+        "operationId": "getCounters",
+        "summary": "Analytics counters of a site",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Counters"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateCounters",
+        "summary": "Change the site's counters; a published site gets a new release with them",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCountersRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Counters"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/sites/{ref}/files": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SiteRef"
+        }
+      ],
+      "get": {
+        "operationId": "listSiteFiles",
+        "summary": "Files of a release (the current one by default)",
+        "parameters": [
+          {
+            "name": "deploy_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Release to list; empty: the current one"
+          },
+          {
+            "name": "prefix",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only paths starting with this"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteFileList"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateSiteFiles",
+        "summary": "Add or replace files (at most 1 MB of content), delete files or folders and download assets on top of base_deploy_id; publishes a new release (source mcp). A stale base answers 409 deploy_conflict",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSiteFilesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilesResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/LimitReached"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/sites/{ref}/files/read": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SiteRef"
+        }
+      ],
+      "post": {
+        "operationId": "readSiteFiles",
+        "summary": "Read files of a release: text as is, small binary files in base64, at most 256 KB of content per call",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadSiteFilesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteFileRead"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/uploads": {
+      "post": {
+        "operationId": "beginUpload",
+        "summary": "Open an upload session (at most 3 per user, closed after 30 idle minutes)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BeginUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Upload"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/LimitReached"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/uploads/{id}/files": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ID"
+        }
+      ],
+      "post": {
+        "operationId": "uploadFiles",
+        "summary": "Add files (at most 1 MB of content per call) or downloads to an own session; other users' sessions answer upload_expired",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadFilesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Upload"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/uploads/{id}/commit": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ID"
+        }
+      ],
+      "post": {
+        "operationId": "commitUpload",
+        "summary": "Publish an upload session as a new release and close it",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommitUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilesResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/LimitReached"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/sites/{ref}/forms/submissions/search": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SiteRef"
+        }
+      ],
+      "get": {
+        "operationId": "searchFormSubmissions",
+        "summary": "Search submissions, newest first, continued by a cursor",
+        "parameters": [
+          {
+            "name": "form",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only this form name"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only submissions with a field value containing this text"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "From this date (YYYY-MM-DD, UTC) or RFC 3339 time, inclusive"
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Up to this date (the whole day included) or RFC 3339 time, exclusive"
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3650
+            },
+            "description": "The last N days by the server clock; overrides since"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "description": "Submissions per page"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "next_cursor of the previous page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormSubmissionSearch"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/sites/{ref}/forms/submissions/export": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SiteRef"
+        }
+      ],
+      "get": {
+        "operationId": "exportFormSubmissionsText",
+        "summary": "The newest matching submissions as CSV text in JSON (at most 1000 rows and 256 KB)",
+        "parameters": [
+          {
+            "name": "form",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only this form name"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only submissions with a field value containing this text"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "From this date (YYYY-MM-DD, UTC) or RFC 3339 time, inclusive"
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Up to this date (the whole day included) or RFC 3339 time, exclusive"
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3650
+            },
+            "description": "The last N days by the server clock; overrides since"
+          },
+          {
+            "name": "max_rows",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 200
+            },
+            "description": "Newest submissions to include"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormSubmissionExport"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/connections": {
+      "get": {
+        "operationId": "listConnections",
+        "summary": "Connected apps (OAuth) and active API tokens of the caller, without secrets",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/connections/{kind}/{id}": {
+      "parameters": [
+        {
+          "name": "kind",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "app",
+              "token"
+            ]
+          }
+        },
+        {
+          "$ref": "#/components/parameters/ID"
+        }
+      ],
+      "delete": {
+        "operationId": "revokeConnection",
+        "summary": "Disconnect an own app or revoke an own token",
+        "responses": {
+          "204": {
+            "description": "Revoked"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/root-site": {
+      "put": {
+        "operationId": "setRootSite",
+        "summary": "Administrators: show any user's site on the root domain; confirm must repeat its ID or slug. Others get 400",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RootSiteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RootSite"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "clearRootSite",
+        "summary": "Administrators: take the site off the root domain; confirm must repeat its ID or slug. Others get 400",
+        "parameters": [
+          {
+            "name": "confirm",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RootSite"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           },
           "500": {
             "$ref": "#/components/responses/Internal"
@@ -1903,7 +2628,11 @@
         "required": [
           "user",
           "limits",
-          "site_count"
+          "site_count",
+          "max_domains_per_site",
+          "max_inline_bytes",
+          "ui_url",
+          "root_site"
         ],
         "properties": {
           "user": {
@@ -1914,6 +2643,29 @@
           },
           "site_count": {
             "type": "integer"
+          },
+          "max_domains_per_site": {
+            "type": "integer",
+            "description": "Own domains one site may have"
+          },
+          "max_inline_bytes": {
+            "type": "integer",
+            "description": "Largest file content of one files or uploads call"
+          },
+          "ui_url": {
+            "type": "string",
+            "description": "Address of the web interface"
+          },
+          "root_site": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Site"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Administrators only: the site on the root domain; null otherwise"
           }
         }
       },
@@ -2248,7 +3000,8 @@
           "updated_at",
           "noindex",
           "protected",
-          "expires_at"
+          "expires_at",
+          "hostnames"
         ],
         "properties": {
           "id": {
@@ -2309,6 +3062,12 @@
               "null"
             ],
             "format": "date-time"
+          },
+          "hostnames": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Hostname"
+            }
           }
         }
       },
@@ -3061,11 +3820,47 @@
       "FormSiteSettings": {
         "type": "object",
         "required": [
-          "require_altcha"
+          "site_id",
+          "site_url",
+          "require_altcha",
+          "form_names",
+          "telegram_available",
+          "telegram_bot",
+          "email_available",
+          "cabinet_url"
         ],
         "properties": {
           "require_altcha": {
             "type": "boolean"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "site_url": {
+            "type": "string"
+          },
+          "form_names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Forms that already received submissions"
+          },
+          "telegram_available": {
+            "type": "boolean"
+          },
+          "telegram_bot": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email_available": {
+            "type": "boolean"
+          },
+          "cabinet_url": {
+            "type": "string",
+            "description": "Web interface page with the submissions and channels of the site"
           }
         }
       },
@@ -3310,6 +4105,679 @@
             "type": "integer",
             "minimum": 100,
             "maximum": 10000000
+          }
+        }
+      },
+      "DomainSetup": {
+        "type": "object",
+        "required": [
+          "site_id",
+          "cname_target",
+          "server_ips",
+          "max_domains"
+        ],
+        "properties": {
+          "site_id": {
+            "type": "string"
+          },
+          "cname_target": {
+            "type": "string",
+            "description": "CNAME target for a subdomain"
+          },
+          "server_ips": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A/AAAA targets for a root domain; empty when unknown"
+          },
+          "max_domains": {
+            "type": "integer"
+          }
+        }
+      },
+      "CounterIDs": {
+        "type": "object",
+        "required": [
+          "yandex_metrica_id",
+          "google_analytics_id"
+        ],
+        "properties": {
+          "yandex_metrica_id": {
+            "type": "string",
+            "description": "Empty when not set"
+          },
+          "google_analytics_id": {
+            "type": "string",
+            "description": "Empty when not set"
+          }
+        }
+      },
+      "Counters": {
+        "type": "object",
+        "required": [
+          "site_id",
+          "own",
+          "global",
+          "new_deploy_id"
+        ],
+        "properties": {
+          "site_id": {
+            "type": "string"
+          },
+          "own": {
+            "$ref": "#/components/schemas/CounterIDs"
+          },
+          "global": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CounterIDs"
+              }
+            ],
+            "description": "Counters an administrator adds to every site (read-only)"
+          },
+          "new_deploy_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Release created to apply changed counters to a published site"
+          }
+        }
+      },
+      "UpdateCountersRequest": {
+        "type": "object",
+        "properties": {
+          "yandex_metrica_id": {
+            "type": "string",
+            "description": "Empty string removes it"
+          },
+          "google_analytics_id": {
+            "type": "string",
+            "description": "Empty string removes it"
+          }
+        },
+        "description": "Pass at least one field; absent fields are kept"
+      },
+      "Connection": {
+        "type": "object",
+        "required": [
+          "kind",
+          "id",
+          "name",
+          "detail",
+          "connected_at",
+          "last_used_at",
+          "expires_at",
+          "current"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "app",
+              "token"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "For apps: the host the app returned to when connecting"
+          },
+          "connected_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_used_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "current": {
+            "type": "boolean",
+            "description": "True for the token this request was authenticated with"
+          }
+        }
+      },
+      "ConnectionList": {
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Connection"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      },
+      "RootSiteRequest": {
+        "type": "object",
+        "required": [
+          "site",
+          "confirm"
+        ],
+        "properties": {
+          "site": {
+            "type": "string",
+            "description": "ID or slug of any user's site"
+          },
+          "confirm": {
+            "type": "string",
+            "description": "The same ID or slug again, after the user confirmed"
+          }
+        }
+      },
+      "RootSite": {
+        "type": "object",
+        "required": [
+          "root_url",
+          "site"
+        ],
+        "properties": {
+          "root_url": {
+            "type": "string"
+          },
+          "site": {
+            "$ref": "#/components/schemas/Site"
+          }
+        }
+      },
+      "FormSiteSettingsUpdate": {
+        "type": "object",
+        "required": [
+          "require_altcha"
+        ],
+        "properties": {
+          "require_altcha": {
+            "type": "boolean"
+          }
+        }
+      },
+      "FormSubmissionSearch": {
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "next_cursor",
+          "server_time",
+          "cabinet_url"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FormSubmission"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Pass as cursor for the next page; null on the last page"
+          },
+          "server_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cabinet_url": {
+            "type": "string"
+          }
+        }
+      },
+      "FormSubmissionExport": {
+        "type": "object",
+        "required": [
+          "csv",
+          "rows",
+          "total",
+          "truncated",
+          "cabinet_url"
+        ],
+        "properties": {
+          "csv": {
+            "type": "string"
+          },
+          "rows": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "cabinet_url": {
+            "type": "string"
+          }
+        }
+      },
+      "SiteFile": {
+        "type": "object",
+        "required": [
+          "path",
+          "size",
+          "sha256",
+          "type"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "SiteFileList": {
+        "type": "object",
+        "required": [
+          "site_id",
+          "url",
+          "deploy_id",
+          "current",
+          "files",
+          "total_files",
+          "total_bytes",
+          "truncated"
+        ],
+        "properties": {
+          "site_id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "deploy_id": {
+            "type": "string",
+            "description": "The release read; pass it as base_deploy_id"
+          },
+          "current": {
+            "type": "boolean"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SiteFile"
+            }
+          },
+          "total_files": {
+            "type": "integer"
+          },
+          "total_bytes": {
+            "type": "integer"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SiteFileContent": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/SiteFile"
+          },
+          {
+            "type": "object",
+            "required": [
+              "encoding",
+              "content",
+              "note"
+            ],
+            "properties": {
+              "encoding": {
+                "type": "string",
+                "enum": [
+                  "utf8",
+                  "base64",
+                  ""
+                ],
+                "description": "Empty when the content is not included"
+              },
+              "content": {
+                "type": "string"
+              },
+              "note": {
+                "type": "string",
+                "description": "Why the content is not included"
+              }
+            }
+          }
+        ]
+      },
+      "SiteFileRead": {
+        "type": "object",
+        "required": [
+          "site_id",
+          "deploy_id",
+          "current",
+          "files",
+          "missing",
+          "truncated"
+        ],
+        "properties": {
+          "site_id": {
+            "type": "string"
+          },
+          "deploy_id": {
+            "type": "string"
+          },
+          "current": {
+            "type": "boolean"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SiteFileContent"
+            }
+          },
+          "missing": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ReadSiteFilesRequest": {
+        "type": "object",
+        "required": [
+          "paths"
+        ],
+        "properties": {
+          "deploy_id": {
+            "type": "string",
+            "description": "Empty: the current release"
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 50,
+            "description": "Paths or patterns such as css/*.css"
+          }
+        }
+      },
+      "InlineFile": {
+        "type": "object",
+        "required": [
+          "path",
+          "content"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "encoding": {
+            "type": "string",
+            "enum": [
+              "utf8",
+              "base64"
+            ],
+            "default": "utf8"
+          }
+        }
+      },
+      "FetchSpec": {
+        "type": "object",
+        "required": [
+          "url",
+          "path"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Public https:// address"
+          },
+          "path": {
+            "type": "string"
+          }
+        }
+      },
+      "FetchedFile": {
+        "type": "object",
+        "required": [
+          "url",
+          "path",
+          "type",
+          "bytes",
+          "original_bytes",
+          "resized"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "bytes": {
+            "type": "integer"
+          },
+          "original_bytes": {
+            "type": "integer"
+          },
+          "resized": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UpdateSiteFilesRequest": {
+        "type": "object",
+        "required": [
+          "base_deploy_id"
+        ],
+        "properties": {
+          "base_deploy_id": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InlineFile"
+            }
+          },
+          "delete": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fetch": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FetchSpec"
+            }
+          }
+        }
+      },
+      "FilesResult": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DeployResult"
+          },
+          {
+            "type": "object",
+            "required": [
+              "base_deploy_id",
+              "written",
+              "deleted",
+              "fetched"
+            ],
+            "properties": {
+              "base_deploy_id": {
+                "type": "string"
+              },
+              "written": {
+                "type": "integer"
+              },
+              "deleted": {
+                "type": "integer"
+              },
+              "fetched": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/FetchedFile"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "BeginUploadRequest": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "site": {
+            "type": "string",
+            "description": "Empty: a new site on commit"
+          },
+          "title": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "replace",
+              "patch"
+            ],
+            "default": "replace"
+          },
+          "base_deploy_id": {
+            "type": "string"
+          }
+        }
+      },
+      "UploadFilesRequest": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InlineFile"
+            }
+          },
+          "fetch": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FetchSpec"
+            }
+          }
+        }
+      },
+      "CommitUploadRequest": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "delete": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Upload": {
+        "type": "object",
+        "required": [
+          "id",
+          "mode",
+          "site_id",
+          "base_deploy_id",
+          "files",
+          "bytes",
+          "expires_at",
+          "max_bytes",
+          "max_files",
+          "max_file_bytes",
+          "max_call_bytes",
+          "fetched"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "base_deploy_id": {
+            "type": "string"
+          },
+          "files": {
+            "type": "integer"
+          },
+          "bytes": {
+            "type": "integer"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "max_bytes": {
+            "type": "integer"
+          },
+          "max_files": {
+            "type": "integer"
+          },
+          "max_file_bytes": {
+            "type": "integer"
+          },
+          "max_call_bytes": {
+            "type": "integer"
+          },
+          "fetched": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FetchedFile"
+            }
           }
         }
       }

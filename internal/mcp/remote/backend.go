@@ -5,11 +5,9 @@ package remote
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log/slog"
 	"math"
-	"sort"
-	"strings"
 	"time"
 
 	"github.com/b0balYson/dropsite/internal/domain"
@@ -24,12 +22,7 @@ type backend struct {
 	log   *slog.Logger
 }
 
-func stamp(t *time.Time) string {
-	if t == nil || t.IsZero() {
-		return ""
-	}
-	return t.UTC().Format(time.RFC3339)
-}
+func stamp(t *time.Time) string { return mcp.Stamp(t) }
 
 func toDeploy(d domain.Deploy, current, preview string) mcp.Deploy {
 	return mcp.Deploy{
@@ -64,29 +57,15 @@ func (b backend) toolError(err error) error {
 	switch e.Kind {
 	case domain.KindInternal:
 		b.log.Error("mcp tool failed", "user_id", b.actor.User.ID, "err", err)
-		return fmt.Errorf("internal server error; try again in a minute, and if it persists tell the user to contact the administrator")
+		return errors.New(mcp.InternalErrorText)
 	case domain.KindNotFound:
-		return fmt.Errorf("not found: no such site or release among this user's sites; call list_sites (or list_deploys) to see valid IDs and slugs")
+		return errors.New(mcp.NotFoundSite)
 	case domain.KindRateLimited:
-		secs := int64(math.Ceil(e.RetryAfter.Seconds()))
-		return fmt.Errorf("too many requests: retry in %d seconds", max(secs, 1))
+		return mcp.RateLimitedError(int64(math.Ceil(e.RetryAfter.Seconds())))
 	case domain.KindUnauthorized:
-		return fmt.Errorf("the connection to dropsite is no longer authorized; reconnect it")
+		return errors.New("the connection to dropsite is no longer authorized; reconnect it")
 	}
-	msg := e.Message
-	if len(e.Params) > 0 {
-		keys := make([]string, 0, len(e.Params))
-		for k := range e.Params {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		parts := make([]string, 0, len(keys))
-		for _, k := range keys {
-			parts = append(parts, fmt.Sprintf("%s: %v", k, e.Params[k]))
-		}
-		msg += " (" + strings.Join(parts, ", ") + ")"
-	}
-	return fmt.Errorf("%s [%s]", msg, e.Code)
+	return mcp.CodedError(e.Message, e.Code, e.Params)
 }
 
 func (b backend) ListSites(ctx context.Context) ([]mcp.Site, error) {

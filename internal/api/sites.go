@@ -10,11 +10,25 @@ import (
 )
 
 func (a *api) me(w http.ResponseWriter, r *http.Request) error {
-	u, lim, n, err := a.svc.Me(r.Context(), actorFrom(r.Context()))
+	ctx, actor := r.Context(), actorFrom(r.Context())
+	u, lim, n, err := a.svc.Me(ctx, actor)
 	if err != nil {
 		return err
 	}
-	writeJSON(w, http.StatusOK, meDTO{User: toUser(u), Limits: toLimits(lim), SiteCount: n})
+	cfg := a.svc.Config()
+	out := meDTO{User: toUser(u), Limits: toLimits(lim), SiteCount: n,
+		MaxDomainsPerSite: cfg.MaxDomainsPerSite, MaxInlineBytes: service.MaxInlineBytes, UIURL: cfg.UIURL}
+	if u.IsAdmin() {
+		v, ok, err := a.svc.RootSite(ctx, actor)
+		if err != nil {
+			return err
+		}
+		if ok {
+			s := toSite(v)
+			out.RootSite = &s
+		}
+	}
+	writeJSON(w, http.StatusOK, out)
 	return nil
 }
 

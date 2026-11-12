@@ -29,15 +29,20 @@ const (
 
 	apiPrefix    = "/api/v1"
 	clientHeader = "X-Dropsite-Client"
-	maxBody      = 16 << 20
+	// assistantHeader marks requests made for an AI assistant (the local
+	// MCP server): the server then treats the token like one presented to
+	// /mcp, without administrator powers.
+	assistantHeader = "X-Dropsite-Assistant"
+	maxBody         = 16 << 20
 )
 
 // Client talks to one server with one token. It is safe for concurrent use.
 type Client struct {
-	base    string
-	token   string
-	timeout time.Duration
-	http    *http.Client
+	base      string
+	token     string
+	timeout   time.Duration
+	http      *http.Client
+	assistant bool
 }
 
 // Option configures a Client.
@@ -89,14 +94,27 @@ func WithRootCAFile(file string) (Option, error) {
 	}, nil
 }
 
+// noRedirect keeps redirects as responses: the API never redirects, and a
+// redirect of a path with "." or ".." segments (an ID typed by an assistant)
+// must not repeat a DELETE or POST on another endpoint.
+func noRedirect(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+
 func defaultHTTPClient() *http.Client {
 	tr, ok := http.DefaultTransport.(*http.Transport)
 	if !ok {
-		return &http.Client{}
+		return &http.Client{CheckRedirect: noRedirect}
 	}
 	tr = tr.Clone()
 	tr.ResponseHeaderTimeout = DefaultDeployHeaderTimeout
-	return &http.Client{Transport: tr}
+	return &http.Client{Transport: tr, CheckRedirect: noRedirect}
+}
+
+// AsAssistant returns a copy of the client whose requests are marked as made
+// for an AI assistant, so the server applies the rights of the MCP endpoint.
+func (c *Client) AsAssistant() *Client {
+	cp := *c
+	cp.assistant = true
+	return &cp
 }
 
 // Server returns the normalized server root the client talks to.
@@ -123,6 +141,9 @@ func (c *Client) newRequest(ctx context.Context, method, path string, q url.Valu
 	}
 	req.Header.Set("User-Agent", UserAgent())
 	req.Header.Set(clientHeader, UserAgent())
+	if c.assistant {
+		req.Header.Set(assistantHeader, "mcp")
+	}
 	req.Header.Set("Accept", "application/json")
 	return req, nil
 }
@@ -134,11 +155,14 @@ func (c *Client) doJSON(ctx context.Context, method, path string, q url.Values, 
 	defer cancel()
 	var body io.Reader
 	if in != nil {
-		b, err := json.Marshal(in)
-		if err != nil {
+		// HTML is not escaped: file content would grow by a factor of six.
+		var buf bytes.Buffer
+		enc := json.NewEncoder(&buf)
+		enc.SetEscapeHTML(false)
+		if err := enc.Encode(in); err != nil {
 			return fmt.Errorf("encode request: %w", err)
 		}
-		body = bytes.NewReader(b)
+		body = bytes.NewReader(bytes.TrimSuffix(buf.Bytes(), []byte("\n")))
 	}
 	req, err := c.newRequest(ctx, method, path, q, body)
 	if err != nil {

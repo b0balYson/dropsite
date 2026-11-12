@@ -91,6 +91,29 @@ func (a *api) removeHostname(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// domainSetupDTO tells the owner which DNS records point a domain at a site.
+type domainSetupDTO struct {
+	SiteID      string   `json:"site_id"`
+	CNAMETarget string   `json:"cname_target"`
+	ServerIPs   []string `json:"server_ips"`
+	MaxDomains  int      `json:"max_domains"`
+}
+
+func (a *api) domainSetup(w http.ResponseWriter, r *http.Request) error {
+	ctx, actor := r.Context(), actorFrom(r.Context())
+	v, err := a.svc.GetSite(ctx, actor, r.PathValue("ref"))
+	if err != nil {
+		return err
+	}
+	setup, err := a.svc.DomainSetup(ctx, actor, v.Site.ID)
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusOK, domainSetupDTO{SiteID: v.Site.ID, CNAMETarget: setup.CNAMETarget,
+		ServerIPs: addrStrings(setup.ServerIPs), MaxDomains: setup.MaxDomains})
+	return nil
+}
+
 func (a *api) listDomains(w http.ResponseWriter, r *http.Request) error {
 	q := r.URL.Query()
 	p, err := page(q)
