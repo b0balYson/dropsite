@@ -105,7 +105,7 @@ The remote MCP server (`https://api.<BASE_DOMAIN>/mcp`, see [ai-clients.md](ai-c
 | `set_channel_enabled` | turns a channel off or on (on also resumes a paused webhook) |
 | `delete_channel`, `rotate_channel_secret` | need `confirm` with the channel's ID or address after the user agreed |
 
-Nothing is bypassed: 10 channels per site, 10 new channels per user per hour, 3 confirmation codes per recipient per day, 5 code attempts. If Telegram or e-mail is not set up on the installation, `add_channel` answers `channel_unavailable` and the assistant tells the user that the administrator must set it up. Installation settings (bot token, SMTP, retention) are not available through MCP. The local `dropsite mcp` server has no form tools.
+Nothing is bypassed: 10 channels per site, 10 new channels per user per hour, 3 confirmation codes per recipient per day, 5 code attempts. If Telegram or e-mail is not set up on the installation, `add_channel` answers `channel_unavailable` and the assistant tells the user that the administrator must set it up. Installation settings (bot token, SMTP, retention) are not available through MCP. The local `dropsite mcp` server offers the same form tools through the API.
 
 ## For administrators
 

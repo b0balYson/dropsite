@@ -6,7 +6,7 @@ dropsite is meant to be used from a chat: the user connects it once and then ask
 | --- | --- | --- |
 | ChatGPT, claude.ai, Claude Desktop, Claude Code (main path) | remote MCP `https://api.<BASE_DOMAIN>/mcp`: every chat tool (publish, change files, forms, statistics, access, domains, rollback) | connector + OAuth with a connect code |
 | Claude Code, Codex, Cursor on a computer (optional) | `dropsite-publish` skill → `dropsite deploy <folder>` | one command (`dropsite setup`) |
-| Claude Desktop on a computer (optional) | local MCP server `dropsite mcp` (tool `deploy_folder`) | one command (`dropsite setup`) |
+| Claude Desktop on a computer (optional) | local MCP server `dropsite mcp`: the same tools, with `deploy_folder` instead of `deploy_files` | one command (`dropsite setup`) |
 
 ## Chats: ChatGPT, claude.ai, Claude Desktop, Claude Code
 
@@ -84,7 +84,9 @@ The Claude Desktop config is rewritten atomically with its permissions and every
 
 ### Local MCP server
 
-`dropsite mcp` speaks MCP over stdio and calls the API with the saved login. It sends the same instructions and offers `get_guide` (also without a login), plus `list_sites`, `create_site`, `get_site`, `set_slug`, `list_deploys`, `rollback`, `delete_site` and `deploy_folder` (an absolute folder path; packed exactly like `dropsite deploy`, including `.dropsite.json`). Without a login every tool answers with instructions to press **Connect**.
+`dropsite mcp` speaks MCP over stdio and calls the API v1 with the saved login (an API token). It sends the same instructions and offers the same tools as the remote server, with the same names, schemas, outputs and confirmations (a test compares both tool lists): `get_guide` (also without a login), the site, form, settings and file tools described below, and `deploy_folder` (an absolute folder path; packed exactly like `dropsite deploy`, including `.dropsite.json`) instead of `deploy_files`. Without a login every tool answers with instructions to press **Connect**.
+
+The local server is an assistant too: it marks its API requests with `X-Dropsite-Assistant: mcp`, and the server then applies the rights of `/mcp` to the token (own sites only, even with an administrator's login; the audit log and new releases get the source `mcp`, including `deploy_folder`). No tool creates tokens or connect codes, deletions and revocations take `confirm`, and the root domain tools need an administrator and the site's slug or ID in `confirm` (checked by the server).
 
 Because the assistant can be steered by content it reads, `deploy_folder` is guarded: the home folder, folders directly inside it and file system roots are refused (symbolic links are resolved), and a folder with secret-looking files — `.env*`, `.npmrc`, `.netrc`, `.git-credentials`, `.pypirc`, `.ssh/`, `.aws/`, `.gnupg/`, `*.pem`, `*.key`, `id_rsa*`, `id_dsa*`, `id_ecdsa*`, `id_ed25519*` — is refused with the list of those files. With `skip_sensitive_files: true` the folder is published without them; the tool has no way to publish them. Other dotfiles such as `.well-known/` are published as usual. The tool description tells the assistant to pass only the build output folder.
 
@@ -94,9 +96,9 @@ Because the assistant can be steered by content it reads, `deploy_folder` is gua
 
 The remote server offers every chat tool. A whole small site is published in one call with `deploy_files` (instead of the local `deploy_folder`): `files` is an array of `{path, content, encoding}` (`utf8` or `base64`), at most 1 MB decoded in total; omit `site` to create a new site. Larger sites go up in an upload session where the server offers one; otherwise the error recommends the web interface, the CLI or Claude Desktop. Releases published this way have the source `mcp`.
 
-Form tools (remote server only; details in [forms.md](forms.md#from-a-chat-assistant)): `get_form_settings`, `set_form_settings`, `list_submissions`, `export_submissions`, `list_channels`, `add_channel`, `verify_channel`, `set_channel_enabled`, `delete_channel`, `rotate_channel_secret`.
+Form tools (details in [forms.md](forms.md#from-a-chat-assistant)): `get_form_settings`, `set_form_settings`, `list_submissions`, `export_submissions`, `list_channels`, `add_channel`, `verify_channel`, `set_channel_enabled`, `delete_channel`, `rotate_channel_secret`.
 
-The remote server also covers the account and site settings of the web interface, so a user can manage everything by asking in plain words:
+Both servers also cover the account and site settings of the web interface, so a user can manage everything by asking in plain words:
 
 | Tool | What it does |
 | --- | --- |
@@ -130,7 +132,7 @@ Upload sessions: at most 3 open per user, closed after 30 idle minutes (every `u
 
 `fetch` entries let the assistant put images, fonts, CSS and JS inside the site instead of linking to other servers. The server downloads them only over `https` on port 443, without a proxy, and only from public addresses: the address actually connected to is checked after every DNS lookup and on every redirect (at most 3), so private, loopback, link-local, cloud metadata and other reserved networks are never reached. Allowed: images (PNG, JPEG, GIF, WebP, AVIF, SVG, ICO), fonts (WOFF, WOFF2, TTF, OTF, EOT), `.css`, `.js`, `.mjs` — by the response type and the target extension. Limits: 20 URLs and 20 MB per call, 5 MB per file (and at most the owner's `MAX_FILE_BYTES`), 60 seconds per call, 300 URLs per user per hour. JPEG and PNG wider than 2000 px are scaled down to 2000 px when that makes the file smaller. One failed URL cancels the whole call and the error names it.
 
-`list_sites` and `get_site` also return `hidden_from_search`, `password_protected`, `expires_at`, `root_domain` and `own_domains`. Answers carry ready links and a short `summary` the assistant can repeat. These tools exist only on the remote server; the local `dropsite mcp` keeps the tools listed above.
+`list_sites` and `get_site` also return `hidden_from_search`, `password_protected`, `expires_at`, `root_domain` and `own_domains`. Answers carry ready links and a short `summary` the assistant can repeat. The local `dropsite mcp` offers all of these tools through the API (see [api-contract.md](api-contract.md)).
 
 No tool issues credentials: API tokens and connect codes are created only in the web interface.
 

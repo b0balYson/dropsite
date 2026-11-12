@@ -36,8 +36,8 @@ DNSCheck {hostname, verdict, addresses[], cname|null, expected[]}
 Deploy   {id, site_id, source, size_bytes, file_count, status, created_at, created_by, current, preview_url|null}
 Site     {id, title, url, urls[], slug|null, hostnames[], owner_id, created_at, updated_at, current_deploy: Deploy|null,
           noindex, protected, expires_at|null}
-SiteItem {id, title, url, urls[], slug|null, owner_id, owner_email, last_deploy_at|null, size_bytes, created_at, updated_at,
-          noindex, protected, expires_at|null}
+SiteItem {id, title, url, urls[], slug|null, owner_id, owner_email, hostnames[], last_deploy_at|null, size_bytes, created_at,
+          updated_at, noindex, protected, expires_at|null}
 LimitOverrides {max_site_bytes|null, max_file_bytes|null, max_files|null, max_sites_per_user|null, keep_releases|null}
 Token    {id, name, prefix, created_at, last_used_at|null, expires_at|null, revoked_at|null}
 Audit    {id, actor_id|null, actor_email, action, target, meta{}, ip, created_at}
@@ -47,6 +47,13 @@ Channel  {id, kind, target, status, enabled, consecutive_failures, paused_at|nul
                                                 kind: telegram | email | webhook; status: pending | active
 Submission {id, form, host, created_at, fields[{name, value}], deliveries[{channel_id, kind, target, status, attempts, last_error, next_attempt_at|null, sent_at|null}]}
                                                 delivery status: pending | sent | failed | cancelled
+FormSiteSettings {site_id, site_url, require_altcha, form_names[], telegram_available, telegram_bot|null, email_available, cabinet_url}
+Counters {site_id, own{yandex_metrica_id, google_analytics_id}, global{...}, new_deploy_id|null}   "" means not set
+Connection {kind, id, name, detail|null, connected_at, last_used_at|null, expires_at|null, current}
+                                                kind: app (OAuth) | token
+SiteFile {path, size, sha256, type}
+FilesResult {deploy_id, url, urls[], deploy: Deploy, site: Site, base_deploy_id, written, deleted, fetched[{url, path, type, bytes, original_bytes, resized}]}
+Upload   {id, mode, site_id, base_deploy_id, files, bytes, expires_at, max_bytes, max_files, max_file_bytes, max_call_bytes, fetched[]}
 FormSettings {telegram{bot, token_set}, smtp{host, port, username, password_set, from, security}, retention_days, altcha_max_number, secrets_unreadable}
 ```
 
@@ -59,7 +66,7 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 | Method and path | Request | Response |
 | --- | --- | --- |
 | `POST /connect/exchange` | `{code, name?}`, no token | `201 {token: Token, value, user: User}`; `value` is shown once |
-| `GET /me` | | `{user: User, limits: Limits, site_count}` |
+| `GET /me` | | `{user: User, limits: Limits, site_count, max_domains_per_site, max_inline_bytes, ui_url, root_site: Site\|null}`; `root_site` only for administrators |
 | `GET /sites` | `?limit&offset` | `List<SiteItem>` (own sites) |
 | `POST /sites` | `{title, slug?}` | `201 Site` |
 | `GET /sites/{ref}` | | `Site` |
@@ -71,20 +78,35 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 | `GET /sites/{ref}/hostnames` | | `List<Hostname>` (every address, any status) |
 | `POST /sites/{ref}/hostnames` | `{hostname}` | `201 Hostname` (external, `pending`) |
 | `DELETE /sites/{ref}/hostnames/{hostname}` | | `204`; only external domains, any status |
+| `GET /sites/{ref}/domain-setup` | | `{site_id, cname_target, server_ips[], max_domains}` |
 | `GET /sites/{ref}/stats` | `?days` (1–400, default 30) | `Stats` |
+| `GET /sites/{ref}/counters` | | `Counters` |
+| `PATCH /sites/{ref}/counters` | `{yandex_metrica_id?, google_analytics_id?}`; `""` removes one | `Counters`; a published site gets a new release |
+| `GET /sites/{ref}/files` | `?deploy_id&prefix` | `{site_id, url, deploy_id, current, files: SiteFile[], total_files, total_bytes, truncated}` |
+| `POST /sites/{ref}/files/read` | `{deploy_id?, paths[]}` (1–50 paths or patterns) | `{site_id, deploy_id, current, files[SiteFile + {encoding, content, note}], missing[], truncated}` |
+| `PATCH /sites/{ref}/files` | `{base_deploy_id, files?[{path, content, encoding?}], delete?[], fetch?[{url, path}]}` | `FilesResult`; `409 deploy_conflict` when the base is not current |
+| `POST /uploads` | `{site?, title?, mode?, base_deploy_id?}` | `201 Upload` |
+| `POST /uploads/{id}/files` | `{files?[], fetch?[]}` | `Upload` |
+| `POST /uploads/{id}/commit` | `{delete?[]}` (patch mode) | `201 FilesResult` |
 | `GET /sites/{ref}/forms/channels` | | `List<Channel>` (no secrets) |
 | `POST /sites/{ref}/forms/channels` | `{kind, target?}` | `201 {channel: Channel, secret?, link?}` |
 | `PATCH /sites/{ref}/forms/channels/{id}` | `{enabled}` | `Channel`; `true` also resumes a paused channel |
 | `DELETE /sites/{ref}/forms/channels/{id}` | | `204` |
 | `POST /sites/{ref}/forms/channels/{id}/verify` | `{code}` | `Channel` |
 | `POST /sites/{ref}/forms/channels/{id}/secret` | | `{channel: Channel, secret}` (webhooks only) |
-| `GET /sites/{ref}/forms/settings` | | `{require_altcha}` |
-| `PATCH /sites/{ref}/forms/settings` | `{require_altcha}` | `{require_altcha}` |
+| `GET /sites/{ref}/forms/settings` | | `FormSiteSettings` |
+| `PATCH /sites/{ref}/forms/settings` | `{require_altcha}` | `FormSiteSettings` |
 | `GET /sites/{ref}/forms/submissions` | `?form&limit&offset` | `List<Submission>` (newest first) |
 | `GET /sites/{ref}/forms/submissions.csv` | `?form` | `text/csv`, up to 10 000 newest and 64 MB, streamed; 100 field columns + `_other` (JSON) |
+| `GET /sites/{ref}/forms/submissions/search` | `?form&q&since&until&days&limit&cursor` | `{items: Submission[], total, next_cursor\|null, server_time, cabinet_url}` (newest first) |
+| `GET /sites/{ref}/forms/submissions/export` | `?form&q&since&until&days&max_rows` | `{csv, rows, total, truncated, cabinet_url}` |
 | `GET /tokens` | | `List<Token>` |
 | `POST /tokens` | `{name, expires_in_days?}` | `201 {token: Token, value}`; `value` is shown once |
 | `DELETE /tokens/{id}` | | `204` |
+| `GET /connections` | | `List<Connection>` (apps and active tokens, no secrets) |
+| `DELETE /connections/{kind}/{id}` | | `204` |
+| `PUT /root-site` | `{site, confirm}` | `{root_url, site: Site}`; administrators only |
+| `DELETE /root-site` | `?confirm` | `{root_url, site: Site}`; administrators only |
 | `GET /admin/users` | `?q&status&limit&offset` | `List<User + site_count>` |
 | `POST /admin/users` | `{email, role?}` | `201 {user: User, invite_url, invite_expires_at}` |
 | `GET /admin/users/{id}` | | `{user: User, limits: Limits, limit_overrides: LimitOverrides}` |
@@ -102,11 +124,21 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 | `PATCH /admin/forms/settings` | `{telegram_token?, smtp?{host?, port?, username?, password?, from?, security?}, retention_days?, altcha_max_number?}` | `FormSettings` |
 | `GET /openapi.json` | no auth | OpenAPI 3.1 document |
 
-`{ref}` is a site ID or its slug. `limit` defaults to 50; values outside 1–200 are rejected with 400. JSON request bodies are limited to 64 KiB.
+`{ref}` is a site ID or its slug. `limit` defaults to 50; values outside 1–200 are rejected with 400. JSON request bodies are limited to 64 KiB, except `PATCH /sites/{ref}/files` and `POST /uploads/{id}/files` (4 MiB; at most 1 MB of decoded file content per call).
+
+## Endpoints for assistants
+
+These endpoints give the local MCP server of the CLI (`dropsite mcp`) the tools of the remote `/mcp` endpoint; they call the same service methods, so limits, checks and errors are the same (see [ai-clients.md](ai-clients.md)).
+
+- Site files and upload sessions follow the spec of `update_site_files` and `begin_upload`/`upload_files`/`commit_upload`: releases they create have the source `mcp`; downloads in `fetch` go only to public `https` addresses; a stale `base_deploy_id` gives `409 deploy_conflict`. A site without a release answers `400 site_not_published`. Upload sessions belong to the user (at most 3, closed after 30 idle minutes); an unknown, expired or other user's session answers `400 upload_expired`.
+- `PATCH /sites/{ref}/counters` changes only the fields present; with neither it answers 400.
+- `GET /connections` marks with `current` the token of the request; `DELETE /connections/{kind}/{id}` disconnects an app (all its tokens) or revokes a token. Credentials are never created here: tokens come from `POST /tokens` or the web interface.
+- `PUT /root-site` and `DELETE /root-site` require `confirm` to repeat the ID or slug of the site (for `DELETE`, of the site now on the root domain). Users who are not administrators get `400 invalid_input`, the same answer an assistant gets.
+- In submission search and export, `since` and `until` take `YYYY-MM-DD` (UTC; a date `until` includes the whole day) or RFC 3339 (`until` exclusive); `days` (1–3650) counts back from the server clock and overrides `since`. `limit` is 1–100 (default 20), `max_rows` 1–1000 (default 200); the CSV is at most 256 KB and `truncated` tells whether newer rows were left out.
 
 `expires_in_days` accepts 1–3650; omitted means the token never expires. In `GET /admin/audit`, `from` and `to` accept RFC 3339 or `YYYY-MM-DD`; `from` is inclusive, an RFC 3339 `to` is exclusive and a date `to` includes the whole day. `PATCH /admin/users/{id}` with `blocked` returns only `{user}`; the invite fields appear only with `reissue_invite`.
 
-The deploy source is `cli` when the request carries `X-Dropsite-Client: cli/<version>`, otherwise `api`. The upload may be at most `max_site_bytes + max_files KiB + 1 MiB`; larger bodies get 413 without being read fully.
+The deploy source is `mcp` when the request carries `X-Dropsite-Assistant: mcp`, `cli` when it carries `X-Dropsite-Client: cli/<version>`, otherwise `api`. `X-Dropsite-Assistant: mcp` marks a request made for an AI assistant (the local MCP server of the CLI): the token then has the rights it would have on `/mcp` — no administrator powers except the root domain, audit entries with the source `mcp`. The header can only lower rights. The upload may be at most `max_site_bytes + max_files KiB + 1 MiB`; larger bodies get 413 without being read fully.
 
 External domains (see `docs/external-domains.md`): `hostname` is normalised (lower case, punycode, no trailing dot) and refused with `domain_invalid` (not a name of two or more labels, an IP, a scheme, path or port) or `domain_forbidden` (the base domain or below it, the API host or below it, the UI host or one of its parents). A site holds at most `MAX_DOMAINS_PER_SITE` external domains in any status (`domain_limit_reached`, `details.limit`). `reject` requires a reason of 1–200 characters (`domain_reason_invalid`); rejecting an approved domain withdraws the approval. In `GET /admin/domains`, `status` is `pending`, `active`, `rejected` or `all` (default). `dns-check` takes at most 5 seconds and never fails because of DNS: problems are reported in `verdict`.
 `GET /sites/{ref}/stats` counts page views of HTML pages from the sites access log (bots and assets excluded), by UTC day; `days` lists every day of the period ending today, oldest first, including days without views. `visitors` is the approximate number of unique visitors of a day (hash of IP and User-Agent with a daily salt); the total is the sum of daily values. In `top_referrers` an empty `name` is a direct visit; in both tops `*` stands for everything beyond the rows stored per day (500 pages, 200 referrers). Statistics lag behind by up to one collection interval (`STATS_INTERVAL`, default one minute).
