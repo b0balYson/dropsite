@@ -24,7 +24,7 @@
         <li class="deliveries__item">
           <span class="badge badge--{{if eq (printf "%s" .Status) "sent"}}ok{{else if eq (printf "%s" .Status) "failed"}}error{{else if eq (printf "%s" .Status) "cancelled"}}muted{{else}}warn{{end}}">{{$.R.L.T (printf "forms.kind.%s" .ChannelKind)}} · {{$.R.L.T (printf "forms.delivery.%s" .Status)}}</span>
           {{if gt .Attempts 1}}<span class="small muted">{{$.R.L.T "forms.delivery.attempts" "n" .Attempts}}</span>{{end}}
-          {{if .LastError}}<span class="small deliveries__error">{{.LastError}}</span>{{end}}
+          {{if and .LastError (ne (printf "%s" .Status) "cancelled")}}<span class="small deliveries__error">{{.LastError}}</span>{{end}}
         </li>
         {{else}}<li class="small muted">{{$.R.L.T "forms.delivery.none"}}</li>{{end}}
       </ul>
