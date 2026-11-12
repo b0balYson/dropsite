@@ -312,7 +312,7 @@ func TestStdioRootSiteNeedsConfirm(t *testing.T) {
 	wantToolErr(t, local, "get_site", map[string]any{"site": "soon"}, "not found")
 	same(t, local, web, "get_site", map[string]any{"site": "soon"})
 	same(t, local, web, "set_root_site", map[string]any{"site": "soon", "confirm": "other"})
-	out :=mustTool(t, local, "set_root_site", map[string]any{"site": "soon", "confirm": "soon"})
+	out := mustTool(t, local, "set_root_site", map[string]any{"site": "soon", "confirm": "soon"})
 	if !strings.Contains(out["summary"].(string), "Placeholder") {
 		t.Fatalf("set root: %v", out)
 	}

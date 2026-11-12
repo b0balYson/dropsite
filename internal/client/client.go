@@ -33,7 +33,7 @@ const (
 	// MCP server): the server then treats the token like one presented to
 	// /mcp, without administrator powers.
 	assistantHeader = "X-Dropsite-Assistant"
-	maxBody      = 16 << 20
+	maxBody         = 16 << 20
 )
 
 // Client talks to one server with one token. It is safe for concurrent use.
