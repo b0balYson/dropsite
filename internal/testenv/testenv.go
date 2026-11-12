@@ -99,6 +99,12 @@ type options struct {
 	env    map[string]string
 	mutate []func(*config.Config)
 	sender service.FormSender
+	render service.Screenshotter
+}
+
+// WithRenderer sets the screenshot renderer (none by default).
+func WithRenderer(r service.Screenshotter) Option {
+	return func(o *options) { o.render = r }
 }
 
 // WithFormSender replaces the transports used for form delivery.
@@ -132,7 +138,7 @@ func New(t testing.TB, opts ...Option) *Env {
 		opt(o)
 	}
 	cfg := loadConfig(t, o)
-	return start(t, cfg, o.sender)
+	return start(t, cfg, o.sender, o.render)
 }
 
 func loadConfig(t testing.TB, o *options) *config.Config {
@@ -150,7 +156,7 @@ func loadConfig(t testing.TB, o *options) *config.Config {
 	return cfg
 }
 
-func start(t testing.TB, cfg *config.Config, sender service.FormSender) *Env {
+func start(t testing.TB, cfg *config.Config, sender service.FormSender, renderer service.Screenshotter) *Env {
 	t.Helper()
 	ctx := context.Background()
 	uploads := filepath.Join(cfg.StateDir, "uploads")
@@ -172,6 +178,7 @@ func start(t testing.TB, cfg *config.Config, sender service.FormSender) *Env {
 		Config: cfg, Repo: db, Files: storage.NewFS(cfg.SitesDir), Now: clock.Now, UploadDir: uploads,
 		Resolver:   dns,
 		FormSender: sender,
+		Renderer:   renderer,
 	})
 	if err := svc.Start(ctx); err != nil {
 		t.Fatalf("testenv: start service: %v", err)
