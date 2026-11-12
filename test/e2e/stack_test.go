@@ -45,6 +45,10 @@ func repoRoot() string {
 // certificate signed by Caddy's local CA instead of a real DNS provider.
 func wildcardStand() bool { return os.Getenv("E2E_WILDCARD") != "" }
 
+// rendererStand reports whether the optional screenshot renderer runs too
+// (E2E_RENDERER=1): the "renderer" compose profile with RENDERER_URL set.
+func rendererStand() bool { return os.Getenv("E2E_RENDERER") != "" }
+
 func compose(ctx context.Context, args ...string) *exec.Cmd {
 	root := repoRoot()
 	base := []string{"compose", "-p", project,
@@ -57,10 +61,14 @@ func compose(ctx context.Context, args ...string) *exec.Cmd {
 	base = append(base, "--env-file", filepath.Join(root, "deploy", "local.env"))
 	cmd := exec.CommandContext(ctx, "docker", append(base, args...)...)
 	cmd.Dir = filepath.Join(root, "deploy")
+	cmd.Env = os.Environ()
+	if rendererStand() {
+		cmd.Env = append(cmd.Env, "COMPOSE_PROFILES=renderer", "RENDERER_URL=http://renderer:3000")
+	}
 	if wildcardStand() {
 		// The "internal" provider never calls a DNS API; the token only
 		// satisfies the override's required variable.
-		cmd.Env = append(os.Environ(), "TLS_DNS_PROVIDER=internal", "CF_API_TOKEN=unused-by-internal-provider")
+		cmd.Env = append(cmd.Env, "TLS_DNS_PROVIDER=internal", "CF_API_TOKEN=unused-by-internal-provider")
 	}
 	return cmd
 }

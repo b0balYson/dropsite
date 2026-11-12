@@ -53,6 +53,9 @@ func TestWorkflow(t *testing.T) {
 	}
 	s.expectBody(host, "/", http.StatusOK, "Scheduled sale")
 
+	if rendererStand() {
+		return // TestScreenshots covers the renderer
+	}
 	st, body = owner.json(http.MethodGet, "/sites/"+siteID+"/visual-diff?from=x", nil)
 	if st != http.StatusServiceUnavailable || errCode(body) != "renderer_unavailable" {
 		t.Fatalf("visual diff without renderer: %d %v", st, body)
