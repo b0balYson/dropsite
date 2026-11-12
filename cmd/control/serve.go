@@ -26,7 +26,13 @@ const (
 	housekeepingInterval = time.Hour
 	shutdownTimeout      = 20 * time.Second
 	readHeaderTimeout    = 10 * time.Second
-	healthTimeout        = 3 * time.Second
+	// readTimeout and writeTimeout are generous upper bounds: archive uploads
+	// (up to ~53 MB) may arrive over slow links. The API additionally applies
+	// a short read deadline to every non-upload request.
+	readTimeout   = 15 * time.Minute
+	writeTimeout  = 15 * time.Minute
+	idleTimeout   = 2 * time.Minute
+	healthTimeout = 3 * time.Second
 )
 
 // app holds the wired components, shared by serve and tests.
@@ -148,7 +154,9 @@ func newServer(addr string, h http.Handler, log *slog.Logger) *http.Server {
 		Addr:              addr,
 		Handler:           h,
 		ReadHeaderTimeout: readHeaderTimeout,
-		IdleTimeout:       2 * time.Minute,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
 		ErrorLog:          slog.NewLogLogger(log.Handler(), slog.LevelWarn),
 	}
 }

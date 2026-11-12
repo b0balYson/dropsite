@@ -18,7 +18,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/b0balYson/dropsite/internal/brand"
@@ -146,14 +145,4 @@ func writeTree(ctx context.Context, tw *tar.Writer, root string) error {
 // isInside reports whether rel (slash-separated, relative) stays inside its root.
 func isInside(rel string) bool {
 	return rel != "" && filepath.IsLocal(filepath.FromSlash(rel))
-}
-
-// linkTargetInside reports whether a symlink at rel pointing to target stays
-// inside the sites root.
-func linkTargetInside(rel, target string) bool {
-	if target == "" || strings.HasPrefix(target, "/") || filepath.IsAbs(target) {
-		return false
-	}
-	joined := filepath.Join(filepath.Dir(filepath.FromSlash(rel)), filepath.FromSlash(target))
-	return filepath.IsLocal(joined)
 }

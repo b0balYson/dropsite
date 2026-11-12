@@ -108,3 +108,51 @@ func TestConcurrentAllow(t *testing.T) {
 		t.Fatalf("allowed %d, want exactly 100", allowed)
 	}
 }
+
+func TestReserveIsAtomicAndCancellable(t *testing.T) {
+	c := newClock()
+	w := New(3, time.Minute).WithClock(c.now)
+	var rs []Reservation
+	for i := range 3 {
+		r, ok, _ := w.Reserve("k")
+		if !ok {
+			t.Fatalf("reservation %d must be granted", i+1)
+		}
+		rs = append(rs, r)
+	}
+	if _, ok, retry := w.Reserve("k"); ok || retry != time.Minute {
+		t.Fatalf("4th reservation must be refused for 1m, got %v %v", ok, retry)
+	}
+	rs[1].Cancel()
+	rs[1].Cancel() // idempotent: must not free a second slot
+	if _, ok, _ := w.Reserve("k"); !ok {
+		t.Fatal("a cancelled reservation frees its slot")
+	}
+	if _, ok, _ := w.Reserve("k"); ok {
+		t.Fatal("double cancel must not free two slots")
+	}
+	var zero Reservation
+	zero.Cancel() // no-op on the zero value
+}
+
+func TestReserveConcurrent(t *testing.T) {
+	w := New(10, time.Hour)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	granted := 0
+	for range 200 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, ok, _ := w.Reserve("ip:1"); ok {
+				mu.Lock()
+				granted++
+				mu.Unlock()
+			}
+		}()
+	}
+	wg.Wait()
+	if granted != 10 {
+		t.Fatalf("granted %d, want exactly 10", granted)
+	}
+}

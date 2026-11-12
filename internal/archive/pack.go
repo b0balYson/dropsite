@@ -51,6 +51,7 @@ type packScan struct {
 	lim     Limits
 	entries []packEntry
 	res     Result
+	dirs    int
 }
 
 func (s *packScan) visit(p string, d fs.DirEntry, err error) error {
@@ -69,7 +70,11 @@ func (s *packScan) visit(p string, d fs.DirEntry, err error) error {
 		}
 		return nil
 	}
-	if _, err := cleanName(p); err != nil {
+	rel, err := cleanName(p)
+	if err != nil {
+		return err
+	}
+	if err := checkShape(rel, p); err != nil {
 		return err
 	}
 	return s.add(p, d)
@@ -88,6 +93,10 @@ func (s *packScan) add(p string, d fs.DirEntry) error {
 		return internalErr("stat file", err)
 	}
 	if d.IsDir() {
+		if s.dirs >= s.lim.dirsCap() {
+			return tooManyDirsErr(s.lim)
+		}
+		s.dirs++
 		s.entries = append(s.entries, packEntry{rel: p, dir: true, mtime: info.ModTime()})
 		return nil
 	}

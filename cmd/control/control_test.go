@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/b0balYson/dropsite/internal/backup"
 	"github.com/b0balYson/dropsite/internal/config"
@@ -174,5 +175,14 @@ func TestRunDispatch(t *testing.T) {
 	t.Setenv("INTERNAL_ADDR", "127.0.0.1:1")
 	if err := run(ctx, []string{"healthcheck"}); err == nil {
 		t.Fatal("healthcheck against a closed port must fail")
+	}
+}
+
+func TestServerTimeouts(t *testing.T) {
+	srv := newServer(":0", http.NotFoundHandler(), quietLog())
+	if srv.ReadHeaderTimeout != 10*time.Second || srv.ReadTimeout != 15*time.Minute ||
+		srv.WriteTimeout != 15*time.Minute || srv.IdleTimeout != 2*time.Minute {
+		t.Fatalf("timeouts: header %v read %v write %v idle %v",
+			srv.ReadHeaderTimeout, srv.ReadTimeout, srv.WriteTimeout, srv.IdleTimeout)
 	}
 }

@@ -118,3 +118,27 @@ func TestParseBytes(t *testing.T) {
 		}
 	}
 }
+
+// A UI on the sites domain would let any published site set a cookie with
+// Domain=<base> and fix the admin session.
+func TestUIURLMustNotBeOnBaseDomain(t *testing.T) {
+	bad := []string{
+		"https://example.com", "https://EXAMPLE.com.", "https://admin.example.com",
+		"https://a.b.example.com:8443", "http://xn--e1afmkfd.example.com", "https://пример.example.com",
+	}
+	for _, u := range bad {
+		e := base()
+		e["UI_URL"] = u
+		if _, err := Load(env(e)); err == nil || !strings.Contains(err.Error(), "UI_URL") {
+			t.Errorf("%s: want UI_URL error, got %v", u, err)
+		}
+	}
+	good := []string{"https://admin.example.org", "https://notexample.com", "https://example.com.evil.org", "http://10.0.0.5:8082"}
+	for _, u := range good {
+		e := base()
+		e["UI_URL"] = u
+		if _, err := Load(env(e)); err != nil {
+			t.Errorf("%s: %v", u, err)
+		}
+	}
+}

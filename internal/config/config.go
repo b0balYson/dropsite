@@ -124,7 +124,7 @@ func Load(get Getenv) (*Config, error) {
 
 	c.BaseDomain = r.hostname("BASE_DOMAIN", "", true)
 	c.APIHost = r.hostname("API_HOST", "api."+c.BaseDomain, false)
-	c.UIURL = r.uiURL()
+	c.UIURL = r.uiURL(c.BaseDomain)
 	c.SitesHTTPSPort = r.positiveInt("SITES_HTTPS_PORT", 443)
 	if c.SitesHTTPSPort > 65535 {
 		r.fail("SITES_HTTPS_PORT", "must be a TCP port")
@@ -190,13 +190,31 @@ func numericTLD(h string) bool {
 	return strings.Trim(tld, "0123456789") == ""
 }
 
-func (r *reader) uiURL() string {
+// uiURL reads UI_URL. The UI must not live on the base domain or below it:
+// published sites run arbitrary JavaScript there and could set a cookie with
+// Domain=<base domain> to fix an admin session.
+func (r *reader) uiURL(baseDomain string) string {
 	raw := strings.TrimSuffix(r.str("UI_URL", "http://127.0.0.1:8082"), "/")
 	u, err := url.Parse(raw)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.Path != "" {
 		r.fail("UI_URL", "must be an absolute URL such as http://10.0.0.5:8082, got %q", raw)
+		return raw
+	}
+	if baseDomain != "" && underDomain(u.Hostname(), baseDomain) {
+		r.fail("UI_URL", "must not be on BASE_DOMAIN %s or its subdomains (published sites could set cookies for it), got %q",
+			baseDomain, raw)
 	}
 	return raw
+}
+
+// underDomain reports whether host equals domain or is a subdomain of it,
+// comparing the ASCII (punycode) forms case-insensitively.
+func underDomain(host, domainName string) bool {
+	h := domain.NormalizeHostname(host)
+	if ascii, err := idna.Lookup.ToASCII(h); err == nil {
+		h = ascii
+	}
+	return h == domainName || strings.HasSuffix(h, "."+domainName)
 }
 
 func (r *reader) logLevel() slog.Level {

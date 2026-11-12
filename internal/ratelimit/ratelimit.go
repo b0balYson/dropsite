@@ -111,3 +111,57 @@ func (w *Window) Reset(key string) {
 	defer w.mu.Unlock()
 	delete(w.events, key)
 }
+
+// Reservation is an event recorded by Reserve. Cancel removes it again, for
+// attempts that turned out not to count (e.g. a successful login).
+type Reservation struct {
+	w    *Window
+	key  string
+	at   time.Time
+	done *bool
+}
+
+// Reserve atomically checks the limit and records an event for key, so
+// concurrent callers cannot all pass a Check before any of them Records.
+// When the limit is reached it returns false and the time until the next
+// event is allowed.
+func (w *Window) Reserve(key string) (Reservation, bool, time.Duration) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	now := w.now()
+	w.maybeSweep(now)
+	evs := w.prune(key, now)
+	if len(evs) >= w.max {
+		return Reservation{}, false, w.retryAfter(evs, now)
+	}
+	w.events[key] = append(evs, now)
+	return Reservation{w: w, key: key, at: now, done: new(bool)}, true, 0
+}
+
+// Cancel removes the reserved event. It is idempotent and a no-op on the zero
+// Reservation or once the event has left the window.
+func (r Reservation) Cancel() {
+	if r.w == nil {
+		return
+	}
+	r.w.mu.Lock()
+	defer r.w.mu.Unlock()
+	if *r.done {
+		return
+	}
+	*r.done = true
+	evs := r.w.events[r.key]
+	for i := len(evs) - 1; i >= 0; i-- {
+		if evs[i].Equal(r.at) {
+			rest := make([]time.Time, 0, len(evs)-1)
+			rest = append(rest, evs[:i]...)
+			rest = append(rest, evs[i+1:]...)
+			if len(rest) == 0 {
+				delete(r.w.events, r.key)
+				return
+			}
+			r.w.events[r.key] = rest
+			return
+		}
+	}
+}

@@ -61,12 +61,41 @@ func (w *statusWriter) Write(b []byte) (int, error) {
 
 func (w *statusWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
 
-// middleware applies, outermost first: security headers, request context and
-// access log, panic recovery.
+// requestReadTimeout bounds reading the whole request of every endpoint except
+// archive uploads, which may legitimately stream tens of megabytes over a slow
+// link and rely on the server-wide ReadTimeout instead. A variable for tests.
+var requestReadTimeout = 30 * time.Second
+
+// isUpload reports whether r is an archive upload (POST /sites/{ref}/deploys).
+func isUpload(r *http.Request) bool {
+	if r.Method != http.MethodPost {
+		return false
+	}
+	rest, ok := strings.CutPrefix(r.URL.Path, Prefix+"/sites/")
+	if !ok {
+		return false
+	}
+	ref, ok := strings.CutSuffix(rest, "/deploys")
+	return ok && ref != "" && !strings.Contains(ref, "/")
+}
+
+// limitRead sets a short read deadline for non-upload requests, so a client
+// cannot hold a connection open by trickling a small body. Writers that do
+// not support deadlines (tests) are left alone.
+func limitRead(w http.ResponseWriter, r *http.Request) {
+	if isUpload(r) {
+		return
+	}
+	_ = http.NewResponseController(w).SetReadDeadline(time.Now().Add(requestReadTimeout))
+}
+
+// middleware applies, outermost first: read deadline, security headers,
+// request context and access log, panic recovery.
 func (a *api) middleware(next http.Handler) http.Handler {
 	trusted := a.svc.Config().TrustedProxies
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
+		limitRead(w, r)
 		setSecurityHeaders(w.Header())
 		info := &requestInfo{id: newRequestID(), ip: clientIP(r, trusted)}
 		w.Header().Set("X-Request-Id", info.id)

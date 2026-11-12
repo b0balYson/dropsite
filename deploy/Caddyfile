@@ -34,6 +34,13 @@
 		# A Host header that differs from the TLS SNI name gets 421, so one
 		# site's certificate cannot be used to fetch another site's files.
 		strict_sni_host on
+		# Slow-header clients are cut off and idle keep-alive connections are
+		# closed. read_body is deliberately unset: archive uploads to the API
+		# may stream tens of megabytes over slow links (control bounds them).
+		timeouts {
+			read_header 10s
+			idle 2m
+		}
 	}
 }
 

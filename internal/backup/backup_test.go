@@ -86,35 +86,17 @@ func TestRestoreAcceptsInternalLinks(t *testing.T) {
 	}
 }
 
-func TestLinkChecks(t *testing.T) {
-	ok := map[string]string{"by-host/a": "../sites/x/current", "sites/x/current": "releases/1"}
-	for rel, target := range ok {
-		if !linkTargetInside(rel, target) {
-			t.Errorf("%s -> %s should be inside", rel, target)
-		}
-	}
-	bad := map[string]string{"by-host/a": "../../x", "a": "/etc", "b": ""}
-	for rel, target := range bad {
-		if linkTargetInside(rel, target) {
-			t.Errorf("%s -> %s should be outside", rel, target)
-		}
-	}
-	if isInside("../x") || isInside("") || !isInside("a/b") {
-		t.Fatal("isInside")
-	}
-}
-
 func TestBackupRoundTripKeepsLinks(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	state, sites := filepath.Join(dir, "state"), filepath.Join(dir, "sites")
-	for _, d := range []string{state, filepath.Join(sites, "empty"), filepath.Join(sites, "sites", "abcdefghij", "releases", "r1"), filepath.Join(sites, "by-host")} {
+	for _, d := range []string{state, filepath.Join(sites, "empty"), filepath.Join(sites, "sites", "abcdefghij", "releases", testDeploy), filepath.Join(sites, "by-host")} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
 			t.Fatal(err)
 		}
 	}
-	_ = os.WriteFile(filepath.Join(sites, "sites", "abcdefghij", "releases", "r1", "index.html"), []byte("hi"), 0o644)
-	_ = os.Symlink("releases/r1", filepath.Join(sites, "sites", "abcdefghij", "current"))
+	_ = os.WriteFile(filepath.Join(sites, "sites", "abcdefghij", "releases", testDeploy, "index.html"), []byte("hi"), 0o644)
+	_ = os.Symlink("releases/"+testDeploy, filepath.Join(sites, "sites", "abcdefghij", "current"))
 	_ = os.Symlink("../sites/abcdefghij/current", filepath.Join(sites, "by-host", "a.pp.test"))
 	db, err := store.Open(ctx, filepath.Join(state, "state.db"))
 	if err != nil {

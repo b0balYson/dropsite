@@ -78,6 +78,20 @@ func (db *DB) RevokeToken(ctx context.Context, userID, tokenID int64, now time.T
 	return expectAffected(res, err, "revoke token")
 }
 
+// RevokeUserTokens revokes all active tokens of a user.
+func (db *DB) RevokeUserTokens(ctx context.Context, userID int64, now time.Time) (int, error) {
+	res, err := db.w.ExecContext(ctx, "UPDATE tokens SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL",
+		toMS(now), userID)
+	if err != nil {
+		return 0, fmt.Errorf("revoke user tokens: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("revoke user tokens: %w", err)
+	}
+	return int(n), nil
+}
+
 // TouchToken records the last use of a token.
 func (db *DB) TouchToken(ctx context.Context, tokenID int64, now time.Time) error {
 	if _, err := db.w.ExecContext(ctx, "UPDATE tokens SET last_used_at = ? WHERE id = ?", toMS(now), tokenID); err != nil {

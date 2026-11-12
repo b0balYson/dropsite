@@ -74,6 +74,9 @@ type TokenRepository interface {
 	ListTokens(ctx context.Context, userID int64) ([]domain.Token, error)
 	// RevokeToken sets revoked_at if the token belongs to userID; otherwise ErrNotFound.
 	RevokeToken(ctx context.Context, userID, tokenID int64, now time.Time) error
+	// RevokeUserTokens revokes every still active token of userID and returns
+	// how many were revoked; earlier revocation times are kept.
+	RevokeUserTokens(ctx context.Context, userID int64, now time.Time) (int, error)
 	TouchToken(ctx context.Context, tokenID int64, now time.Time) error
 }
 

@@ -258,3 +258,29 @@ func TestDeployRateLimited(t *testing.T) {
 	expectCode(t, r, 1)
 	expectContains(t, "stderr", r.stderr, "rate_limited", "Retry in 42 seconds")
 }
+
+// An admin can see every site, so a project file from a cloned repository
+// could silently point at someone else's site.
+func TestDeployLinkedSiteOwnedByAnotherUser(t *testing.T) {
+	e := newTestEnv(t)
+	e.login()
+	s := e.srv.addSite("Theirs", "theirs", 1)
+	e.srv.mu.Lock()
+	s.Owner = "u2"
+	e.srv.mu.Unlock()
+	dir := siteDir(t, nil)
+	if err := writeProject(dir, project{Server: e.srv.URL, SiteID: s.ID}); err != nil {
+		t.Fatal(err)
+	}
+	r := e.run("deploy", dir)
+	expectCode(t, r, 1)
+	expectContains(t, "stderr", r.stderr, s.ID, "another user", "--site "+s.ID)
+	if e.srv.sawRequest("POST /api/v1/sites") {
+		t.Fatal("must not create or upload")
+	}
+
+	expectCode(t, e.run("deploy", "--site", s.ID, dir), 0)
+	if len(e.srv.sites[s.ID].Deploys) != 2 {
+		t.Fatal("an explicit --site must still publish to a foreign site")
+	}
+}

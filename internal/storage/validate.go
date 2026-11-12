@@ -65,3 +65,33 @@ func isNumericLabel(label string) bool {
 	}
 	return label != ""
 }
+
+// ValidSiteID reports whether id is a well-formed site ID.
+func ValidSiteID(id string) bool { return validateSiteID(id) == nil }
+
+// ValidDeployID reports whether id is a well-formed deploy ID.
+func ValidDeployID(id string) bool { return validateDeployID(id) == nil }
+
+// ValidHostname reports whether h may appear as a by-host entry.
+func ValidHostname(h string) bool { return validateHostname(h) == nil }
+
+// CurrentTargetValid reports whether target is a value this package ever
+// writes into sites/<id>/current: releases/<deploy_id> or the shared empty dir.
+func CurrentTargetValid(target string) bool {
+	if target == emptyTarget {
+		return true
+	}
+	d, ok := strings.CutPrefix(target, releasesDir+"/")
+	return ok && ValidDeployID(d)
+}
+
+// HostTargetValid reports whether target is a value this package ever writes
+// into by-host/<hostname>: ../sites/<site_id>/current.
+func HostTargetValid(target string) bool {
+	rest, ok := strings.CutPrefix(target, "../"+sitesDir+"/")
+	if !ok {
+		return false
+	}
+	id, ok := strings.CutSuffix(rest, "/"+currentLink)
+	return ok && ValidSiteID(id)
+}

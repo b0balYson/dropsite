@@ -20,11 +20,14 @@ const (
 )
 
 // tree is the in-memory namespace of accepted entries. It rejects duplicates
-// and file/directory conflicts and counts stored files against MaxFiles.
+// and file/directory conflicts, counts stored files against MaxFiles and
+// directories (explicit and implicit parents alike) against the directory cap,
+// and bounds the depth and length of every stored path.
 type tree struct {
 	lim   Limits
 	nodes map[string]nodeKind
 	files int
+	dirs  int
 }
 
 func newTree(lim Limits) *tree {
@@ -59,6 +62,9 @@ func (t *tree) admit(raw string, typ entryType) (rel string, skip bool, err erro
 }
 
 func (t *tree) add(rel, raw string, isDir bool) error {
+	if err := checkShape(rel, raw); err != nil {
+		return err
+	}
 	if err := t.addParents(rel, raw); err != nil {
 		return err
 	}
@@ -66,6 +72,11 @@ func (t *tree) add(rel, raw string, isDir bool) error {
 	if isDir {
 		if exists && prev != nodeImplicitDir {
 			return conflictErr(raw)
+		}
+		if !exists {
+			if err := t.countDir(); err != nil {
+				return err
+			}
 		}
 		t.nodes[rel] = nodeDir
 		return nil
@@ -91,9 +102,20 @@ func (t *tree) addParents(rel, raw string) error {
 		case nodeFile:
 			return conflictErr(raw)
 		case 0:
+			if err := t.countDir(); err != nil {
+				return err
+			}
 			t.nodes[parent] = nodeImplicitDir
 		}
 	}
+	return nil
+}
+
+func (t *tree) countDir() error {
+	if t.dirs >= t.lim.dirsCap() {
+		return tooManyDirsErr(t.lim)
+	}
+	t.dirs++
 	return nil
 }
 

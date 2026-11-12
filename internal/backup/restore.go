@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/b0balYson/dropsite/internal/storage"
 	"github.com/b0balYson/dropsite/internal/store"
 )
 
@@ -76,6 +77,11 @@ func extract(ctx context.Context, r io.Reader, stage string) (Manifest, error) {
 		return Manifest{}, fmt.Errorf("not a backup archive: %w", err)
 	}
 	defer gz.Close()
+	sw, err := newSiteWriter(stage)
+	if err != nil {
+		return Manifest{}, err
+	}
+	defer sw.close()
 	tr := tar.NewReader(gz)
 	var m Manifest
 	sawDB := false
@@ -101,7 +107,7 @@ func extract(ctx context.Context, r io.Reader, stage string) (Manifest, error) {
 			}
 			sawDB = true
 		case strings.HasPrefix(hdr.Name, sitesPrefix):
-			if err := extractSiteEntry(stage, hdr, tr); err != nil {
+			if err := sw.extract(hdr, tr); err != nil {
 				return Manifest{}, err
 			}
 		default:
@@ -114,7 +120,29 @@ func extract(ctx context.Context, r io.Reader, stage string) (Manifest, error) {
 	return m, nil
 }
 
-func extractSiteEntry(stage string, hdr *tar.Header, tr io.Reader) error {
+// siteWriter materializes the sites part of a backup inside an os.Root, so no
+// entry can reach outside the staging directory even through links, and
+// remembers the links it created so nothing is ever written through one.
+type siteWriter struct {
+	root  *os.Root
+	links map[string]bool
+}
+
+func newSiteWriter(stage string) (*siteWriter, error) {
+	dir := filepath.Join(stage, "sites")
+	if err := os.Mkdir(dir, 0o755); err != nil { //nolint:gosec // readable by Caddy
+		return nil, fmt.Errorf("create staging sites directory: %w", err)
+	}
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return nil, fmt.Errorf("open staging sites directory: %w", err)
+	}
+	return &siteWriter{root: root, links: map[string]bool{}}, nil
+}
+
+func (w *siteWriter) close() { _ = w.root.Close() }
+
+func (w *siteWriter) extract(hdr *tar.Header, tr io.Reader) error {
 	rel := strings.TrimSuffix(strings.TrimPrefix(hdr.Name, sitesPrefix), "/")
 	if rel == "" {
 		return nil
@@ -122,24 +150,70 @@ func extractSiteEntry(stage string, hdr *tar.Header, tr io.Reader) error {
 	if !isInside(rel) {
 		return fmt.Errorf("unsafe path %q in backup", hdr.Name)
 	}
-	dst := filepath.Join(stage, "sites", filepath.FromSlash(rel))
-	//nolint:gosec // Caddy runs as another uid and must read the sites volume
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return fmt.Errorf("create directory: %w", err)
+	if w.atOrBelowLink(rel) {
+		return fmt.Errorf("entry %q in backup is at or below a link", hdr.Name)
+	}
+	name := filepath.FromSlash(rel)
+	if dir := filepath.Dir(name); dir != "." {
+		if err := w.root.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // readable by Caddy
+			return fmt.Errorf("create directory: %w", err)
+		}
 	}
 	switch hdr.Typeflag {
 	case tar.TypeDir:
-		return os.MkdirAll(dst, 0o755) //nolint:gosec // readable by Caddy
+		return w.root.MkdirAll(name, 0o755) //nolint:gosec // readable by Caddy
 	case tar.TypeReg:
-		return copyTo(dst, tr, 0o644)
-	case tar.TypeSymlink:
-		if !linkTargetInside(rel, hdr.Linkname) {
-			return fmt.Errorf("unsafe link %q -> %q in backup", hdr.Name, hdr.Linkname)
+		f, err := w.root.OpenFile(name, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644) //nolint:gosec // readable by Caddy
+		if err != nil {
+			return fmt.Errorf("create %s: %w", rel, err)
 		}
-		return os.Symlink(hdr.Linkname, dst)
+		return writeAndClose(f, tr, rel)
+	case tar.TypeSymlink:
+		if !allowedLink(rel, hdr.Linkname) {
+			return fmt.Errorf("unexpected link %q -> %q in backup", hdr.Name, hdr.Linkname)
+		}
+		if err := w.root.Symlink(hdr.Linkname, name); err != nil {
+			return fmt.Errorf("create link %s: %w", rel, err)
+		}
+		w.links[rel] = true
+		return nil
 	default:
 		return fmt.Errorf("unsupported entry type for %q", hdr.Name)
 	}
+}
+
+// atOrBelowLink reports whether rel or one of its parents is a restored link.
+func (w *siteWriter) atOrBelowLink(rel string) bool {
+	for i := range len(rel) {
+		if rel[i] == '/' && w.links[rel[:i]] {
+			return true
+		}
+	}
+	return w.links[rel]
+}
+
+// allowedLink is the strict whitelist of links a backup may contain: exactly
+// the ones internal/storage creates, with well-formed IDs and hostnames.
+//
+//	sites/<site_id>/current -> releases/<deploy_id> | ../../empty
+//	by-host/<hostname>      -> ../sites/<site_id>/current
+func allowedLink(rel, target string) bool {
+	parts := strings.Split(rel, "/")
+	switch {
+	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "current" && storage.ValidSiteID(parts[1]):
+		return storage.CurrentTargetValid(target)
+	case len(parts) == 2 && parts[0] == "by-host" && storage.ValidHostname(parts[1]):
+		return storage.HostTargetValid(target)
+	}
+	return false
+}
+
+func writeAndClose(f *os.File, r io.Reader, name string) error {
+	if _, err := io.Copy(f, r); err != nil {
+		_ = f.Close()
+		return fmt.Errorf("write %s: %w", name, err)
+	}
+	return f.Close()
 }
 
 func copyTo(dst string, r io.Reader, mode os.FileMode) error {
@@ -147,11 +221,7 @@ func copyTo(dst string, r io.Reader, mode os.FileMode) error {
 	if err != nil {
 		return fmt.Errorf("create %s: %w", dst, err)
 	}
-	if _, err := io.Copy(f, r); err != nil {
-		_ = f.Close()
-		return fmt.Errorf("write %s: %w", dst, err)
-	}
-	return f.Close()
+	return writeAndClose(f, r, dst)
 }
 
 func replaceDB(src, dbPath string) error {

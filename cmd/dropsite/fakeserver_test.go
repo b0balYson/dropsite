@@ -42,6 +42,7 @@ type fakeSite struct {
 	Slug    *string
 	Deploys []fakeDeploy // oldest first
 	Current int          // index into Deploys, -1 if none
+	Owner   string       // owner_id; empty means the logged-in user "u1"
 }
 
 type fakeDeploy struct {
@@ -171,8 +172,12 @@ func (s *fakeSite) json() map[string]any {
 	if s.Current >= 0 {
 		cur = s.deployJSON(s.Current)
 	}
+	owner := s.Owner
+	if owner == "" {
+		owner = "u1"
+	}
 	return map[string]any{"id": s.ID, "title": s.Title, "url": s.url(), "urls": []string{s.url()},
-		"slug": s.Slug, "current_deploy": cur}
+		"slug": s.Slug, "owner_id": owner, "current_deploy": cur}
 }
 
 func (s *fakeSite) deployJSON(i int) map[string]any {

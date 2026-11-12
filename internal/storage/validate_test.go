@@ -98,3 +98,31 @@ func TestMethodsRejectDangerousNames(t *testing.T) {
 		t.Fatalf("unexpected sites entries: %v %v", entries, err)
 	}
 }
+
+func TestLinkTargetValidators(t *testing.T) {
+	const site, deploy = "abcdefghij", "20261112-100000-abc123"
+	cases := []struct {
+		fn     func(string) bool
+		target string
+		want   bool
+	}{
+		{CurrentTargetValid, releaseTarget(deploy), true},
+		{CurrentTargetValid, emptyTarget, true},
+		{CurrentTargetValid, "releases/r1", false},
+		{CurrentTargetValid, "releases/" + deploy + "/..", false},
+		{CurrentTargetValid, "../../empty/", false},
+		{HostTargetValid, hostTarget(site), true},
+		{HostTargetValid, "../sites/" + site + "/releases", false},
+		{HostTargetValid, "../sites/../current", false},
+		{HostTargetValid, "/sites/" + site + "/current", false},
+	}
+	for _, tc := range cases {
+		if got := tc.fn(tc.target); got != tc.want {
+			t.Errorf("%q: got %v, want %v", tc.target, got, tc.want)
+		}
+	}
+	if !ValidSiteID(site) || ValidSiteID("ABC") || !ValidDeployID(deploy) || ValidDeployID("x") ||
+		!ValidHostname("a.pp.test") || ValidHostname("10.0.0.1") {
+		t.Fatal("exported validators disagree with the internal ones")
+	}
+}

@@ -63,7 +63,7 @@ func (a *app) deploy(ctx context.Context, o deployOpts) error {
 	if err := p.ready(); err != nil {
 		return err
 	}
-	siteID, err := a.resolveSite(ctx, c, o)
+	siteID, err := a.resolveSite(ctx, c, o, me.User.ID)
 	if err != nil {
 		return errors.Join(err, p.stop())
 	}
@@ -115,7 +115,8 @@ func (a *app) printDeploy(res *client.DeployResult, asJSON bool) error {
 }
 
 // resolveSite picks the target: --site, the project file, or a new site.
-func (a *app) resolveSite(ctx context.Context, c *client.Client, o deployOpts) (string, error) {
+// userID is the logged-in user; a project file may only name their own site.
+func (a *app) resolveSite(ctx context.Context, c *client.Client, o deployOpts, userID string) (string, error) {
 	if o.site != "" {
 		return lookupSite(ctx, c, o.site)
 	}
@@ -124,7 +125,7 @@ func (a *app) resolveSite(ctx context.Context, c *client.Client, o deployOpts) (
 		return "", err
 	}
 	if ok {
-		return linkedSite(ctx, c, o.dir, proj)
+		return linkedSite(ctx, c, o.dir, proj, userID)
 	}
 	return a.createLinkedSite(ctx, c, o)
 }
@@ -137,7 +138,10 @@ func lookupSite(ctx context.Context, c *client.Client, ref string) (string, erro
 	return s.ID, nil
 }
 
-func linkedSite(ctx context.Context, c *client.Client, dir string, p project) (string, error) {
+// linkedSite resolves the site remembered in the project file. A site owned by
+// someone else is refused: an administrator sees every site, so a project
+// file from a cloned repository could otherwise silently overwrite it.
+func linkedSite(ctx context.Context, c *client.Client, dir string, p project, userID string) (string, error) {
 	server, err := normalizeServer(p.Server)
 	if err != nil || server != c.Server() {
 		return "", withHint(
@@ -149,6 +153,13 @@ func linkedSite(ctx context.Context, c *client.Client, dir string, p project) (s
 	s, err := c.GetSite(ctx, p.SiteID)
 	if err != nil {
 		return "", siteGoneError(p.SiteID, err)
+	}
+	if s.OwnerID != userID {
+		return "", withHint(
+			fmt.Errorf("%s links this directory to site %s, which belongs to another user", projectPath(dir), s.ID),
+			"Nothing was published. If you really mean to publish to that site, pass it explicitly:",
+			fmt.Sprintf("  %s deploy %s --site %s", brand.Name, dir, s.ID),
+			fmt.Sprintf("Otherwise delete %s to publish as a new site of your own.", brand.ProjectFile))
 	}
 	return s.ID, nil
 }

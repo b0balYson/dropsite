@@ -3,12 +3,15 @@ package service
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/b0balYson/dropsite/internal/brand"
 	"github.com/b0balYson/dropsite/internal/domain"
+	"github.com/b0balYson/dropsite/internal/ratelimit"
 )
 
 // LoginResult is a new UI session. Secret goes into the cookie; it is never stored.
@@ -20,30 +23,103 @@ type LoginResult struct {
 
 func ipKey(ip string) string { return "ip:" + ip }
 
+// accountKey identifies the submitted login name for the per-account limit.
+// It is hashed so arbitrary input cannot bloat the limiter's memory, and it is
+// derived for any input, so the limit reveals nothing about which accounts exist.
+func accountKey(email string) string {
+	sum := sha256.Sum256([]byte(strings.ToLower(strings.TrimSpace(email))))
+	return "acct:" + hex.EncodeToString(sum[:])
+}
+
+// loginAttempt holds the limiter reservations of one login attempt.
+type loginAttempt struct {
+	release func()
+	ip      ratelimit.Reservation
+	account ratelimit.Reservation
+}
+
+// cancel refunds the attempt (it did not fail on credentials).
+func (a loginAttempt) cancel() {
+	a.ip.Cancel()
+	a.account.Cancel()
+}
+
+// beginLogin admits one login attempt: only one attempt per IP may be in
+// flight, and the failure is reserved against the per-IP and per-account
+// limits before the slow password check, so parallel requests cannot exceed
+// them. The caller must call release and, unless the credentials were wrong,
+// cancel.
+func (s *Service) beginLogin(email, ip string) (loginAttempt, error) {
+	release, ok := s.loginBusy.tryAcquire(ipKey(ip))
+	if !ok {
+		return loginAttempt{}, domain.ErrRateLimited.WithRetryAfter(LoginBusyRetryAfter)
+	}
+	ipRes, ok, retry := s.loginLimit.Reserve(ipKey(ip))
+	if !ok {
+		release()
+		return loginAttempt{}, domain.ErrRateLimited.WithRetryAfter(retry)
+	}
+	acctRes, ok, retry := s.accountLimit.Reserve(accountKey(email))
+	if !ok {
+		ipRes.Cancel()
+		release()
+		return loginAttempt{}, domain.ErrRateLimited.WithRetryAfter(retry)
+	}
+	return loginAttempt{release: release, ip: ipRes, account: acctRes}, nil
+}
+
+// loginFailedMeta records the submitted email only when it is a valid address,
+// so a pasted password or an oversized value never reaches the audit log.
+func loginFailedMeta(email string) map[string]any {
+	norm, err := domain.NormalizeEmail(email)
+	if err != nil {
+		return map[string]any{"email_invalid": true}
+	}
+	return map[string]any{"email": norm}
+}
+
 // Login verifies credentials and opens a UI session. Unknown email, wrong
 // password, a blocked or not-yet-activated user all yield the same error.
 func (s *Service) Login(ctx context.Context, email, password, ip, userAgent string) (LoginResult, error) {
-	if ok, retry := s.loginLimit.Check(ipKey(ip)); !ok {
-		return LoginResult{}, domain.ErrRateLimited.WithRetryAfter(retry)
-	}
-	u, err := s.repo.GetUserByEmail(ctx, strings.TrimSpace(email))
-	hash := s.hasher.dummy
-	if err == nil && u.PasswordHash != "" {
-		hash = u.PasswordHash
-	}
-	if err != nil && domain.AsError(err).Kind != domain.KindNotFound {
+	att, err := s.beginLogin(email, ip)
+	if err != nil {
 		return LoginResult{}, err
 	}
-	match, verr := s.hasher.verify(ctx, password, hash)
-	if verr != nil {
-		return LoginResult{}, fmt.Errorf("verify password: %w", verr)
+	defer att.release()
+	u, ok, err := s.checkCredentials(ctx, email, password)
+	if err != nil {
+		att.cancel()
+		return LoginResult{}, err
 	}
-	if err != nil || !match || u.PasswordHash == "" || u.Status != domain.UserActive {
-		s.loginLimit.Record(ipKey(ip))
-		s.audit(ctx, Actor{IP: ip}, "auth.login_failed", "", map[string]any{"email": email})
+	if !ok {
+		s.audit(ctx, Actor{IP: ip}, "auth.login_failed", "", loginFailedMeta(email))
 		return LoginResult{}, domain.ErrBadCredentials
 	}
+	att.cancel()
 	return s.openSession(ctx, u, ip, userAgent)
+}
+
+// checkCredentials reports whether email/password belong to an active user.
+// The password is always verified (against a dummy hash for unknown users) to
+// keep timing uniform.
+func (s *Service) checkCredentials(ctx context.Context, email, password string) (domain.User, bool, error) {
+	u, err := s.repo.GetUserByEmail(ctx, strings.TrimSpace(email))
+	found := err == nil
+	if !found && domain.AsError(err).Kind != domain.KindNotFound {
+		return domain.User{}, false, err
+	}
+	hash := s.hasher.dummy
+	if found && u.PasswordHash != "" {
+		hash = u.PasswordHash
+	}
+	match, err := s.hasher.verify(ctx, password, hash)
+	if err != nil {
+		return domain.User{}, false, fmt.Errorf("verify password: %w", err)
+	}
+	if !found || !match || u.PasswordHash == "" || u.Status != domain.UserActive {
+		return domain.User{}, false, nil
+	}
+	return u, true, nil
 }
 
 func (s *Service) openSession(ctx context.Context, u domain.User, ip, userAgent string) (LoginResult, error) {
@@ -111,11 +187,13 @@ func (s *Service) Logout(ctx context.Context, secret string) error {
 
 // AuthenticateToken resolves an API bearer token.
 func (s *Service) AuthenticateToken(ctx context.Context, token, ip string) (Actor, error) {
-	if ok, retry := s.tokenLimit.Check(ipKey(ip)); !ok {
+	// The failure is reserved up front (atomically) and refunded on success,
+	// so concurrent requests cannot exceed the limit.
+	res, ok, retry := s.tokenLimit.Reserve(ipKey(ip))
+	if !ok {
 		return Actor{}, domain.ErrRateLimited.WithRetryAfter(retry)
 	}
 	fail := func() (Actor, error) {
-		s.tokenLimit.Record(ipKey(ip))
 		return Actor{}, domain.ErrUnauthorized
 	}
 	if !strings.HasPrefix(token, brand.TokenPrefix) || len(token) > 128 {
@@ -135,6 +213,7 @@ func (s *Service) AuthenticateToken(ctx context.Context, token, ip string) (Acto
 			s.log.Warn("touch token failed", "err", err)
 		}
 	}
+	res.Cancel()
 	return Actor{User: u, IP: ip}, nil
 }
 

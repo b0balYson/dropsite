@@ -103,6 +103,26 @@ func (s *Service) ReissueInvite(ctx context.Context, a Actor, userID int64) (Inv
 	return s.issueInvite(ctx, a, userID)
 }
 
+// RevokeUserTokens revokes every active API token of a user (admin only), for
+// example after a password reset when the account may have been compromised.
+// Reissuing an invite deliberately does not do this on its own, so CI tokens
+// keep working through an ordinary password reset. It returns the number of
+// tokens revoked.
+func (s *Service) RevokeUserTokens(ctx context.Context, a Actor, userID int64) (int, error) {
+	if err := requireAdmin(a); err != nil {
+		return 0, err
+	}
+	if _, err := s.repo.GetUser(ctx, userID); err != nil {
+		return 0, err
+	}
+	n, err := s.repo.RevokeUserTokens(ctx, userID, s.now())
+	if err != nil {
+		return 0, err
+	}
+	s.audit(ctx, a, "user.tokens_revoke", userTarget(userID), map[string]any{"count": n})
+	return n, nil
+}
+
 func (s *Service) issueInvite(ctx context.Context, a Actor, userID int64) (InviteLink, error) {
 	secret := domain.NewSecret()
 	now := s.now()
