@@ -44,6 +44,8 @@ type Storage interface {
 	ActivateEmpty(siteID string) error
 	LinkHost(hostname, siteID string) error
 	LinkPreview(hostname, siteID, deployID string) error
+	LinkDraft(siteID string, deployID *string) error
+	LinkDraftHost(hostname, siteID string) error
 	UnlinkHost(hostname string) error
 	SetHostFlag(flag HostFlag, hostname string) error
 	ClearHostFlag(flag HostFlag, hostname string) error

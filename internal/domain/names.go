@@ -100,7 +100,7 @@ func ValidateSlug(slug string, reserved ReservedSlugs) error {
 		return E(KindInvalid, CodeSlugInvalid,
 			"slug must be 3-63 characters of a-z, 0-9 and hyphens, starting and ending with a letter or digit")
 	}
-	if reserved.Contains(slug) || IsPreviewLabel(slug) {
+	if reserved.Contains(slug) || IsPreviewLabel(slug) || IsDraftPreviewLabel(slug) {
 		return E(KindInvalid, CodeSlugReserved, "slug is reserved").
 			WithParams(map[string]any{"slug": slug})
 	}

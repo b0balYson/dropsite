@@ -86,7 +86,8 @@ func CurrentTargetValid(target string) bool {
 }
 
 // HostTargetValid reports whether target is a value this package ever writes
-// into by-host/<hostname>: ../sites/<site_id>/current, or a release preview
+// into by-host/<hostname>: ../sites/<site_id>/current, a draft preview
+// ../sites/<site_id>/draft, or a release preview
 // ../sites/<site_id>/releases/<deploy_id>.
 func HostTargetValid(target string) bool {
 	rest, ok := strings.CutPrefix(target, "../"+sitesDir+"/")
@@ -97,7 +98,7 @@ func HostTargetValid(target string) bool {
 	if !ok || !ValidSiteID(id) {
 		return false
 	}
-	if sub == currentLink {
+	if sub == currentLink || sub == draftLink {
 		return true
 	}
 	d, ok := strings.CutPrefix(sub, releasesDir+"/")
