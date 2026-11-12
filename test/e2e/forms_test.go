@@ -101,6 +101,8 @@ func siteForms(t *testing.T, s *stack, owner *api, siteID, host string) {
 		t.Fatalf("submissions %s", raw)
 	}
 
+	mcpForms(t, s, owner, siteID, marker)
+
 	// The channel reports its circuit breaker; a healthy one is not paused.
 	st, body = owner.json(http.MethodGet, "/sites/"+siteID+"/forms/channels", nil)
 	must(t, st, http.StatusOK, body, "list channels")
