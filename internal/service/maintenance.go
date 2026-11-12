@@ -39,30 +39,23 @@ func (s *Service) Reconcile(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("list deleted sites: %w", err)
 	}
-	report, err := s.files.Reconcile(ctx, toStorageLayout(layout), storage.Retained{SiteIDs: pending})
+	report, err := s.files.Reconcile(ctx, s.toStorageLayout(layout), storage.Retained{SiteIDs: pending})
 	if err != nil {
 		return fmt.Errorf("reconcile sites volume: %w", err)
 	}
 	s.log.Info("sites volume reconciled",
 		"removed_temp", len(report.RemovedTemp), "removed_releases", len(report.RemovedReleases),
 		"removed_sites", len(report.RemovedSites), "linked_hosts", len(report.LinkedHosts),
-		"unlinked_hosts", len(report.UnlinkedHosts), "fixed_current", report.FixedCurrent)
+		"unlinked_hosts", len(report.UnlinkedHosts), "fixed_current", report.FixedCurrent,
+		"tls_mode", s.cfg.TLSMode)
 	if len(report.MissingCurrent) > 0 {
 		s.log.Error("current release directory is missing; these sites serve nothing until redeployed",
 			"sites", report.MissingCurrent)
 	}
-	return nil
-}
-
-func toStorageLayout(in []store.SiteLayout) []storage.SiteLayout {
-	out := make([]storage.SiteLayout, 0, len(in))
-	for _, l := range in {
-		out = append(out, storage.SiteLayout{
-			SiteID: l.SiteID, CurrentDeployID: l.CurrentDeployID,
-			Hostnames: l.Hostnames, ReadyDeployIDs: l.ReadyDeployIDs,
-		})
+	if len(report.MissingPreviews) > 0 {
+		s.log.Warn("release directories are missing; these previews serve nothing", "hosts", report.MissingPreviews)
 	}
-	return out
+	return nil
 }
 
 // Housekeeping purges deleted sites past their retention and expired

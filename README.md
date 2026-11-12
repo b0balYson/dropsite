@@ -96,9 +96,18 @@ irm https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.ps
 
 By default every address gets its own certificate on first visit (`TLS_MODE=ondemand`). Caddy only requests a certificate for addresses that exist.
 
-Let's Encrypt allows **50 new certificates per registered domain per 7 days** (as of August 2026, see [rate limits](https://letsencrypt.org/docs/rate-limits/)). A site with a slug uses two certificates (random address and slug), so plan for about **25 new sites per week**. Renewals do not count. Caddy falls back to ZeroSSL when Let's Encrypt refuses. If you grow beyond that, switch to a wildcard certificate: see [docs/tls.md](docs/tls.md).
+Let's Encrypt allows **50 new certificates per registered domain per 7 days** (as of August 2026, see [rate limits](https://letsencrypt.org/docs/rate-limits/)). A site with a slug uses two certificates (random address and slug), so plan for about **25 new sites per week**. Renewals do not count. Caddy falls back to ZeroSSL when Let's Encrypt refuses. If you grow beyond that, switch to wildcard mode.
 
 Every issued certificate is published in public Certificate Transparency logs, so site addresses are not secret.
+
+**Wildcard mode** (`TLS_MODE=wildcard`) uses one certificate for `*.<BASE_DOMAIN>` and the root, obtained through the DNS-01 challenge, so new sites cost no certificates. It needs DNS hosted at Cloudflare (other providers can be added) and an API token with `Zone.DNS:Edit`:
+
+```sh
+# .env: CF_API_TOKEN=<token>
+docker compose -f docker-compose.yml -f compose.wildcard.yml up -d
+```
+
+In this mode every release also gets its own preview address `https://p-<release>-<site>.<BASE_DOMAIN>/` (not indexed by search engines), shown in the release history. Step-by-step switch and rollback: [docs/tls.md](docs/tls.md).
 
 ## Configuration
 
@@ -111,7 +120,8 @@ Every issued certificate is published in public Certificate Transparency logs, s
 | `ADMIN_BIND_IP` | no | `127.0.0.1` | Address the web interface listens on |
 | `UI_URL` | no | `http://<ADMIN_BIND_IP>:8082` | Address used in invite links |
 | `API_HOST` | no | `api.<BASE_DOMAIN>` | Host of the public API |
-| `TLS_MODE` | no | `ondemand` | Only `ondemand` in this version |
+| `TLS_MODE` | no | `ondemand` | `ondemand` or `wildcard`; wildcard is set by `compose.wildcard.yml` |
+| `CF_API_TOKEN` | wildcard only | — | Cloudflare token with `Zone.DNS:Edit`, passed to Caddy only |
 | `MAX_SITE_BYTES`, `MAX_FILE_BYTES`, `MAX_FILES`, `MAX_SITES_PER_USER`, `KEEP_RELEASES` | no | 50 MB, 20 MB, 2000, 10, 5 | Limits; admins can override them in the interface |
 | `RESERVED_SLUGS` | no | | Extra forbidden slugs, comma separated |
 | `LOG_LEVEL` | no | `info` | `debug`, `info`, `warn`, `error` |

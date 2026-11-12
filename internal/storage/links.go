@@ -96,6 +96,26 @@ func (f *FS) LinkHost(hostname, siteID string) error {
 	return replaceSymlink(hostTarget(siteID), f.hostPath(hostname))
 }
 
+// LinkPreview atomically points by-host/<hostname> at the release directory
+// sites/<siteID>/releases/<deployID>, which must exist: no dangling entry is
+// ever created. UnlinkHost removes it.
+func (f *FS) LinkPreview(hostname, siteID, deployID string) error {
+	if err := validateHostname(hostname); err != nil {
+		return err
+	}
+	if err := validateSiteAndDeploy(siteID, deployID); err != nil {
+		return err
+	}
+	ok, err := isDir(f.releasePath(siteID, deployID))
+	if err != nil {
+		return fmt.Errorf("storage: stat release: %w", err)
+	}
+	if !ok {
+		return fmt.Errorf("%w: release %s/%s", ErrNotFound, siteID, deployID)
+	}
+	return replaceSymlink(previewTarget(siteID, deployID), f.hostPath(hostname))
+}
+
 // UnlinkHost removes by-host/<hostname>; a missing entry is not an error.
 // The link itself is removed, never its target.
 func (f *FS) UnlinkHost(hostname string) error {
