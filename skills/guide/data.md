@@ -8,9 +8,18 @@ A site can keep small JSON data in collections: menu items and prices, a catalog
 - Keep text that rarely changes (about us, contacts, the hero block) in the HTML files.
 - Small data only: at most 20 collections per site, 5000 documents per collection, 16 KB per document. Files, photos and large tables do not belong here; photos stay in the site files and a document refers to them by path.
 
+## Start from a template
+
+For typical content there are ready templates: `menu` (categories and prices), `catalog` (products), `services` (price list), `events` (schedule, past events hide themselves), `team`, `faq` and `reviews` (moderated, with the visitor form).
+
+1. list_collection_templates shows them briefly; call it again with `name` (and `collection`, the name you will use) to get the JSON Schema, sample documents and a snippet.
+2. save_collection with `template` creates the collection with the template's schema and mode; `with_samples: true` also adds the samples. Replace the samples with the user's real content (save_documents with `replace: true` once the user confirmed), or start without samples when the user already gave the content.
+3. Put the snippet into the page and adapt it: headings and texts in the site's language, the currency, the fallback content written from the real documents, fields the user does not need removed. A template is a starting point, not a design: the snippet has no styles and renders plain semantic markup (lists, headings, `time`, `details`, `figure`) with `data-*` hooks. Style it with the site's own CSS so that it matches the site; never ship it unstyled and never copy the same look from site to site.
+4. Change the schema when the user needs other fields (save_collection with `schema`); list_collections then shows the generic snippet, so keep the adapted one in the page.
+
 ## Building a page on a collection
 
-Example request: "make a menu so that I can change prices from the chat".
+Example request: "make a menu so that I can change prices from the chat" (the `menu` template above does most of this).
 
 1. save_collection with name `menu` and mode `public` (everybody reads, only the owner writes). Add a schema when the shape matters, e.g. `{"type": "object", "properties": {"name": {"type": "string"}, "price": {"type": "number"}}, "required": ["name", "price"]}`.
 2. save_documents with one document per item; give stable IDs (`cappuccino`, `latte`) and `position` for the order.
@@ -37,7 +46,7 @@ fetch('/_dropsite/data/menu')
 </script>
 ```
 
-The answer is `{"items": [{"id", "data", "position", "created_at", "updated_at"}], "next": null}` sorted by position; `?order=newest` or `oldest` changes the order, `?limit=` (up to 500) and `?after=<next>` read further pages. `/_dropsite/data/<name>/<id>` returns one document. On a password-protected site the data is available only to visitors who signed in.
+The answer is `{"items": [{"id", "data", "position", "created_at", "updated_at"}], "next": null}` sorted by position; `?order=newest` or `oldest` changes the order, `?limit=` (at most 200 documents per page for visitors; larger values are cut to 200) and `?after=<next>` read further pages: follow `next` until it is null, as the template snippets do. One visitor address may read data about 300 times a minute; past that the answer is 429 and the page keeps its fallback. `/_dropsite/data/<name>/<id>` returns one document. On a password-protected site the data is available only to visitors who signed in.
 
 To change a price later: list_documents to find the ID, then save_documents with that ID and the whole new document. Tell the user the change is already on the site.
 
