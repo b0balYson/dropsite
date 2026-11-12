@@ -161,6 +161,12 @@ func (a *api) authenticated(next handlerFunc) handlerFunc {
 		if err != nil {
 			return err
 		}
+		// A client acting for an AI assistant (the local MCP server of the
+		// CLI) gives up administrator powers like a token on /mcp. The
+		// header can only lower rights, so it needs no proof.
+		if isAssistant(r) {
+			actor.ViaMCP = true
+		}
 		info.userID = actor.User.ID
 		return next(w, r.WithContext(context.WithValue(r.Context(), actorKey, actor)))
 	}

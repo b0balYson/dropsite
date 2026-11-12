@@ -275,3 +275,26 @@ func TestFormSettingsAndSearchEndpoints(t *testing.T) {
 		t.Fatalf("names %+v", st.FormNames)
 	}
 }
+
+func TestAssistantHeaderDropsAdminPowers(t *testing.T) {
+	h := newHarness(t)
+	_, tok := h.user("bob@pp.test")
+	site := h.createSite(tok, "Bob", "bob")
+	asAssistant := withHeader("X-Dropsite-Assistant", "mcp")
+	wantStatus(t, h.do(http.MethodGet, "/api/v1/sites/bob", h.adminToken, nil), http.StatusOK)
+	wantError(t, h.do(http.MethodGet, "/api/v1/sites/bob", h.adminToken, nil, asAssistant), http.StatusNotFound, domain.CodeNotFound)
+	wantError(t, h.do(http.MethodGet, "/api/v1/admin/users", h.adminToken, nil, asAssistant), http.StatusNotFound, domain.CodeNotFound)
+	// The root domain stays available to an administrator's assistant, with confirm.
+	wantStatus(t, h.do(http.MethodPut, "/api/v1/root-site", h.adminToken,
+		map[string]string{"site": site.ID, "confirm": site.ID}, asAssistant), http.StatusOK)
+	if me := decodeAs[meDTO](t, h.do(http.MethodGet, "/api/v1/me", h.adminToken, nil, asAssistant)); me.RootSite == nil {
+		t.Fatal("assistant admin lost the root site")
+	}
+	// Releases made for an assistant have the source mcp; other values change nothing.
+	rec := h.deploy(site.ID, tok, testenv.Zip(t, index("x")), asAssistant)
+	wantStatus(t, rec, http.StatusCreated)
+	if d := decodeAs[deployResultDTO](t, rec); d.Deploy.Source != "mcp" {
+		t.Fatalf("source %q", d.Deploy.Source)
+	}
+	wantStatus(t, h.do(http.MethodGet, "/api/v1/sites/bob", h.adminToken, nil, withHeader("X-Dropsite-Assistant", "no")), http.StatusOK)
+}

@@ -89,21 +89,21 @@ type siteDTO struct {
 }
 
 type siteItemDTO struct {
-	ID           string     `json:"id"`
-	Title        string     `json:"title"`
-	URL          string     `json:"url"`
-	URLs         []string   `json:"urls"`
-	Slug         *string    `json:"slug"`
-	OwnerID      string     `json:"owner_id"`
+	ID           string        `json:"id"`
+	Title        string        `json:"title"`
+	URL          string        `json:"url"`
+	URLs         []string      `json:"urls"`
+	Slug         *string       `json:"slug"`
+	OwnerID      string        `json:"owner_id"`
 	OwnerEmail   string        `json:"owner_email"`
 	Hostnames    []hostnameDTO `json:"hostnames"`
 	LastDeployAt *time.Time    `json:"last_deploy_at"`
-	SizeBytes    int64      `json:"size_bytes"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
-	Noindex      bool       `json:"noindex"`
-	Protected    bool       `json:"protected"`
-	ExpiresAt    *time.Time `json:"expires_at"`
+	SizeBytes    int64         `json:"size_bytes"`
+	CreatedAt    time.Time     `json:"created_at"`
+	UpdatedAt    time.Time     `json:"updated_at"`
+	Noindex      bool          `json:"noindex"`
+	Protected    bool          `json:"protected"`
+	ExpiresAt    *time.Time    `json:"expires_at"`
 }
 
 type deployResultDTO struct {
@@ -267,7 +267,7 @@ func toSiteItems(rows []service.SiteSummaryView) []siteItemDTO {
 			ID: r.ID, Title: r.Title, URL: r.URL, URLs: nonNil(r.URLs), Slug: optional(r.Slug),
 			OwnerID: idString(r.OwnerID), OwnerEmail: r.OwnerEmail, Hostnames: toHostnames(r.Hostnames),
 			LastDeployAt: utcPtr(r.LastDeployAt),
-			SizeBytes: r.SizeBytes, CreatedAt: utc(r.CreatedAt), UpdatedAt: utc(r.UpdatedAt),
+			SizeBytes:    r.SizeBytes, CreatedAt: utc(r.CreatedAt), UpdatedAt: utc(r.UpdatedAt),
 			Noindex: r.Noindex, Protected: r.Protected, ExpiresAt: utcPtr(r.ExpiresAt),
 		})
 	}
