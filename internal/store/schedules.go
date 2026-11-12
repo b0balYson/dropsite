@@ -19,8 +19,8 @@ type ScheduleRepository interface {
 	// for one (CodeScheduleInvalid).
 	CreateSchedule(ctx context.Context, sp domain.ScheduledPublish, maxPending int) (domain.ScheduledPublish, error)
 	GetSchedule(ctx context.Context, id int64) (domain.ScheduledPublish, error)
-	// ListSchedules returns the publishes of the given sites (all sites of
-	// ownerID when siteID is empty) that are pending or finished at or after
+	// ListSchedules returns the publishes of the given sites (every site
+	// visible to ownerID, personal or of a workspace, when siteID is empty) that are pending or finished at or after
 	// since, ordered by publish time.
 	ListSchedules(ctx context.Context, ownerID int64, siteID string, since time.Time, limit int) ([]domain.ScheduledPublish, error)
 	// ListDueSchedules returns pending publishes due at or before now, of
@@ -152,7 +152,7 @@ func (db *DB) ListSchedules(ctx context.Context, ownerID int64, siteID string, s
 		q += " AND p.site_id = ?2"
 		args = append(args, siteID)
 	} else {
-		q += " AND s.owner_id = ?2"
+		q += " AND " + visibleSite("?2")
 		args = append(args, ownerID)
 	}
 	q += " ORDER BY p.publish_at, p.id LIMIT ?3"

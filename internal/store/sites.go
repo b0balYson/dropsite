@@ -11,9 +11,9 @@ import (
 
 const (
 	siteInsertCols = "id, owner_id, title, current_deploy_id, created_at, updated_at, deleted_at, purged_at"
-	siteCols       = siteInsertCols + ", noindex, access_password_hash != '', expires_at"
+	siteCols       = siteInsertCols + ", noindex, access_password_hash != '', expires_at, workspace_id"
 	siteColsS      = "s.id, s.owner_id, s.title, s.current_deploy_id, s.created_at, s.updated_at, s.deleted_at, s.purged_at, " +
-		"s.noindex, s.access_password_hash != '', s.expires_at"
+		"s.noindex, s.access_password_hash != '', s.expires_at, s.workspace_id"
 )
 
 // siteScan holds raw values of siteCols: dest gives the scan targets, finish
@@ -23,11 +23,12 @@ type siteScan struct {
 	created, updated int64
 	deleted, purged  sql.NullInt64
 	expires          sql.NullInt64
+	workspace        sql.NullInt64
 }
 
 func (r *siteScan) dest(site *domain.Site) []any {
 	return []any{&site.ID, &site.OwnerID, &site.Title, &r.current, &r.created, &r.updated, &r.deleted, &r.purged,
-		&site.Noindex, &site.Protected, &r.expires}
+		&site.Noindex, &site.Protected, &r.expires, &r.workspace}
 }
 
 func (r *siteScan) finish(site *domain.Site) {
@@ -35,6 +36,7 @@ func (r *siteScan) finish(site *domain.Site) {
 	site.CreatedAt, site.UpdatedAt = fromMS(r.created), fromMS(r.updated)
 	site.DeletedAt, site.PurgedAt = fromNullMS(r.deleted), fromNullMS(r.purged)
 	site.ExpiresAt = fromNullMS(r.expires)
+	site.WorkspaceID = fromNullInt(r.workspace)
 }
 
 func scanSite(s rowScanner) (domain.Site, error) {
@@ -69,9 +71,9 @@ func (db *DB) CountActiveSites(ctx context.Context, ownerID int64) (int, error) 
 // CreateSite inserts the site and its hostnames in one transaction.
 func (db *DB) CreateSite(ctx context.Context, s domain.Site, hosts []domain.Hostname) error {
 	return db.withTx(ctx, func(tx *sql.Tx) error {
-		if _, err := tx.ExecContext(ctx, `INSERT INTO sites (`+siteInsertCols+`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		if _, err := tx.ExecContext(ctx, `INSERT INTO sites (`+siteInsertCols+`, workspace_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			s.ID, s.OwnerID, s.Title, s.CurrentDeployID, toMS(s.CreatedAt), toMS(s.UpdatedAt),
-			nullMS(s.DeletedAt), nullMS(s.PurgedAt)); err != nil {
+			nullMS(s.DeletedAt), nullMS(s.PurgedAt), nullInt(s.WorkspaceID)); err != nil {
 			return fmt.Errorf("insert site %s: %w", s.ID, err)
 		}
 		for _, h := range hosts {
