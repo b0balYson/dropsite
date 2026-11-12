@@ -238,7 +238,7 @@ func TestAdminFormSettingsEndpoint(t *testing.T) {
 	f := newFormHarness(t)
 	wantError(t, f.do(http.MethodGet, "/api/v1/admin/forms/settings", f.owner, nil), http.StatusNotFound, "not_found")
 	rec := f.do(http.MethodPatch, "/api/v1/admin/forms/settings", f.adminToken, map[string]any{
-		"smtp": map[string]any{"host": "smtp.example.com", "port": 587, "from": "forms@example.com", "password": "top-secret"},
+		"smtp":           map[string]any{"host": "smtp.example.com", "port": 587, "from": "forms@example.com", "password": "top-secret"},
 		"retention_days": 30,
 	})
 	wantStatus(t, rec, http.StatusOK)

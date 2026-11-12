@@ -149,7 +149,8 @@ func (db *DB) GetFormChannel(ctx context.Context, siteID string, id int64) (doma
 }
 
 func (db *DB) queryChannels(ctx context.Context, where string, args ...any) ([]domain.FormChannel, error) {
-	rows, err := db.r.QueryContext(ctx, "SELECT "+channelCols+" FROM form_channels WHERE "+where+" ORDER BY id", args...)
+	query := "SELECT " + channelCols + " FROM form_channels WHERE " + where + " ORDER BY id" //nolint:gosec // G202: where is a constant chosen by callers in this file
+	rows, err := db.r.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list form channels: %w", err)
 	}
@@ -266,7 +267,8 @@ func (db *DB) ListFormSubmissions(ctx context.Context, f FormSubmissionFilter) (
 		if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM form_submissions WHERE "+where, args...).Scan(&total); err != nil {
 			return fmt.Errorf("count form submissions: %w", err)
 		}
-		rows, err := tx.QueryContext(ctx, "SELECT "+submissionCols+" FROM form_submissions WHERE "+where+
+		rows, err := tx.QueryContext(ctx, "SELECT "+submissionCols+" FROM form_submissions WHERE "+where+ //nolint:gosec // G202: where is built from constants
+
 			" ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?", append(args, limit, offset)...)
 		if err != nil {
 			return fmt.Errorf("list form submissions: %w", err)
@@ -331,7 +333,8 @@ func (db *DB) ListFormNames(ctx context.Context, siteID string) ([]string, error
 func (db *DB) ClaimDueDeliveries(ctx context.Context, now, leaseUntil time.Time, limit int) ([]DeliveryJob, error) {
 	var jobs []DeliveryJob
 	err := db.withTx(ctx, func(tx *sql.Tx) error {
-		rows, err := tx.QueryContext(ctx, "SELECT "+deliveryCols+", "+prefixed("c", channelCols)+
+		rows, err := tx.QueryContext(ctx, "SELECT "+deliveryCols+", "+prefixed("c", channelCols)+ //nolint:gosec // G202: column lists are constants
+
 			", s.id, s.site_id, s.host, s.form, s.fields_json, s.created_at, u.lang"+` FROM form_deliveries d
 			JOIN form_channels c ON c.id = d.channel_id
 			JOIN form_submissions s ON s.id = d.submission_id

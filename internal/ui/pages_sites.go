@@ -104,6 +104,7 @@ type deployRow struct {
 
 type siteData struct {
 	V       service.SiteView
+	Forms   formsSummary
 	Deploys []deployRow
 	MaxSize int64
 	Domain  string
@@ -127,6 +128,9 @@ func (s *server) loadSite(r *http.Request, rc *reqCtx) (siteData, error) {
 
 func (s *server) sitePage(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	data, err := s.loadSite(r, rc)
+	if err == nil {
+		data.Forms, err = s.formsSummary(r, rc, data.V.Site.ID)
+	}
 	if err != nil {
 		s.failPage(w, r, rc, err)
 		return

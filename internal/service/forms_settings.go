@@ -19,7 +19,7 @@ const (
 	FormSettingSMTPHost      = "forms.smtp_host"
 	FormSettingSMTPPort      = "forms.smtp_port"
 	FormSettingSMTPUsername  = "forms.smtp_username"
-	FormSettingSMTPPassword  = "forms.smtp_password"
+	FormSettingSMTPPassword  = "forms.smtp_password" //nolint:gosec // G101: a settings key, not a credential
 	FormSettingSMTPFrom      = "forms.smtp_from"
 	FormSettingSMTPSecurity  = "forms.smtp_security"
 	FormSettingRetentionDays = "forms.retention_days"
@@ -259,6 +259,22 @@ func (s *Service) UpdateFormSettings(ctx context.Context, a Actor, u FormSetting
 		s.audit(ctx, a, "forms.settings.update", "settings", map[string]any{"changed": sortedStrings(changed)})
 	}
 	return s.GetFormSettings(ctx, a)
+}
+
+// FormAvailability tells site owners which channel kinds can be added.
+type FormAvailability struct {
+	Telegram bool
+	Bot      string
+	Email    bool
+}
+
+// FormChannelAvailability reports configured transports without secrets.
+func (s *Service) FormChannelAvailability(ctx context.Context) (FormAvailability, error) {
+	c, err := s.formConfig(ctx)
+	if err != nil {
+		return FormAvailability{}, err
+	}
+	return FormAvailability{Telegram: c.telegramToken != "" && c.botName != "", Bot: c.botName, Email: c.smtp.Configured()}, nil
 }
 
 // errText is the user-facing text of a sender error.

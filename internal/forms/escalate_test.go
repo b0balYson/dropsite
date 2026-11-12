@@ -3,6 +3,7 @@ package forms
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -65,7 +66,7 @@ func TestAltchaDifficultyCannotBeForged(t *testing.T) {
 		_ = json.Unmarshal(raw, &p)
 		tamper(&p)
 		b, _ := json.Marshal(p)
-		if _, err := a.Verify(base64.StdEncoding.EncodeToString(b), "promo.test"); err != ErrAltcha {
+		if _, err := a.Verify(base64.StdEncoding.EncodeToString(b), "promo.test"); !errors.Is(err, ErrAltcha) {
 			t.Fatal("tampered parameters accepted")
 		}
 	}

@@ -2,6 +2,7 @@ package forms
 
 import (
 	"bytes"
+	"errors"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -14,18 +15,18 @@ import (
 
 func TestSafeNext(t *testing.T) {
 	for in, want := range map[string]string{
-		"/thanks.html":          "/thanks.html",
-		"/":                     "/",
-		"/a?b=1#c":              "/a?b=1#c",
-		"":                      "",
-		"thanks":                "",
-		"//evil.example/":       "",
-		"/\\evil.example":       "",
-		"https://evil.example/": "",
-		"/a\\b":                 "",
-		"/a\nLocation: x":       "",
-		"/a b":                  "",
-		"javascript:alert(1)":   "",
+		"/thanks.html":                        "/thanks.html",
+		"/":                                   "/",
+		"/a?b=1#c":                            "/a?b=1#c",
+		"":                                    "",
+		"thanks":                              "",
+		"//evil.example/":                     "",
+		"/\\evil.example":                     "",
+		"https://evil.example/":               "",
+		"/a\\b":                               "",
+		"/a\nLocation: x":                     "",
+		"/a b":                                "",
+		"javascript:alert(1)":                 "",
 		"/" + strings.Repeat("a", maxNextLen): "",
 	} {
 		if got := SafeNext(in); got != want {
@@ -78,14 +79,14 @@ func TestSealer(t *testing.T) {
 	if v, err := s.Open(sealed, "setting:token"); err != nil || v != "bot-token" {
 		t.Fatalf("open: %q %v", v, err)
 	}
-	if _, err := s.Open(sealed, "channel:1"); err != ErrUnsealable {
+	if _, err := s.Open(sealed, "channel:1"); !errors.Is(err, ErrUnsealable) {
 		t.Fatalf("other context: %v", err)
 	}
 	other, _ := NewSealer(bytes.Repeat([]byte{1}, KeySize))
-	if _, err := other.Open(sealed, "setting:token"); err != ErrUnsealable {
+	if _, err := other.Open(sealed, "setting:token"); !errors.Is(err, ErrUnsealable) {
 		t.Fatalf("other key: %v", err)
 	}
-	if _, err := s.Open("plain", "x"); err != ErrUnsealable {
+	if _, err := s.Open("plain", "x"); !errors.Is(err, ErrUnsealable) {
 		t.Fatal("plain accepted")
 	}
 	if s.Derive("a") == s.Derive("b") || s.Derive("a") == other.Derive("a") {

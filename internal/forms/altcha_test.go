@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -40,12 +41,12 @@ func TestAltchaRoundTrip(t *testing.T) {
 	if err != nil || v.Signature != ch.Signature || v.ExpiresAt.Unix() != ch.Parameters.ExpiresAt {
 		t.Fatalf("verify %+v %v", v, err)
 	}
-	if _, err := a.Verify(payload, "other.test"); err != ErrAltcha {
+	if _, err := a.Verify(payload, "other.test"); !errors.Is(err, ErrAltcha) {
 		t.Fatal("solution accepted for another host")
 	}
 	other := a
 	other.SignatureSecret = "forged"
-	if _, err := other.Verify(payload, "promo.test"); err != ErrAltcha {
+	if _, err := other.Verify(payload, "promo.test"); !errors.Is(err, ErrAltcha) {
 		t.Fatal("forged signature accepted")
 	}
 }
@@ -56,7 +57,7 @@ func TestAltchaRejectsExpiredAndTampered(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := a.Verify(solveAltcha(t, ch), "promo.test"); err != ErrAltcha {
+	if _, err := a.Verify(solveAltcha(t, ch), "promo.test"); !errors.Is(err, ErrAltcha) {
 		t.Fatal("expired challenge accepted")
 	}
 	ch, _ = a.Challenge("promo.test", MinAltchaMaxNumber, time.Now())
@@ -70,12 +71,12 @@ func TestAltchaRejectsExpiredAndTampered(t *testing.T) {
 	}
 	p.Solution.DerivedKey = string(bytes.Repeat([]byte("ab"), 32))
 	b, _ := json.Marshal(p)
-	if _, err := a.Verify(base64.StdEncoding.EncodeToString(b), "promo.test"); err != ErrAltcha {
+	if _, err := a.Verify(base64.StdEncoding.EncodeToString(b), "promo.test"); !errors.Is(err, ErrAltcha) {
 		t.Fatal("wrong derived key accepted")
 	}
 	test, _ := json.Marshal(map[string]any{"challenge": nil, "solution": nil, "test": true})
 	for _, bad := range []string{"", "!!!", base64.StdEncoding.EncodeToString([]byte("{}")), base64.StdEncoding.EncodeToString(test)} {
-		if _, err := a.Verify(bad, "promo.test"); err != ErrAltcha {
+		if _, err := a.Verify(bad, "promo.test"); !errors.Is(err, ErrAltcha) {
 			t.Fatalf("%q accepted", bad)
 		}
 	}

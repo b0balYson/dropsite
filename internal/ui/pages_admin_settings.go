@@ -47,6 +47,7 @@ type settingsData struct {
 	ExtraOver bool
 	Builtin   []string
 	EnvSlugs  []string
+	Forms     service.FormSettings
 }
 
 func formatSetting(l *locale, bytes bool, v int64) string {
@@ -62,10 +63,15 @@ func (s *server) settingsPage(w http.ResponseWriter, r *http.Request, rc *reqCtx
 		s.failPage(w, r, rc, err)
 		return
 	}
+	forms, err := s.svc.GetFormSettings(r.Context(), rc.actor)
+	if err != nil {
+		s.failPage(w, r, rc, err)
+		return
+	}
 	defaults := s.svc.Config().Limits
 	data := settingsData{
 		Extra: strings.Join(st.ExtraReserved, "\n"), ExtraOver: st.Overridden[service.SettingReservedSlugs],
-		Builtin: st.Builtin, EnvSlugs: st.EnvReserved,
+		Builtin: st.Builtin, EnvSlugs: st.EnvReserved, Forms: forms,
 	}
 	for _, f := range numericSettings {
 		minimum := 1

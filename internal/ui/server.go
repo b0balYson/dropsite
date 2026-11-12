@@ -88,6 +88,14 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /sites/{ref}/deploy", s.upload(s.deploy))
 	mux.HandleFunc("POST /sites/{ref}/rollback", s.user(s.rollback))
 	mux.HandleFunc("POST /sites/{ref}/delete", s.user(s.deleteSite))
+	mux.HandleFunc("GET /sites/{ref}/forms", s.user(s.formsPage))
+	mux.HandleFunc("GET /sites/{ref}/forms/export.csv", s.user(s.exportForms))
+	mux.HandleFunc("POST /sites/{ref}/forms/settings", s.user(s.formSiteSettings))
+	mux.HandleFunc("POST /sites/{ref}/forms/channels", s.user(s.addChannel))
+	mux.HandleFunc("POST /sites/{ref}/forms/channels/{id}/verify", s.user(s.verifyChannel))
+	mux.HandleFunc("POST /sites/{ref}/forms/channels/{id}/toggle", s.user(s.toggleChannel))
+	mux.HandleFunc("POST /sites/{ref}/forms/channels/{id}/delete", s.user(s.deleteChannel))
+	mux.HandleFunc("POST /sites/{ref}/forms/channels/{id}/secret", s.user(s.rotateChannel))
 
 	mux.HandleFunc("GET /connect", s.user(s.connectPage))
 	mux.HandleFunc("POST /connect/tokens", s.user(s.createToken))
@@ -106,6 +114,7 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("GET /admin/audit", s.admin(s.auditPage))
 	mux.HandleFunc("GET /admin/settings", s.admin(s.settingsPage))
 	mux.HandleFunc("POST /admin/settings", s.admin(s.saveSettings))
+	mux.HandleFunc("POST /admin/settings/forms", s.admin(s.saveFormSettings))
 
 	mux.HandleFunc("/", s.user(s.notFound))
 	return mux

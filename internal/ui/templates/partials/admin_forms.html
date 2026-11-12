@@ -1,0 +1,88 @@
+{{define "admin_forms"}}
+{{$f := .D.Forms}}
+<form method="post" action="/admin/settings/forms" class="settings forms-settings" autocomplete="off">
+  {{template "csrf" .}}
+  <section class="section" aria-labelledby="forms-h">
+    <h2 class="section-title" id="forms-h">{{.L.T "forms.admin.title"}}</h2>
+    <p class="lede">{{.L.T "forms.admin.lede"}}</p>
+    {{if $f.SecretsUnreadable}}<p class="notice notice--error" role="alert">{{.L.T "forms.admin.unreadable"}}</p>{{end}}
+
+    <div class="forms-settings__grid">
+      <fieldset class="panel--tight stack">
+        <legend class="channel-add__title">{{.L.T "forms.kind.telegram"}}</legend>
+        <div class="field">
+          <label class="field__label" for="fs-token">{{.L.T "forms.admin.token"}}</label>
+          <input class="input mono" id="fs-token" name="telegram_token" type="password" autocomplete="new-password" spellcheck="false"
+            placeholder="{{if $f.TelegramTokenSet}}{{.L.T "forms.admin.secret.keep"}}{{else}}123456:ABC…{{end}}" aria-describedby="fs-token-state">
+          <p class="hint" id="fs-token-state">
+            {{if $f.TelegramTokenSet}}<span class="badge badge--ok">{{.L.T "forms.admin.secret.set"}}</span> <span class="mono">@{{$f.TelegramBot}}</span>{{else}}<span class="badge badge--muted">{{.L.T "forms.admin.secret.unset"}}</span> {{.L.T "forms.admin.token.hint"}}{{end}}
+          </p>
+          {{if $f.TelegramTokenSet}}<label class="check small"><input type="checkbox" name="clear_telegram_token" value="1"> {{.L.T "forms.admin.secret.clear"}}</label>{{end}}
+        </div>
+      </fieldset>
+
+      <fieldset class="panel--tight">
+        <legend class="channel-add__title">{{.L.T "forms.kind.email"}} (SMTP)</legend>
+        <div class="form-grid">
+          <div class="field">
+            <label class="field__label" for="fs-host">{{.L.T "settings.forms.smtp_host"}}</label>
+            <input class="input mono" id="fs-host" name="smtp_host" value="{{$f.SMTPHost}}" placeholder="smtp.example.com" spellcheck="false">
+          </div>
+          <div class="field">
+            <label class="field__label" for="fs-port">{{.L.T "settings.forms.smtp_port"}}</label>
+            <input class="input mono" id="fs-port" name="smtp_port" inputmode="numeric" value="{{if $f.SMTPPort}}{{$f.SMTPPort}}{{end}}" placeholder="587">
+          </div>
+          <div class="field">
+            <label class="field__label" for="fs-sec">{{.L.T "settings.forms.smtp_security"}}</label>
+            <select class="input" id="fs-sec" name="smtp_security">
+              {{range $m := (list "starttls" "tls" "none")}}<option value="{{$m}}" {{if eq $m $f.SMTPSecurity}}selected{{end}}>{{$.L.T (printf "forms.admin.security.%s" $m)}}</option>{{end}}
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="fs-from">{{.L.T "settings.forms.smtp_from"}}</label>
+            <input class="input mono" id="fs-from" name="smtp_from" type="email" value="{{$f.SMTPFrom}}" placeholder="forms@example.com">
+          </div>
+          <div class="field">
+            <label class="field__label" for="fs-user">{{.L.T "forms.admin.username"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+            <input class="input mono" id="fs-user" name="smtp_username" value="{{$f.SMTPUsername}}" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="field">
+            <label class="field__label" for="fs-pass">{{.L.T "forms.admin.password"}}</label>
+            <input class="input mono" id="fs-pass" name="smtp_password" type="password" autocomplete="new-password"
+              placeholder="{{if $f.SMTPPasswordSet}}{{.L.T "forms.admin.secret.keep"}}{{end}}" aria-describedby="fs-pass-state">
+            <p class="hint" id="fs-pass-state">{{if $f.SMTPPasswordSet}}<span class="badge badge--ok">{{.L.T "forms.admin.secret.set"}}</span>{{else}}<span class="badge badge--muted">{{.L.T "forms.admin.secret.unset"}}</span>{{end}}</p>
+            {{if $f.SMTPPasswordSet}}<label class="check small"><input type="checkbox" name="clear_smtp_password" value="1"> {{.L.T "forms.admin.secret.clear"}}</label>{{end}}
+          </div>
+        </div>
+      </fieldset>
+    </div>
+
+    <div class="setting-list">
+      <div class="setting">
+        <div class="setting__label">
+          <label class="field__label" for="fs-days">{{.L.T "settings.forms.retention_days"}}</label>
+          <p class="hint">{{.L.T "forms.admin.retention.hint"}}</p>
+        </div>
+        <div class="setting__input">
+          <input class="input mono" id="fs-days" name="retention_days" inputmode="numeric" value="{{$f.RetentionDays}}" required>
+          <span class="setting__unit">{{.L.T "unit.days"}}</span>
+        </div>
+        <div class="setting__state"></div>
+      </div>
+      <div class="setting">
+        <div class="setting__label">
+          <label class="field__label" for="fs-altcha">{{.L.T "settings.forms.altcha_max_number"}}</label>
+          <p class="hint">{{.L.T "forms.admin.altcha.hint"}}</p>
+        </div>
+        <div class="setting__input">
+          <input class="input mono" id="fs-altcha" name="altcha_max_number" inputmode="numeric" value="{{$f.AltchaMaxNumber}}" required>
+        </div>
+        <div class="setting__state"></div>
+      </div>
+    </div>
+  </section>
+  <div class="form-actions">
+    <button class="btn btn--primary" type="submit">{{.L.T "form.save"}}</button>
+  </div>
+</form>
+{{end}}

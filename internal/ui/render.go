@@ -24,6 +24,21 @@ var funcs = template.FuncMap{
 	"wbr":  breakable,
 	"inc":  func(i int) int { return i + 1 },
 	"join": strings.Join,
+	// bundle passes the page view and a value to a shared template.
+	"bundle": func(root, v any) map[string]any { return map[string]any{"R": root, "V": v} },
+	"dict":   dict,
+	"list":   func(v ...string) []string { return v },
+}
+
+// dict builds a map from alternating string keys and values.
+func dict(kv ...any) map[string]any {
+	m := make(map[string]any, len(kv)/2)
+	for i := 0; i+1 < len(kv); i += 2 {
+		if k, ok := kv[i].(string); ok {
+			m[k] = kv[i+1]
+		}
+	}
+	return m
 }
 
 // breakable escapes s and adds line-break opportunities after dots, "@" and
