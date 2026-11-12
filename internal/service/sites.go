@@ -199,7 +199,7 @@ func (s *Service) insertSite(ctx context.Context, a Actor, title, slug string) (
 			hosts = append(hosts, domain.Hostname{Hostname: s.host(slug), SiteID: id, Kind: domain.HostSlug, Verified: true, CreatedAt: now})
 		}
 		if err := s.repo.CreateSite(ctx, site, hosts); err != nil {
-			return domain.Site{}, nil, err
+			return domain.Site{}, nil, withSlug(err, slug)
 		}
 		return site, hosts, nil
 	}
@@ -254,7 +254,7 @@ func (s *Service) setSlug(ctx context.Context, a Actor, site domain.Site, slug s
 	}
 	removed, err := s.repo.SetSlugHost(ctx, site.ID, host, s.now())
 	if err != nil {
-		return err
+		return withSlug(err, slug)
 	}
 	if host != nil && removed == host.Hostname {
 		return nil // unchanged
@@ -397,4 +397,12 @@ func (s *Service) TransferSite(ctx context.Context, a Actor, ref string, newOwne
 	s.audit(ctx, a, "site.transfer", siteTarget(site.ID), map[string]any{"from": site.OwnerID, "to": newOwnerID, "to_email": owner.Email})
 	site.OwnerID = newOwnerID
 	return s.view(ctx, site)
+}
+
+// withSlug attaches the requested slug to a slug_taken error for clients.
+func withSlug(err error, slug string) error {
+	if de := domain.AsError(err); de.Code == domain.CodeSlugTaken {
+		return de.WithParams(map[string]any{"slug": slug})
+	}
+	return err
 }

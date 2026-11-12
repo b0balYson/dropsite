@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/b0balYson/dropsite/internal/domain"
 	"github.com/b0balYson/dropsite/internal/store"
@@ -56,7 +57,8 @@ func userTarget(id int64) string { return fmt.Sprintf("user:%d", id) }
 type InviteLink struct {
 	User      domain.User
 	URL       string
-	ExpiresAt string
+	ExpiresAt string    // human-readable, minute precision
+	Expires   time.Time // exact expiry
 }
 
 // CreateUser creates an invited user and issues an invite link (admin only).
@@ -116,7 +118,7 @@ func (s *Service) issueInvite(ctx context.Context, a Actor, userID int64) (Invit
 		return InviteLink{}, err
 	}
 	s.audit(ctx, a, "user.invite", userTarget(userID), map[string]any{"email": u.Email})
-	return InviteLink{User: u, URL: s.cfg.UIURL + "/invite/" + secret, ExpiresAt: inv.ExpiresAt.Format("2006-01-02 15:04 MST")}, nil
+	return InviteLink{User: u, URL: s.cfg.UIURL + "/invite/" + secret, ExpiresAt: inv.ExpiresAt.Format("2006-01-02 15:04 MST"), Expires: inv.ExpiresAt}, nil
 }
 
 var errInviteInvalid = domain.E(domain.KindInvalid, domain.CodeInviteInvalid,

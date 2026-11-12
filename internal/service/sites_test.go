@@ -320,3 +320,20 @@ func TestConcurrentSlugClaims(t *testing.T) {
 		t.Fatalf("exactly one site may win the slug, got %d", wins)
 	}
 }
+
+func TestSlugTakenNamesTheSlug(t *testing.T) {
+	e := newEnv(t)
+	ctx := context.Background()
+	u := e.user("ann@pp.test")
+	_, _ = e.svc.CreateSite(ctx, u, "a", "taken-one")
+	_, err := e.svc.CreateSite(ctx, u, "b", "taken-one")
+	if de := domain.AsError(err); de.Code != domain.CodeSlugTaken || de.Params["slug"] != "taken-one" {
+		t.Fatalf("got %v %v", err, domain.AsError(err).Params)
+	}
+	other, _ := e.svc.CreateSite(ctx, u, "c", "")
+	slug := "taken-one"
+	_, err = e.svc.UpdateSite(ctx, u, other.Site.ID, SiteUpdate{Slug: &slug})
+	if de := domain.AsError(err); de.Params["slug"] != "taken-one" {
+		t.Fatalf("update: %v", err)
+	}
+}

@@ -1,0 +1,608 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Pushpage API",
+    "version": "1",
+    "description": "Publish static sites. Every endpoint except GET /openapi.json requires `Authorization: Bearer <token>`. Times are RFC 3339 in UTC. IDs are strings. Resources of other users and admin endpoints for non-admins answer 404."
+  },
+  "servers": [{ "url": "/api/v1" }],
+  "security": [{ "bearer": [] }],
+  "paths": {
+    "/openapi.json": {
+      "get": {
+        "operationId": "getOpenAPI",
+        "summary": "This document",
+        "security": [],
+        "responses": {
+          "200": { "description": "OpenAPI 3.1 document", "content": { "application/json": { "schema": { "type": "object" } } } }
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "operationId": "getMe",
+        "summary": "Current user, effective limits and site count",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Me" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/sites": {
+      "get": {
+        "operationId": "listSites",
+        "summary": "List own sites",
+        "parameters": [{ "$ref": "#/components/parameters/Limit" }, { "$ref": "#/components/parameters/Offset" }],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SiteItemList" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      },
+      "post": {
+        "operationId": "createSite",
+        "summary": "Create an empty site",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateSiteRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Site" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/LimitReached" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/sites/{ref}": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }],
+      "get": {
+        "operationId": "getSite",
+        "summary": "Get a site with its addresses and current release",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Site" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      },
+      "patch": {
+        "operationId": "updateSite",
+        "summary": "Change title and/or slug; slug \"\" or null removes it, a missing field is left unchanged",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateSiteRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Site" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      },
+      "delete": {
+        "operationId": "deleteSite",
+        "summary": "Delete a site; its addresses stop working at once",
+        "responses": {
+          "204": { "description": "Deleted" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/sites/{ref}/deploys": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }],
+      "post": {
+        "operationId": "deploySite",
+        "summary": "Publish a zip or tar.gz archive as a new release",
+        "description": "The body may be at most max_site_bytes + max_files KiB + 1 MiB (plus multipart framing); larger bodies get 413 without being read fully. The source is `cli` when X-Pushpage-Client starts with `cli/`, otherwise `api`. At most 30 publications per user per hour.",
+        "parameters": [
+          {
+            "name": "X-Pushpage-Client",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string", "examples": ["cli/1.0.0"] }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["archive"],
+                "properties": { "archive": { "type": "string", "contentMediaType": "application/octet-stream" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Published", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DeployResult" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "413": { "$ref": "#/components/responses/TooLarge" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      },
+      "get": {
+        "operationId": "listDeploys",
+        "summary": "Release history, newest first",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DeployList" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/sites/{ref}/rollback": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }],
+      "post": {
+        "operationId": "rollbackSite",
+        "summary": "Switch to an earlier release; without deploy_id, to the previous one",
+        "requestBody": {
+          "required": false,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RollbackRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DeployResult" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/tokens": {
+      "get": {
+        "operationId": "listTokens",
+        "summary": "List own API tokens (values are never listed)",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TokenList" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      },
+      "post": {
+        "operationId": "createToken",
+        "summary": "Issue an API token; the value is shown only in this response",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateTokenRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NewToken" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/tokens/{id}": {
+      "parameters": [{ "$ref": "#/components/parameters/ID" }],
+      "delete": {
+        "operationId": "revokeToken",
+        "summary": "Revoke an own token",
+        "responses": {
+          "204": { "description": "Revoked" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/admin/users": {
+      "get": {
+        "operationId": "adminListUsers",
+        "summary": "List users (admin)",
+        "parameters": [
+          { "name": "q", "in": "query", "schema": { "type": "string" }, "description": "Email substring" },
+          { "name": "status", "in": "query", "schema": { "$ref": "#/components/schemas/UserStatus" } },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Offset" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserItemList" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      },
+      "post": {
+        "operationId": "adminCreateUser",
+        "summary": "Invite a user (admin)",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateUserRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Invite" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/admin/users/{id}": {
+      "parameters": [{ "$ref": "#/components/parameters/ID" }],
+      "patch": {
+        "operationId": "adminUpdateUser",
+        "summary": "Block/unblock a user or reissue an invite (admin); send exactly one field",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateUserRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserUpdate" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/admin/sites": {
+      "get": {
+        "operationId": "adminListSites",
+        "summary": "Search every site (admin)",
+        "parameters": [
+          { "name": "q", "in": "query", "schema": { "type": "string" }, "description": "Substring of a hostname, title or owner email" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Offset" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SiteItemList" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/admin/sites/{ref}/apex": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }],
+      "post": {
+        "operationId": "adminSetApex",
+        "summary": "Serve the site on the base domain root (admin)",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Site" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      },
+      "delete": {
+        "operationId": "adminClearApex",
+        "summary": "Remove the base domain root from the site (admin)",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Site" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/admin/sites/{ref}/transfer": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }],
+      "post": {
+        "operationId": "adminTransferSite",
+        "summary": "Give the site to another active user (admin)",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TransferRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Site" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/admin/audit": {
+      "get": {
+        "operationId": "adminListAudit",
+        "summary": "Audit log, newest first (admin)",
+        "parameters": [
+          { "name": "actor_id", "in": "query", "schema": { "type": "string" } },
+          { "name": "action", "in": "query", "schema": { "type": "string" }, "description": "Exact action, e.g. site.create" },
+          { "name": "from", "in": "query", "schema": { "type": "string" }, "description": "Inclusive lower bound: RFC 3339 time or YYYY-MM-DD (UTC)" },
+          { "name": "to", "in": "query", "schema": { "type": "string" }, "description": "Exclusive upper bound: RFC 3339 time, or YYYY-MM-DD to include that whole day (UTC)" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Offset" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuditList" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": { "type": "http", "scheme": "bearer", "description": "API token issued in the web interface or by POST /tokens" }
+    },
+    "parameters": {
+      "SiteRef": { "name": "ref", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Site ID or slug" },
+      "ID": { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+      "Limit": { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 200, "default": 50 } },
+      "Offset": { "name": "offset", "in": "query", "schema": { "type": "integer", "minimum": 0, "default": 0 } }
+    },
+    "responses": {
+      "Invalid": { "description": "Invalid input or archive validation failed (codes invalid_input, slug_*, title_invalid, archive_*, ...)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "Unauthorized": {
+        "description": "Missing or invalid token",
+        "headers": { "WWW-Authenticate": { "schema": { "type": "string" } } },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "LimitReached": { "description": "Quota reached (site_limit_reached)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "NotFound": { "description": "Not found, including resources of other users and admin endpoints for non-admins", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "Conflict": { "description": "Conflict (email_taken, slug_taken)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "TooLarge": { "description": "Upload or unpacked archive too large (archive_too_large, archive_file_too_large, archive_too_many_files)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "RateLimited": {
+        "description": "Too many requests",
+        "headers": { "Retry-After": { "schema": { "type": "integer" }, "description": "Seconds to wait" } },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "Internal": { "description": "Unexpected error (code internal, no details)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" },
+              "details": { "type": "object", "additionalProperties": true }
+            }
+          }
+        }
+      },
+      "UserStatus": { "type": "string", "enum": ["invited", "active", "blocked"] },
+      "User": {
+        "type": "object",
+        "required": ["id", "email", "role", "status", "created_at"],
+        "properties": {
+          "id": { "type": "string" },
+          "email": { "type": "string" },
+          "role": { "type": "string", "enum": ["user", "admin"] },
+          "status": { "$ref": "#/components/schemas/UserStatus" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "UserItem": {
+        "allOf": [
+          { "$ref": "#/components/schemas/User" },
+          { "type": "object", "required": ["site_count"], "properties": { "site_count": { "type": "integer" } } }
+        ]
+      },
+      "Limits": {
+        "type": "object",
+        "required": ["max_site_bytes", "max_file_bytes", "max_files", "max_sites_per_user", "keep_releases"],
+        "properties": {
+          "max_site_bytes": { "type": "integer" },
+          "max_file_bytes": { "type": "integer" },
+          "max_files": { "type": "integer" },
+          "max_sites_per_user": { "type": "integer" },
+          "keep_releases": { "type": "integer" }
+        }
+      },
+      "Me": {
+        "type": "object",
+        "required": ["user", "limits", "site_count"],
+        "properties": {
+          "user": { "$ref": "#/components/schemas/User" },
+          "limits": { "$ref": "#/components/schemas/Limits" },
+          "site_count": { "type": "integer" }
+        }
+      },
+      "Hostname": {
+        "type": "object",
+        "required": ["hostname", "kind"],
+        "properties": {
+          "hostname": { "type": "string" },
+          "kind": { "type": "string", "enum": ["default", "slug", "apex"] }
+        }
+      },
+      "Deploy": {
+        "type": "object",
+        "required": ["id", "site_id", "source", "size_bytes", "file_count", "status", "created_at", "created_by", "current"],
+        "properties": {
+          "id": { "type": "string" },
+          "site_id": { "type": "string" },
+          "source": { "type": "string", "enum": ["ui", "api", "cli", "mcp"] },
+          "size_bytes": { "type": "integer" },
+          "file_count": { "type": "integer" },
+          "status": { "type": "string", "enum": ["ready", "failed", "pruned"] },
+          "created_at": { "type": "string", "format": "date-time" },
+          "created_by": { "type": "string" },
+          "current": { "type": "boolean" }
+        }
+      },
+      "Site": {
+        "type": "object",
+        "required": ["id", "title", "url", "urls", "slug", "hostnames", "owner_id", "created_at", "updated_at", "current_deploy"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "url": { "type": "string", "description": "Primary address: slug if set, otherwise the random default" },
+          "urls": { "type": "array", "items": { "type": "string" }, "description": "Every address, primary first" },
+          "slug": { "type": ["string", "null"] },
+          "hostnames": { "type": "array", "items": { "$ref": "#/components/schemas/Hostname" } },
+          "owner_id": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "current_deploy": { "oneOf": [{ "$ref": "#/components/schemas/Deploy" }, { "type": "null" }] }
+        }
+      },
+      "SiteItem": {
+        "type": "object",
+        "required": ["id", "title", "url", "urls", "slug", "owner_id", "owner_email", "last_deploy_at", "size_bytes", "created_at", "updated_at"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "url": { "type": "string" },
+          "urls": { "type": "array", "items": { "type": "string" } },
+          "slug": { "type": ["string", "null"] },
+          "owner_id": { "type": "string" },
+          "owner_email": { "type": "string" },
+          "last_deploy_at": { "type": ["string", "null"], "format": "date-time" },
+          "size_bytes": { "type": "integer" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "DeployResult": {
+        "type": "object",
+        "required": ["deploy_id", "url", "urls", "deploy", "site"],
+        "properties": {
+          "deploy_id": { "type": "string" },
+          "url": { "type": "string" },
+          "urls": { "type": "array", "items": { "type": "string" } },
+          "deploy": { "$ref": "#/components/schemas/Deploy" },
+          "site": { "$ref": "#/components/schemas/Site" }
+        }
+      },
+      "Token": {
+        "type": "object",
+        "required": ["id", "name", "prefix", "created_at", "last_used_at", "expires_at", "revoked_at"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "prefix": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "last_used_at": { "type": ["string", "null"], "format": "date-time" },
+          "expires_at": { "type": ["string", "null"], "format": "date-time" },
+          "revoked_at": { "type": ["string", "null"], "format": "date-time" }
+        }
+      },
+      "NewToken": {
+        "type": "object",
+        "required": ["token", "value"],
+        "properties": {
+          "token": { "$ref": "#/components/schemas/Token" },
+          "value": { "type": "string", "description": "Full token value, shown only once" }
+        }
+      },
+      "Invite": {
+        "type": "object",
+        "required": ["user", "invite_url", "invite_expires_at"],
+        "properties": {
+          "user": { "$ref": "#/components/schemas/User" },
+          "invite_url": { "type": "string" },
+          "invite_expires_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "UserUpdate": {
+        "type": "object",
+        "required": ["user"],
+        "properties": {
+          "user": { "$ref": "#/components/schemas/User" },
+          "invite_url": { "type": "string", "description": "Only after reissue_invite" },
+          "invite_expires_at": { "type": "string", "format": "date-time", "description": "Only after reissue_invite" }
+        }
+      },
+      "Audit": {
+        "type": "object",
+        "required": ["id", "actor_id", "actor_email", "action", "target", "meta", "ip", "created_at"],
+        "properties": {
+          "id": { "type": "string" },
+          "actor_id": { "type": ["string", "null"] },
+          "actor_email": { "type": "string" },
+          "action": { "type": "string" },
+          "target": { "type": "string" },
+          "meta": { "type": "object", "additionalProperties": true },
+          "ip": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "SiteItemList": {
+        "type": "object",
+        "required": ["items", "total"],
+        "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/SiteItem" } }, "total": { "type": "integer" } }
+      },
+      "DeployList": {
+        "type": "object",
+        "required": ["items", "total"],
+        "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/Deploy" } }, "total": { "type": "integer" } }
+      },
+      "TokenList": {
+        "type": "object",
+        "required": ["items", "total"],
+        "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/Token" } }, "total": { "type": "integer" } }
+      },
+      "UserItemList": {
+        "type": "object",
+        "required": ["items", "total"],
+        "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/UserItem" } }, "total": { "type": "integer" } }
+      },
+      "AuditList": {
+        "type": "object",
+        "required": ["items", "total"],
+        "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/Audit" } }, "total": { "type": "integer" } }
+      },
+      "CreateSiteRequest": {
+        "type": "object",
+        "required": ["title"],
+        "additionalProperties": false,
+        "properties": { "title": { "type": "string" }, "slug": { "type": "string" } }
+      },
+      "UpdateSiteRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": { "title": { "type": "string" }, "slug": { "type": ["string", "null"] } }
+      },
+      "RollbackRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": { "deploy_id": { "type": "string" } }
+      },
+      "CreateTokenRequest": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": false,
+        "properties": { "name": { "type": "string" }, "expires_in_days": { "type": "integer", "minimum": 1, "maximum": 3650 } }
+      },
+      "CreateUserRequest": {
+        "type": "object",
+        "required": ["email"],
+        "additionalProperties": false,
+        "properties": { "email": { "type": "string" }, "role": { "type": "string", "enum": ["user", "admin"] } }
+      },
+      "UpdateUserRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "maxProperties": 1,
+        "properties": { "blocked": { "type": "boolean" }, "reissue_invite": { "const": true } }
+      },
+      "TransferRequest": {
+        "type": "object",
+        "required": ["user_id"],
+        "additionalProperties": false,
+        "properties": { "user_id": { "type": ["string", "integer"] } }
+      }
+    }
+  }
+}

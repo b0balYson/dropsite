@@ -16,7 +16,8 @@ Base URL: `https://<API_HOST>/api/v1`. Authentication: `Authorization: Bearer <t
 | invalid input, archive validation | 400 |
 | conflict (`email_taken`, `slug_taken`) | 409 |
 | limit (`site_limit_reached`) | 403 |
-| upload too large (`archive_too_large`) | 413 |
+| too large (`archive_too_large`, `archive_file_too_large`, `archive_too_many_files`) | 413 |
+| wrong method (`method_not_allowed`) | 405 with `Allow` |
 | rate limited | 429 with `Retry-After` (seconds) |
 | missing or invalid token | 401 |
 | unexpected | 500, `{"code": "internal"}`, no details |
@@ -34,6 +35,8 @@ Token    {id, name, prefix, created_at, last_used_at|null, expires_at|null, revo
 Audit    {id, actor_id|null, actor_email, action, target, meta{}, ip, created_at}
 List     {items[], total}
 ```
+
+IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer` accepts `user_id` as a string or a number. Every response carries `X-Request-Id`, which also appears in server logs.
 
 `url` is the primary address (slug if set, otherwise the random default). `urls` lists every address, primary first.
 
@@ -63,6 +66,8 @@ List     {items[], total}
 | `GET /admin/audit` | `?actor_id&action&from&to&limit&offset` | `List<Audit>` |
 | `GET /openapi.json` | no auth | OpenAPI 3.1 document |
 
-`{ref}` is a site ID or its slug. `limit` defaults to 50, max 200.
+`{ref}` is a site ID or its slug. `limit` defaults to 50; values outside 1–200 are rejected with 400. JSON request bodies are limited to 64 KiB.
+
+`expires_in_days` accepts 1–3650; omitted means the token never expires. In `GET /admin/audit`, `from` and `to` accept RFC 3339 or `YYYY-MM-DD`; `from` is inclusive, an RFC 3339 `to` is exclusive and a date `to` includes the whole day. `PATCH /admin/users/{id}` with `blocked` returns only `{user}`; the invite fields appear only with `reissue_invite`.
 
 The deploy source is `cli` when the request carries `X-Pushpage-Client: cli/<version>`, otherwise `api`. The upload may be at most `max_site_bytes + max_files KiB + 1 MiB`; larger bodies get 413 without being read fully.

@@ -1,0 +1,261 @@
+package api
+
+import (
+	"strconv"
+	"time"
+
+	"github.com/b0balYson/dropsite/internal/domain"
+	"github.com/b0balYson/dropsite/internal/service"
+)
+
+// Numeric IDs (users, tokens, audit entries) are sent as strings, like site
+// and deploy IDs, so clients treat every ID as opaque.
+
+type userDTO struct {
+	ID        string    `json:"id"`
+	Email     string    `json:"email"`
+	Role      string    `json:"role"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type userItemDTO struct {
+	userDTO
+	SiteCount int `json:"site_count"`
+}
+
+type limitsDTO struct {
+	MaxSiteBytes    int64 `json:"max_site_bytes"`
+	MaxFileBytes    int64 `json:"max_file_bytes"`
+	MaxFiles        int   `json:"max_files"`
+	MaxSitesPerUser int   `json:"max_sites_per_user"`
+	KeepReleases    int   `json:"keep_releases"`
+}
+
+type meDTO struct {
+	User      userDTO   `json:"user"`
+	Limits    limitsDTO `json:"limits"`
+	SiteCount int       `json:"site_count"`
+}
+
+type hostnameDTO struct {
+	Hostname string `json:"hostname"`
+	Kind     string `json:"kind"`
+}
+
+type deployDTO struct {
+	ID        string    `json:"id"`
+	SiteID    string    `json:"site_id"`
+	Source    string    `json:"source"`
+	SizeBytes int64     `json:"size_bytes"`
+	FileCount int       `json:"file_count"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+	CreatedBy string    `json:"created_by"`
+	Current   bool      `json:"current"`
+}
+
+type siteDTO struct {
+	ID            string        `json:"id"`
+	Title         string        `json:"title"`
+	URL           string        `json:"url"`
+	URLs          []string      `json:"urls"`
+	Slug          *string       `json:"slug"`
+	Hostnames     []hostnameDTO `json:"hostnames"`
+	OwnerID       string        `json:"owner_id"`
+	CreatedAt     time.Time     `json:"created_at"`
+	UpdatedAt     time.Time     `json:"updated_at"`
+	CurrentDeploy *deployDTO    `json:"current_deploy"`
+}
+
+type siteItemDTO struct {
+	ID           string     `json:"id"`
+	Title        string     `json:"title"`
+	URL          string     `json:"url"`
+	URLs         []string   `json:"urls"`
+	Slug         *string    `json:"slug"`
+	OwnerID      string     `json:"owner_id"`
+	OwnerEmail   string     `json:"owner_email"`
+	LastDeployAt *time.Time `json:"last_deploy_at"`
+	SizeBytes    int64      `json:"size_bytes"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+}
+
+type deployResultDTO struct {
+	DeployID string    `json:"deploy_id"`
+	URL      string    `json:"url"`
+	URLs     []string  `json:"urls"`
+	Deploy   deployDTO `json:"deploy"`
+	Site     siteDTO   `json:"site"`
+}
+
+type tokenDTO struct {
+	ID         string     `json:"id"`
+	Name       string     `json:"name"`
+	Prefix     string     `json:"prefix"`
+	CreatedAt  time.Time  `json:"created_at"`
+	LastUsedAt *time.Time `json:"last_used_at"`
+	ExpiresAt  *time.Time `json:"expires_at"`
+	RevokedAt  *time.Time `json:"revoked_at"`
+}
+
+type newTokenDTO struct {
+	Token tokenDTO `json:"token"`
+	Value string   `json:"value"`
+}
+
+type inviteDTO struct {
+	User            userDTO    `json:"user"`
+	InviteURL       string     `json:"invite_url,omitempty"`
+	InviteExpiresAt *time.Time `json:"invite_expires_at,omitempty"`
+}
+
+type auditDTO struct {
+	ID         string         `json:"id"`
+	ActorID    *string        `json:"actor_id"`
+	ActorEmail string         `json:"actor_email"`
+	Action     string         `json:"action"`
+	Target     string         `json:"target"`
+	Meta       map[string]any `json:"meta"`
+	IP         string         `json:"ip"`
+	CreatedAt  time.Time      `json:"created_at"`
+}
+
+func idString(id int64) string { return strconv.FormatInt(id, 10) }
+
+func utc(t time.Time) time.Time { return t.UTC().Truncate(time.Second) }
+
+func utcPtr(t *time.Time) *time.Time {
+	if t == nil {
+		return nil
+	}
+	v := utc(*t)
+	return &v
+}
+
+func optional(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func toUser(u domain.User) userDTO {
+	return userDTO{
+		ID: idString(u.ID), Email: u.Email, Role: string(u.Role),
+		Status: string(u.Status), CreatedAt: utc(u.CreatedAt),
+	}
+}
+
+func toLimits(l domain.Limits) limitsDTO {
+	return limitsDTO{
+		MaxSiteBytes: l.MaxSiteBytes, MaxFileBytes: l.MaxFileBytes, MaxFiles: l.MaxFiles,
+		MaxSitesPerUser: l.MaxSitesPerUser, KeepReleases: l.KeepReleases,
+	}
+}
+
+func toDeploy(d domain.Deploy, currentID *string) deployDTO {
+	return deployDTO{
+		ID: d.ID, SiteID: d.SiteID, Source: string(d.Source), SizeBytes: d.SizeBytes,
+		FileCount: d.FileCount, Status: string(d.Status), CreatedAt: utc(d.CreatedAt),
+		CreatedBy: idString(d.CreatedBy), Current: currentID != nil && *currentID == d.ID,
+	}
+}
+
+func toDeploys(ds []domain.Deploy, currentID *string) []deployDTO {
+	out := make([]deployDTO, 0, len(ds))
+	for _, d := range ds {
+		out = append(out, toDeploy(d, currentID))
+	}
+	return out
+}
+
+func toHostnames(hs []domain.Hostname) []hostnameDTO {
+	out := make([]hostnameDTO, 0, len(hs))
+	for _, h := range hs {
+		out = append(out, hostnameDTO{Hostname: h.Hostname, Kind: string(h.Kind)})
+	}
+	return out
+}
+
+func toSite(v service.SiteView) siteDTO {
+	s := siteDTO{
+		ID: v.Site.ID, Title: v.Site.Title, URL: v.URL, URLs: nonNil(v.URLs), Slug: optional(v.Slug),
+		Hostnames: toHostnames(v.Hostnames), OwnerID: idString(v.OwnerID),
+		CreatedAt: utc(v.Site.CreatedAt), UpdatedAt: utc(v.Site.UpdatedAt),
+	}
+	if v.Current != nil {
+		d := toDeploy(*v.Current, &v.Current.ID)
+		s.CurrentDeploy = &d
+	}
+	return s
+}
+
+func toSiteItems(rows []service.SiteSummaryView) []siteItemDTO {
+	out := make([]siteItemDTO, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, siteItemDTO{
+			ID: r.ID, Title: r.Title, URL: r.URL, URLs: nonNil(r.URLs), Slug: optional(r.Slug),
+			OwnerID: idString(r.OwnerID), OwnerEmail: r.OwnerEmail, LastDeployAt: utcPtr(r.LastDeployAt),
+			SizeBytes: r.SizeBytes, CreatedAt: utc(r.CreatedAt), UpdatedAt: utc(r.UpdatedAt),
+		})
+	}
+	return out
+}
+
+func toDeployResult(res service.DeployResult) deployResultDTO {
+	return deployResultDTO{
+		DeployID: res.Deploy.ID, URL: res.Site.URL, URLs: nonNil(res.Site.URLs),
+		Deploy: toDeploy(res.Deploy, res.Site.Site.CurrentDeployID), Site: toSite(res.Site),
+	}
+}
+
+func toToken(t domain.Token) tokenDTO {
+	return tokenDTO{
+		ID: idString(t.ID), Name: t.Name, Prefix: t.Prefix, CreatedAt: utc(t.CreatedAt),
+		LastUsedAt: utcPtr(t.LastUsedAt), ExpiresAt: utcPtr(t.ExpiresAt), RevokedAt: utcPtr(t.RevokedAt),
+	}
+}
+
+func toUserItems(rows []service.UserSummary) []userItemDTO {
+	out := make([]userItemDTO, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, userItemDTO{userDTO: toUser(r.User), SiteCount: r.SiteCount})
+	}
+	return out
+}
+
+func toInvite(inv service.InviteLink) inviteDTO {
+	out := inviteDTO{User: toUser(inv.User), InviteURL: inv.URL}
+	if !inv.Expires.IsZero() {
+		out.InviteExpiresAt = utcPtr(&inv.Expires)
+	}
+	return out
+}
+
+func toAudit(rows []service.AuditRow) []auditDTO {
+	out := make([]auditDTO, 0, len(rows))
+	for _, r := range rows {
+		a := auditDTO{
+			ID: idString(r.ID), ActorEmail: r.ActorEmail, Action: r.Action, Target: r.Target,
+			Meta: r.Meta, IP: r.IP, CreatedAt: utc(r.CreatedAt),
+		}
+		if r.ActorID != nil {
+			id := idString(*r.ActorID)
+			a.ActorID = &id
+		}
+		if a.Meta == nil {
+			a.Meta = map[string]any{}
+		}
+		out = append(out, a)
+	}
+	return out
+}
+
+func nonNil(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
+}
