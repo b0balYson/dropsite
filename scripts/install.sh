@@ -118,7 +118,9 @@ connect() {
 	bin="$1"
 	say ""
 	say "Signing in to $server"
-	"$bin" login --server "$server" --code "$code" ||
+	# The code goes through the environment, not argv, so other local users
+	# cannot read it from the process list.
+	DROPSITE_CODE="$code" "$bin" login --server "$server" ||
 		die "sign-in failed. Press Connect on the Connect AI page again and run the new command (codes work once, for 10 minutes)."
 	say ""
 	say "Connecting AI assistants"

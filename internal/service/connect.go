@@ -55,7 +55,13 @@ func (s *Service) redeemConnectCode(ctx context.Context, code, ip, purpose strin
 		return domain.User{}, domain.ErrRateLimited.WithRetryAfter(retry)
 	}
 	fail := func() (domain.User, error) {
-		s.audit(ctx, Actor{IP: ip}, "connect.code_failed", "", map[string]any{"purpose": purpose})
+		// One row per network and window: the rate limit already bounds
+		// guessing, and the first row is enough to see it happen.
+		if ok, _ := s.codeAudit.Allow(ipKey(ip)); ok {
+			s.audit(ctx, Actor{IP: ip}, "connect.code_failed", "", map[string]any{
+				"purpose": purpose, "repeats_hidden_minutes": int(FailedCodesWindow.Minutes()),
+			})
+		}
 		return domain.User{}, errConnectInvalid
 	}
 	norm := domain.NormalizeConnectCode(code)

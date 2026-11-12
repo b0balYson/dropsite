@@ -7,9 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/netip"
 	"net/url"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/b0balYson/dropsite/internal/brand"
 	"github.com/b0balYson/dropsite/internal/domain"
@@ -18,17 +21,28 @@ import (
 
 // OAuth policy (spec oauth).
 const (
-	OAuthScope           = "sites"
-	AccessTokenTTL       = time.Hour
-	RefreshTokenTTL      = 30 * 24 * time.Hour
-	AuthCodeTTL          = time.Minute
-	MaxOAuthClients      = 1000
-	RegistrationsPerIP   = 10
-	RegistrationWindow   = time.Hour
-	UnusedClientTTL      = 30 * 24 * time.Hour
-	MaxRedirectURIs      = 10
-	maxClientNameRunes   = 100
-	maxRedirectURILength = 2000
+	OAuthScope         = "sites"
+	AccessTokenTTL     = time.Hour
+	RefreshTokenTTL    = 30 * 24 * time.Hour
+	AuthCodeTTL        = time.Minute
+	MaxOAuthClients    = 1000
+	RegistrationsPerIP = 10
+	RegistrationWindow = time.Hour
+	// NeverUsedClientTTL removes a registration that never led to a
+	// connection; real clients authorize right after registering.
+	NeverUsedClientTTL = 24 * time.Hour
+	// UnusedClientTTL removes a registration whose connections were all revoked.
+	UnusedClientTTL = 30 * 24 * time.Hour
+	// ClientEvictionGrace protects a fresh registration from eviction at the
+	// cap while its user is still on the consent page.
+	ClientEvictionGrace = 15 * time.Minute
+	MaxRedirectURIs     = 10
+	// ClientMetadataFetchesPerIP bounds outbound fetches of client metadata
+	// documents that one network can trigger (cache hits are free).
+	ClientMetadataFetchesPerIP = 10
+	ClientMetadataFetchWindow  = 10 * time.Minute
+	maxClientNameRunes         = 100
+	maxRedirectURILength       = 2000
 )
 
 // OAuthError is an RFC 6749 error. Adapters write Code and Description as is.
@@ -64,13 +78,15 @@ func (s *Service) CanonicalResource(r string) (string, bool) {
 }
 
 // ValidRedirectURI reports whether u may be registered as a redirect URI:
-// https, or http on a loopback address; never a fragment or credentials.
+// https, or http on a loopback address; never a fragment or credentials. The
+// host must be a DNS name or an IP literal, so the origin is safe to place in
+// a Content-Security-Policy.
 func ValidRedirectURI(u string) bool {
 	if u == "" || len(u) > maxRedirectURILength {
 		return false
 	}
 	p, err := url.Parse(u)
-	if err != nil || p.Host == "" || p.Fragment != "" || p.User != nil || p.Opaque != "" {
+	if err != nil || p.Host == "" || p.Fragment != "" || p.User != nil || p.Opaque != "" || !validRedirectHost(p.Hostname()) {
 		return false
 	}
 	switch p.Scheme {
@@ -80,6 +96,28 @@ func ValidRedirectURI(u string) bool {
 		return isLoopbackHost(p.Hostname())
 	}
 	return false
+}
+
+// validRedirectHost accepts a DNS name (letters, digits, hyphens and dots)
+// or an IP literal without a zone.
+func validRedirectHost(h string) bool {
+	if ip, err := netip.ParseAddr(h); err == nil {
+		return ip.Zone() == ""
+	}
+	return domain.IsValidHostname(strings.ToLower(h))
+}
+
+// RedirectOrigin returns the origin (scheme://host[:port]) of a valid
+// redirect URI, or "" when the URI is not valid.
+func RedirectOrigin(u string) string {
+	if !ValidRedirectURI(u) {
+		return ""
+	}
+	p, err := url.Parse(u)
+	if err != nil {
+		return ""
+	}
+	return p.Scheme + "://" + p.Host
 }
 
 func isLoopbackHost(h string) bool {
@@ -99,8 +137,19 @@ func RedirectHost(u string) string {
 	return p.Host
 }
 
-// cleanClientName bounds a client-supplied name for display.
-func cleanClientName(name string) string {
+// CleanClientName makes a client-supplied name safe to display: control and
+// format characters (including bidirectional overrides) are dropped, white
+// space is collapsed and the length is capped.
+func CleanClientName(name string) string {
+	name = strings.Map(func(r rune) rune {
+		if r == utf8.RuneError || unicode.In(r, unicode.Cc, unicode.Cf, unicode.Co, unicode.Cs) {
+			if unicode.IsSpace(r) {
+				return ' '
+			}
+			return -1
+		}
+		return r
+	}, name)
 	name = strings.Join(strings.Fields(name), " ")
 	if r := []rune(name); len(r) > maxClientNameRunes {
 		name = string(r[:maxClientNameRunes])
@@ -123,25 +172,38 @@ func (s *Service) RegisterOAuthClient(ctx context.Context, name string, redirect
 	if ok, retry := s.regLimit.Allow(ipKey(ip)); !ok {
 		return domain.OAuthClient{}, domain.ErrRateLimited.WithRetryAfter(retry)
 	}
-	n, err := s.repo.CountOAuthClients(ctx)
-	if err != nil {
-		return domain.OAuthClient{}, err
-	}
-	if n >= MaxOAuthClients {
-		return domain.OAuthClient{}, oauthErr("temporarily_unavailable", "the client registration limit is reached")
-	}
-	name = cleanClientName(name)
+	name = CleanClientName(name)
 	if name == "" {
 		name = RedirectHost(redirectURIs[0])
 	}
+	now := s.now()
 	c := domain.OAuthClient{
-		ID: domain.NewOAuthClientID(), Name: name, RedirectURIs: redirectURIs, CreatedAt: s.now(), CreatedIP: ip,
+		ID: domain.NewOAuthClientID(), Name: name, RedirectURIs: redirectURIs, CreatedAt: now, CreatedIP: ip,
 	}
-	if err := s.repo.CreateOAuthClient(ctx, c); err != nil {
+	// At the cap the oldest registration without a connection makes room, so
+	// a flood of registrations cannot lock real clients out.
+	evicted, err := s.repo.CreateOAuthClientCapped(ctx, c, MaxOAuthClients, now.Add(-ClientEvictionGrace))
+	if errors.Is(err, store.ErrOAuthClientLimit) {
+		return domain.OAuthClient{}, oauthErr("temporarily_unavailable", "the client registration limit is reached")
+	}
+	if err != nil {
 		return domain.OAuthClient{}, err
 	}
-	s.audit(ctx, Actor{IP: ip}, "oauth.client_register", "oauth_client:"+c.ID, map[string]any{"name": c.Name})
+	meta := map[string]any{"name": c.Name}
+	if evicted != "" {
+		meta["evicted"] = evicted
+	}
+	s.audit(ctx, Actor{IP: ip}, "oauth.client_register", "oauth_client:"+c.ID, meta)
 	return c, nil
+}
+
+// AllowClientMetadataFetch admits one outbound fetch of a client metadata
+// document on behalf of the client at ip.
+func (s *Service) AllowClientMetadataFetch(ip string) error {
+	if ok, retry := s.cimdLimit.Allow(ipKey(ip)); !ok {
+		return domain.ErrRateLimited.WithRetryAfter(retry)
+	}
+	return nil
 }
 
 // GetOAuthClient returns a registered client.
@@ -176,14 +238,14 @@ func (s *Service) AuthorizeOAuth(ctx context.Context, req AuthorizeRequest, conn
 	code := domain.NewSecret()
 	now := s.now()
 	if _, err := s.repo.CreateOAuthCode(ctx, domain.OAuthCode{
-		Hash: domain.HashSecret(code), UserID: u.ID, ClientID: req.ClientID, ClientName: cleanClientName(req.ClientName),
+		Hash: domain.HashSecret(code), UserID: u.ID, ClientID: req.ClientID, ClientName: CleanClientName(req.ClientName),
 		RedirectURI: req.RedirectURI, Challenge: req.Challenge, Resource: s.MCPResource(), Scope: OAuthScope,
 		CreatedAt: now, ExpiresAt: now.Add(AuthCodeTTL),
 	}); err != nil {
 		return "", fmt.Errorf("create authorization code: %w", err)
 	}
 	s.audit(ctx, Actor{User: u, IP: ip}, "oauth.authorize", userTarget(u.ID), map[string]any{
-		"client": cleanClientName(req.ClientName), "redirect_host": RedirectHost(req.RedirectURI),
+		"client": CleanClientName(req.ClientName), "redirect_host": RedirectHost(req.RedirectURI),
 	})
 	return code, nil
 }
@@ -229,38 +291,46 @@ func validVerifier(v string) bool {
 }
 
 // ExchangeOAuthCode redeems an authorization code (grant_type=authorization_code).
+// Redeeming the code and issuing the grant happen in one transaction, so a
+// replay racing the first exchange always finds the grant and revokes it.
 func (s *Service) ExchangeOAuthCode(ctx context.Context, code, verifier, clientID, redirectURI, resource string) (OAuthTokens, error) {
 	now := s.now()
-	c, err := s.repo.RedeemOAuthCode(ctx, domain.HashSecret(code), now)
+	var out OAuthTokens
+	accept := func(c domain.OAuthCode) (domain.OAuthGrant, []domain.OAuthToken, error) {
+		if c.ClientID != clientID || c.RedirectURI != redirectURI {
+			return domain.OAuthGrant{}, nil, invalidGrant()
+		}
+		if !validVerifier(verifier) || !domain.EqualHash([]byte(PKCEChallenge(verifier)), []byte(c.Challenge)) {
+			return domain.OAuthGrant{}, nil, oauthErr("invalid_grant", "code_verifier does not match the code_challenge")
+		}
+		if res, ok := s.CanonicalResource(resource); !ok || res != c.Resource {
+			return domain.OAuthGrant{}, nil, oauthErr("invalid_target", "the resource does not match the authorization request")
+		}
+		u, err := s.repo.GetUser(ctx, c.UserID)
+		if err != nil || u.Status != domain.UserActive {
+			return domain.OAuthGrant{}, nil, invalidGrant()
+		}
+		var rows []domain.OAuthToken
+		out, rows = s.newTokenPair(now)
+		return domain.OAuthGrant{
+			UserID: u.ID, ClientID: c.ClientID, ClientName: c.ClientName, RedirectHost: RedirectHost(c.RedirectURI),
+			Scope: c.Scope, Resource: c.Resource, CreatedAt: now,
+		}, rows, nil
+	}
+	_, err := s.repo.ExchangeOAuthCode(ctx, domain.HashSecret(code), now, accept)
 	if errors.Is(err, store.ErrCredentialReused) {
 		s.audit(ctx, Actor{}, "oauth.code_reuse", "", map[string]any{"client": clientID})
 		return OAuthTokens{}, invalidGrant()
+	}
+	var oe *OAuthError
+	if errors.As(err, &oe) {
+		return OAuthTokens{}, err
 	}
 	if err != nil {
 		if domain.AsError(err).Kind == domain.KindNotFound {
 			return OAuthTokens{}, invalidGrant()
 		}
-		return OAuthTokens{}, err
-	}
-	if c.ClientID != clientID || c.RedirectURI != redirectURI {
-		return OAuthTokens{}, invalidGrant()
-	}
-	if !validVerifier(verifier) || !domain.EqualHash([]byte(PKCEChallenge(verifier)), []byte(c.Challenge)) {
-		return OAuthTokens{}, oauthErr("invalid_grant", "code_verifier does not match the code_challenge")
-	}
-	if res, ok := s.CanonicalResource(resource); !ok || res != c.Resource {
-		return OAuthTokens{}, oauthErr("invalid_target", "the resource does not match the authorization request")
-	}
-	u, err := s.repo.GetUser(ctx, c.UserID)
-	if err != nil || u.Status != domain.UserActive {
-		return OAuthTokens{}, invalidGrant()
-	}
-	out, rows := s.newTokenPair(now)
-	if _, err := s.repo.IssueOAuthGrant(ctx, c.ID, domain.OAuthGrant{
-		UserID: u.ID, ClientID: c.ClientID, ClientName: c.ClientName, RedirectHost: RedirectHost(c.RedirectURI),
-		Scope: c.Scope, Resource: c.Resource, CreatedAt: now,
-	}, rows); err != nil {
-		return OAuthTokens{}, fmt.Errorf("issue grant: %w", err)
+		return OAuthTokens{}, fmt.Errorf("exchange authorization code: %w", err)
 	}
 	return out, nil
 }
@@ -335,6 +405,7 @@ func (s *Service) RevokeOAuthToken(ctx context.Context, token string) error {
 func (s *Service) AuthenticateMCP(ctx context.Context, token, ip string) (Actor, time.Time, error) {
 	if strings.HasPrefix(token, brand.TokenPrefix) {
 		a, err := s.AuthenticateToken(ctx, token, ip)
+		a.ViaMCP = true
 		return a, time.Time{}, err
 	}
 	res, ok, retry := s.tokenLimit.Reserve(ipKey(ip))
@@ -361,7 +432,7 @@ func (s *Service) AuthenticateMCP(ctx context.Context, token, ip string) (Actor,
 		}
 	}
 	res.Cancel()
-	return Actor{User: u, IP: ip}, t.ExpiresAt, nil
+	return Actor{User: u, IP: ip, ViaMCP: true}, t.ExpiresAt, nil
 }
 
 // ListOAuthGrants returns the actor's connected applications.
@@ -388,7 +459,7 @@ func (s *Service) housekeepConnect(ctx context.Context, now time.Time) error {
 	if _, err := s.repo.DeleteExpiredOAuth(ctx, now); err != nil {
 		return fmt.Errorf("delete expired oauth state: %w", err)
 	}
-	if _, err := s.repo.DeleteUnusedOAuthClients(ctx, now.Add(-UnusedClientTTL)); err != nil {
+	if _, err := s.repo.DeleteUnusedOAuthClients(ctx, now.Add(-NeverUsedClientTTL), now.Add(-UnusedClientTTL)); err != nil {
 		return fmt.Errorf("delete unused oauth clients: %w", err)
 	}
 	return nil

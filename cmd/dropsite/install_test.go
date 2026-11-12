@@ -21,7 +21,7 @@ func fakeRelease(t *testing.T, loginExit int) (base, log string) {
 	arch := map[string]string{"amd64": "amd64", "arm64": "arm64"}[runtime.GOARCH]
 	asset := "dropsite-" + runtime.GOOS + "-" + arch
 	script := "#!/bin/sh\necho \"$@\" >> '" + log + "'\n" +
-		"case \"$1\" in version) echo 'dropsite test';; login) exit " + itoa(loginExit) + ";; esac\n"
+		"case \"$1\" in version) echo 'dropsite test';; login) echo \"DROPSITE_CODE=$DROPSITE_CODE\" >> '" + log + "'; exit " + itoa(loginExit) + ";; esac\n"
 	if err := os.WriteFile(filepath.Join(base, asset), []byte(script), 0o755); err != nil { //nolint:gosec // test fixture must be executable
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestInstallScriptWithCode(t *testing.T) {
 		t.Fatalf("install: %v\n%s", err, out)
 	}
 	calls, _ := os.ReadFile(log)
-	want := "version\nlogin --server https://api.example.com --code ABCD-EFGH-JKMNP\nsetup\n"
+	want := "version\nlogin --server https://api.example.com\nDROPSITE_CODE=ABCD-EFGH-JKMNP\nsetup\n"
 	if !strings.Contains(string(calls), want) {
 		t.Fatalf("calls:\n%s\noutput:\n%s", calls, out)
 	}
@@ -65,7 +65,7 @@ func TestInstallScriptWithCode(t *testing.T) {
 	if out, err := runInstall(t, base, []string{"DROPSITE_SERVER=https://api.example.com", "DROPSITE_CODE=X"}); err != nil {
 		t.Fatalf("env install: %v\n%s", err, out)
 	}
-	if calls, _ := os.ReadFile(log); !strings.Contains(string(calls), "login --server https://api.example.com --code X") {
+	if calls, _ := os.ReadFile(log); !strings.Contains(string(calls), "login --server https://api.example.com\nDROPSITE_CODE=X\n") {
 		t.Fatalf("env calls: %s", calls)
 	}
 

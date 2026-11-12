@@ -8,7 +8,7 @@ When the user asks to publish, deploy, share or "put online" a page or site from
 3. Publish: `dropsite deploy <folder> --json`. The first run creates a site and writes `.dropsite.json` into the folder; later runs update the same site. Use `--site <id-or-slug>` to target an existing site and `--title "<name>"` to name a new one.
 4. Reply with the `url` from the JSON output as a link. Mention that publishing again updates the same address and that `dropsite rollback <site>` restores the previous version.
 
-If the CLI reports a missing `index.html`, a size or file-count limit, a symbolic link or a rate limit, explain the message to the user and fix the folder before retrying once.
+If the CLI reports a missing `index.html`, a size or file-count limit, a symbolic link or a rate limit, explain the message to the user and fix the folder before retrying once. If it refuses secret-looking files (`.env*`, keys, credentials), publish the build output folder instead or add `--skip-sensitive`; never add `--include-sensitive` without the user's explicit confirmation.
 
 ### Forms on sites published with dropsite
 

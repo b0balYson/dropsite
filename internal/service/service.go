@@ -74,6 +74,10 @@ type Service struct {
 	accountLimit *ratelimit.Window
 	tokenLimit   *ratelimit.Window
 	codeLimit    *ratelimit.Window
+	// codeAudit lets one failed connect code per network and window into
+	// the audit log, so guessing cannot flood it.
+	codeAudit    *ratelimit.Window
+	cimdLimit    *ratelimit.Window
 	regLimit     *ratelimit.Window
 	loginBusy    keyedTryLock
 	hasher       *passwordHasher
@@ -117,6 +121,8 @@ func New(d Deps) *Service {
 		accountLimit: ratelimit.New(FailedLoginsPerAccount, FailedLoginsWindow).WithClock(now),
 		tokenLimit:   ratelimit.New(FailedTokensPerIP, FailedLoginsWindow).WithClock(now),
 		codeLimit:    ratelimit.New(FailedCodesPerIP, FailedCodesWindow).WithClock(now),
+		codeAudit:    ratelimit.New(1, FailedCodesWindow).WithClock(now),
+		cimdLimit:    ratelimit.New(ClientMetadataFetchesPerIP, ClientMetadataFetchWindow).WithClock(now),
 		regLimit:     ratelimit.New(RegistrationsPerIP, RegistrationWindow).WithClock(now),
 		hasher:       newPasswordHasher(),
 		dns:          dnscheck.New(d.Resolver, dnscheck.DefaultTimeout),
@@ -131,10 +137,16 @@ func New(d Deps) *Service {
 type Actor struct {
 	User domain.User
 	IP   string
+	// ViaMCP marks an actor authenticated on the MCP endpoint (an OAuth
+	// access token or an API token presented to /mcp). An AI assistant acts
+	// only on the user's own resources: it never gets administrator powers,
+	// so a prompt injection cannot reach other users' sites.
+	ViaMCP bool
 }
 
-// IsAdmin reports whether the actor is an administrator.
-func (a Actor) IsAdmin() bool { return a.User.IsAdmin() }
+// IsAdmin reports whether the actor may use administrator powers: an
+// administrator acting directly, never through an AI assistant.
+func (a Actor) IsAdmin() bool { return a.User.IsAdmin() && !a.ViaMCP }
 
 func (a Actor) id() *int64 {
 	if a.User.ID == 0 {

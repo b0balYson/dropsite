@@ -72,7 +72,17 @@ type FilesDeployer interface {
 
 // FolderDeployer publishes a folder from the local disk (CLI server).
 type FolderDeployer interface {
-	DeployFolder(ctx context.Context, path, ref, title string) (DeployResult, error)
+	DeployFolder(ctx context.Context, f Folder) (DeployResult, error)
+}
+
+// Folder is a deploy_folder request.
+type Folder struct {
+	Path  string
+	Site  string
+	Title string
+	// SkipSensitive publishes without secret-looking files instead of
+	// refusing the folder.
+	SkipSensitive bool
 }
 
 // Resolver returns the backend for a tool call (per authenticated user), or

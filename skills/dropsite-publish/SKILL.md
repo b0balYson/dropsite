@@ -26,7 +26,7 @@ The folder must contain `index.html` at its root.
 - A single HTML page: publish the folder that contains it; rename the file to `index.html` if it is the only page.
 - Do not publish the project root if it contains source code, `node_modules`, `.env` files or secrets.
 
-Hidden files and `.git`, `node_modules`, `.DS_Store` are skipped automatically, but check that nothing private is in the folder.
+`.git`, `node_modules`, `.DS_Store` are skipped automatically; everything else in the folder becomes public, so check that nothing private is in it. If the folder holds secret-looking files (`.env*`, `.npmrc`, `.netrc`, `.git-credentials`, `.ssh/`, `.aws/`, `*.pem`, `*.key`, `id_rsa*`), `dropsite deploy` stops and lists them: pick the build output folder instead, or add `--skip-sensitive` to leave them out. Never add `--include-sensitive` unless the user explicitly confirmed those files are meant to be public.
 
 ## 3. Publish
 

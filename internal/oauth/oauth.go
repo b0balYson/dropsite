@@ -61,6 +61,9 @@ type Options struct {
 	TLSConfig *tls.Config
 	// AllowAddr overrides the public-address check (tests only).
 	AllowAddr func(netip.Addr) bool
+	// MetadataDialPort connects to this port instead of 443 when fetching
+	// client metadata documents (tests only).
+	MetadataDialPort string
 }
 
 // Server is the OAuth protocol adapter.
@@ -84,7 +87,9 @@ func New(svc *service.Service, o Options) *Server {
 	if _, err := rand.Read(key); err != nil {
 		panic("crypto/rand failed: " + err.Error())
 	}
-	return &Server{svc: svc, o: o, cimd: newFetcher(o.Resolver, o.TLSConfig, o.AllowAddr), key: key, nowFn: time.Now}
+	cimd := newFetcher(o.Resolver, o.TLSConfig, o.AllowAddr, o.MetadataDialPort)
+	cimd.admit = svc.AllowClientMetadataFetch
+	return &Server{svc: svc, o: o, cimd: cimd, key: key, nowFn: time.Now}
 }
 
 // remoteHost is the connection address without the port.
@@ -118,9 +123,11 @@ func (s *Server) Routes() []Route {
 }
 
 // ResolveClient returns a registered client or fetches a metadata document.
-func (s *Server) ResolveClient(ctx context.Context, clientID string) (Client, error) {
+// ip is the address of the browser that asked; outbound fetches are rate
+// limited per address.
+func (s *Server) ResolveClient(ctx context.Context, clientID, ip string) (Client, error) {
 	if IsMetadataURL(clientID) {
-		return s.cimd.get(ctx, clientID)
+		return s.cimd.get(ctx, clientID, ip)
 	}
 	if clientID == "" || len(clientID) > 64 {
 		return Client{}, domain.ErrNotFound
@@ -156,15 +163,20 @@ type Pending struct {
 	Client  Client
 }
 
-// ValidateAuthorize checks an authorization request (query parameters).
-func (s *Server) ValidateAuthorize(ctx context.Context, q url.Values) (Pending, error) {
+// ValidateAuthorize checks an authorization request (query parameters) sent
+// by the browser at ip. A rate-limited metadata fetch returns the domain
+// rate-limit error as is.
+func (s *Server) ValidateAuthorize(ctx context.Context, q url.Values, ip string) (Pending, error) {
 	for _, k := range []string{"client_id", "redirect_uri", "response_type", "state", "code_challenge",
 		"code_challenge_method", "resource", "scope"} {
 		if len(q[k]) > 1 {
 			return Pending{}, &PageError{Reason: "the parameter " + k + " is repeated"}
 		}
 	}
-	c, err := s.ResolveClient(ctx, q.Get("client_id"))
+	c, err := s.ResolveClient(ctx, q.Get("client_id"), ip)
+	if errors.Is(err, domain.ErrRateLimited) {
+		return Pending{}, err
+	}
 	if err != nil {
 		s.o.Logger.Info("oauth authorize: unknown client", "client_id_len", len(q.Get("client_id")), "err", err)
 		return Pending{}, &PageError{Reason: "the application is not registered or its metadata could not be loaded"}

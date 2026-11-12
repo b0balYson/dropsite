@@ -38,9 +38,10 @@ type filesArgs struct {
 }
 
 type folderArgs struct {
-	Path  string `json:"path" jsonschema:"absolute path of a folder on this computer that contains index.html"`
-	Site  string `json:"site,omitempty" jsonschema:"site ID or slug; omit to use the site remembered in the folder or create a new one"`
-	Title string `json:"title,omitempty" jsonschema:"name of a newly created site (default: the folder name)"`
+	Path          string `json:"path" jsonschema:"absolute path of the site's build output folder (with index.html), not the project folder"`
+	Site          string `json:"site,omitempty" jsonschema:"site ID or slug; omit to use the site remembered in the folder or create a new one"`
+	Title         string `json:"title,omitempty" jsonschema:"name of a newly created site (default: the folder name)"`
+	SkipSensitive bool   `json:"skip_sensitive_files,omitempty" jsonschema:"publish without secret-looking files (.env, keys, credentials) instead of refusing the folder"`
 }
 
 type sitesOut struct {
@@ -95,6 +96,10 @@ func (t tools) register(s *sdk.Server, o Options) {
 	if o.Folder {
 		sdk.AddTool(s, &sdk.Tool{Name: "deploy_folder", Annotations: writes("Publish folder", false, false),
 			Description: "Publish a folder from this computer (it must contain index.html) and return its link. " +
+				"Everything in the folder becomes public: pass only the site's build output folder (dist, build, " +
+				"public), never a project, home or system folder. The home folder, folders directly inside it and " +
+				"file system roots are refused, and so is a folder with secret-looking files (.env, keys, " +
+				"credentials) unless skip_sensitive_files is true, which leaves them out. " +
 				"The first publication creates a site and remembers it in .dropsite.json inside the folder; " +
 				"later publications of the same folder update that site."}, t.deployFolder)
 	}
@@ -202,6 +207,6 @@ func (t tools) deployFolder(ctx context.Context, req *sdk.CallToolRequest, in fo
 	if !ok {
 		return nil, DeployResult{}, errNoPublisher
 	}
-	r, err := d.DeployFolder(ctx, in.Path, in.Site, in.Title)
+	r, err := d.DeployFolder(ctx, Folder(in))
 	return nil, r, err
 }

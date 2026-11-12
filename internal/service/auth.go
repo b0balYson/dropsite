@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"net/netip"
 	"strings"
 	"time"
 
@@ -21,7 +22,24 @@ type LoginResult struct {
 	Session domain.Session
 }
 
-func ipKey(ip string) string { return "ip:" + ip }
+// ipKey is the rate-limit key of a client address. IPv6 clients are
+// aggregated by /64, the smallest prefix a single subscriber usually gets, so
+// rotating addresses inside it cannot multiply per-IP limits.
+func ipKey(ip string) string {
+	a, err := netip.ParseAddr(ip)
+	if err != nil {
+		return "ip:" + ip
+	}
+	a = a.WithZone("").Unmap()
+	if a.Is4() {
+		return "ip:" + a.String()
+	}
+	p, err := a.Prefix(64)
+	if err != nil {
+		return "ip:" + a.String()
+	}
+	return "ip6:" + p.String()
+}
 
 // accountKey identifies the submitted login name for the per-account limit.
 // It is hashed so arbitrary input cannot bloat the limiter's memory, and it is

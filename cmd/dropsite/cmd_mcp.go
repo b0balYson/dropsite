@@ -18,8 +18,9 @@ import (
 )
 
 const localInstructions = "Publish static websites from folders on this computer to the user's " + brand.DisplayName +
-	" server and manage them. To publish, call deploy_folder with the absolute path of a folder that contains " +
-	"index.html (build the project first if it has a build step); it returns the link to give to the user. " +
+	" server and manage them. To publish, call deploy_folder with the absolute path of the site's build output " +
+	"folder that contains index.html (build the project first if it has a build step; never pass a project, " +
+	"home or system folder: everything in the folder becomes public); it returns the link to give to the user. " +
 	"Never delete a site unless the user explicitly asked and confirmed."
 
 var errMCPNotConnected = errors.New(brand.Name + " is not connected on this computer: ask the user to open the " +
@@ -184,12 +185,22 @@ func (b localBackend) DeleteSite(ctx context.Context, ref string) error {
 }
 
 // DeployFolder publishes a local folder exactly like 'dropsite deploy'.
-func (b localBackend) DeployFolder(ctx context.Context, path, ref, title string) (mcp.DeployResult, error) {
-	dir, err := b.a.expandPath(path)
+// The assistant may be steered by untrusted content, so broad folders are
+// refused and secret-looking files are refused or skipped, never published.
+func (b localBackend) DeployFolder(ctx context.Context, f mcp.Folder) (mcp.DeployResult, error) {
+	dir, err := b.a.expandPath(f.Path)
 	if err != nil {
 		return mcp.DeployResult{}, err
 	}
-	r, err := b.a.publishDir(ctx, b.c, deployOpts{dir: dir, site: ref, title: title})
+	if err := b.a.checkFolderScope(dir); err != nil {
+		return mcp.DeployResult{}, err
+	}
+	mode := sensitiveRefuse
+	if f.SkipSensitive {
+		mode = sensitiveSkip
+	}
+	r, err := b.a.publishDir(ctx, b.c, deployOpts{dir: dir, site: f.Site, title: f.Title,
+		sensitive: mode, sensitiveHints: mcpSensitiveHints})
 	if err != nil {
 		return mcp.DeployResult{}, toolError(err)
 	}

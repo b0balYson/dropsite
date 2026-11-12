@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/b0balYson/dropsite/internal/domain"
 	"github.com/b0balYson/dropsite/internal/service"
 	"github.com/b0balYson/dropsite/internal/testenv"
 )
@@ -46,6 +47,8 @@ func TestPublicAddr(t *testing.T) {
 		"127.0.0.1": false, "10.0.0.5": false, "172.16.1.1": false, "192.168.1.1": false, "169.254.169.254": false,
 		"100.64.0.1": false, "0.0.0.0": false, "::1": false, "fe80::1": false, "fc00::1": false, "::ffff:10.0.0.1": false,
 		"64:ff9b::a00:1": false, "2002:a00:1::": false, "224.0.0.1": false, "198.18.0.1": false, "240.0.0.1": false,
+		"::a00:1": false, "::808:808": false, "fec0::1": false, "192.88.99.1": false, "2001:10::1": false,
+		"2001::1": false, "4000::1": false, "2a00:1450::1": true,
 	} {
 		if got := PublicAddr(netip.MustParseAddr(addr)); got != want {
 			t.Errorf("%s: %v", addr, got)
@@ -62,6 +65,9 @@ func TestIsMetadataURL(t *testing.T) {
 		"https://u@a.example/c.json":            false,
 		"https://a.example/c.json#x":            false,
 		"https://a.example/x/..":                false,
+		"https://a.example:443/c.json":          true,
+		"https://a.example:8443/c.json":         false,
+		"https://a.example:22/c.json":           false,
 		"dsc_abc":                               false,
 	} {
 		if IsMetadataURL(in) != want {
@@ -94,9 +100,12 @@ func newCIMDServer(t *testing.T) *cimdServer {
 	return c
 }
 
-func (c *cimdServer) clientID() string {
+func (c *cimdServer) clientID() string { return "https://example.com/client.json" }
+
+// port is where the fetcher really connects instead of 443.
+func (c *cimdServer) port() string {
 	_, port, _ := net.SplitHostPort(c.srv.Listener.Addr().String())
-	return "https://example.com:" + port + "/client.json"
+	return port
 }
 
 func (c *cimdServer) doc(id string, redirects ...string) {
@@ -107,7 +116,7 @@ func (c *cimdServer) doc(id string, redirects ...string) {
 func testFetcher(c *cimdServer, allow func(netip.Addr) bool, res Resolver) *fetcher {
 	pool := x509.NewCertPool()
 	pool.AddCert(c.srv.Certificate())
-	return newFetcher(res, &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}, allow)
+	return newFetcher(res, &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}, allow, c.port())
 }
 
 func allowAll(netip.Addr) bool { return true }
@@ -117,15 +126,15 @@ func TestCIMDFetchAndCache(t *testing.T) {
 	id := c.clientID()
 	c.doc(id, "https://chat.example/cb")
 	f := testFetcher(c, allowAll, fakeResolver{addrs: addrs("127.0.0.1")})
-	got, err := f.get(context.Background(), id)
+	got, err := f.get(context.Background(), id, "1.1.1.1")
 	if err != nil || got.Name != "Chat" || !got.Metadata || got.RedirectURIs[0] != "https://chat.example/cb" {
 		t.Fatalf("get: %+v %v", got, err)
 	}
-	if _, err := f.get(context.Background(), id); err != nil || c.hits.Load() != 1 {
+	if _, err := f.get(context.Background(), id, "1.1.1.1"); err != nil || c.hits.Load() != 1 {
 		t.Fatalf("not cached: %d %v", c.hits.Load(), err)
 	}
 	f.now = func() time.Time { return time.Now().Add(cimdMaxTTL + time.Minute) }
-	if _, err := f.get(context.Background(), id); err != nil || c.hits.Load() != 2 {
+	if _, err := f.get(context.Background(), id, "1.1.1.1"); err != nil || c.hits.Load() != 2 {
 		t.Fatalf("cache not expired: %d %v", c.hits.Load(), err)
 	}
 }
@@ -167,13 +176,50 @@ func TestCIMDRejections(t *testing.T) {
 	for _, tc := range cases {
 		c.extra = nil
 		tc.setup()
-		if _, err := tc.f().get(ctx, id); err == nil {
+		if _, err := tc.f().get(ctx, id, "1.1.1.1"); err == nil {
 			t.Errorf("%s: accepted", tc.name)
 		}
 	}
 	f := testFetcher(c, allowAll, fakeResolver{addrs: addrs("127.0.0.1")})
-	if _, err := f.get(ctx, "http://example.com/c.json"); err == nil {
+	if _, err := f.get(ctx, "http://example.com/c.json", "1.1.1.1"); err == nil {
 		t.Error("http client_id accepted")
+	}
+}
+
+func TestCIMDFailureCacheAndName(t *testing.T) {
+	c := newCIMDServer(t)
+	id := c.clientID()
+	ctx := context.Background()
+	c.body.Store("<html>")
+	f := testFetcher(c, allowAll, fakeResolver{addrs: addrs("127.0.0.1")})
+	if _, err := f.get(ctx, id, "1.1.1.1"); err == nil {
+		t.Fatal("broken document accepted")
+	}
+	b, _ := json.Marshal(map[string]any{"client_id": id, "client_name": "Chat\u202e\u200b  App", "redirect_uris": []string{"https://chat.example/cb"}})
+	c.body.Store(string(b))
+	// The failure is cached: no new outbound request within cimdFailureTTL.
+	if _, err := f.get(ctx, id, "1.1.1.1"); !errors.Is(err, errCachedFailure) || c.hits.Load() != 1 {
+		t.Fatalf("failure not cached: %d %v", c.hits.Load(), err)
+	}
+	f.now = func() time.Time { return time.Now().Add(cimdFailureTTL + time.Second) }
+	got, err := f.get(ctx, id, "1.1.1.1")
+	if err != nil || got.Name != "Chat App" {
+		t.Fatalf("after failure TTL: %+v %v", got, err)
+	}
+	// A refused admission (per-IP limit) is not cached as a failure.
+	f2 := testFetcher(c, allowAll, fakeResolver{addrs: addrs("127.0.0.1")})
+	f2.admit = func(string) error { return domain.ErrRateLimited }
+	if _, err := f2.get(ctx, id, "1.1.1.1"); !errors.Is(err, domain.ErrRateLimited) {
+		t.Fatalf("admit: %v", err)
+	}
+	f2.admit = nil
+	if _, err := f2.get(ctx, id, "1.1.1.1"); err != nil {
+		t.Fatalf("after admit: %v", err)
+	}
+	// Only port 443 is dialled.
+	f3 := newFetcher(fakeResolver{addrs: addrs("127.0.0.1")}, nil, allowAll, "")
+	if _, _, err := f3.fetch(ctx, "https://example.com:8443/c.json"); err == nil {
+		t.Fatal("non-default port fetched")
 	}
 }
 
@@ -186,7 +232,7 @@ func TestCIMDTimeout(t *testing.T) {
 	f := testFetcher(c, allowAll, fakeResolver{addrs: addrs("127.0.0.1")})
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
-	if _, err := f.get(ctx, id); err == nil {
+	if _, err := f.get(ctx, id, "1.1.1.1"); err == nil {
 		t.Fatal("no timeout")
 	}
 }
@@ -357,7 +403,7 @@ func TestValidateAuthorizeAndSeal(t *testing.T) {
 	ch := service.PKCEChallenge(strings.Repeat("v", 43))
 	base := url.Values{"client_id": {c.ID}, "response_type": {"code"}, "code_challenge": {ch},
 		"code_challenge_method": {"S256"}, "state": {"s"}}
-	p, err := r.s.ValidateAuthorize(ctx, base)
+	p, err := r.s.ValidateAuthorize(ctx, base, "1.1.1.1")
 	if err != nil || p.Request.RedirectURI != "https://a.example/cb" || p.Request.Resource != "https://api.pp.test/mcp" {
 		t.Fatalf("valid: %+v %v", p, err)
 	}
@@ -368,7 +414,7 @@ func TestValidateAuthorizeAndSeal(t *testing.T) {
 		{"client_id": {c.ID, c.ID}},
 		{"client_id": {strings.Repeat("x", 100)}},
 	} {
-		if _, err := r.s.ValidateAuthorize(ctx, q); !errors.As(err, &pe) || pe.Error() == "" {
+		if _, err := r.s.ValidateAuthorize(ctx, q, "1.1.1.1"); !errors.As(err, &pe) || pe.Error() == "" {
 			t.Errorf("%v: %v", q, err)
 		}
 	}
@@ -380,7 +426,7 @@ func TestValidateAuthorizeAndSeal(t *testing.T) {
 			q[kk] = vv
 		}
 		q.Set(k, v)
-		if _, err := r.s.ValidateAuthorize(ctx, q); !errors.As(err, &re) || re.Error() == "" {
+		if _, err := r.s.ValidateAuthorize(ctx, q, "1.1.1.1"); !errors.As(err, &re) || re.Error() == "" {
 			t.Errorf("%s=%s: %v", k, v, err)
 		}
 	}
@@ -419,11 +465,23 @@ func TestResolveMetadataClient(t *testing.T) {
 	pool.AddCert(c.srv.Certificate())
 	r := newRig(t, Options{
 		Resolver: fakeResolver{addrs: addrs("127.0.0.1")}, AllowAddr: allowAll,
-		TLSConfig: &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12},
+		TLSConfig: &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}, MetadataDialPort: c.port(),
 	})
-	got, err := r.s.ResolveClient(context.Background(), id)
+	got, err := r.s.ResolveClient(context.Background(), id, "1.1.1.1")
 	if err != nil || !got.Metadata {
 		t.Fatalf("resolve: %+v %v", got, err)
+	}
+	// Every cache miss counts against the per-IP fetch limit.
+	for i := range service.ClientMetadataFetchesPerIP {
+		_, _ = r.s.ResolveClient(context.Background(), fmt.Sprintf("https://example.com/c%d.json", i), "2001:db8::1")
+	}
+	_, err = r.s.ValidateAuthorize(context.Background(), url.Values{"client_id": {"https://example.com/other.json"}}, "2001:db8::2")
+	if !errors.Is(err, domain.ErrRateLimited) {
+		t.Fatalf("want fetch limit, got %v", err)
+	}
+	// Cached documents stay available to everyone.
+	if _, err := r.s.ResolveClient(context.Background(), id, "2001:db8::3"); err != nil {
+		t.Fatalf("cached: %v", err)
 	}
 	if r.s.Issuer() != "https://api.pp.test" {
 		t.Fatal("issuer")
