@@ -25,6 +25,24 @@ func TestConnectPage(t *testing.T) {
 		"Чат-клиенты пока не подключены", "ChatGPT", "claude.ai")
 	// The manual skill instructions are gone.
 	wantNotContains(t, p.body, "SKILL.md", "DROPSITE_CODE=")
+	// The chat comes first, then the code and the computer command, then
+	// example requests in the interface language.
+	chat, code, phrases := strings.Index(p.body, `id="chat-h"`), strings.Index(p.body, `action="/connect/code"`),
+		strings.Index(p.body, `id="use-h"`)
+	if chat < 0 || chat > code || code > phrases {
+		t.Fatalf("block order: chat %d, code %d, phrases %d", chat, code, phrases)
+	}
+	wantContains(t, p.body, "claude mcp add --transport http dropsite https://api.pp.test/mcp",
+		"Сделай сайт кофейни и опубликуй", "Покажи последние заявки", "Верни предыдущую версию",
+		"Что вы делаете сами", "записи DNS")
+	// The root domain is an administrator's request.
+	wantNotContains(t, p.body, "корневой домен")
+	en := h.get("/connect", "Accept-Language", "en")
+	wantContains(t, en.body, "Make a coffee shop site and publish it", "Show visits for the week")
+
+	admin := newHarness(t)
+	admin.loginAdmin()
+	wantContains(t, admin.get("/connect").body, "Поставь эту заглушку на корневой домен")
 }
 
 func TestConnectCodeCommands(t *testing.T) {
