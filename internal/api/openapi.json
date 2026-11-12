@@ -912,8 +912,15 @@
         "summary": "Remove a member, or leave (own user ID)",
         "description": "The last member of a workspace with sites cannot leave (workspace_last_member); the last member of an empty workspace deletes it.",
         "responses": {
-          "204": {
-            "description": "Removed"
+          "200": {
+            "description": "Removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceMemberRemoval"
+                }
+              }
+            }
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
@@ -4701,6 +4708,18 @@
         "properties": {
           "email": {
             "type": "string"
+          }
+        }
+      },
+      "WorkspaceMemberRemoval": {
+        "type": "object",
+        "required": [
+          "workspace_deleted"
+        ],
+        "properties": {
+          "workspace_deleted": {
+            "type": "boolean",
+            "description": "True when the last member left an empty workspace, which is deleted with it"
           }
         }
       },

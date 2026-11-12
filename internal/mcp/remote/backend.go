@@ -37,6 +37,7 @@ func toSite(v service.SiteView) mcp.Site {
 		ID: v.Site.ID, Title: v.Site.Title, URL: v.URL, URLs: v.URLs, Slug: v.Slug, UpdatedAt: stamp(&v.Site.UpdatedAt),
 		SiteExtras: siteExtras(v.Site, v.Hostnames),
 	}
+	s.WorkspaceID, s.Workspace = workspaceOf(v.Site.WorkspaceID, v.WorkspaceName)
 	if v.Current != nil {
 		d := toDeploy(*v.Current, v.Current.ID, v.CurrentPreviewURL)
 		s.CurrentDeploy = &d
@@ -77,11 +78,13 @@ func (b backend) ListSites(ctx context.Context) ([]mcp.Site, error) {
 	}
 	out := make([]mcp.Site, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, mcp.Site{
+		s := mcp.Site{
 			ID: r.ID, Title: r.Title, URL: r.URL, URLs: r.URLs, Slug: r.Slug,
 			LastDeployAt: stamp(r.LastDeployAt), UpdatedAt: stamp(&r.UpdatedAt),
 			SiteExtras: siteExtras(r.Site, r.Hostnames),
-		})
+		}
+		s.WorkspaceID, s.Workspace = workspaceOf(r.WorkspaceID, r.WorkspaceName)
+		out = append(out, s)
 	}
 	return out, nil
 }

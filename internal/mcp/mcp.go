@@ -25,6 +25,9 @@ type Site struct {
 	CurrentDeploy *Deploy  `json:"current_deploy,omitempty" jsonschema:"the release being served, if any"`
 	LastDeployAt  string   `json:"last_deploy_at,omitempty"`
 	UpdatedAt     string   `json:"updated_at,omitempty"`
+	// WorkspaceID and Workspace name the shared workspace of the site.
+	WorkspaceID string `json:"workspace_id,omitempty" jsonschema:"shared workspace of the site; absent for the user's personal sites"`
+	Workspace   string `json:"workspace,omitempty" jsonschema:"name of the shared workspace: every member can change the site"`
 	SiteExtras
 	// Attached is filled by get_site only.
 	Attached *SiteAttached `json:"attached,omitempty" jsonschema:"what is attached to the site: forms, delivery channels, counters (get_site only)"`

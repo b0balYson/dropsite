@@ -96,7 +96,8 @@ func hosts(hs []client.Hostname) []mcp.Host {
 
 func fromSite(s client.Site) mcp.Site {
 	out := mcp.Site{ID: s.ID, Title: s.Title, URL: s.URL, URLs: s.URLs, Slug: deref(s.Slug), UpdatedAt: stampTime(&s.UpdatedAt),
-		SiteExtras: mcp.NewSiteExtras(s.Noindex, s.Protected, s.ExpiresAt, hosts(s.Hostnames))}
+		SiteExtras:  mcp.NewSiteExtras(s.Noindex, s.Protected, s.ExpiresAt, hosts(s.Hostnames)),
+		WorkspaceID: deref(s.WorkspaceID), Workspace: deref(s.WorkspaceName)}
 	if s.CurrentDeploy != nil {
 		d := fromDeploy(*s.CurrentDeploy)
 		out.CurrentDeploy = &d
@@ -148,7 +149,8 @@ func (b localBackend) ListSites(ctx context.Context) ([]mcp.Site, error) {
 	for _, s := range l.Items {
 		out = append(out, mcp.Site{ID: s.ID, Title: s.Title, URL: s.URL, URLs: s.URLs, Slug: deref(s.Slug),
 			LastDeployAt: stampTime(s.LastDeployAt), UpdatedAt: stampTime(&s.UpdatedAt),
-			SiteExtras: mcp.NewSiteExtras(s.Noindex, s.Protected, s.ExpiresAt, hosts(s.Hostnames))})
+			SiteExtras:  mcp.NewSiteExtras(s.Noindex, s.Protected, s.ExpiresAt, hosts(s.Hostnames)),
+			WorkspaceID: deref(s.WorkspaceID), Workspace: deref(s.WorkspaceName)})
 	}
 	return out, nil
 }

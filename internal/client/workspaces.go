@@ -66,9 +66,14 @@ func (c *Client) AddWorkspaceMember(ctx context.Context, id, email string) (*Wor
 	return &out, nil
 }
 
-// RemoveWorkspaceMember removes a member (the user's own ID: leave).
-func (c *Client) RemoveWorkspaceMember(ctx context.Context, id, userID string) error {
-	return c.doJSON(ctx, http.MethodDelete, workspacePath(id)+"/members/"+url.PathEscape(userID), nil, nil, nil)
+// RemoveWorkspaceMember removes a member (the user's own ID: leave) and
+// reports whether the last member took the empty workspace along.
+func (c *Client) RemoveWorkspaceMember(ctx context.Context, id, userID string) (bool, error) {
+	var out struct {
+		WorkspaceDeleted bool `json:"workspace_deleted"`
+	}
+	err := c.doJSON(ctx, http.MethodDelete, workspacePath(id)+"/members/"+url.PathEscape(userID), nil, nil, &out)
+	return out.WorkspaceDeleted, err
 }
 
 // MoveSite moves a site into a workspace (empty workspaceID: personal).

@@ -196,11 +196,17 @@ func (a *api) removeWorkspaceMember(w http.ResponseWriter, r *http.Request) erro
 	if !ok {
 		return domain.ErrNotFound
 	}
-	if _, err := a.svc.RemoveWorkspaceMember(r.Context(), actorFrom(r.Context()), id, userID); err != nil {
+	deleted, err := a.svc.RemoveWorkspaceMember(r.Context(), actorFrom(r.Context()), id, userID)
+	if err != nil {
 		return err
 	}
-	noContent(w)
+	writeJSON(w, http.StatusOK, memberRemovalDTO{WorkspaceDeleted: deleted})
 	return nil
+}
+
+// memberRemovalDTO tells whether the last member took the empty workspace along.
+type memberRemovalDTO struct {
+	WorkspaceDeleted bool `json:"workspace_deleted"`
 }
 
 type moveRequest struct {

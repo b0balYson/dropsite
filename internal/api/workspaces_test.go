@@ -78,7 +78,11 @@ func TestWorkspacesAPI(t *testing.T) {
 	wantStatus(t, h.do(http.MethodPost, "/api/v1/sites/"+personal.ID+"/move", bob, map[string]any{}), http.StatusBadRequest)
 
 	// Leaving: the last member stays while sites remain.
-	wantStatus(t, h.do(http.MethodDelete, base+"/members/"+idString(bobActor.User.ID), bob, nil), http.StatusNoContent)
+	rec = h.do(http.MethodDelete, base+"/members/"+idString(bobActor.User.ID), bob, nil)
+	wantStatus(t, rec, http.StatusOK)
+	if decodeAs[memberRemovalDTO](t, rec).WorkspaceDeleted {
+		t.Fatal("workspace with sites deleted")
+	}
 	wantStatus(t, h.do(http.MethodGet, base, bob, nil), http.StatusNotFound)
 	wantStatus(t, h.do(http.MethodGet, "/api/v1/sites/"+personal.ID, bob, nil), http.StatusNotFound)
 	wantError(t, h.do(http.MethodDelete, base, ann, nil), http.StatusConflict, "workspace_not_empty")

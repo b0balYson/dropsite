@@ -10,9 +10,10 @@ import (
 )
 
 type cloneArgs struct {
-	Site  string `json:"site" jsonschema:"site ID or slug to copy"`
-	Title string `json:"title,omitempty" jsonschema:"name of the new site; default: the old name with (copy)"`
-	Slug  string `json:"slug,omitempty" jsonschema:"optional memorable address of the new site (a-z, 0-9, hyphens)"`
+	Site      string `json:"site" jsonschema:"site ID or slug to copy"`
+	Title     string `json:"title,omitempty" jsonschema:"name of the new site; default: the old name with (copy)"`
+	Slug      string `json:"slug,omitempty" jsonschema:"optional memorable address of the new site (a-z, 0-9, hyphens)"`
+	Workspace string `json:"workspace,omitempty" jsonschema:"optional workspace_id from list_workspaces: create the site in that shared workspace"`
 }
 
 type listTemplatesArgs struct {
@@ -20,10 +21,11 @@ type listTemplatesArgs struct {
 }
 
 type fromTemplateArgs struct {
-	Template string `json:"template" jsonschema:"template name from list_templates, e.g. cafe"`
-	Title    string `json:"title,omitempty" jsonschema:"site name shown on the page and in the interface"`
-	Slug     string `json:"slug,omitempty" jsonschema:"optional memorable address (a-z, 0-9, hyphens)"`
-	Lang     string `json:"lang,omitempty" jsonschema:"ru (default) or en: language of the template texts"`
+	Template  string `json:"template" jsonschema:"template name from list_templates, e.g. cafe"`
+	Title     string `json:"title,omitempty" jsonschema:"site name shown on the page and in the interface"`
+	Slug      string `json:"slug,omitempty" jsonschema:"optional memorable address (a-z, 0-9, hyphens)"`
+	Lang      string `json:"lang,omitempty" jsonschema:"ru (default) or en: language of the template texts"`
+	Workspace string `json:"workspace,omitempty" jsonschema:"optional workspace_id from list_workspaces: create the site in that shared workspace"`
 }
 
 type scheduleArgs struct {
@@ -128,6 +130,14 @@ func (t tools) cloneSite(ctx context.Context, req *sdk.CallToolRequest, in clone
 	if err != nil {
 		return nil, DeployResult{}, err
 	}
+	if in.Workspace != "" {
+		wb, err := t.inWorkspace(ctx, req)
+		if err != nil {
+			return nil, DeployResult{}, err
+		}
+		r, err := wb.CloneSiteIn(ctx, in.Workspace, in.Site, in.Title, in.Slug)
+		return nil, r, err
+	}
 	r, err := b.CloneSite(ctx, in.Site, in.Title, in.Slug)
 	return nil, r, err
 }
@@ -148,6 +158,14 @@ func (t tools) createFromTemplate(ctx context.Context, req *sdk.CallToolRequest,
 	b, err := t.workflowBackend(ctx, req)
 	if err != nil {
 		return nil, DeployResult{}, err
+	}
+	if in.Workspace != "" {
+		wb, err := t.inWorkspace(ctx, req)
+		if err != nil {
+			return nil, DeployResult{}, err
+		}
+		r, err := wb.CreateSiteFromTemplateIn(ctx, in.Workspace, in.Template, in.Title, in.Slug, in.Lang)
+		return nil, r, err
 	}
 	r, err := b.CreateSiteFromTemplate(ctx, in.Template, in.Title, in.Slug, in.Lang)
 	return nil, r, err
