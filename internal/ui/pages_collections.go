@@ -149,6 +149,7 @@ type collectionPageData struct {
 	Form     documentForm
 	Snippet  string
 	Statuses []string
+	Sheet    *sheetBlock
 }
 
 // prettyJSON indents a stored document for the editor.
@@ -186,6 +187,7 @@ func (s *server) renderCollection(w http.ResponseWriter, r *http.Request, rc *re
 	base := collectionPagePath(v.Site.ID, c.Name)
 	data := collectionPageData{V: v, C: c, Docs: p.Items, Status: st, Snippet: mcp.CollectionSnippet(c.Name),
 		Statuses: []string{"all", string(domain.DocumentPending), string(domain.DocumentApproved)}}
+	data.Sheet = s.sheetBlockFor(r, rc, v.Site.ID, c)
 	if p.Next != "" {
 		data.Next = base + "?" + url.Values{"status": {st}, "cursor": {p.Next}}.Encode()
 	}

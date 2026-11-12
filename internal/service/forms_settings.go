@@ -266,6 +266,10 @@ type FormAvailability struct {
 	Telegram bool
 	Bot      string
 	Email    bool
+	// Sheets is true when Google Sheets is set up; SheetsEmail is the
+	// service account to share spreadsheets with.
+	Sheets      bool
+	SheetsEmail string
 }
 
 // FormChannelAvailability reports configured transports without secrets.
@@ -274,7 +278,11 @@ func (s *Service) FormChannelAvailability(ctx context.Context) (FormAvailability
 	if err != nil {
 		return FormAvailability{}, err
 	}
-	return FormAvailability{Telegram: c.telegramToken != "" && c.botName != "", Bot: c.botName, Email: c.smtp.Configured()}, nil
+	out := FormAvailability{Telegram: c.telegramToken != "" && c.botName != "", Bot: c.botName, Email: c.smtp.Configured()}
+	if st, err := s.GetSheetsStatus(ctx); err == nil {
+		out.Sheets, out.SheetsEmail = st.Configured, st.Email
+	}
+	return out, nil
 }
 
 // errText is the user-facing text of a sender error.

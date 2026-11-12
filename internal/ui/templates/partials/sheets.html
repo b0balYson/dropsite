@@ -1,0 +1,104 @@
+{{define "admin_sheets"}}
+{{$s := .D.Sheets}}
+<form method="post" action="/admin/settings/sheets" class="settings" autocomplete="off">
+  {{template "csrf" .}}
+  <section class="section" aria-labelledby="sheets-h">
+    <h2 class="section-title" id="sheets-h">{{.L.T "sheets.admin.title"}}</h2>
+    <p class="lede">{{.L.T "sheets.admin.lede"}}</p>
+    {{if $s.Unreadable}}<p class="notice notice--error" role="alert">{{.L.T "sheets.admin.unreadable"}}</p>{{end}}
+    <p class="hint" id="sheets-state">
+      {{if $s.Configured}}<span class="badge badge--ok">{{.L.T "sheets.admin.state.set"}}</span> <span class="mono">{{$s.Email}}</span>
+      {{else}}<span class="badge badge--muted">{{.L.T "sheets.admin.state.unset"}}</span>{{end}}
+    </p>
+    <div class="field">
+      <label class="field__label" for="sheets-key">{{if $s.Configured}}{{.L.T "sheets.admin.key.replace"}}{{else}}{{.L.T "sheets.admin.key"}}{{end}}</label>
+      <textarea class="input mono" id="sheets-key" name="service_account_json" rows="6" autocomplete="off" spellcheck="false"
+        maxlength="16384" placeholder="{&quot;type&quot;: &quot;service_account&quot;, …}" aria-describedby="sheets-key-hint sheets-state"></textarea>
+      <p class="hint" id="sheets-key-hint">{{.L.T "sheets.admin.key.hint"}}</p>
+    </div>
+    <details class="howto">
+      <summary>{{.L.T "sheets.admin.howto"}}</summary>
+      <ol class="small">
+        <li>{{.L.T "sheets.admin.howto.1"}}</li>
+        <li>{{.L.T "sheets.admin.howto.2"}}</li>
+        <li>{{.L.T "sheets.admin.howto.3"}}</li>
+        <li>{{.L.T "sheets.admin.howto.4"}}</li>
+      </ol>
+    </details>
+  </section>
+  <div class="form-actions">
+    <button class="btn btn--primary" type="submit">{{.L.T "sheets.admin.save"}}</button>
+    {{if $s.Configured}}<button class="btn btn--ghost" type="submit" name="clear" value="1" formnovalidate>{{.L.T "sheets.admin.clear"}}</button>{{end}}
+  </div>
+</form>
+{{end}}
+
+{{define "sheet_link"}}
+{{$b := .D.Sheet}}{{$v := .D.V}}{{$c := .D.C}}{{$base := printf "/sites/%s/data/%s/sheet" $v.Site.ID $c.Name}}
+{{if $b}}
+<section class="section" aria-labelledby="sheet-h">
+  <h2 class="section-title" id="sheet-h">{{.L.T "sheets.title"}}</h2>
+  {{if not $b.Public}}<p class="hint">{{.L.T "sheets.moderated"}}</p>
+  {{else if and (not $b.Status.Configured) (not $b.Link)}}<p class="hint">{{.L.T "sheets.off"}}</p>
+  {{else}}
+  <p class="lede">{{.L.T "sheets.lede"}}</p>
+  {{if $b.Status.Configured}}<p class="small">{{.L.T "sheets.share" "email" $b.Status.Email}}</p>{{else}}<p class="notice notice--error" role="alert">{{.L.T "sheets.off"}}</p>{{end}}
+  <div class="notice notice--warn" role="note"><p class="notice__text">{{.L.T "sheets.warn"}}</p></div>
+  {{with $b.Link}}{{$l := .Link}}
+  <dl class="fields">
+    <div class="fields__row"><dt class="fields__name">{{$.L.T "sheets.sheet"}}</dt><dd class="fields__value"><a class="mono addr-break" href="{{.URL}}" rel="noopener noreferrer" target="_blank">{{if $l.SheetTitle}}{{$l.SheetTitle}}{{else}}{{.URL}}{{end}}</a></dd></div>
+    <div class="fields__row"><dt class="fields__name">{{$.L.T "sheets.interval"}}</dt><dd class="fields__value">{{if $l.IntervalMinutes}}{{$.L.T "sheets.interval.every" "n" $l.IntervalMinutes}}{{if $l.NextSyncAt}} · {{$.L.T "sheets.next" "at" ($.L.DatePtr $l.NextSyncAt)}}{{end}}{{else}}{{$.L.T "sheets.interval.manual"}}{{end}}</dd></div>
+    <div class="fields__row"><dt class="fields__name">{{$.L.T "sheets.last"}}</dt><dd class="fields__value">
+      {{if eq (printf "%s" $l.LastStatus) "ok"}}<span class="badge badge--ok">{{$.L.T "sheets.last.ok" "rows" $l.LastRows}}</span>
+      {{else if eq (printf "%s" $l.LastStatus) "failed"}}<span class="badge badge--error">{{$.L.T "sheets.last.failed"}}</span> {{$l.LastMessage}}
+      {{else}}{{$.L.T "sheets.last.none"}}{{end}}
+      {{if $l.LastSyncAt}} · {{$.L.DatePtr $l.LastSyncAt}} · {{$.L.T (printf "sheets.trigger.%s" $l.LastTrigger)}}{{end}}
+    </dd></div>
+  </dl>
+  {{if $l.LastErrors}}
+  <table class="table small sheet-errors">
+    <thead><tr><th scope="col">{{$.L.T "sheets.errors.row"}}</th><th scope="col">{{$.L.T "sheets.errors.field"}}</th><th scope="col">{{$.L.T "sheets.errors.message"}}</th></tr></thead>
+    <tbody>{{range $l.LastErrors}}<tr><td class="mono">{{.Row}}</td><td class="mono">{{.Field}}</td><td>{{.Message}}</td></tr>{{end}}</tbody>
+  </table>
+  {{end}}
+  <div class="channel__actions">
+    <form method="post" action="{{$base}}/sync">{{template "csrf" $}}<button class="btn btn--small btn--primary" type="submit">{{$.L.T "sheets.sync"}}</button></form>
+    <form method="post" action="{{$base}}/delete">{{template "csrf" $}}<button class="btn btn--small btn--danger-ghost" type="submit">{{$.L.T "sheets.unlink"}}</button></form>
+  </div>
+  {{end}}
+  {{if $b.Status.Configured}}
+  <form class="panel--tight stack" method="post" action="{{$base}}">
+    {{template "csrf" .}}
+    <div class="field">
+      <label class="field__label" for="sheet-url">{{.L.T "sheets.url"}}</label>
+      <input class="input mono" id="sheet-url" name="url" type="url" required maxlength="2048" placeholder="https://docs.google.com/spreadsheets/d/…" value="{{with $b.Link}}{{.URL}}{{end}}" aria-describedby="sheet-url-hint">
+      <p class="hint" id="sheet-url-hint">{{.L.T "sheets.url.hint"}}</p>
+    </div>
+    <div class="field">
+      <label class="field__label" for="sheet-interval">{{.L.T "sheets.interval"}}</label>
+      <select class="input" id="sheet-interval" name="interval_minutes">
+        {{range $b.Intervals}}<option value="{{.}}" {{if eq . $b.Interval}}selected{{end}}>{{if eq . 0}}{{$.L.T "sheets.interval.manual"}}{{else}}{{$.L.T "sheets.interval.every" "n" .}}{{end}}</option>{{end}}
+      </select>
+    </div>
+    <button class="btn btn--primary" type="submit">{{if $b.Link}}{{.L.T "sheets.save"}}{{else}}{{.L.T "sheets.link"}}{{end}}</button>
+  </form>
+  {{end}}
+  {{end}}
+</section>
+{{end}}
+{{end}}
+
+{{define "sheets_channel_add"}}
+<form class="panel--tight stack" method="post" action="/sites/{{.D.V.Site.ID}}/forms/channels">
+  {{template "csrf" .}}<input type="hidden" name="kind" value="sheets">
+  <h4 class="channel-add__title">{{.L.T "forms.kind.sheets"}}</h4>
+  {{if .D.Available.Sheets}}
+  <p class="hint">{{.L.T "forms.add.sheets.hint" "email" .D.Available.SheetsEmail}}</p>
+  <div class="field">
+    <label class="field__label" for="gs-url">{{.L.T "forms.add.sheets.url"}}</label>
+    <input class="input mono" id="gs-url" name="target" type="url" required maxlength="2048" placeholder="https://docs.google.com/spreadsheets/d/…" {{if eq .D.ErrorKind "sheets"}}value="{{.D.FormTarget}}"{{end}}>
+  </div>
+  <button class="btn btn--primary" type="submit">{{.L.T "forms.add.sheets.submit"}}</button>
+  {{else}}<p class="hint">{{.L.T "forms.add.sheets.off"}}</p>{{end}}
+</form>
+{{end}}
