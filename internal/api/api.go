@@ -33,13 +33,17 @@ type api struct {
 	log *slog.Logger
 }
 
-// New returns the handler for the public listener.
-func New(svc *service.Service, log *slog.Logger) http.Handler {
+// New returns the handler for the public listener. Mounts add non-API paths
+// (MCP, OAuth) behind the same middleware.
+func New(svc *service.Service, log *slog.Logger, mounts ...Mount) http.Handler {
 	if log == nil {
 		log = slog.New(slog.DiscardHandler)
 	}
 	a := &api{svc: svc, log: log}
 	mux := http.NewServeMux()
+	for _, m := range mounts {
+		mux.Handle(m.Pattern, m.Handler)
+	}
 	a.register(mux, a.routes())
 	return a.middleware(mux)
 }
@@ -49,6 +53,7 @@ func New(svc *service.Service, log *slog.Logger) http.Handler {
 func (a *api) routes() []route {
 	return []route{
 		{Method: http.MethodGet, Path: "/openapi.json", Public: true, handle: a.openAPI},
+		{Method: http.MethodPost, Path: "/connect/exchange", Public: true, handle: a.exchangeConnect},
 		{Method: http.MethodGet, Path: "/me", handle: a.me},
 		{Method: http.MethodGet, Path: "/sites", handle: a.listSites},
 		{Method: http.MethodPost, Path: "/sites", handle: a.createSite},

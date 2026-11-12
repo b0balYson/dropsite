@@ -45,6 +45,10 @@ const (
 	CodeNoPrevious     = "no_previous_deploy"
 	CodeTokenInvalid   = "token_name_invalid"
 	CodeSettingInvalid = "setting_invalid"
+	// CodeConnectInvalid covers unknown, used and expired connect codes alike.
+	CodeConnectInvalid = "connect_code_invalid"
+	// CodeFilesTooLarge rejects an MCP file set above the inline limit.
+	CodeFilesTooLarge = "files_too_large"
 
 	// Archive validation codes (produced by internal/archive).
 	CodeArchiveFormat      = "archive_unsupported_format"

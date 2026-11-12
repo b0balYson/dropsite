@@ -26,6 +26,8 @@ type Repository interface {
 	DeployRepository
 	AuditRepository
 	SettingsRepository
+	ConnectRepository
+	OAuthRepository
 	Ping(ctx context.Context) error
 }
 

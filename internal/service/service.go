@@ -68,6 +68,8 @@ type Service struct {
 	loginLimit   *ratelimit.Window
 	accountLimit *ratelimit.Window
 	tokenLimit   *ratelimit.Window
+	codeLimit    *ratelimit.Window
+	regLimit     *ratelimit.Window
 	loginBusy    keyedTryLock
 	hasher       *passwordHasher
 	siteLocks    keyedMutex
@@ -101,6 +103,8 @@ func New(d Deps) *Service {
 		loginLimit:   ratelimit.New(FailedLoginsPerIP, FailedLoginsWindow).WithClock(now),
 		accountLimit: ratelimit.New(FailedLoginsPerAccount, FailedLoginsWindow).WithClock(now),
 		tokenLimit:   ratelimit.New(FailedTokensPerIP, FailedLoginsWindow).WithClock(now),
+		codeLimit:    ratelimit.New(FailedCodesPerIP, FailedCodesWindow).WithClock(now),
+		regLimit:     ratelimit.New(RegistrationsPerIP, RegistrationWindow).WithClock(now),
 		hasher:       newPasswordHasher(),
 	}
 }

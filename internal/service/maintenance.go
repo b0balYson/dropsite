@@ -84,7 +84,7 @@ func (s *Service) Housekeeping(ctx context.Context) error {
 	if _, err := s.repo.DeleteExpiredInvites(ctx, now.Add(-InviteTTL)); err != nil {
 		return fmt.Errorf("delete expired invites: %w", err)
 	}
-	return nil
+	return s.housekeepConnect(ctx, now)
 }
 
 func (s *Service) purgeSite(ctx context.Context, id string, now time.Time) error {
