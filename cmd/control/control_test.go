@@ -83,6 +83,45 @@ func TestHealthz(t *testing.T) {
 	resp.Body.Close()
 }
 
+// TestAuthCheckMounted checks the forward_auth endpoint on the internal
+// listener and the visitor login page on the public one.
+func TestAuthCheckMounted(t *testing.T) {
+	ctx := context.Background()
+	a, err := build(ctx, testConfig(t, t.TempDir()), quietLog())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer a.db.Close()
+	admin := adminActor(t, a)
+	v, err := a.svc.CreateSite(ctx, admin, "Docs", "docs")
+	if err != nil {
+		t.Fatal(err)
+	}
+	pass := "visitor-pass-1"
+	if _, err := a.svc.UpdateSite(ctx, admin, v.Site.ID, service.SiteUpdate{Password: &pass}); err != nil {
+		t.Fatal(err)
+	}
+	noRedirect := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	for _, tc := range []struct {
+		h    http.Handler
+		path string
+		want int
+	}{
+		{a.intern, "/internal/auth-check", http.StatusFound},
+		{a.public, "/_dropsite/login", http.StatusOK},
+	} {
+		srv := httptest.NewServer(tc.h)
+		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+tc.path, nil)
+		req.Host = "docs.pp.test"
+		resp, err := noRedirect.Do(req)
+		if err != nil || resp.StatusCode != tc.want {
+			t.Fatalf("%s: %v %v", tc.path, resp, err)
+		}
+		resp.Body.Close()
+		srv.Close()
+	}
+}
+
 func TestBuildFailsWithoutAdminOnEmptyDatabase(t *testing.T) {
 	cfg := testConfig(t, t.TempDir())
 	cfg.AdminPassword = ""

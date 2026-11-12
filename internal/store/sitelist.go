@@ -64,16 +64,12 @@ func listSitePage(ctx context.Context, tx *sql.Tx, f SiteFilter, pattern string)
 
 func scanSiteSummary(rows *sql.Rows) (SiteSummary, error) {
 	var s SiteSummary
-	var current sql.NullString
-	var created, updated int64
-	var deleted, purged, deployAt, size sql.NullInt64
-	if err := rows.Scan(&s.ID, &s.OwnerID, &s.Title, &current, &created, &updated, &deleted, &purged,
-		&s.OwnerEmail, &deployAt, &size); err != nil {
+	var raw siteScan
+	var deployAt, size sql.NullInt64
+	if err := rows.Scan(append(raw.dest(&s.Site), &s.OwnerEmail, &deployAt, &size)...); err != nil {
 		return SiteSummary{}, err
 	}
-	s.CurrentDeployID = fromNullString(current)
-	s.CreatedAt, s.UpdatedAt = fromMS(created), fromMS(updated)
-	s.DeletedAt, s.PurgedAt = fromNullMS(deleted), fromNullMS(purged)
+	raw.finish(&s.Site)
 	s.LastDeployAt, s.SizeBytes = fromNullMS(deployAt), size.Int64
 	s.Hostnames = []domain.Hostname{}
 	return s, nil
@@ -149,7 +145,8 @@ func (db *DB) ActiveLayout(ctx context.Context) ([]SiteLayout, error) {
 }
 
 func activeSites(ctx context.Context, tx *sql.Tx) ([]SiteLayout, error) {
-	rows, err := tx.QueryContext(ctx, "SELECT id, current_deploy_id FROM sites WHERE deleted_at IS NULL ORDER BY id")
+	rows, err := tx.QueryContext(ctx, `SELECT id, current_deploy_id, noindex, access_password_hash != ''
+		FROM sites WHERE deleted_at IS NULL ORDER BY id`)
 	if err != nil {
 		return nil, fmt.Errorf("list active sites: %w", err)
 	}
@@ -158,7 +155,7 @@ func activeSites(ctx context.Context, tx *sql.Tx) ([]SiteLayout, error) {
 	for rows.Next() {
 		var l SiteLayout
 		var current sql.NullString
-		if err := rows.Scan(&l.SiteID, &current); err != nil {
+		if err := rows.Scan(&l.SiteID, &current, &l.Noindex, &l.Protected); err != nil {
 			return nil, fmt.Errorf("scan active site: %w", err)
 		}
 		l.CurrentDeployID = fromNullString(current)

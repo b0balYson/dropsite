@@ -41,7 +41,7 @@ func (s *Service) Deploy(ctx context.Context, a Actor, ref string, r io.Reader, 
 		return DeployResult{}, domain.ErrRateLimited.WithRetryAfter(retry).
 			WithParams(map[string]any{"limit": DeploysPerHour})
 	}
-	lim, err := s.Limits(ctx)
+	lim, err := s.siteOwnerLimits(ctx, site)
 	if err != nil {
 		return DeployResult{}, err
 	}
@@ -298,10 +298,15 @@ func (s *Service) CleanUploads() error {
 	return nil
 }
 
-// UploadLimit is the largest request body a deploy may send, so adapters can
-// reject oversized uploads before reading them.
-func (s *Service) UploadLimit(ctx context.Context) (int64, error) {
-	lim, err := s.Limits(ctx)
+// UploadLimit is the largest request body a deploy to the site may send, so
+// adapters can reject oversized uploads before reading them. It follows the
+// limits of the site's owner; an invisible site is "not found".
+func (s *Service) UploadLimit(ctx context.Context, a Actor, ref string) (int64, error) {
+	site, err := s.resolveSite(ctx, a, ref)
+	if err != nil {
+		return 0, err
+	}
+	lim, err := s.siteOwnerLimits(ctx, site)
 	if err != nil {
 		return 0, err
 	}

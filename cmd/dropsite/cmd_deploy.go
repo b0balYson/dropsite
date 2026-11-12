@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sync/atomic"
+	"time"
 
 	"github.com/b0balYson/dropsite/internal/archive"
 	"github.com/b0balYson/dropsite/internal/brand"
@@ -13,10 +14,12 @@ import (
 )
 
 type deployOpts struct {
-	dir    string
-	site   string
-	title  string
-	asJSON bool
+	dir     string
+	site    string
+	title   string
+	expires string
+	asJSON  bool
+	expiry  *client.Expiry // parsed --expires; nil leaves the expiry alone
 }
 
 // deployOutput is the --json result of deploy and rollback.
@@ -28,13 +31,14 @@ type deployOutput struct {
 }
 
 func cmdDeploy(ctx context.Context, a *app, args []string) error {
-	fs := a.newFlagSet("deploy", "<dir> [--site <id|slug>] [--title <text>] [--json]",
+	fs := a.newFlagSet("deploy", "<dir> [--site <id|slug>] [--title <text>] [--expires <when>] [--json]",
 		"Pack <dir> (it must contain index.html), publish it and print the site URL.\n"+
 			"Without --site the site is taken from "+brand.ProjectFile+" in <dir>; if there is\n"+
 			"none, a new site is created and remembered there.")
 	var o deployOpts
 	fs.StringVar(&o.site, "site", "", "publish to this site (ID or slug)")
 	fs.StringVar(&o.title, "title", "", "title of a newly created site (default: the directory name)")
+	fs.StringVar(&o.expires, "expires", "", "take the site down after: 7d, 36h, 2026-12-31 (end of day, UTC), an RFC 3339 time, or never")
 	fs.BoolVar(&o.asJSON, "json", false, "print one JSON object {site_id, deploy_id, url, urls}")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
@@ -44,6 +48,11 @@ func cmdDeploy(ctx context.Context, a *app, args []string) error {
 		return err
 	}
 	o.dir = pos[0]
+	if o.expires != "" {
+		if o.expiry, err = parseExpires(o.expires, time.Now()); err != nil {
+			return err
+		}
+	}
 	return a.deploy(ctx, o)
 }
 
@@ -71,7 +80,28 @@ func (a *app) deploy(ctx context.Context, o deployOpts) error {
 	if err != nil {
 		return err
 	}
-	return a.printDeploy(res, o.asJSON)
+	if err := a.printDeploy(res, o.asJSON); err != nil {
+		return err
+	}
+	return a.setExpiry(ctx, c, siteID, o.expiry)
+}
+
+// setExpiry applies --expires after a successful publication.
+func (a *app) setExpiry(ctx context.Context, c *client.Client, siteID string, e *client.Expiry) error {
+	if e == nil {
+		return nil
+	}
+	s, err := c.UpdateSite(ctx, siteID, client.UpdateSiteRequest{ExpiresAt: e})
+	if err != nil {
+		return withHint(fmt.Errorf("the site is published, but its expiry was not set: %w", err),
+			"Run the command again with a valid --expires, or set the date in the web interface.")
+	}
+	if s.ExpiresAt == nil {
+		fmt.Fprintln(a.stderr, "The site has no expiry date.")
+		return nil
+	}
+	fmt.Fprintf(a.stderr, "The site expires at %s.\n", s.ExpiresAt.UTC().Format(time.RFC3339))
+	return nil
 }
 
 func packLimits(l client.Limits) archive.Limits {

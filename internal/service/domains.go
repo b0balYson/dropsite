@@ -110,7 +110,7 @@ func (s *Service) RemoveDomain(ctx context.Context, a Actor, ref, hostname strin
 	if err != nil {
 		return err
 	}
-	if err := s.files.UnlinkHost(name); err != nil {
+	if err := s.unlinkHost(name); err != nil {
 		return fmt.Errorf("unlink domain: %w", err)
 	}
 	s.audit(ctx, a, "domain.remove", siteTarget(site.ID), map[string]any{
@@ -175,13 +175,15 @@ func (s *Service) review(ctx context.Context, a Actor, hostname string, approve 
 	d.Hostname = h
 	meta := map[string]any{"domain": h.Hostname, "owner": d.OwnerEmail}
 	if approve {
-		if err := s.files.LinkHost(h.Hostname, h.SiteID); err != nil {
+		// Access markers of the site first, so the domain is never served
+		// less restricted than the site's other addresses.
+		if err := s.linkHost(ctx, h.SiteID, h.Hostname); err != nil {
 			return DomainView{}, fmt.Errorf("link domain: %w", err)
 		}
 		s.audit(ctx, a, "domain.approve", siteTarget(h.SiteID), meta)
 		return d, nil
 	}
-	if err := s.files.UnlinkHost(h.Hostname); err != nil {
+	if err := s.unlinkHost(h.Hostname); err != nil {
 		return DomainView{}, fmt.Errorf("unlink domain: %w", err)
 	}
 	meta["reason"] = reason

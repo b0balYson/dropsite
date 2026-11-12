@@ -661,9 +661,34 @@
           "$ref": "#/components/parameters/ID"
         }
       ],
+      "get": {
+        "operationId": "adminGetUser",
+        "summary": "A user with their personal limit overrides and effective limits (admin)",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      },
       "patch": {
         "operationId": "adminUpdateUser",
-        "summary": "Block/unblock a user or reissue an invite (admin); send exactly one field",
+        "summary": "Block/unblock a user, reissue an invite or set personal limits (admin); send exactly one field",
         "requestBody": {
           "required": true,
           "content": {
@@ -1662,7 +1687,10 @@
           "owner_id",
           "created_at",
           "updated_at",
-          "current_deploy"
+          "current_deploy",
+          "noindex",
+          "protected",
+          "expires_at"
         ],
         "properties": {
           "id": {
@@ -1714,6 +1742,20 @@
                 "type": "null"
               }
             ]
+          },
+          "noindex": {
+            "type": "boolean"
+          },
+          "protected": {
+            "type": "boolean",
+            "description": "Visitors need a password"
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -1730,7 +1772,10 @@
           "last_deploy_at",
           "size_bytes",
           "created_at",
-          "updated_at"
+          "updated_at",
+          "noindex",
+          "protected",
+          "expires_at"
         ],
         "properties": {
           "id": {
@@ -1776,6 +1821,20 @@
           },
           "updated_at": {
             "type": "string",
+            "format": "date-time"
+          },
+          "noindex": {
+            "type": "boolean"
+          },
+          "protected": {
+            "type": "boolean",
+            "description": "Visitors need a password"
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date-time"
           }
         }
@@ -1911,6 +1970,14 @@
             "type": "string",
             "format": "date-time",
             "description": "Only after reissue_invite"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/Limits",
+            "description": "Only after limits: the effective limits"
+          },
+          "limit_overrides": {
+            "$ref": "#/components/schemas/LimitOverrides",
+            "description": "Only after limits"
           }
         }
       },
@@ -2075,6 +2142,27 @@
               "string",
               "null"
             ]
+          },
+          "noindex": {
+            "type": "boolean",
+            "description": "Ask search engines not to index the site (X-Robots-Tag on every response)"
+          },
+          "protected": {
+            "type": "boolean",
+            "description": "false removes password protection; true without password requires an existing one"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Visitor password; protects the site or changes its password. Never returned"
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the site is taken down and soft-deleted; null removes the expiry. Future, at most 10 years ahead"
           }
         }
       },
@@ -2134,6 +2222,9 @@
           },
           "reissue_invite": {
             "const": true
+          },
+          "limits": {
+            "$ref": "#/components/schemas/LimitOverrides"
           }
         }
       },
@@ -2274,6 +2365,67 @@
             "items": {
               "$ref": "#/components/schemas/StatsCount"
             }
+          }
+        }
+      },
+      "LimitOverrides": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Personal limits; null or a missing field inherits the global value. A PATCH replaces all overrides",
+        "properties": {
+          "max_site_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "max_file_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "max_files": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "max_sites_per_user": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "keep_releases": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 2
+          }
+        }
+      },
+      "UserDetail": {
+        "type": "object",
+        "required": [
+          "user",
+          "limits",
+          "limit_overrides"
+        ],
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/Limits"
+          },
+          "limit_overrides": {
+            "$ref": "#/components/schemas/LimitOverrides"
           }
         }
       }

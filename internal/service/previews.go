@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/b0balYson/dropsite/internal/domain"
 	"github.com/b0balYson/dropsite/internal/storage"
@@ -50,7 +51,9 @@ func (s *Service) linkPreview(ctx context.Context, siteID, deployID string) {
 		}
 		return
 	}
-	if err := s.files.LinkPreview(s.previewHost(siteID, deployID), siteID, deployID); err != nil {
+	host := s.previewHost(siteID, deployID)
+	err := s.withHostFlags(ctx, siteID, host, func() error { return s.files.LinkPreview(host, siteID, deployID) })
+	if err != nil {
 		s.log.Error("preview: link", "site", siteID, "deploy", deployID, "err", err)
 	}
 }
@@ -62,7 +65,59 @@ func (s *Service) unlinkPreview(ctx context.Context, siteID, deployID string) er
 	if err != nil || shadowed {
 		return err
 	}
-	return s.files.UnlinkHost(s.previewHost(siteID, deployID))
+	return s.unlinkHost(s.previewHost(siteID, deployID))
+}
+
+// previewHosts lists the preview names of the site's ready releases that are
+// served (wildcard mode, not shadowed by a legacy slug).
+func (s *Service) previewHosts(ctx context.Context, siteID string) ([]string, error) {
+	if !s.cfg.Wildcard() {
+		return nil, nil
+	}
+	deploys, err := s.repo.ListDeploys(ctx, siteID)
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, d := range deploys {
+		if d.Status != domain.DeployReady {
+			continue
+		}
+		shadowed, err := s.previewShadowed(ctx, siteID, d.ID)
+		if err != nil {
+			return nil, err
+		}
+		if !shadowed {
+			out = append(out, s.previewHost(siteID, d.ID))
+		}
+	}
+	return out, nil
+}
+
+// siteOfPreview resolves the preview hostname of a ready release to its
+// active site (wildcard mode only).
+func (s *Service) siteOfPreview(ctx context.Context, host string) (domain.Site, error) {
+	label, rest, ok := strings.Cut(host, ".")
+	if !ok || rest != s.cfg.BaseDomain || !s.cfg.Wildcard() || !domain.IsPreviewLabel(label) {
+		return domain.Site{}, domain.ErrNotFound
+	}
+	siteID := label[len(label)-domain.SiteIDLength:]
+	deployID := label[2 : len(label)-domain.SiteIDLength-1]
+	if domain.PreviewLabel(siteID, deployID) != label {
+		return domain.Site{}, domain.ErrNotFound
+	}
+	site, err := s.repo.GetSite(ctx, siteID)
+	if err != nil {
+		return domain.Site{}, err
+	}
+	d, err := s.repo.GetDeploy(ctx, siteID, deployID)
+	if err != nil {
+		return domain.Site{}, err
+	}
+	if d.Status != domain.DeployReady {
+		return domain.Site{}, domain.ErrNotFound
+	}
+	return site, nil
 }
 
 // unlinkPreviews removes the previews of the site's ready releases among
@@ -94,6 +149,7 @@ func (s *Service) toStorageLayout(in []store.SiteLayout) []storage.SiteLayout {
 		sl := storage.SiteLayout{
 			SiteID: l.SiteID, CurrentDeployID: l.CurrentDeployID,
 			Hostnames: l.Hostnames, ReadyDeployIDs: l.ReadyDeployIDs,
+			Noindex: l.Noindex, Protected: l.Protected,
 		}
 		if s.cfg.Wildcard() {
 			for _, d := range l.ReadyDeployIDs {

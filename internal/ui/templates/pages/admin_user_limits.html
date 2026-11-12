@@ -1,0 +1,39 @@
+{{define "content"}}
+<nav class="crumbs" aria-label="{{.L.T "nav.breadcrumbs"}}"><a href="/admin/users">← {{.L.T "users.title"}}</a></nav>
+<header class="page-head">
+  <div class="page-head__text">
+    <p class="eyebrow mono addr-break">{{wbr .D.User.Email}}</p>
+    <h1 class="display">{{.L.T "limits.title"}}</h1>
+    <p class="lede">{{.L.T "limits.lede"}}</p>
+  </div>
+</header>
+
+<form method="post" action="/admin/users/{{.D.User.ID}}/limits" class="settings">
+  {{template "csrf" .}}
+  <section class="section" aria-labelledby="limits-h">
+    <h2 class="sr-only" id="limits-h">{{.L.T "limits.title"}}</h2>
+    <div class="setting-list">
+    {{range .D.Fields}}
+      <div class="setting{{if .Overridden}} setting--over{{end}}">
+        <div class="setting__label">
+          <label class="field__label" for="l-{{.Key}}">{{$.L.T (printf "settings.%s" .Key)}}</label>
+          <p class="hint">{{$.L.T (printf "settings.%s.hint" .Key)}}</p>
+        </div>
+        <div class="setting__input">
+          <input class="input mono" id="l-{{.Key}}" name="{{.Key}}" inputmode="{{if .Bytes}}decimal{{else}}numeric{{end}}" value="{{.Value}}" placeholder="{{.Global}}" aria-describedby="ld-{{.Key}}">
+          <span class="setting__unit">{{if .Bytes}}{{$.L.T "unit.mb"}}{{else}}{{$.L.T "unit.pcs"}}{{end}}</span>
+        </div>
+        <div class="setting__state" id="ld-{{.Key}}">
+          {{if .Overridden}}<span class="badge badge--warn">{{$.L.T "limits.personal"}}</span>{{else}}<span class="badge badge--muted">{{$.L.T "limits.inherited"}}</span>{{end}}
+          <span class="small">{{$.L.T "limits.global" "value" .Global}} {{if .Bytes}}{{$.L.T "unit.mb"}}{{end}}</span>
+          {{if .Overridden}}<label class="check small"><input type="checkbox" name="reset_{{.Key}}" value="1"> {{$.L.T "settings.reset"}}</label>{{end}}
+        </div>
+      </div>
+    {{end}}
+    </div>
+  </section>
+  <div class="form-actions">
+    <button class="btn btn--primary" type="submit">{{.L.T "form.save"}}</button>
+  </div>
+</form>
+{{end}}

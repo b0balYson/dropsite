@@ -54,6 +54,10 @@ const (
 	CodeDomainLimit         = "domain_limit_reached"
 	CodeDomainReasonInvalid = "domain_reason_invalid"
 
+	// Site access controls (stage 2).
+	CodeSitePasswordRequired = "site_password_required"
+	CodeExpiryInvalid        = "expiry_invalid"
+
 	// Archive validation codes (produced by internal/archive).
 	CodeArchiveFormat      = "archive_unsupported_format"
 	CodeArchiveCorrupt     = "archive_corrupt"

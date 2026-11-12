@@ -30,7 +30,40 @@ type Repository interface {
 	SettingsRepository
 	StatsRepository
 	CounterRepository
+	AccessRepository
+	UserLimitsRepository
+	SecretRepository
 	Ping(ctx context.Context) error
+}
+
+// AccessRepository manages per-site access controls and expiry.
+type AccessRepository interface {
+	// FindSiteByHostname resolves an active, verified hostname to its active site.
+	FindSiteByHostname(ctx context.Context, hostname string) (domain.Site, error)
+	SetSiteNoindex(ctx context.Context, siteID string, on bool, now time.Time) error
+	GetSiteAccess(ctx context.Context, siteID string) (domain.SiteAccess, error)
+	// SetSitePassword stores the hash ("" removes protection) and increments
+	// the access version, returning the new version.
+	SetSitePassword(ctx context.Context, siteID, hash string, now time.Time) (int64, error)
+	// SetSiteExpiry sets or clears (nil) the expiry of an active site.
+	SetSiteExpiry(ctx context.Context, siteID string, expiresAt *time.Time, now time.Time) error
+	// ListExpiredSites returns active sites whose expiry is at or before now.
+	ListExpiredSites(ctx context.Context, now time.Time) ([]string, error)
+}
+
+// UserLimitsRepository stores per-user limit overrides.
+type UserLimitsRepository interface {
+	// GetUserLimits returns the overrides of a user (all nil if none).
+	GetUserLimits(ctx context.Context, userID int64) (domain.LimitOverrides, error)
+	// SetUserLimits replaces the overrides; all-nil removes the row.
+	SetUserLimits(ctx context.Context, userID int64, o domain.LimitOverrides, now time.Time) error
+}
+
+// SecretRepository stores installation-wide random keys.
+type SecretRepository interface {
+	// EnsureSecret stores value under name unless a value exists, and returns
+	// the stored value.
+	EnsureSecret(ctx context.Context, name string, value []byte, now time.Time) ([]byte, error)
 }
 
 // UserRepository manages accounts.
@@ -235,6 +268,8 @@ type SiteLayout struct {
 	CurrentDeployID *string
 	Hostnames       []string
 	ReadyDeployIDs  []string
+	Noindex         bool
+	Protected       bool
 }
 
 // ExternalHost is an external hostname with its site and owner.

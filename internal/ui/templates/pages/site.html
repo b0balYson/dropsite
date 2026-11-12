@@ -14,7 +14,17 @@
     {{end}}
   </ul>
   {{template "site_meta" .}}
+  {{if or $v.Site.Protected $v.Site.Noindex}}
+  <ul class="flag-list" aria-label="{{.L.T "access.title"}}">
+    {{if $v.Site.Protected}}<li><span class="badge badge--ok">{{.L.T "access.badge.protected"}}</span></li>{{end}}
+    {{if $v.Site.Noindex}}<li><span class="badge badge--muted">{{.L.T "access.badge.noindex"}}</span></li>{{end}}
+  </ul>
+  {{end}}
 </header>
+
+{{if .D.Access.Soon}}
+<p class="notice notice--warn expiry-notice" role="status">{{.L.T "access.expires.soon" "date" (.L.DatePtr $v.Site.ExpiresAt)}}</p>
+{{end}}
 
 <div class="site-grid">
   <section class="site-grid__main" aria-labelledby="publish-h">
@@ -53,7 +63,8 @@
     </details>
   </section>
 
-  <section class="site-grid__side panel panel--tight" aria-labelledby="settings-h">
+  <div class="site-grid__side side-stack">
+  <section class="panel panel--tight" aria-labelledby="settings-h">
     <h2 class="section-title" id="settings-h">{{.L.T "site.settings"}}</h2>
     <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/settings">
       {{template "csrf" .}}
@@ -89,6 +100,37 @@
       <button class="btn btn--ghost" type="submit">{{.L.T "counters.save"}}</button>
     </form>
   </section>
+
+  <section class="panel panel--tight" aria-labelledby="access-h">
+    <h2 class="section-title" id="access-h">{{.L.T "access.title"}}</h2>
+    <form class="stack access" method="post" action="/sites/{{$v.Site.ID}}/access">
+      {{template "csrf" .}}
+      <fieldset class="access__group">
+        <legend class="field__label">{{.L.T "access.index.legend"}}</legend>
+        <label class="check"><input type="checkbox" name="noindex" value="1"{{if $v.Site.Noindex}} checked{{end}} aria-describedby="noindex-hint"> <span>{{.L.T "access.index.label"}}</span></label>
+        <p class="hint" id="noindex-hint">{{.L.T "access.index.hint"}}</p>
+      </fieldset>
+      <fieldset class="access__group">
+        <legend class="field__label">{{.L.T "access.pass.legend"}}</legend>
+        <label class="check"><input type="checkbox" name="protected" value="1"{{if $v.Site.Protected}} checked{{end}}> <span>{{.L.T "access.pass.label"}}</span></label>
+        <div class="field">
+          <label class="field__label field__label--sub" for="site-password">{{if $v.Site.Protected}}{{.L.T "access.pass.new"}}{{else}}{{.L.T "access.pass.field"}}{{end}}</label>
+          <input class="input" id="site-password" name="password" type="password" minlength="10" maxlength="256" autocomplete="new-password" aria-describedby="password-hint">
+          <p class="hint" id="password-hint">{{if $v.Site.Protected}}{{.L.T "access.pass.hint.change"}}{{else}}{{.L.T "access.pass.hint.new"}}{{end}}</p>
+        </div>
+      </fieldset>
+      <fieldset class="access__group">
+        <legend class="field__label">{{.L.T "access.expires.legend"}}</legend>
+        <div class="field">
+          <label class="field__label field__label--sub" for="expires">{{.L.T "access.expires.label"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+          <input class="input mono" id="expires" name="expires" type="date" min="{{.D.Access.MinDay}}" value="{{.D.Access.ExpiresDay}}" aria-describedby="expires-hint">
+          <p class="hint" id="expires-hint">{{if $v.Site.ExpiresAt}}{{.L.T "access.expires.current" "date" (.L.DatePtr $v.Site.ExpiresAt)}} {{end}}{{.L.T "access.expires.hint"}}</p>
+        </div>
+      </fieldset>
+      <button class="btn btn--primary" type="submit">{{.L.T "form.save"}}</button>
+    </form>
+  </section>
+  </div>
 </div>
 
 {{template "site_stats" .}}

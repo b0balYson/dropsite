@@ -34,6 +34,8 @@ type fakeServer struct {
 	rateLimit  bool    // every request gets 429
 	lastFiles  []string
 	lastClient string
+	lastPatch  map[string]any // body of the last PATCH /sites/{ref}
+	patchErr   *apiErr        // returned instead of accepting a PATCH
 }
 
 type fakeSite struct {
@@ -68,6 +70,7 @@ func newFakeServer(t *testing.T) *fakeServer {
 	mux.HandleFunc("POST /api/v1/sites", f.createSite)
 	mux.HandleFunc("GET /api/v1/sites/{ref}", f.withSite(f.getSite))
 	mux.HandleFunc("DELETE /api/v1/sites/{ref}", f.withSite(f.deleteSite))
+	mux.HandleFunc("PATCH /api/v1/sites/{ref}", f.withSite(f.patchSite))
 	mux.HandleFunc("POST /api/v1/sites/{ref}/deploys", f.withSite(f.deploy))
 	mux.HandleFunc("GET /api/v1/sites/{ref}/deploys", f.withSite(f.listDeploys))
 	mux.HandleFunc("POST /api/v1/sites/{ref}/rollback", f.withSite(f.rollback))
@@ -287,6 +290,22 @@ func (f *fakeServer) createSite(w http.ResponseWriter, r *http.Request) {
 
 func (f *fakeServer) getSite(w http.ResponseWriter, _ *http.Request, s *fakeSite) {
 	reply(w, 200, s.json())
+}
+
+func (f *fakeServer) patchSite(w http.ResponseWriter, r *http.Request, s *fakeSite) {
+	if f.patchErr != nil {
+		fail(w, *f.patchErr)
+		return
+	}
+	var body map[string]any
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		fail(w, apiErr{400, "invalid_input", "bad json", nil})
+		return
+	}
+	f.lastPatch = body
+	out := s.json()
+	out["expires_at"] = body["expires_at"]
+	reply(w, 200, out)
 }
 
 func (f *fakeServer) deleteSite(w http.ResponseWriter, _ *http.Request, s *fakeSite) {
