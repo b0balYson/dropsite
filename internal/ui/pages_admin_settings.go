@@ -47,6 +47,7 @@ type settingsData struct {
 	ExtraOver bool
 	Builtin   []string
 	EnvSlugs  []string
+	Counters  domain.Counters
 }
 
 func formatSetting(l *locale, bytes bool, v int64) string {
@@ -65,7 +66,7 @@ func (s *server) settingsPage(w http.ResponseWriter, r *http.Request, rc *reqCtx
 	defaults := s.svc.Config().Limits
 	data := settingsData{
 		Extra: strings.Join(st.ExtraReserved, "\n"), ExtraOver: st.Overridden[service.SettingReservedSlugs],
-		Builtin: st.Builtin, EnvSlugs: st.EnvReserved,
+		Builtin: st.Builtin, EnvSlugs: st.EnvReserved, Counters: st.Counters,
 	}
 	for _, f := range numericSettings {
 		minimum := 1
@@ -119,6 +120,13 @@ func settingsUpdate(r *http.Request, l *locale, st service.Settings) (service.Se
 			return service.SettingsUpdate{}, f.key
 		}
 		f.set(&upd, &v)
+	}
+	counters := domain.Counters{
+		MetrikaID: strings.TrimSpace(r.PostFormValue(service.SettingCounterMetrika)),
+		GA4ID:     strings.ToUpper(strings.TrimSpace(r.PostFormValue(service.SettingCounterGA4))),
+	}
+	if counters != st.Counters {
+		upd.Counters = &counters
 	}
 	if r.PostFormValue("reset_"+service.SettingReservedSlugs) == "1" {
 		upd.Reset = append(upd.Reset, service.SettingReservedSlugs)
