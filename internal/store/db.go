@@ -155,8 +155,15 @@ func (db *DB) migrate(ctx context.Context) error {
 	if latest := ms[len(ms)-1].version; current > latest {
 		return fmt.Errorf("%w (database %d, binary %d)", ErrSchemaTooNew, current, latest)
 	}
+	applied, err := db.appliedVersions(ctx)
+	if err != nil {
+		return err
+	}
+	// Every missing version is applied, not only those above the newest one:
+	// changes developed in parallel may land with a lower number after a
+	// higher one has already run on an installation.
 	for _, m := range ms {
-		if m.version <= current {
+		if applied[m.version] {
 			continue
 		}
 		if err := db.apply(ctx, m); err != nil {
@@ -164,6 +171,26 @@ func (db *DB) migrate(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func (db *DB) appliedVersions(ctx context.Context) (map[int]bool, error) {
+	rows, err := db.w.QueryContext(ctx, "SELECT version FROM schema_migrations")
+	if err != nil {
+		return nil, fmt.Errorf("read applied migrations: %w", err)
+	}
+	defer rows.Close()
+	out := map[int]bool{}
+	for rows.Next() {
+		var v int
+		if err := rows.Scan(&v); err != nil {
+			return nil, fmt.Errorf("read applied migrations: %w", err)
+		}
+		out[v] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read applied migrations: %w", err)
+	}
+	return out, nil
 }
 
 func (db *DB) apply(ctx context.Context, m migration) error {

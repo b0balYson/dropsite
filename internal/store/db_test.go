@@ -60,6 +60,34 @@ func TestOpenRefusesNewerSchema(t *testing.T) {
 	}
 }
 
+// TestOpenAppliesSkippedMigration covers a migration merged with a lower
+// number after a higher one already ran on an installation.
+func TestOpenAppliesSkippedMigration(t *testing.T) {
+	ctx := context.Background()
+	file := filepath.Join(t.TempDir(), "state.db")
+	db, err := Open(ctx, file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, q := range []string{
+		"DROP TABLE form_deliveries", "DROP TABLE form_submissions", "DROP TABLE form_channels",
+		"DROP TABLE form_site_settings", "DROP TABLE form_altcha_used", "DELETE FROM schema_migrations WHERE version = 5",
+	} {
+		if _, err := db.Writer().ExecContext(ctx, q); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_ = db.Close()
+	db, err = Open(ctx, file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := db.CountFormChannels(ctx, "x"); err != nil {
+		t.Fatalf("skipped migration not applied: %v", err)
+	}
+}
+
 func TestForeignKeysAndConstraints(t *testing.T) {
 	ctx := context.Background()
 	db, err := Open(ctx, filepath.Join(t.TempDir(), "state.db"))

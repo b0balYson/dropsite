@@ -11,6 +11,7 @@ import (
 type adminSiteRow struct {
 	service.SiteSummaryView
 	HasApex bool
+	Views   int64 // page views over the last service.StatsAdminDays days
 }
 
 type allSitesData struct {
@@ -41,8 +42,17 @@ func (s *server) allSitesPage(w http.ResponseWriter, r *http.Request, rc *reqCtx
 		Query: q, Pager: newPager("/admin/sites", r.URL.Query(), n, total),
 		Domain: s.svc.Config().BaseDomain, Back: r.URL.RequestURI(),
 	}
+	ids := make([]string, 0, len(sites))
 	for _, v := range sites {
-		row := adminSiteRow{SiteSummaryView: v}
+		ids = append(ids, v.ID)
+	}
+	views, err := s.svc.SitesViews(r.Context(), rc.actor, ids, service.StatsAdminDays)
+	if err != nil {
+		s.failPage(w, r, rc, err)
+		return
+	}
+	for _, v := range sites {
+		row := adminSiteRow{SiteSummaryView: v, Views: views[v.ID]}
 		for _, h := range v.Hostnames {
 			row.HasApex = row.HasApex || h.Kind == domain.HostApex
 		}

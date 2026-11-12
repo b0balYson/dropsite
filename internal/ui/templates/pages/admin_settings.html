@@ -51,6 +51,20 @@
       </div>
     </div>
   </section>
+  <section class="section" aria-labelledby="counters-h">
+    <h2 class="section-title" id="counters-h">{{.L.T "settings.counters"}}</h2>
+    <p class="hint counters-lede">{{.L.T "settings.counters.hint"}}</p>
+    <div class="form-grid">
+      <div class="field">
+        <label class="field__label" for="s-metrika">{{.L.T "counters.metrika"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+        <input class="input mono" id="s-metrika" name="counter_metrika_id" value="{{.D.Counters.MetrikaID}}" inputmode="numeric" pattern="[1-9][0-9]{3,11}" maxlength="12" autocomplete="off" spellcheck="false" placeholder="12345678">
+      </div>
+      <div class="field">
+        <label class="field__label" for="s-ga4">{{.L.T "counters.ga4"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+        <input class="input mono" id="s-ga4" name="counter_ga4_id" value="{{.D.Counters.GA4ID}}" pattern="[Gg]-[A-Za-z0-9]{4,16}" maxlength="18" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="G-XXXXXXXXXX">
+      </div>
+    </div>
+  </section>
   <div class="form-actions">
     <button class="btn btn--primary" type="submit">{{.L.T "form.save"}}</button>
   </div>

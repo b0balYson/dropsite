@@ -86,6 +86,8 @@ type Env struct {
 	// the database and uploads.
 	SitesDir string
 	StateDir string
+	// DNS answers the service's DNS checks; tests add records with Set.
+	DNS *StaticResolver
 
 	repo *store.DB
 }
@@ -163,8 +165,12 @@ func start(t testing.TB, cfg *config.Config, sender service.FormSender) *Env {
 	}
 	t.Cleanup(func() { _ = db.Close() })
 	clock := &Clock{t: Start}
+	dns := NewStaticResolver()
+	dns.Set(cfg.BaseDomain, ServerIP)
+	dns.Set(cfg.APIHost, ServerIP)
 	svc := service.New(service.Deps{
 		Config: cfg, Repo: db, Files: storage.NewFS(cfg.SitesDir), Now: clock.Now, UploadDir: uploads,
+		Resolver:   dns,
 		FormSender: sender,
 	})
 	if err := svc.Start(ctx); err != nil {
@@ -177,7 +183,7 @@ func start(t testing.TB, cfg *config.Config, sender service.FormSender) *Env {
 	return &Env{
 		T: t, Svc: svc, Config: cfg, Clock: clock,
 		Admin:    service.Actor{User: admin, IP: AdminIP},
-		SitesDir: cfg.SitesDir, StateDir: cfg.StateDir, repo: db,
+		SitesDir: cfg.SitesDir, StateDir: cfg.StateDir, DNS: dns, repo: db,
 	}
 }
 

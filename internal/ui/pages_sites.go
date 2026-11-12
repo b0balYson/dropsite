@@ -103,11 +103,14 @@ type deployRow struct {
 }
 
 type siteData struct {
-	V       service.SiteView
-	Forms   formsSummary
-	Deploys []deployRow
-	MaxSize int64
-	Domain  string
+	V        service.SiteView
+	Forms    formsSummary
+	Deploys  []deployRow
+	MaxSize  int64
+	Domain   string
+	Domains  siteDomains
+	Stats    statsView
+	Counters service.SiteCounters
 }
 
 func (s *server) loadSite(r *http.Request, rc *reqCtx) (siteData, error) {
@@ -123,11 +126,21 @@ func (s *server) loadSite(r *http.Request, rc *reqCtx) (siteData, error) {
 	for _, d := range ds {
 		rows = append(rows, deployRow{Deploy: d, Current: v.Current != nil && v.Current.ID == d.ID, PreviewURL: s.svc.PreviewURL(d)})
 	}
-	return siteData{V: v, Deploys: rows, MaxSize: lim.MaxSiteBytes, Domain: s.svc.Config().BaseDomain}, nil
+	doms, err := s.loadSiteDomains(r, rc, v)
+	if err != nil {
+		return siteData{}, err
+	}
+	return siteData{V: v, Deploys: rows, MaxSize: lim.MaxSiteBytes, Domain: s.svc.Config().BaseDomain, Domains: doms}, nil
 }
 
 func (s *server) sitePage(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	data, err := s.loadSite(r, rc)
+	if err == nil {
+		data.Stats, err = s.siteStatsView(r, rc, data.V.Site.ID)
+	}
+	if err == nil {
+		data.Counters, err = s.svc.GetSiteCounters(r.Context(), rc.actor, data.V.Site.ID)
+	}
 	if err == nil {
 		data.Forms, err = s.formsSummary(r, rc, data.V.Site.ID)
 	}

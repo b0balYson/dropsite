@@ -157,7 +157,7 @@ func TestAdminEndpointsAre404ForUsers(t *testing.T) {
 		if !strings.HasPrefix(rt.Path, "/admin/") {
 			continue
 		}
-		path := Prefix + strings.NewReplacer("{ref}", site.ID, "{id}", "1").Replace(rt.Path)
+		path := Prefix + strings.NewReplacer("{ref}", site.ID, "{id}", "1", "{hostname}", "x.example.ru").Replace(rt.Path)
 		for _, q := range []string{"", "?limit=bad&status=x&from=y"} {
 			rec := h.do(rt.Method, path+q, tok, `{"bad json`)
 			if rec.Code != http.StatusNotFound || rec.Body.String() != notFoundBody {
