@@ -243,6 +243,31 @@ http:// {
 			error @hidden 404
 			error @reserved 404
 
+			# Files generated at publish time live in /.dropsite/ (hidden above,
+			# so only these rewrites reach it). Fallbacks are served only where
+			# the site has no file of its own; they come before clean URLs and
+			# the SPA fallback so 200.html does not answer /robots.txt.
+			@generated {
+				path /robots.txt /sitemap.xml /favicon.ico
+				not file {path}
+				file /.dropsite/static{path}
+			}
+			rewrite @generated /.dropsite/static{path}
+
+			# WebP variants of JPEG and PNG images, same size in pixels, only
+			# for clients that accept WebP; Vary keeps shared caches correct.
+			@webpVariant {
+				path *.jpg *.jpeg *.png
+				file /.dropsite/webp{path}.webp
+			}
+			header @webpVariant Vary Accept
+			@webpAccepted {
+				path *.jpg *.jpeg *.png
+				header Accept *image/webp*
+				file /.dropsite/webp{path}.webp
+			}
+			rewrite @webpAccepted /.dropsite/webp{path}.webp
+
 			@cleanurl {
 				not file {path}
 				file {path}.html

@@ -243,7 +243,8 @@ func (s *Service) publishEdit(ctx context.Context, a Actor, siteID, base string,
 	if err != nil {
 		return UpdateResult{}, err
 	}
-	return UpdateResult{DeployResult: DeployResult{Deploy: d, Site: v}, Base: base, Deleted: removed}, nil
+	return UpdateResult{DeployResult: DeployResult{Deploy: d, Site: v, Quality: s.reportOf(ctx, site.ID, d.ID)},
+		Base: base, Deleted: removed}, nil
 }
 
 func (s *Service) removeUpload(name string) {

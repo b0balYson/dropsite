@@ -38,6 +38,8 @@ type Repository interface {
 	FormRepository
 	CollectionRepository
 	ProxyRepository
+	PublishRepository
+	ReportRepository
 	Ping(ctx context.Context) error
 }
 

@@ -76,9 +76,10 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 | `GET /sites/{ref}` | | `Site` |
 | `PATCH /sites/{ref}` | `{title?, slug?, noindex?, protected?, password?, expires_at?}`; `slug: ""` or `null` removes it | `Site` |
 | `DELETE /sites/{ref}` | | `204` |
-| `POST /sites/{ref}/deploys` | `multipart/form-data`, field `archive` (zip or tar.gz) | `201 {deploy_id, url, urls[], deploy: Deploy, site: Site}` |
+| `POST /sites/{ref}/deploys` | `multipart/form-data`, field `archive` (zip or tar.gz) | `201 {deploy_id, url, urls[], deploy: Deploy, site: Site, quality: QualitySummary\|null}` |
 | `GET /sites/{ref}/deploys` | | `List<Deploy>` (newest first) |
-| `POST /sites/{ref}/rollback` | `{deploy_id?}`; empty means the previous release | `{deploy_id, url, urls[], deploy: Deploy, site: Site}` |
+| `GET /sites/{ref}/deploys/{id}` | `id` or `current` | `Deploy` + `quality: QualityReport\|null` (docs/quality.md) |
+| `POST /sites/{ref}/rollback` | `{deploy_id?}`; empty means the previous release | `{deploy_id, url, urls[], deploy: Deploy, site: Site, quality}` (the target's report) |
 | `GET /sites/{ref}/hostnames` | | `List<Hostname>` (every address, any status) |
 | `POST /sites/{ref}/hostnames` | `{hostname}` | `201 Hostname` (external, `pending`) |
 | `DELETE /sites/{ref}/hostnames/{hostname}` | | `204`; only external domains, any status |
@@ -98,6 +99,8 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 | `DELETE /sites/{ref}/forms/channels/{id}` | | `204` |
 | `POST /sites/{ref}/forms/channels/{id}/verify` | `{code}` | `Channel` |
 | `POST /sites/{ref}/forms/channels/{id}/secret` | | `{channel: Channel, secret}` (webhooks only) |
+| `GET /sites/{ref}/publish-settings` | | `PublishSettings` `{site_id, optimize, installation_enabled, effective}` |
+| `PATCH /sites/{ref}/publish-settings` | `{optimize}` | `PublishSettings`; applies from the next publication (docs/publishing.md) |
 | `GET /sites/{ref}/forms/settings` | | `FormSiteSettings` |
 | `PATCH /sites/{ref}/forms/settings` | `{require_altcha}` | `FormSiteSettings` |
 | `GET /sites/{ref}/forms/submissions` | `?form&limit&offset` | `List<Submission>` (newest first) |

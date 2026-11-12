@@ -148,6 +148,9 @@ func (a *app) upload(ctx context.Context, c *client.Client, siteID, dir string, 
 	}
 	fmt.Fprintf(a.stderr, "Published %d files (%s, %s compressed) as deploy %s\n",
 		p.res.Files, formatBytes(p.res.Bytes), formatBytes(sent.Load()), res.DeployID)
+	if res.Quality != nil {
+		fmt.Fprintln(a.stderr, res.Quality.Summary)
+	}
 	return res, nil
 }
 

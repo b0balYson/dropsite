@@ -1,0 +1,73 @@
+{{define "title"}}{{.L.T "quality.title"}} — {{.D.V.Site.Site.Title}}{{end}}
+
+{{define "quality_issues"}}{{/* .I: issues, .N: total, .H: heading key, .E: empty key, .L: locale, .Kind: show kind */}}
+<section class="section quality__group" aria-labelledby="{{.ID}}">
+  <h2 class="section-title" id="{{.ID}}">{{.L.T .H}} <span class="quality__count mono">{{.N}}</span></h2>
+  {{if .I}}
+  <ul class="quality__list">
+    {{range .I}}
+    <li><code class="mono addr-break">{{wbr .Target}}</code>{{if and $.Kind .Kind}} <span class="badge badge--muted">{{.Kind}}</span>{{end}} <span class="muted small">{{$.L.T "quality.in" "page" .Page}}</span></li>
+    {{end}}
+  </ul>
+  {{if gt .N (len .I)}}<p class="hint">{{.L.T "quality.more" "shown" (len .I) "total" .N}}</p>{{end}}
+  {{else}}<p class="empty-line">{{.L.T .E}}</p>{{end}}
+</section>
+{{end}}
+
+{{define "content"}}
+{{$v := .D.V}}{{$r := $v.Report}}
+<nav class="crumbs" aria-label="{{.L.T "nav.breadcrumbs"}}"><a href="/sites/{{$v.Site.Site.ID}}">← {{$v.Site.Site.Title}}</a></nav>
+<header class="page-head">
+  <div class="page-head__text">
+    <p class="eyebrow mono">{{$v.Deploy.ID}}{{if $v.Current}} · {{.L.T "history.current"}}{{end}}</p>
+    <h1 class="display">{{.L.T "quality.title"}}</h1>
+    <p class="lede">{{.L.Date $v.Deploy.CreatedAt}} · {{.L.Size $v.Deploy.SizeBytes}} · {{.L.T "history.files" "n" $v.Deploy.FileCount}}</p>
+  </div>
+  {{if $r}}<p class="quality__score quality__score--{{$r.Grade}}" aria-label="{{.L.T "quality.score.label" "score" $r.Score "grade" $r.Grade}}"><span class="quality__grade">{{$r.Grade}}</span> <span class="mono">{{$r.Score}}/100</span></p>{{end}}
+</header>
+
+{{if not $r}}
+<p class="empty-line">{{.L.T "quality.none"}}</p>
+{{else}}
+<section class="section" aria-labelledby="quality-sum-h">
+  <h2 class="section-title" id="quality-sum-h">{{.L.T "quality.summary"}}</h2>
+  <p>{{.L.T "quality.totals" "pages" $r.Pages "files" $r.Files "size" (.L.Size $r.TotalBytes)}}</p>
+  {{with $r.Optimization}}<p class="hint">{{$.L.T "quality.optimization" "images" .ImagesConverted "saved" ($.L.Size .BytesSaved)}}{{if .Generated}} {{$.L.T "quality.generated"}} <span class="mono">{{range $i, $g := .Generated}}{{if $i}}, {{end}}{{$g}}{{end}}</span>.{{end}}</p>{{end}}
+  {{if $r.Truncated}}<p class="notice notice--warn">{{.L.T "quality.truncated"}}</p>{{end}}
+</section>
+
+{{template "quality_issues" (dict "ID" "q-missing" "H" "quality.missing" "E" "quality.missing.none" "I" $r.MissingAssets "N" $r.Counts.MissingAssets "Kind" true "L" .L)}}
+{{template "quality_issues" (dict "ID" "q-broken" "H" "quality.broken" "E" "quality.broken.none" "I" $r.BrokenLinks "N" $r.Counts.BrokenLinks "Kind" false "L" .L)}}
+{{template "quality_issues" (dict "ID" "q-external" "H" "quality.external" "E" "quality.external.none" "I" $r.ExternalResources "N" $r.Counts.ExternalResources "Kind" true "L" .L)}}
+
+<section class="section quality__group" aria-labelledby="q-pages">
+  <h2 class="section-title" id="q-pages">{{.L.T "quality.pages"}}</h2>
+  {{$m := $r.PagesMissing}}
+  {{if or $m.Title $m.Viewport $m.Description $m.Lang}}
+  <dl class="quality__meta">
+    {{if $m.Viewport}}<dt>{{.L.T "quality.pages.viewport"}} <span class="quality__count mono">{{$r.Counts.MissingViewport}}</span></dt><dd class="mono addr-break">{{range $i, $p := $m.Viewport}}{{if $i}}, {{end}}{{$p}}{{end}}</dd>{{end}}
+    {{if $m.Title}}<dt>{{.L.T "quality.pages.title"}} <span class="quality__count mono">{{$r.Counts.MissingTitle}}</span></dt><dd class="mono addr-break">{{range $i, $p := $m.Title}}{{if $i}}, {{end}}{{$p}}{{end}}</dd>{{end}}
+    {{if $m.Description}}<dt>{{.L.T "quality.pages.description"}} <span class="quality__count mono">{{$r.Counts.MissingDescription}}</span></dt><dd class="mono addr-break">{{range $i, $p := $m.Description}}{{if $i}}, {{end}}{{$p}}{{end}}</dd>{{end}}
+    {{if $m.Lang}}<dt>{{.L.T "quality.pages.lang"}} <span class="quality__count mono">{{$r.Counts.MissingLang}}</span></dt><dd class="mono addr-break">{{range $i, $p := $m.Lang}}{{if $i}}, {{end}}{{$p}}{{end}}</dd>{{end}}
+  </dl>
+  {{else}}<p class="empty-line">{{.L.T "quality.pages.none"}}</p>{{end}}
+</section>
+
+{{template "quality_issues" (dict "ID" "q-alt" "H" "quality.alt" "E" "quality.alt.none" "I" $r.ImagesWithoutAlt "N" $r.Counts.ImagesWithoutAlt "Kind" false "L" .L)}}
+
+<section class="section quality__group" aria-labelledby="q-weight">
+  <h2 class="section-title" id="q-weight">{{.L.T "quality.weight"}}</h2>
+  <div class="quality__columns">
+    <div>
+      <h3 class="field__label">{{.L.T "quality.heaviest"}}</h3>
+      <ol class="quality__list">{{range $r.HeaviestPages}}<li><span class="mono addr-break">{{wbr .Page}}</span> <span class="mono muted">{{$.L.Size .Bytes}}</span></li>{{end}}</ol>
+    </div>
+    <div>
+      <h3 class="field__label">{{.L.T "quality.largest"}}</h3>
+      <ol class="quality__list">{{range $r.LargestFiles}}<li><span class="mono addr-break">{{wbr .Path}}</span> <span class="mono muted">{{$.L.Size .Bytes}}</span></li>{{end}}</ol>
+    </div>
+  </div>
+  {{if $r.Counts.HeavyPages}}<p class="hint">{{.L.T "quality.heavy" "n" $r.Counts.HeavyPages}}</p>{{end}}
+</section>
+{{end}}
+{{end}}

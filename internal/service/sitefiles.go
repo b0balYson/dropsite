@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/b0balYson/dropsite/internal/domain"
+	"github.com/b0balYson/dropsite/internal/optimize"
 	"github.com/b0balYson/dropsite/internal/storage"
 	"github.com/b0balYson/dropsite/internal/tracking"
 )
@@ -107,11 +108,16 @@ func (s *Service) openRelease(site domain.Site, d domain.Deploy) (*os.Root, erro
 
 // walkFiles calls fn for every regular file of root in lexical order.
 // Symbolic links and special files are skipped: releases never contain them,
-// and nothing outside the release may be reached through one.
+// and nothing outside the release may be reached through one. Files the
+// platform generated at publish time (optimize.Dir) are not the site's own
+// and are skipped too.
 func walkFiles(root *os.Root, fn func(p string, info fs.FileInfo) error) error {
 	return fs.WalkDir(root.FS(), ".", func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
+		}
+		if optimize.IsGenerated(p) {
+			return fs.SkipDir
 		}
 		if !d.Type().IsRegular() {
 			return nil
@@ -279,6 +285,9 @@ func (s *Service) ReadSiteFiles(ctx context.Context, a Actor, ref, deployID stri
 // readOne reads one file; ok is false when p is not a regular file of the
 // release (missing, a directory or a link).
 func readOne(root *os.Root, p string, budget *int) (SiteFileContent, bool, error) {
+	if optimize.IsGenerated(p) {
+		return SiteFileContent{}, false, nil
+	}
 	info, err := root.Lstat(p)
 	if errors.Is(err, fs.ErrNotExist) || (err == nil && !info.Mode().IsRegular()) {
 		return SiteFileContent{}, false, nil

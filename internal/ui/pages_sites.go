@@ -101,6 +101,7 @@ type deployRow struct {
 	domain.Deploy
 	Current    bool
 	PreviewURL string // wildcard TLS mode only
+	Quality    *domain.QualityScore
 }
 
 type siteData struct {
@@ -114,6 +115,7 @@ type siteData struct {
 	Stats    statsView
 	Counters service.SiteCounters
 	Access   accessView
+	Publish  service.PublishSettingsView
 }
 
 func (s *server) loadSite(r *http.Request, rc *reqCtx) (siteData, error) {
@@ -125,9 +127,17 @@ func (s *server) loadSite(r *http.Request, rc *reqCtx) (siteData, error) {
 	if err != nil {
 		return siteData{}, err
 	}
+	scores, err := s.svc.DeployScores(r.Context(), rc.actor, v.Site.ID)
+	if err != nil {
+		return siteData{}, err
+	}
 	rows := make([]deployRow, 0, len(ds))
 	for _, d := range ds {
-		rows = append(rows, deployRow{Deploy: d, Current: v.Current != nil && v.Current.ID == d.ID, PreviewURL: s.svc.PreviewURL(d)})
+		row := deployRow{Deploy: d, Current: v.Current != nil && v.Current.ID == d.ID, PreviewURL: s.svc.PreviewURL(d)}
+		if sc, ok := scores[d.ID]; ok {
+			row.Quality = &sc
+		}
+		rows = append(rows, row)
 	}
 	doms, err := s.loadSiteDomains(r, rc, v)
 	if err != nil {
@@ -152,6 +162,9 @@ func (s *server) sitePage(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	}
 	if err == nil {
 		_, data.Data, err = s.svc.ListCollections(r.Context(), rc.actor, data.V.Site.ID)
+	}
+	if err == nil {
+		data.Publish, err = s.svc.GetPublishSettings(r.Context(), rc.actor, data.V.Site.ID)
 	}
 	if err != nil {
 		s.failPage(w, r, rc, err)

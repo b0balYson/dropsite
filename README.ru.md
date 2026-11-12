@@ -219,6 +219,7 @@ docker compose -f docker-compose.yml -f compose.wildcard.yml up -d --build --wai
 | `STATS_INTERVAL` | нет | `1m` | Как часто control читает access-лог сайтов (от 1s до 1h) |
 | `STATS_LOG_FILE` | нет | `/logs/sites-access.log` | Access-лог сайтов внутри control; `off` выключает статистику |
 | `TELEGRAM_API_URL` | нет | `https://api.telegram.org` | Адрес Bot API для доставки заявок (прокси или тесты) |
+| `PUBLISH_OPTIMIZE` | нет | `on` | Оптимизация при публикации: WebP-копии изображений и служебные `robots.txt`, `sitemap.xml`, `favicon.ico`; файлы сайта не меняются (docs/publishing.md) |
 | `FORM_WEBHOOK_ALLOW_CIDRS` | нет | | Частные сети, куда можно слать вебхуки форм — любому пользователю (только тестовые стенды; адреса самого control запрещены всегда) |
 
 ## Эксплуатация

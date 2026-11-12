@@ -7,6 +7,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
+
+	"github.com/b0balYson/dropsite/internal/brand"
 )
 
 // StagingDir creates sites/<siteID>/releases if needed and returns the path
@@ -187,8 +190,11 @@ func copyTree(src, dest string) (CopyResult, error) {
 			return to.Mkdir(name, dirPerm)
 		case d.Type().IsRegular():
 			n, err := copyFile(from, to, name)
-			res.Bytes += n
-			res.Files++
+			// Files generated at publish time are not counted as the site's.
+			if p != brand.GeneratedDir && !strings.HasPrefix(p, brand.GeneratedDir+"/") {
+				res.Bytes += n
+				res.Files++
+			}
 			return err
 		default:
 			return fmt.Errorf("unexpected file type at %s", p)

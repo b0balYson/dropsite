@@ -100,6 +100,7 @@ Form tools (details in [forms.md](forms.md#from-a-chat-assistant)): `get_form_se
 
 Site data tools (collections that pages load from `/_dropsite/data/<name>`, see [api-contract.md](api-contract.md)): `list_collections` (with the public address and a ready loading snippet), `save_collection` (creates or changes), `delete_collection` (with `confirm`), `list_documents`, `save_documents` (`replace` swaps the whole content), `delete_documents`, `moderate_documents` (`approve` or `reject`). Writes are live at once without a new release; rights, limits and errors are those of the HTTP API.
 API key proxy tools (details in [proxy.md](proxy.md)): `list_proxy_endpoints`, `set_proxy_endpoint`, `delete_proxy_endpoint`. No tool takes a key: `set_proxy_endpoint` returns `secret_url`, where the user pastes the key in the web interface.
+Publish settings tools (details in [publishing.md](publishing.md)): `get_publish_settings`, `set_publish_settings`. Quality report (details in [quality.md](quality.md)): `get_quality_report`; every publication and rollback result also carries a short `quality` with the main issues to fix.
 
 Both servers also cover the account and site settings of the web interface, so a user can manage everything by asking in plain words:
 

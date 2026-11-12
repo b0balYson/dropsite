@@ -129,8 +129,12 @@ func (s *Service) rerelease(ctx context.Context, a Actor, site domain.Site, sour
 		s.discard(site.ID, id)
 		return domain.Deploy{}, err
 	}
-	return s.commit(ctx, site.ID, domain.Deploy{
+	d, err := s.commit(ctx, site.ID, domain.Deploy{
 		ID: id, SiteID: site.ID, CreatedBy: a.User.ID, Source: source,
 		SizeBytes: cp.Bytes + inj.DeltaBytes, FileCount: cp.Files, Status: domain.DeployReady, CreatedAt: now,
 	})
+	if err == nil {
+		s.copyReport(ctx, site.ID, *site.CurrentDeployID, d.ID)
+	}
+	return d, err
 }

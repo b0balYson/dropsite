@@ -10,6 +10,7 @@ import (
 
 	"github.com/b0balYson/dropsite/internal/archive"
 	"github.com/b0balYson/dropsite/internal/domain"
+	"github.com/b0balYson/dropsite/internal/quality"
 	"github.com/b0balYson/dropsite/internal/tracking"
 )
 
@@ -17,6 +18,8 @@ import (
 type DeployResult struct {
 	Deploy domain.Deploy
 	Site   SiteView
+	// Quality is the release's quality report, nil when it has none.
+	Quality *quality.Report
 }
 
 func userKey(id int64) string { return fmt.Sprintf("user:%d", id) }
@@ -73,7 +76,7 @@ func (s *Service) Deploy(ctx context.Context, a Actor, ref string, r io.Reader, 
 	if err != nil {
 		return DeployResult{}, err
 	}
-	return DeployResult{Deploy: d, Site: v}, nil
+	return DeployResult{Deploy: d, Site: v, Quality: s.reportOf(ctx, site.ID, d.ID)}, nil
 }
 
 // receive streams the upload into a temporary file, aborting past max bytes.
@@ -113,6 +116,9 @@ func (s *Service) publish(ctx context.Context, a Actor, site domain.Site, upload
 		s.discard(site.ID, id)
 		return domain.Deploy{}, err
 	}
+	opt := s.optimizeRelease(ctx, site, staging)
+	// The report sees the site's files before the platform's counters.
+	rep := s.analyzeRelease(ctx, site, staging, opt)
 	set, err := s.countersFor(ctx, site.ID)
 	if err != nil {
 		s.discard(site.ID, id)
@@ -127,10 +133,14 @@ func (s *Service) publish(ctx context.Context, a Actor, site domain.Site, upload
 		}
 		delta = inj.DeltaBytes
 	}
-	return s.commit(ctx, site.ID, domain.Deploy{
+	d, err := s.commit(ctx, site.ID, domain.Deploy{
 		ID: id, SiteID: site.ID, CreatedBy: a.User.ID, Source: source,
 		SizeBytes: res.Bytes + delta, FileCount: res.Files, Status: domain.DeployReady, CreatedAt: now,
 	})
+	if err == nil {
+		s.saveReport(ctx, site.ID, d.ID, rep)
+	}
+	return d, err
 }
 
 // commit turns a filled staging directory into the site's current release.
@@ -195,6 +205,7 @@ func (s *Service) prune(ctx context.Context, siteID string, keep int) {
 		s.log.Error("prune: mark", "site", siteID, "err", err)
 		return
 	}
+	s.dropReports(ctx, siteID, drop)
 	for _, id := range drop {
 		// The preview goes first so it never points at a deleted directory.
 		if err := s.unlinkPreview(ctx, siteID, id); err != nil {
@@ -252,7 +263,7 @@ func (s *Service) Rollback(ctx context.Context, a Actor, ref, deployID string) (
 	if err != nil {
 		return DeployResult{}, err
 	}
-	return DeployResult{Deploy: target, Site: v}, nil
+	return DeployResult{Deploy: target, Site: v, Quality: s.reportOf(ctx, site.ID, target.ID)}, nil
 }
 
 func (s *Service) rollbackTarget(ctx context.Context, site domain.Site, deployID string) (domain.Deploy, error) {
