@@ -26,6 +26,8 @@ type Site struct {
 	LastDeployAt  string   `json:"last_deploy_at,omitempty"`
 	UpdatedAt     string   `json:"updated_at,omitempty"`
 	SiteExtras
+	// Draft is the site's draft release (change staged-publish).
+	Draft *Draft `json:"draft,omitempty" jsonschema:"a new version visitors do not see yet: open preview_url to check it, publish_draft makes it live"`
 	// Attached is filled by get_site only.
 	Attached *SiteAttached `json:"attached,omitempty" jsonschema:"what is attached to the site: forms, delivery channels, counters (get_site only)"`
 }
@@ -41,6 +43,7 @@ type Deploy struct {
 	Current   bool   `json:"current" jsonschema:"true for the release being served"`
 	// PreviewURL is the release's own address, when the server has previews.
 	PreviewURL string `json:"preview_url,omitempty" jsonschema:"address that always serves this exact release, if previews are enabled"`
+	Draft      bool   `json:"draft,omitempty" jsonschema:"true for the site's draft: not served to visitors yet"`
 }
 
 // DeployResult is the outcome of a publication or rollback.
@@ -51,6 +54,9 @@ type DeployResult struct {
 	URLs     []string `json:"urls"`
 	// Quality is the short quality report of the release being served.
 	Quality *quality.Summary `json:"quality,omitempty" jsonschema:"quality check of this version: fix the listed issues with update_site_files; full report: get_quality_report"`
+	// Draft and PreviewURL are set for a draft (change staged-publish).
+	Draft      bool   `json:"draft,omitempty" jsonschema:"true when this version was saved as a draft: visitors still see the previous one at url"`
+	PreviewURL string `json:"preview_url,omitempty" jsonschema:"draft only: the address that shows the draft; give it to the user and ask whether to publish"`
 }
 
 // File is one file passed by value to deploy_files.
@@ -89,6 +95,8 @@ type Folder struct {
 	// SkipSensitive publishes without secret-looking files instead of
 	// refusing the folder.
 	SkipSensitive bool
+	// Draft saves the folder as the site's draft.
+	Draft bool
 }
 
 // Resolver returns the backend for a tool call (per authenticated user), or
@@ -116,6 +124,9 @@ type Options struct {
 	// Workflow adds site copies, templates, scheduled publishes and
 	// screenshots; the backend must implement WorkflowBackend.
 	Workflow bool
+	// Drafts adds publish_draft and discard_draft; the backend must
+	// implement DraftBackend.
+	Drafts bool
 	// Instructions are sent to the client on initialize.
 	Instructions string
 }

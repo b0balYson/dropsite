@@ -83,14 +83,14 @@ func filesResult(r service.UpdateResult, verb string) mcp.FilesResult {
 	return mcp.NewFilesResult(mcp.FilesOutcome{
 		SiteID: r.Site.Site.ID, DeployID: r.Deploy.ID, Base: r.Base, URL: r.Site.URL, URLs: r.Site.URLs,
 		Written: r.Written, Deleted: r.Deleted, FileCount: r.Deploy.FileCount, Fetched: toFetched(r.Fetched),
-		Quality: quality.Summarize(r.Quality),
+		Quality: quality.Summarize(r.Quality), Draft: isDraft(r.Site, r.Deploy.ID), PreviewURL: draftPreview(r.Site),
 	}, verb)
 }
 
 func (b backend) UpdateSiteFiles(ctx context.Context, c mcp.FilesChange) (mcp.FilesResult, error) {
-	r, err := b.svc.UpdateSiteFiles(ctx, b.actor, c.Site, c.Base, service.FileChanges{
+	r, err := b.svc.UpdateSiteFilesWith(ctx, b.actor, c.Site, c.Base, service.FileChanges{
 		Put: toInline(c.Files), Delete: c.Delete, Fetch: toFetch(c.Fetch),
-	})
+	}, service.PublishOptions{Draft: c.Draft})
 	if err != nil {
 		return mcp.FilesResult{}, b.toolError(err)
 	}

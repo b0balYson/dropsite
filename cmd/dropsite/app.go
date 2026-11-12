@@ -75,6 +75,7 @@ func commands() map[string]command {
 		"deploys":  {"Show the release history of a site", cmdDeploys},
 		"rollback": {"Switch a site to a previous release", cmdRollback},
 		"clone":    {"Copy a site into a new site", cmdClone},
+		"draft":    {"Publish or delete a site's draft", cmdDraft},
 		"delete":   {"Delete a site and all its releases", cmdDelete},
 		"domains":  {"List, add or remove the own domains of a site", cmdDomains},
 		"version":  {"Print the CLI version", cmdVersion},

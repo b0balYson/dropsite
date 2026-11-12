@@ -79,13 +79,14 @@ func filesResult(r *client.FilesResult, verb string) mcp.FilesResult {
 	return mcp.NewFilesResult(mcp.FilesOutcome{
 		SiteID: r.Site.ID, DeployID: r.DeployID, Base: r.BaseDeployID, URL: r.URL, URLs: r.URLs,
 		Written: r.Written, Deleted: r.Deleted, FileCount: r.Deploy.FileCount, Fetched: fromFetched(r.Fetched),
-		Quality: r.Quality,
+		Quality: r.Quality, Draft: r.Deploy.Draft, PreviewURL: draftPreview(r.Site.Draft),
 	}, verb)
 }
 
 func (b localBackend) UpdateSiteFiles(ctx context.Context, c mcp.FilesChange) (mcp.FilesResult, error) {
 	r, err := b.c.UpdateSiteFiles(ctx, c.Site, client.FilesChange{
 		BaseDeployID: c.Base, Files: toInlineFiles(c.Files), Delete: c.Delete, Fetch: toFetchSpecs(c.Fetch),
+		Draft: c.Draft,
 	})
 	if err != nil {
 		return mcp.FilesResult{}, toolError(err)

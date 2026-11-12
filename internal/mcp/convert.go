@@ -316,11 +316,17 @@ type FilesOutcome struct {
 	FileCount int
 	Fetched   []FetchedFile
 	Quality   *quality.Summary
+	// Draft and PreviewURL describe a draft (change staged-publish).
+	Draft      bool
+	PreviewURL string
 }
 
 // NewFilesResult builds the tool output with a summary starting with verb
 // ("Site updated", "Site published").
 func NewFilesResult(o FilesOutcome, verb string) FilesResult {
+	if o.Draft {
+		verb = "Draft saved"
+	}
 	parts := []string{fmt.Sprintf("%s: %d file(s) written", verb, o.Written)}
 	if o.Deleted > 0 {
 		parts = append(parts, fmt.Sprintf("%d removed", o.Deleted))
@@ -336,6 +342,9 @@ func NewFilesResult(o FilesOutcome, verb string) FilesResult {
 	}
 	summary := strings.Join(parts, ", ") + fmt.Sprintf("; the site now has %d files and is live at %s. "+
 		"The previous version can be restored with rollback.", o.FileCount, o.URL)
+	if o.Draft {
+		summary = strings.Join(parts, ", ") + draftSummary(o.FileCount, o.URL, o.PreviewURL)
+	}
 	if o.Quality != nil {
 		summary += " " + o.Quality.Summary
 	}
@@ -346,6 +355,6 @@ func NewFilesResult(o FilesOutcome, verb string) FilesResult {
 	return FilesResult{
 		SiteID: o.SiteID, DeployID: o.DeployID, BaseDeployID: o.Base, URL: o.URL, URLs: o.URLs,
 		Written: o.Written, Deleted: o.Deleted, FileCount: o.FileCount, Fetched: fetched, Summary: summary,
-		Quality: o.Quality,
+		Quality: o.Quality, Draft: o.Draft, PreviewURL: o.PreviewURL,
 	}
 }

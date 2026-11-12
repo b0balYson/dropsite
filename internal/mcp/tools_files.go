@@ -25,6 +25,7 @@ type updateFilesArgs struct {
 	Files        []File      `json:"files,omitempty" jsonschema:"files to add or replace, whole content each; at most 16 MB in total"`
 	Delete       []string    `json:"delete,omitempty" jsonschema:"files or folders to remove, e.g. old.html or img/old/"`
 	Fetch        []FetchFile `json:"fetch,omitempty" jsonschema:"images, fonts, stylesheets or scripts the server downloads from public https addresses (up to 20)"`
+	Draft        bool        `json:"draft,omitempty" jsonschema:"save the change as the site's draft instead of going live (default for a site that is already live, see get_guide topic drafts)"`
 }
 
 type beginUploadArgs struct {
@@ -43,6 +44,7 @@ type uploadFilesArgs struct {
 type commitUploadArgs struct {
 	UploadID string   `json:"upload_id" jsonschema:"from begin_upload"`
 	Delete   []string `json:"delete,omitempty" jsonschema:"patch mode only: files or folders of the base release to remove"`
+	Draft    bool     `json:"draft,omitempty" jsonschema:"save as the site's draft instead of going live (default for a site that is already live, see get_guide topic drafts)"`
 }
 
 var errNoSiteFiles = errors.New("this server cannot read or edit site files")
@@ -71,7 +73,8 @@ func (t tools) registerFiles(s *sdk.Server, o Options) {
 			"download files by URL (fetch). Everything else stays as it was. Creates a new version; the previous one " +
 			"stays available for rollback. base_deploy_id must be the deploy_id you read the files from: if the " +
 			"site changed meanwhile you get a deploy_conflict error; then read the files again and redo the change. " +
-			"Give the user the returned link and say in plain words what changed." + fetchAdvice}, t.updateSiteFiles)
+			"Give the user the returned link and say in plain words what changed. base_deploy_id may also be the " +
+			"site's draft, to keep working on it." + fetchAdvice + draftAdvice}, t.updateSiteFiles)
 	sdk.AddTool(s, &sdk.Tool{Name: "begin_upload", Annotations: writes("Start upload", false, false),
 		Description: "Start uploading a site that is larger than 16 MB, in parts. mode replace publishes exactly " +
 			"the uploaded files (a new site when site is omitted); mode patch adds them on top of base_deploy_id. " +
@@ -82,7 +85,7 @@ func (t tools) registerFiles(s *sdk.Server, o Options) {
 			"call) and/or fetch entries the server downloads. Sending a path again replaces it." + fetchAdvice}, t.uploadFiles)
 	sdk.AddTool(s, &sdk.Tool{Name: "commit_upload", Annotations: writes("Publish upload", false, false),
 		Description: "Publish an upload as a new version of the site and close the session. index.html is required " +
-			"at the root. Give the user the returned link."}, t.commitUpload)
+			"at the root. Give the user the returned link." + draftAdvice}, t.commitUpload)
 }
 
 func (t tools) filesBackend(ctx context.Context, req *sdk.CallToolRequest) (SiteFilesBackend, error) {
@@ -127,7 +130,7 @@ func (t tools) updateSiteFiles(ctx context.Context, req *sdk.CallToolRequest, in
 		return nil, FilesResult{}, err
 	}
 	out, err := b.UpdateSiteFiles(ctx, FilesChange{
-		Site: in.Site, Base: in.BaseDeployID, Files: in.Files, Delete: in.Delete, Fetch: in.Fetch,
+		Site: in.Site, Base: in.BaseDeployID, Files: in.Files, Delete: in.Delete, Fetch: in.Fetch, Draft: in.Draft,
 	})
 	return nil, out, err
 }
@@ -154,6 +157,14 @@ func (t tools) commitUpload(ctx context.Context, req *sdk.CallToolRequest, in co
 	b, err := t.filesBackend(ctx, req)
 	if err != nil {
 		return nil, FilesResult{}, err
+	}
+	if in.Draft {
+		db, ok := b.(DraftBackend)
+		if !ok {
+			return nil, FilesResult{}, errNoDrafts
+		}
+		out, err := db.CommitUploadDraft(ctx, in.UploadID, in.Delete)
+		return nil, out, err
 	}
 	out, err := b.CommitUpload(ctx, in.UploadID, in.Delete)
 	return nil, out, err

@@ -60,6 +60,8 @@ type FilesChange struct {
 	Files  []File
 	Delete []string
 	Fetch  []FetchFile
+	// Draft saves the change as the site's draft.
+	Draft bool
 }
 
 // FetchedFile reports a downloaded file.
@@ -86,6 +88,9 @@ type FilesResult struct {
 	Summary      string        `json:"summary" jsonschema:"short human summary to relay to the user"`
 	// Quality is the short quality report of the new release.
 	Quality *quality.Summary `json:"quality,omitempty" jsonschema:"quality check of the new version: fix the listed issues with another update; full report: get_quality_report"`
+	// Draft and PreviewURL are set for a draft (change staged-publish).
+	Draft      bool   `json:"draft,omitempty" jsonschema:"true when the change was saved as a draft: visitors still see the previous version at url"`
+	PreviewURL string `json:"preview_url,omitempty" jsonschema:"draft only: the address that shows the draft; give it to the user and ask whether to publish"`
 }
 
 // Upload describes an upload session.
