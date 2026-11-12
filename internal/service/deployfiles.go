@@ -30,7 +30,8 @@ type InlineFile struct {
 
 func errFilesTooLarge() error {
 	return domain.E(domain.KindTooLarge, domain.CodeFilesTooLarge,
-		"the files are larger than 1 MB in total; publish this site with the dropsite CLI "+
+		"the files are larger than 1 MB in total; send them in parts with begin_upload, upload_files and "+
+			"commit_upload, or publish this site with the dropsite CLI "+
 			"(dropsite deploy <folder>), from Claude Desktop, or upload a zip in the web interface").
 		WithParams(map[string]any{"limit": MaxInlineBytes})
 }

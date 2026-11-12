@@ -51,6 +51,7 @@ type Storage interface {
 	DeleteSite(siteID string) error
 	Reconcile(ctx context.Context, desired []SiteLayout, keep Retained) (ReconcileReport, error)
 	SiteSize(siteID, deployID string) (int64, error)
+	OpenRelease(siteID, deployID string) (*os.Root, error)
 }
 
 // FS is the local file-system implementation of Storage.

@@ -237,3 +237,22 @@ func copyTimes(from, to *os.Root, name string) error {
 	}
 	return to.Chtimes(name, info.ModTime(), info.ModTime())
 }
+
+// OpenRelease opens releases/<deployID> for reading. Every access through the
+// returned root stays inside the release directory. The caller closes it.
+func (f *FS) OpenRelease(siteID, deployID string) (*os.Root, error) {
+	if err := validateSiteAndDeploy(siteID, deployID); err != nil {
+		return nil, err
+	}
+	dir := f.releasePath(siteID, deployID)
+	if ok, err := isDir(dir); err != nil {
+		return nil, fmt.Errorf("storage: stat release: %w", err)
+	} else if !ok {
+		return nil, fmt.Errorf("%w: release %s/%s", ErrNotFound, siteID, deployID)
+	}
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return nil, fmt.Errorf("storage: open release: %w", err)
+	}
+	return root, nil
+}
