@@ -142,6 +142,11 @@ type Actor struct {
 	// only on the user's own resources: it never gets administrator powers,
 	// so a prompt injection cannot reach other users' sites.
 	ViaMCP bool
+	// TokenID and GrantID identify the API token or OAuth grant the request
+	// was authenticated with (0 when not applicable), so the assistant can
+	// tell which connection is its own. They never carry secrets.
+	TokenID int64
+	GrantID int64
 }
 
 // IsAdmin reports whether the actor may use administrator powers: an
@@ -167,6 +172,9 @@ func requireAdmin(a Actor) error {
 // audit appends to the audit log. Failures are logged, never returned: the
 // change has already happened and must not be reported as failed.
 func (s *Service) audit(ctx context.Context, a Actor, action, target string, meta map[string]any) {
+	if a.ViaMCP {
+		meta = withSource(meta, string(domain.SourceMCP))
+	}
 	e := domain.AuditEntry{
 		ActorID:   a.id(),
 		Action:    action,
@@ -178,6 +186,20 @@ func (s *Service) audit(ctx context.Context, a Actor, action, target string, met
 	if err := s.repo.InsertAudit(context.WithoutCancel(ctx), e); err != nil {
 		s.log.Error("audit write failed", "action", action, "target", target, "err", err)
 	}
+}
+
+// withSource returns a copy of meta with "source" set, unless it is already
+// set (a deploy names its own source).
+func withSource(meta map[string]any, source string) map[string]any {
+	if _, ok := meta["source"]; ok {
+		return meta
+	}
+	out := make(map[string]any, len(meta)+1)
+	for k, v := range meta {
+		out[k] = v
+	}
+	out["source"] = source
+	return out
 }
 
 // SiteURL returns the https URL for a hostname.

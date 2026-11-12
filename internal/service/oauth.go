@@ -432,7 +432,7 @@ func (s *Service) AuthenticateMCP(ctx context.Context, token, ip string) (Actor,
 		}
 	}
 	res.Cancel()
-	return Actor{User: u, IP: ip, ViaMCP: true}, t.ExpiresAt, nil
+	return Actor{User: u, IP: ip, ViaMCP: true, GrantID: g.ID}, t.ExpiresAt, nil
 }
 
 // ListOAuthGrants returns the actor's connected applications.

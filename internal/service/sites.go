@@ -34,13 +34,7 @@ func siteTarget(id string) string { return "site:" + id }
 // resolveSite finds an active site by ID or slug, visible to the actor.
 // Anything the actor may not see is reported exactly like a missing site.
 func (s *Service) resolveSite(ctx context.Context, a Actor, ref string) (domain.Site, error) {
-	if !domain.IsValidHostname(ref) || len(ref) > 63 {
-		return domain.Site{}, domain.ErrNotFound
-	}
-	site, err := s.repo.GetSite(ctx, ref)
-	if errors.Is(err, domain.ErrNotFound) {
-		site, err = s.repo.FindSiteBySlug(ctx, ref)
-	}
+	site, err := s.findSite(ctx, ref)
 	if err != nil {
 		return domain.Site{}, err
 	}
@@ -48,6 +42,19 @@ func (s *Service) resolveSite(ctx context.Context, a Actor, ref string) (domain.
 		return domain.Site{}, domain.ErrNotFound
 	}
 	return site, nil
+}
+
+// findSite finds an active site by ID or slug regardless of its owner. Every
+// caller must have checked the actor's right to the site or the operation.
+func (s *Service) findSite(ctx context.Context, ref string) (domain.Site, error) {
+	if !domain.IsValidHostname(ref) || len(ref) > 63 {
+		return domain.Site{}, domain.ErrNotFound
+	}
+	site, err := s.repo.GetSite(ctx, ref)
+	if errors.Is(err, domain.ErrNotFound) {
+		site, err = s.repo.FindSiteBySlug(ctx, ref)
+	}
+	return site, err
 }
 
 func (s *Service) view(ctx context.Context, site domain.Site) (SiteView, error) {
@@ -443,6 +450,12 @@ func (s *Service) SetApex(ctx context.Context, a Actor, ref string) (SiteView, e
 	if err != nil {
 		return SiteView{}, err
 	}
+	return s.setApex(ctx, a, site)
+}
+
+// setApex binds the base domain root to site for an actor whose right to do
+// so has been checked.
+func (s *Service) setApex(ctx context.Context, a Actor, site domain.Site) (SiteView, error) {
 	unlock, err := s.lockApex(ctx, site.ID)
 	if err != nil {
 		return SiteView{}, err
@@ -473,9 +486,16 @@ func (s *Service) ClearApex(ctx context.Context, a Actor, ref string) (SiteView,
 	if err != nil {
 		return SiteView{}, err
 	}
+	return s.clearApex(ctx, a, site)
+}
+
+// clearApex unbinds the base domain root from site (if it holds it) for an
+// actor whose right to do so has been checked.
+func (s *Service) clearApex(ctx context.Context, a Actor, site domain.Site) (SiteView, error) {
 	unlock := s.siteLocks.lock(site.ID)
 	defer unlock()
-	if site, err = s.repo.GetSite(ctx, site.ID); err != nil {
+	site, err := s.repo.GetSite(ctx, site.ID)
+	if err != nil {
 		return SiteView{}, err
 	}
 	removed, err := s.repo.ClearApexHost(ctx, site.ID, s.now())
