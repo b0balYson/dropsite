@@ -89,7 +89,7 @@ func writeJSON(tw *tar.Writer, name string, v any) error {
 }
 
 func writeFile(tw *tar.Writer, name, path string, mode int64) error {
-	f, err := os.Open(path)
+	f, err := os.Open(path) //nolint:gosec // paths come from walking our own volume
 	if err != nil {
 		return fmt.Errorf("open %s: %w", path, err)
 	}

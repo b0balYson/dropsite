@@ -1,0 +1,72 @@
+{{define "token_block"}}
+<div class="token-block" id="token-block">
+  {{with .D.Issued}}
+  <div class="notice notice--warn issued" role="status">
+    <p class="notice__text"><strong>{{$.L.T "connect.issued.title" "name" .Name}}</strong> {{$.L.T "connect.issued.warn"}}</p>
+    <pre class="code" id="cmd-login"><code>{{.Command}}</code></pre>
+    <button class="btn btn--small" type="button" data-copy="#cmd-login" data-copied="{{$.L.T "copy.done"}}">{{$.L.T "copy.button"}}</button>
+    {{if .Expires}}<p class="hint">{{$.L.T "connect.issued.expires" "date" ($.L.DatePtr .Expires)}}</p>{{end}}
+  </div>
+  {{end}}
+  <form class="form-grid form-grid--token" method="post" action="/connect/tokens" hx-post="/connect/tokens" hx-target="#token-block" hx-swap="outerHTML">
+    {{template "csrf" .}}
+    {{with .D.Error}}<p class="notice notice--error form-grid__full" role="alert">{{.}}</p>{{end}}
+    <div class="field">
+      <label class="field__label" for="token-name">{{.L.T "connect.token.name"}}</label>
+      <input class="input" id="token-name" name="name" required maxlength="60" value="{{.D.FormName}}" placeholder="{{.L.T "connect.token.name.placeholder"}}">
+    </div>
+    <fieldset class="field choice">
+      <legend class="field__label">{{.L.T "connect.token.ttl"}}</legend>
+      <div class="choice__row">
+        {{range $i, $d := .D.TTLs}}
+        <label class="choice__item"><input type="radio" name="ttl" value="{{$d}}" {{if eq $i 0}}checked{{end}}>
+          <span>{{if eq $d 0}}{{$.L.T "connect.token.never"}}{{else}}{{$.L.T "connect.token.days" "n" $d}}{{end}}</span></label>
+        {{end}}
+      </div>
+    </fieldset>
+    <div class="form-grid__full">
+      <button class="btn btn--primary" type="submit">{{.L.T "connect.token.submit"}}</button>
+    </div>
+  </form>
+</div>
+{{end}}
+
+{{define "token_list"}}<div id="token-list">{{template "token_rows" .}}</div>{{end}}
+
+{{define "token_rows"}}
+{{if .D.Tokens}}
+<table class="table">
+  <thead><tr>
+    <th scope="col">{{.L.T "connect.token.name"}}</th>
+    <th scope="col">{{.L.T "connect.tokens.prefix"}}</th>
+    <th scope="col">{{.L.T "connect.tokens.created"}}</th>
+    <th scope="col">{{.L.T "connect.tokens.used"}}</th>
+    <th scope="col">{{.L.T "connect.tokens.expires"}}</th>
+    <th scope="col">{{.L.T "connect.tokens.state"}}</th>
+    <th scope="col"><span class="sr-only">{{.L.T "table.actions"}}</span></th>
+  </tr></thead>
+  <tbody>
+  {{range .D.Tokens}}
+  <tr class="{{if ne .State "active"}}row--muted{{end}}">
+    <td data-label="{{$.L.T "connect.token.name"}}">{{.Name}}</td>
+    <td data-label="{{$.L.T "connect.tokens.prefix"}}" class="mono">{{.Prefix}}…</td>
+    <td data-label="{{$.L.T "connect.tokens.created"}}">{{$.L.Date .CreatedAt}}</td>
+    <td data-label="{{$.L.T "connect.tokens.used"}}">{{if .LastUsedAt}}{{$.L.DatePtr .LastUsedAt}}{{else}}{{$.L.T "connect.tokens.never"}}{{end}}</td>
+    <td data-label="{{$.L.T "connect.tokens.expires"}}">{{if .ExpiresAt}}{{$.L.DatePtr .ExpiresAt}}{{else}}{{$.L.T "connect.token.never"}}{{end}}</td>
+    <td data-label="{{$.L.T "connect.tokens.state"}}"><span class="badge badge--{{if eq .State "active"}}ok{{else}}muted{{end}}">{{$.L.T (printf "connect.state.%s" .State)}}</span></td>
+    <td class="table__actions">{{if eq .State "active"}}
+      <form method="post" action="/connect/tokens/{{.ID}}/revoke">
+        {{template "csrf" $}}
+        <button class="btn btn--small btn--danger-ghost" type="submit" aria-label="{{$.L.T "connect.tokens.revoke"}}: {{.Name}}">{{$.L.T "connect.tokens.revoke"}}</button>
+      </form>{{end}}
+    </td>
+  </tr>
+  {{end}}
+  </tbody>
+</table>
+{{else}}
+<p class="empty-line">{{.L.T "connect.tokens.empty"}}</p>
+{{end}}
+{{end}}
+
+{{define "token_result"}}{{template "token_block" .}}<div id="token-list" hx-swap-oob="true">{{template "token_rows" .}}</div>{{end}}

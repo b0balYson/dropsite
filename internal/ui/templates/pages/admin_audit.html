@@ -1,0 +1,61 @@
+{{define "content"}}
+<header class="page-head">
+  <div class="page-head__text">
+    <p class="eyebrow">{{.L.T "nav.admin"}} · {{.L.T "audit.total" "n" .D.Pager.Total}}</p>
+    <h1 class="display">{{.L.T "audit.title"}}</h1>
+  </div>
+</header>
+
+<form class="filters" method="get" action="/admin/audit">
+  <div class="field">
+    <label class="field__label" for="f-user">{{.L.T "audit.user"}}</label>
+    <select class="input" id="f-user" name="user">
+      <option value="">{{.L.T "audit.any"}}</option>
+      {{range .D.Users}}<option value="{{.ID}}" {{if eq (printf "%d" .ID) $.D.Filter.User}}selected{{end}}>{{.Email}}</option>{{end}}
+    </select>
+  </div>
+  <div class="field">
+    <label class="field__label" for="f-action">{{.L.T "audit.action"}}</label>
+    <select class="input" id="f-action" name="action">
+      <option value="">{{.L.T "audit.any"}}</option>
+      {{range .D.Actions}}<option value="{{.}}" {{if eq . $.D.Filter.Action}}selected{{end}}>{{.}}</option>{{end}}
+    </select>
+  </div>
+  <div class="field">
+    <label class="field__label" for="f-from">{{.L.T "audit.from"}}</label>
+    <input class="input" id="f-from" name="from" type="date" value="{{.D.Filter.From}}">
+  </div>
+  <div class="field">
+    <label class="field__label" for="f-to">{{.L.T "audit.to"}}</label>
+    <input class="input" id="f-to" name="to" type="date" value="{{.D.Filter.To}}">
+  </div>
+  <div class="filters__actions">
+    <button class="btn btn--primary" type="submit">{{.L.T "audit.apply"}}</button>
+    <a class="link-btn" href="/admin/audit">{{.L.T "search.reset"}}</a>
+  </div>
+</form>
+
+{{if .D.Rows}}
+<ol class="log">
+  {{range .D.Rows}}
+  <li class="log__row">
+    <time class="log__time mono" datetime="{{.CreatedAt.UTC.Format "2006-01-02T15:04:05Z"}}">{{$.L.Date .CreatedAt}}</time>
+    <div class="log__main">
+      <p class="log__what"><strong>{{.Label}}</strong> <span class="mono muted small">{{.Action}}</span></p>
+      <p class="log__who small">
+        <span class="mono addr-break">{{if .ActorEmail}}{{.ActorEmail}}{{else}}{{$.L.T "audit.system"}}{{end}}</span>
+        {{if .Target}} → <span class="mono addr-break">{{.Target}}</span>{{end}}
+        {{if .IP}} · <span class="mono">{{.IP}}</span>{{end}}
+      </p>
+      {{if .Items}}
+      <dl class="log__meta">
+        {{range .Items}}<div class="kv kv--inline"><dt class="mono">{{.Key}}</dt><dd class="mono addr-break">{{.Value}}</dd></div>{{end}}
+      </dl>
+      {{end}}
+    </div>
+  </li>
+  {{end}}
+</ol>
+{{template "pager" .}}
+{{else}}<p class="empty-line">{{.L.T "audit.empty"}}</p>{{end}}
+{{end}}

@@ -1,0 +1,25 @@
+{{define "content"}}
+<section class="auth">
+  <div class="auth__intro">
+    <p class="eyebrow">{{.Product}}</p>
+    <h1 class="display">{{.L.T "login.heading"}}</h1>
+    <p class="lede">{{.L.T "login.lede"}}</p>
+  </div>
+  <form class="auth__form stack" method="post" action="/login">
+    <h2 class="section-title">{{.L.T "login.title"}}</h2>
+    {{template "csrf" .}}
+    <input type="hidden" name="next" value="{{.D.Next}}">
+    {{with .D.Error}}<p class="notice notice--error" role="alert">{{.}}</p>{{end}}
+    <div class="field">
+      <label class="field__label" for="email">{{.L.T "login.email"}}</label>
+      <input class="input" id="email" name="email" type="email" autocomplete="username" required value="{{.D.Email}}" autofocus>
+    </div>
+    <div class="field">
+      <label class="field__label" for="password">{{.L.T "login.password"}}</label>
+      <input class="input" id="password" name="password" type="password" autocomplete="current-password" required>
+    </div>
+    <button class="btn btn--primary btn--wide" type="submit">{{.L.T "login.submit"}}</button>
+    <p class="hint">{{.L.T "login.forgot"}}</p>
+  </form>
+</section>
+{{end}}

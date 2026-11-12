@@ -123,12 +123,13 @@ func extractSiteEntry(stage string, hdr *tar.Header, tr io.Reader) error {
 		return fmt.Errorf("unsafe path %q in backup", hdr.Name)
 	}
 	dst := filepath.Join(stage, "sites", filepath.FromSlash(rel))
+	//nolint:gosec // Caddy runs as another uid and must read the sites volume
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return fmt.Errorf("create directory: %w", err)
 	}
 	switch hdr.Typeflag {
 	case tar.TypeDir:
-		return os.MkdirAll(dst, 0o755)
+		return os.MkdirAll(dst, 0o755) //nolint:gosec // readable by Caddy
 	case tar.TypeReg:
 		return copyTo(dst, tr, 0o644)
 	case tar.TypeSymlink:
@@ -142,7 +143,7 @@ func extractSiteEntry(stage string, hdr *tar.Header, tr io.Reader) error {
 }
 
 func copyTo(dst string, r io.Reader, mode os.FileMode) error {
-	f, err := os.OpenFile(dst, os.O_CREATE|os.O_EXCL|os.O_WRONLY, mode)
+	f, err := os.OpenFile(dst, os.O_CREATE|os.O_EXCL|os.O_WRONLY, mode) //nolint:gosec // staging and sites paths built by this package
 	if err != nil {
 		return fmt.Errorf("create %s: %w", dst, err)
 	}
@@ -168,10 +169,10 @@ func replaceDB(src, dbPath string) error {
 // replaceSites empties sitesDir (which may be a mount point and cannot be
 // removed itself) and moves the restored tree in.
 func replaceSites(src, sitesDir string) error {
-	if err := os.MkdirAll(src, 0o755); err != nil {
+	if err := os.MkdirAll(src, 0o755); err != nil { //nolint:gosec // readable by Caddy
 		return fmt.Errorf("prepare sites: %w", err)
 	}
-	if err := os.MkdirAll(sitesDir, 0o755); err != nil {
+	if err := os.MkdirAll(sitesDir, 0o755); err != nil { //nolint:gosec // readable by Caddy
 		return fmt.Errorf("create sites directory: %w", err)
 	}
 	old, err := os.ReadDir(sitesDir)
@@ -217,11 +218,11 @@ func copyTreeWithLinks(src, dst string) error {
 			if err != nil {
 				return fmt.Errorf("read link: %w", err)
 			}
-			return os.Symlink(link, target)
+			return os.Symlink(link, target) //nolint:gosec // walking our own staging directory; links are recreated, not followed
 		case d.IsDir():
-			return os.MkdirAll(target, 0o755)
+			return os.MkdirAll(target, 0o755) //nolint:gosec // readable by Caddy
 		default:
-			f, err := os.Open(path)
+			f, err := os.Open(path) //nolint:gosec // walking our own staging directory, links are recreated not followed
 			if err != nil {
 				return fmt.Errorf("open %s: %w", path, err)
 			}

@@ -1,0 +1,77 @@
+{{define "content"}}
+<header class="page-head">
+  <div class="page-head__text">
+    <p class="eyebrow">{{.L.T "connect.eyebrow"}}</p>
+    <h1 class="display">{{.L.T "connect.title"}}</h1>
+    <p class="lede">{{.L.T "connect.lede"}}</p>
+  </div>
+</header>
+
+<ol class="steps-big">
+  <li class="step">
+    <span class="step__num mono" aria-hidden="true">01</span>
+    <div class="step__body">
+      <h2 class="section-title">{{.L.T "connect.install.title"}}</h2>
+      <p>{{.L.T "connect.install.text"}}</p>
+      <div class="codeblock">
+        <p class="codeblock__label">{{.L.T "connect.install.unix"}}</p>
+        <pre class="code" id="cmd-sh"><code>{{.D.InstallSh}}</code></pre>
+        <button class="btn btn--small btn--ghost" type="button" data-copy="#cmd-sh" data-copied="{{.L.T "copy.done"}}">{{.L.T "copy.button"}}</button>
+      </div>
+      <div class="codeblock">
+        <p class="codeblock__label">{{.L.T "connect.install.windows"}}</p>
+        <pre class="code" id="cmd-ps"><code>{{.D.InstallPs1}}</code></pre>
+        <button class="btn btn--small btn--ghost" type="button" data-copy="#cmd-ps" data-copied="{{.L.T "copy.done"}}">{{.L.T "copy.button"}}</button>
+      </div>
+      <p class="hint">{{.L.T "connect.install.check" "cli" .D.CLI}}</p>
+    </div>
+  </li>
+
+  <li class="step">
+    <span class="step__num mono" aria-hidden="true">02</span>
+    <div class="step__body">
+      <h2 class="section-title">{{.L.T "connect.token.title"}}</h2>
+      <p>{{.L.T "connect.token.text"}}</p>
+      {{template "token_block" .}}
+    </div>
+  </li>
+
+  <li class="step">
+    <span class="step__num mono" aria-hidden="true">03</span>
+    <div class="step__body">
+      <h2 class="section-title">{{.L.T "connect.agent.title"}}</h2>
+      <p>{{.L.T "connect.agent.text"}}</p>
+      <details class="howto" open>
+        <summary>Claude Code</summary>
+        <p>{{.L.T "connect.claude.text"}}</p>
+        <p class="mono addr-break small">{{.D.SkillPath}}</p>
+        <div class="codeblock">
+          <pre class="code code--tall" id="skill-claude"><code>{{.D.Skill}}</code></pre>
+          <button class="btn btn--small btn--ghost" type="button" data-copy="#skill-claude" data-copied="{{.L.T "copy.done"}}">{{.L.T "copy.button"}}</button>
+        </div>
+      </details>
+      <details class="howto">
+        <summary>Codex</summary>
+        <p>{{.L.T "connect.codex.text"}}</p>
+        <div class="codeblock">
+          <pre class="code code--tall" id="skill-codex"><code>{{.D.Codex}}</code></pre>
+          <button class="btn btn--small btn--ghost" type="button" data-copy="#skill-codex" data-copied="{{.L.T "copy.done"}}">{{.L.T "copy.button"}}</button>
+        </div>
+      </details>
+    </div>
+  </li>
+
+  <li class="step">
+    <span class="step__num mono" aria-hidden="true">04</span>
+    <div class="step__body">
+      <h2 class="section-title">{{.L.T "connect.use.title"}}</h2>
+      <p class="quote">{{.L.T "connect.use.text"}}</p>
+    </div>
+  </li>
+</ol>
+
+<section class="section" aria-labelledby="tokens-h">
+  <h2 class="section-title" id="tokens-h">{{.L.T "connect.tokens.title"}}</h2>
+  {{template "token_list" .}}
+</section>
+{{end}}

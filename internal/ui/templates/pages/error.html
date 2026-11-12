@@ -1,0 +1,10 @@
+{{define "content"}}
+<section class="errorpage">
+  <p class="errorpage__code mono" aria-hidden="true">{{.D.Code}}</p>
+  <div class="errorpage__text">
+    <h1 class="display">{{.L.T .D.Heading}}</h1>
+    {{if .D.Message}}<p class="lede">{{.D.Message}}</p>{{else if .D.Text}}<p class="lede">{{.L.T .D.Text}}</p>{{end}}
+    <p><a class="btn btn--primary" href="/">{{.L.T "error.home"}}</a></p>
+  </div>
+</section>
+{{end}}

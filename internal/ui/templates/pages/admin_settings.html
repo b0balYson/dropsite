@@ -1,0 +1,58 @@
+{{define "content"}}
+<header class="page-head">
+  <div class="page-head__text">
+    <p class="eyebrow">{{.L.T "nav.admin"}}</p>
+    <h1 class="display">{{.L.T "settings.title"}}</h1>
+    <p class="lede">{{.L.T "settings.lede"}}</p>
+  </div>
+</header>
+
+<form method="post" action="/admin/settings" class="settings">
+  {{template "csrf" .}}
+  <section class="section" aria-labelledby="limits-h">
+    <h2 class="section-title" id="limits-h">{{.L.T "settings.limits"}}</h2>
+    <div class="setting-list">
+    {{range .D.Fields}}
+      <div class="setting{{if .Overridden}} setting--over{{end}}">
+        <div class="setting__label">
+          <label class="field__label" for="s-{{.Key}}">{{$.L.T (printf "settings.%s" .Key)}}</label>
+          <p class="hint">{{$.L.T (printf "settings.%s.hint" .Key)}}</p>
+        </div>
+        <div class="setting__input">
+          <input class="input mono" id="s-{{.Key}}" name="{{.Key}}" inputmode="{{if .Bytes}}decimal{{else}}numeric{{end}}" value="{{.Value}}" required aria-describedby="d-{{.Key}}">
+          <span class="setting__unit">{{if .Bytes}}{{$.L.T "unit.mb"}}{{else}}{{$.L.T "unit.pcs"}}{{end}}</span>
+        </div>
+        <div class="setting__state" id="d-{{.Key}}">
+          {{if .Overridden}}<span class="badge badge--warn">{{$.L.T "settings.overridden"}}</span>{{else}}<span class="badge badge--muted">{{$.L.T "settings.default"}}</span>{{end}}
+          <span class="small">{{$.L.T "settings.defaultvalue" "value" .Default}} {{if .Bytes}}{{$.L.T "unit.mb"}}{{end}}</span>
+          {{if .Overridden}}<label class="check small"><input type="checkbox" name="reset_{{.Key}}" value="1"> {{$.L.T "settings.reset"}}</label>{{end}}
+        </div>
+      </div>
+    {{end}}
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="slugs-h">
+    <h2 class="section-title" id="slugs-h">{{.L.T "settings.reserved"}}</h2>
+    <div class="split">
+      <div class="field">
+        <label class="field__label" for="s-reserved">{{.L.T "settings.reserved.extra"}}</label>
+        <textarea class="input mono" id="s-reserved" name="reserved_slugs" rows="6" spellcheck="false" aria-describedby="reserved-hint">{{.D.Extra}}</textarea>
+        <p class="hint" id="reserved-hint">{{.L.T "settings.reserved.hint"}}</p>
+        {{if .D.ExtraOver}}<label class="check small"><input type="checkbox" name="reset_reserved_slugs" value="1"> {{.L.T "settings.reset"}}</label>{{end}}
+      </div>
+      <div class="split__wide">
+        <p class="field__label">{{.L.T "settings.reserved.builtin"}}</p>
+        <ul class="chips">{{range .D.Builtin}}<li class="chip mono">{{.}}</li>{{end}}</ul>
+        {{if .D.EnvSlugs}}
+        <p class="field__label">{{.L.T "settings.reserved.env"}}</p>
+        <ul class="chips">{{range .D.EnvSlugs}}<li class="chip mono">{{.}}</li>{{end}}</ul>
+        {{end}}
+      </div>
+    </div>
+  </section>
+  <div class="sticky-actions">
+    <button class="btn btn--primary" type="submit">{{.L.T "form.save"}}</button>
+  </div>
+</form>
+{{end}}

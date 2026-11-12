@@ -1,0 +1,63 @@
+{{define "content"}}
+<header class="page-head">
+  <div class="page-head__text">
+    <p class="eyebrow">{{.L.T "nav.admin"}} · {{.L.T "allsites.total" "n" .D.Pager.Total}}</p>
+    <h1 class="display">{{.L.T "allsites.title"}}</h1>
+  </div>
+</header>
+
+<form class="search" method="get" action="/admin/sites" role="search">
+  <label class="sr-only" for="q">{{.L.T "search.label"}}</label>
+  <input class="input" id="q" name="q" type="search" value="{{.D.Query}}" placeholder="{{.L.T "allsites.search"}}">
+  <button class="btn btn--ghost" type="submit">{{.L.T "search.submit"}}</button>
+  {{if .D.Query}}<a class="link-btn" href="/admin/sites">{{.L.T "search.reset"}}</a>{{end}}
+</form>
+
+<datalist id="active-emails">{{range .D.Emails}}<option value="{{.}}"></option>{{end}}</datalist>
+
+{{if .D.Sites}}
+<ol class="site-list site-list--admin">
+  {{range $i, $s := .D.Sites}}
+  <li class="site-row">
+    <span class="site-row__index mono" aria-hidden="true">{{printf "%02d" (inc $i)}}</span>
+    <div class="site-row__main">
+      <h2 class="site-row__title"><a href="/sites/{{$s.ID}}">{{$s.Title}}</a>{{if $s.HasApex}} <span class="badge badge--current">{{$.L.T "allsites.apex.badge"}}</span>{{end}}</h2>
+      <ul class="addr-list">
+        {{range $j, $u := $s.URLs}}<li><a class="addr{{if eq $j 0}} addr--primary{{end}} mono" href="{{$u}}" title="{{$u}}" target="_blank" rel="noopener noreferrer">{{host $u}}</a></li>{{end}}
+      </ul>
+    </div>
+    <dl class="site-row__meta">
+      <div class="kv"><dt>{{$.L.T "allsites.owner"}}</dt><dd class="mono addr-break">{{$s.OwnerEmail}}</dd></div>
+      <div class="kv"><dt>{{$.L.T "sites.lastdeploy"}}</dt><dd>{{if $s.LastDeployAt}}{{$.L.DatePtr $s.LastDeployAt}}{{else}}<span class="muted">{{$.L.T "sites.nodeploy"}}</span>{{end}}</dd></div>
+      <div class="kv"><dt>{{$.L.T "sites.size"}}</dt><dd class="mono">{{if $s.SizeBytes}}{{$.L.Size $s.SizeBytes}}{{else}}—{{end}}</dd></div>
+    </dl>
+    <details class="row-actions">
+      <summary class="btn btn--small btn--ghost">{{$.L.T "allsites.actions"}}</summary>
+      <div class="row-actions__body">
+        {{if $s.HasApex}}
+        <form class="stack" method="post" action="/admin/sites/{{$s.ID}}/apex/clear">
+          {{template "csrf" $}}<input type="hidden" name="back" value="{{$.D.Back}}">
+          <label class="check"><input type="checkbox" name="confirm" value="yes" required> {{$.L.T "allsites.apex.clear.confirm" "domain" $.D.Domain}}</label>
+          <button class="btn btn--small btn--danger-ghost" type="submit">{{$.L.T "allsites.apex.clear"}}</button>
+        </form>
+        {{else}}
+        <form class="stack" method="post" action="/admin/sites/{{$s.ID}}/apex">
+          {{template "csrf" $}}<input type="hidden" name="back" value="{{$.D.Back}}">
+          <label class="check"><input type="checkbox" name="confirm" value="yes" required> {{$.L.T "allsites.apex.confirm" "domain" $.D.Domain}}</label>
+          <button class="btn btn--small" type="submit">{{$.L.T "allsites.apex.set"}}</button>
+        </form>
+        {{end}}
+        <form class="stack" method="post" action="/admin/sites/{{$s.ID}}/transfer">
+          {{template "csrf" $}}<input type="hidden" name="back" value="{{$.D.Back}}">
+          <label class="field__label" for="to-{{$s.ID}}">{{$.L.T "allsites.transfer.label"}}</label>
+          <input class="input" id="to-{{$s.ID}}" name="email" type="email" list="active-emails" required autocomplete="off">
+          <button class="btn btn--small" type="submit">{{$.L.T "allsites.transfer.submit"}}</button>
+        </form>
+      </div>
+    </details>
+  </li>
+  {{end}}
+</ol>
+{{template "pager" .}}
+{{else}}<p class="empty-line">{{if .D.Query}}{{.L.T "allsites.nomatch"}}{{else}}{{.L.T "allsites.empty"}}{{end}}</p>{{end}}
+{{end}}

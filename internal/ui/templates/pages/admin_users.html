@@ -1,0 +1,88 @@
+{{define "content"}}
+<header class="page-head">
+  <div class="page-head__text">
+    <p class="eyebrow">{{.L.T "nav.admin"}}</p>
+    <h1 class="display">{{.L.T "users.title"}}</h1>
+  </div>
+</header>
+
+{{with .D.Invite}}
+<section class="notice notice--ok issued" role="status" aria-labelledby="invite-h">
+  <h2 class="notice__title" id="invite-h">{{$.L.T "users.invite.title" "email" .User.Email}}</h2>
+  <p class="notice__text">{{$.L.T "users.invite.text" "expires" .ExpiresAt}}</p>
+  <pre class="code" id="invite-link"><code>{{.URL}}</code></pre>
+  <button class="btn btn--small" type="button" data-copy="#invite-link" data-copied="{{$.L.T "copy.done"}}">{{$.L.T "copy.button"}}</button>
+</section>
+{{end}}
+
+<section class="panel panel--flat" aria-labelledby="new-user-h">
+  <h2 class="section-title" id="new-user-h">{{.L.T "users.create"}}</h2>
+  <form class="form-grid form-grid--inline" method="post" action="/admin/users">
+    {{template "csrf" .}}
+    {{with .D.Form.Error}}<p class="notice notice--error form-grid__full" role="alert">{{.}}</p>{{end}}
+    <div class="field">
+      <label class="field__label" for="new-email">{{.L.T "login.email"}}</label>
+      <input class="input" id="new-email" name="email" type="email" required value="{{.D.Form.Email}}" autocomplete="off" aria-describedby="new-user-hint">
+    </div>
+    <div class="field">
+      <label class="field__label" for="new-role">{{.L.T "users.role"}}</label>
+      <select class="input" id="new-role" name="role">
+        <option value="user" {{if ne .D.Form.Role "admin"}}selected{{end}}>{{.L.T "role.user"}}</option>
+        <option value="admin" {{if eq .D.Form.Role "admin"}}selected{{end}}>{{.L.T "role.admin"}}</option>
+      </select>
+    </div>
+    <div class="form-grid__full">
+      <button class="btn btn--primary" type="submit">{{.L.T "users.create.submit"}}</button>
+    </div>
+  </form>
+  <p class="hint" id="new-user-hint">{{.L.T "users.create.hint"}}</p>
+</section>
+
+<section class="section" aria-labelledby="users-h">
+    <h2 class="sr-only" id="users-h">{{.L.T "users.title"}}</h2>
+    <form class="search" method="get" action="/admin/users" role="search">
+      <label class="sr-only" for="q">{{.L.T "search.label"}}</label>
+      <input class="input" id="q" name="q" type="search" value="{{.D.Query}}" placeholder="{{.L.T "users.search"}}">
+      <button class="btn btn--ghost" type="submit">{{.L.T "search.submit"}}</button>
+    </form>
+    {{if .D.Users}}
+    <table class="table">
+      <thead><tr>
+        <th scope="col">{{.L.T "login.email"}}</th>
+        <th scope="col">{{.L.T "users.role"}}</th>
+        <th scope="col">{{.L.T "users.status"}}</th>
+        <th scope="col">{{.L.T "users.sites"}}</th>
+        <th scope="col">{{.L.T "users.created"}}</th>
+        <th scope="col"><span class="sr-only">{{.L.T "table.actions"}}</span></th>
+      </tr></thead>
+      <tbody>
+      {{range .D.Users}}
+      <tr class="{{if eq .Status "blocked"}}row--muted{{end}}">
+        <td data-label="{{$.L.T "login.email"}}" class="mono addr-break">{{.Email}}</td>
+        <td data-label="{{$.L.T "users.role"}}">{{$.L.T (printf "role.%s" .Role)}}</td>
+        <td data-label="{{$.L.T "users.status"}}"><span class="badge badge--{{if eq .Status "active"}}ok{{else if eq .Status "blocked"}}error{{else}}warn{{end}}">{{$.L.T (printf "status.%s" .Status)}}</span></td>
+        <td data-label="{{$.L.T "users.sites"}}" class="mono">{{.SiteCount}}</td>
+        <td data-label="{{$.L.T "users.created"}}">{{$.L.Date .CreatedAt}}</td>
+        <td class="table__actions">
+          {{if ne .ID $.D.MeID}}
+          <div class="actions">
+            {{if ne .Status "blocked"}}
+            <form method="post" action="/admin/users/{{.ID}}/invite">{{template "csrf" $}}
+              <button class="btn btn--small btn--ghost" type="submit">{{if eq .Status "active"}}{{$.L.T "users.reset"}}{{else}}{{$.L.T "users.reinvite"}}{{end}}</button></form>
+            <form method="post" action="/admin/users/{{.ID}}/block">{{template "csrf" $}}
+              <button class="btn btn--small btn--danger-ghost" type="submit" aria-label="{{$.L.T "users.block"}}: {{.Email}}">{{$.L.T "users.block"}}</button></form>
+            {{else}}
+            <form method="post" action="/admin/users/{{.ID}}/unblock">{{template "csrf" $}}
+              <button class="btn btn--small btn--ghost" type="submit" aria-label="{{$.L.T "users.unblock"}}: {{.Email}}">{{$.L.T "users.unblock"}}</button></form>
+            {{end}}
+          </div>
+          {{else}}<span class="muted small">{{$.L.T "users.you"}}</span>{{end}}
+        </td>
+      </tr>
+      {{end}}
+      </tbody>
+    </table>
+    {{template "pager" .}}
+    {{else}}<p class="empty-line">{{.L.T "users.empty"}}</p>{{end}}
+</section>
+{{end}}

@@ -1,0 +1,95 @@
+{{define "title"}}{{.D.V.Site.Title}}{{end}}
+
+{{define "flash_link"}}<p><a class="btn btn--small btn--ok" href="{{.D.V.URL}}" target="_blank" rel="noopener noreferrer">{{.L.T "deploy.open"}} <span class="mono addr-break">{{host .D.V.URL}}</span> <span aria-hidden="true">↗</span></a></p>{{end}}
+
+{{define "content"}}
+{{$v := .D.V}}
+<nav class="crumbs" aria-label="{{.L.T "nav.breadcrumbs"}}"><a href="/">← {{.L.T "nav.sites"}}</a></nav>
+<header class="site-head">
+  <p class="eyebrow mono">{{.L.T "site.id"}} {{$v.Site.ID}}</p>
+  <h1 class="display display--site">{{$v.Site.Title}}</h1>
+  <ul class="addr-list addr-list--lg">
+    {{range $i, $u := $v.URLs}}
+    <li><a class="addr{{if eq $i 0}} addr--primary{{end}} mono" href="{{$u}}" title="{{$u}}" target="_blank" rel="noopener noreferrer">{{host $u}}</a></li>
+    {{end}}
+  </ul>
+  {{template "site_meta" .}}
+</header>
+
+<div class="site-grid">
+  <section class="site-grid__main" aria-labelledby="publish-h">
+    <h2 class="section-title" id="publish-h">{{.L.T "deploy.title"}}</h2>
+    <form class="dropzone" method="post" action="/sites/{{$v.Site.ID}}/deploy" enctype="multipart/form-data"
+      data-upload data-history="/sites/{{$v.Site.ID}}/history"
+      data-msg-uploading="{{.L.T "deploy.uploading"}}" data-msg-processing="{{.L.T "deploy.processing"}}"
+      data-msg-failed="{{.L.T "deploy.failed"}}" data-msg-open="{{.L.T "deploy.open"}}" data-msg-wrongtype="{{.L.T "deploy.wrongtype"}}">
+      <input type="hidden" name="_csrf" value="{{.CSRF}}">
+      <div class="dropzone__body">
+        <p class="dropzone__title">{{.L.T "deploy.drop"}}</p>
+        <p class="hint">{{.L.T "deploy.hint" "size" (.L.Size .D.MaxSize)}}</p>
+        <div class="dropzone__actions">
+          <label class="btn btn--primary file-pick">
+            <input class="file-pick__input" type="file" name="archive" accept=".zip,.tar.gz,.tgz,application/zip,application/gzip" required data-file>
+            <span>{{.L.T "deploy.pick"}}</span>
+          </label>
+          <button class="btn btn--ghost" type="submit" data-nojs>{{.L.T "deploy.submit"}}</button>
+        </div>
+      </div>
+      <div class="progress" data-progress hidden>
+        <div class="progress__track" role="progressbar" aria-label="{{.L.T "deploy.progress"}}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-bar-wrap>
+          <div class="progress__bar" data-bar></div>
+        </div>
+        <span class="progress__pct mono" data-pct>0%</span>
+      </div>
+      <div class="upload-status" role="status" aria-live="polite" data-status></div>
+    </form>
+    <details class="howto">
+      <summary>{{.L.T "deploy.howto.title"}}</summary>
+      <ul class="bullets">
+        <li>{{.L.T "deploy.howto.1"}}</li>
+        <li>{{.L.T "deploy.howto.2"}}</li>
+        <li>{{.L.T "deploy.howto.3"}}</li>
+      </ul>
+    </details>
+  </section>
+
+  <section class="site-grid__side panel panel--tight" aria-labelledby="settings-h">
+    <h2 class="section-title" id="settings-h">{{.L.T "site.settings"}}</h2>
+    <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/settings">
+      {{template "csrf" .}}
+      <div class="field">
+        <label class="field__label" for="title">{{.L.T "site.field.title"}}</label>
+        <input class="input" id="title" name="title" required maxlength="120" value="{{$v.Site.Title}}">
+      </div>
+      <div class="field">
+        <label class="field__label" for="slug">{{.L.T "site.field.slug"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+        <input class="input mono" id="slug" name="slug" value="{{$v.Slug}}" maxlength="63" autocomplete="off" autocapitalize="off" spellcheck="false"
+          hx-get="/sites/{{$v.Site.ID}}/slug-check" hx-trigger="input changed delay:350ms" hx-target="#slug-status" hx-sync="this:replace" aria-describedby="slug-hint slug-status">
+        <p class="hint" id="slug-hint">{{.L.T "site.slug.hint" "domain" .D.Domain}} {{.L.T "site.slug.clear"}}</p>
+        <p class="slug-status" id="slug-status" aria-live="polite"></p>
+      </div>
+      <button class="btn btn--primary" type="submit">{{.L.T "form.save"}}</button>
+    </form>
+  </section>
+</div>
+
+<section class="section" aria-labelledby="history-h">
+  <h2 class="section-title" id="history-h">{{.L.T "history.title"}}</h2>
+  <div id="history">{{template "history" .}}</div>
+</section>
+
+<section class="section danger" aria-labelledby="delete-h">
+  <details class="danger__box">
+    <summary><span id="delete-h">{{.L.T "site.delete.title"}}</span></summary>
+    <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/delete">
+      {{template "csrf" .}}
+      <p>{{.L.T "site.delete.text"}}</p>
+      <div class="field">
+        <label class="field__label" for="confirm">{{.L.T "site.delete.confirm" "title" $v.Site.Title}}</label>
+        <input class="input" id="confirm" name="confirm" required autocomplete="off" data-confirm-input>
+      </div>
+      <button class="btn btn--danger" type="submit">{{.L.T "site.delete.submit"}}</button>
+    </form>
+  </details>
+</section>
+{{end}}

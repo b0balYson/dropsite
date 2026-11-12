@@ -1,0 +1,70 @@
+{{define "content"}}
+<header class="page-head">
+  <div class="page-head__text">
+    <p class="eyebrow">{{.L.T "sites.count" "count" .D.Count "limit" .D.Limit}}</p>
+    <h1 class="display">{{.L.T "sites.title"}}</h1>
+  </div>
+  {{if not .D.AtLimit}}<a class="btn btn--primary page-head__action" href="#new-site">{{.L.T "sites.create"}}</a>{{end}}
+</header>
+
+{{if .D.AtLimit}}{{with .D.Form.Error}}<p class="notice notice--error" role="alert">{{.}}</p>{{end}}<p class="notice notice--warn" role="status">{{.L.T "sites.atlimit" "limit" .D.Limit}}</p>{{end}}
+
+{{if .D.Sites}}
+<ol class="site-list">
+  {{range $i, $s := .D.Sites}}
+  <li class="site-row">
+    <span class="site-row__index mono" aria-hidden="true">{{printf "%02d" (inc $i)}}</span>
+    <div class="site-row__main">
+      <h2 class="site-row__title"><a href="/sites/{{$s.ID}}">{{$s.Title}}</a></h2>
+      <ul class="addr-list">
+        {{range $j, $u := $s.URLs}}
+        <li><a class="addr{{if eq $j 0}} addr--primary{{end}} mono" href="{{$u}}" title="{{$u}}" target="_blank" rel="noopener noreferrer">{{host $u}}</a></li>
+        {{end}}
+      </ul>
+    </div>
+    <dl class="site-row__meta">
+      <div class="kv"><dt>{{$.L.T "sites.lastdeploy"}}</dt><dd>{{if $s.LastDeployAt}}{{$.L.DatePtr $s.LastDeployAt}}{{else}}<span class="muted">{{$.L.T "sites.nodeploy"}}</span>{{end}}</dd></div>
+      <div class="kv"><dt>{{$.L.T "sites.size"}}</dt><dd class="mono">{{if $s.SizeBytes}}{{$.L.Size $s.SizeBytes}}{{else}}—{{end}}</dd></div>
+    </dl>
+    <a class="btn btn--ghost site-row__open" href="/sites/{{$s.ID}}" aria-label="{{$.L.T "sites.manage"}}: {{$s.Title}}">{{$.L.T "sites.manage"}} <span aria-hidden="true">→</span></a>
+  </li>
+  {{end}}
+</ol>
+{{else}}
+<section class="empty" aria-labelledby="empty-h">
+  <p class="empty__mark mono" aria-hidden="true">00</p>
+  <div>
+    <h2 class="section-title" id="empty-h">{{.L.T "sites.empty.title"}}</h2>
+    <ol class="steps">
+      <li>{{.L.T "sites.empty.step1"}}</li>
+      <li>{{.L.T "sites.empty.step2"}}</li>
+      <li>{{.L.T "sites.empty.step3"}}</li>
+    </ol>
+  </div>
+</section>
+{{end}}
+
+{{if not .D.AtLimit}}
+<section class="panel" id="new-site" aria-labelledby="new-site-h">
+  <h2 class="section-title" id="new-site-h">{{.L.T "sites.create"}}</h2>
+  <form class="form-grid" method="post" action="/sites">
+    {{template "csrf" .}}
+    {{with .D.Form.Error}}<p class="notice notice--error form-grid__full" role="alert">{{.}}</p>{{end}}
+    <div class="field">
+      <label class="field__label" for="title">{{.L.T "site.field.title"}}</label>
+      <input class="input" id="title" name="title" required maxlength="120" value="{{.D.Form.Title}}" placeholder="{{.L.T "site.field.title.placeholder"}}">
+    </div>
+    <div class="field">
+      <label class="field__label" for="slug">{{.L.T "site.field.slug"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+      <input class="input mono" id="slug" name="slug" value="{{.D.Form.Slug}}" maxlength="63" autocomplete="off" autocapitalize="off" spellcheck="false"
+        hx-get="/slug-check" hx-trigger="input changed delay:350ms" hx-target="#slug-status" hx-sync="this:replace" aria-describedby="slug-hint slug-status">
+      <p class="hint" id="slug-hint">{{.L.T "site.slug.hint" "domain" .D.Domain}}</p>
+      <p class="slug-status" id="slug-status" aria-live="polite"></p>
+    </div>
+    <div class="form-grid__full">
+      <button class="btn btn--primary" type="submit">{{.L.T "sites.create.submit"}}</button>
+    </div>
+  </form>
+</section>
+{{end}}
+{{end}}

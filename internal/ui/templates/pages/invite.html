@@ -1,0 +1,37 @@
+{{define "content"}}
+<section class="auth">
+  <div class="auth__intro">
+    <p class="eyebrow">{{.Product}}</p>
+    {{if .D.Invalid}}
+    <h1 class="display">{{.L.T "invite.invalid.title"}}</h1>
+    <p class="lede">{{.L.T "invite.invalid.text"}}</p>
+    <p><a class="btn btn--ghost" href="/login">{{.L.T "invite.tologin"}}</a></p>
+    {{else}}
+    <h1 class="display">{{.L.T "invite.heading"}}</h1>
+    <p class="lede">{{.L.T "invite.lede"}}</p>
+    {{end}}
+  </div>
+  {{if not .D.Invalid}}
+  <form class="auth__form stack" method="post" action="/invite/{{.D.Secret}}">
+    <h2 class="section-title">{{.L.T "invite.title"}}</h2>
+    {{template "csrf" .}}
+    {{with .D.Error}}<p class="notice notice--error" role="alert">{{.}}</p>{{end}}
+    <div class="field">
+      <span class="field__label">{{.L.T "login.email"}}</span>
+      <p class="readonly mono addr-break">{{.D.Email}}</p>
+      <input type="hidden" name="email" value="{{.D.Email}}" autocomplete="username">
+    </div>
+    <div class="field">
+      <label class="field__label" for="password">{{.L.T "invite.password"}}</label>
+      <input class="input" id="password" name="password" type="password" autocomplete="new-password" minlength="10" required aria-describedby="pw-hint" autofocus>
+      <p class="hint" id="pw-hint">{{.L.T "invite.password.hint"}}</p>
+    </div>
+    <div class="field">
+      <label class="field__label" for="password2">{{.L.T "invite.password2"}}</label>
+      <input class="input" id="password2" name="password2" type="password" autocomplete="new-password" minlength="10" required>
+    </div>
+    <button class="btn btn--primary btn--wide" type="submit">{{.L.T "invite.submit"}}</button>
+  </form>
+  {{end}}
+</section>
+{{end}}

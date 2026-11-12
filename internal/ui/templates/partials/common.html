@@ -1,0 +1,18 @@
+{{define "csrf"}}<input type="hidden" name="_csrf" value="{{.CSRF}}">{{end}}
+
+{{define "flash"}}{{with .Flash}}
+<div class="notice notice--{{if eq .Kind "error"}}error{{else}}ok{{end}} notice--flash" role="{{if eq .Kind "error"}}alert{{else}}status{{end}}">
+  <p class="notice__text">{{.Msg}}</p>
+  {{if eq .Kind "deployed"}}{{block "flash_link" $}}{{end}}{{end}}
+</div>
+{{end}}{{end}}
+
+{{define "pager"}}{{with .D.Pager}}{{if gt .Pages 1}}
+<nav class="pager" aria-label="{{$.L.T "pager.label"}}">
+  {{if .Prev}}<a class="btn btn--small btn--ghost" href="{{.Prev}}" rel="prev">←</a>{{else}}<span class="btn btn--small btn--ghost" aria-disabled="true">←</span>{{end}}
+  <span class="pager__pos mono">{{.Page}} / {{.Pages}}</span>
+  {{if .Next}}<a class="btn btn--small btn--ghost" href="{{.Next}}" rel="next">→</a>{{else}}<span class="btn btn--small btn--ghost" aria-disabled="true">→</span>{{end}}
+</nav>
+{{end}}{{end}}{{end}}
+
+{{define "slug_status"}}{{with .D}}{{if .Slug}}{{if .Available}}<span class="status status--ok"><span class="status__icon" aria-hidden="true">✓</span> <span class="mono addr-break">{{.Host}}</span> — {{$.L.T "slug.available"}}</span>{{else}}<span class="status status--error"><span class="status__icon" aria-hidden="true">✕</span> {{.Message}}</span>{{end}}{{end}}{{end}}{{end}}

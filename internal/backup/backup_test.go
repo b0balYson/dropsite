@@ -6,10 +6,13 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/b0balYson/dropsite/internal/store"
 )
 
 func archiveOf(t *testing.T, add func(tw *tar.Writer)) []byte {
@@ -98,5 +101,65 @@ func TestLinkChecks(t *testing.T) {
 	}
 	if isInside("../x") || isInside("") || !isInside("a/b") {
 		t.Fatal("isInside")
+	}
+}
+
+func TestBackupRoundTripKeepsLinks(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	state, sites := filepath.Join(dir, "state"), filepath.Join(dir, "sites")
+	for _, d := range []string{state, filepath.Join(sites, "empty"), filepath.Join(sites, "sites", "abcdefghij", "releases", "r1"), filepath.Join(sites, "by-host")} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_ = os.WriteFile(filepath.Join(sites, "sites", "abcdefghij", "releases", "r1", "index.html"), []byte("hi"), 0o644)
+	_ = os.Symlink("releases/r1", filepath.Join(sites, "sites", "abcdefghij", "current"))
+	_ = os.Symlink("../sites/abcdefghij/current", filepath.Join(sites, "by-host", "a.pp.test"))
+	db, err := store.Open(ctx, filepath.Join(state, "state.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	m, err := Backup(ctx, db, sites, state, &buf)
+	_ = db.Close()
+	if err != nil || m.SchemaVersion != store.LatestVersion() {
+		t.Fatalf("backup: %v %+v", err, m)
+	}
+
+	out := t.TempDir()
+	state2, sites2 := filepath.Join(out, "state"), filepath.Join(out, "sites")
+	_ = os.MkdirAll(state2, 0o755)
+	if _, err := Restore(ctx, bytes.NewReader(buf.Bytes()), state2, sites2, false); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(filepath.Join(sites2, "by-host", "a.pp.test", "index.html"))
+	if err != nil || string(b) != "hi" {
+		t.Fatalf("served through restored links: %q %v", b, err)
+	}
+	if _, err := Restore(ctx, bytes.NewReader(buf.Bytes()), state2, sites2, false); !errors.Is(err, ErrNotEmpty) {
+		t.Fatalf("second restore without force: %v", err)
+	}
+	if _, err := Restore(ctx, bytes.NewReader(buf.Bytes()), state2, sites2, true); err != nil {
+		t.Fatalf("forced restore: %v", err)
+	}
+	db2, err := store.Open(ctx, filepath.Join(state2, "state.db"))
+	if err != nil {
+		t.Fatalf("restored database opens: %v", err)
+	}
+	_ = db2.Close()
+}
+
+func TestMoveAcrossFilesystemsFallback(t *testing.T) {
+	src := t.TempDir()
+	_ = os.MkdirAll(filepath.Join(src, "a"), 0o755)
+	_ = os.WriteFile(filepath.Join(src, "a", "f"), []byte("x"), 0o644)
+	_ = os.Symlink("a/f", filepath.Join(src, "l"))
+	dst := filepath.Join(t.TempDir(), "copy")
+	if err := copyTreeWithLinks(src, dst); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(dst, "l")); string(b) != "x" {
+		t.Fatal("copy must keep links")
 	}
 }

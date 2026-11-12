@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="{{.L.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="htmx-config" content='{"allowEval":false,"allowScriptTags":false,"includeIndicatorStyles":false,"historyCacheSize":0}'>
+<meta name="referrer" content="same-origin">
+<title>{{block "title" .}}{{.L.T .Title}}{{end}} — {{.Product}}</title>
+<link rel="icon" href="{{.Asset "favicon.svg"}}" type="image/svg+xml">
+<link rel="stylesheet" href="{{.Asset "app.css"}}">
+<script src="{{.Asset "htmx.min.js"}}" defer></script>
+<script src="{{.Asset "app.js"}}" defer></script>
+</head>
+<body hx-headers='{"X-CSRF-Token":"{{.CSRF}}"}'>
+<a class="skip-link" href="#main">{{.L.T "nav.skip"}}</a>
+<header class="masthead">
+  <div class="masthead__inner">
+    <a class="wordmark" href="/"><span class="wordmark__mark" aria-hidden="true"></span>{{.Product}}</a>
+    {{if .Me}}
+    <nav class="nav" aria-label="{{.L.T "nav.label"}}">
+      <a class="nav__link" href="/" {{if eq .Nav "sites"}}aria-current="page"{{end}}>{{.L.T "nav.sites"}}</a>
+      <a class="nav__link" href="/connect" {{if eq .Nav "connect"}}aria-current="page"{{end}}>{{.L.T "nav.connect"}}</a>
+      {{if .IsAdmin}}
+      <span class="nav__group" role="group" aria-label="{{.L.T "nav.admin"}}">
+        <a class="nav__link" href="/admin/users" {{if eq .Nav "users"}}aria-current="page"{{end}}>{{.L.T "nav.users"}}</a>
+        <a class="nav__link" href="/admin/sites" {{if eq .Nav "allsites"}}aria-current="page"{{end}}>{{.L.T "nav.allsites"}}</a>
+        <a class="nav__link" href="/admin/audit" {{if eq .Nav "audit"}}aria-current="page"{{end}}>{{.L.T "nav.audit"}}</a>
+        <a class="nav__link" href="/admin/settings" {{if eq .Nav "settings"}}aria-current="page"{{end}}>{{.L.T "nav.settings"}}</a>
+      </span>
+      {{end}}
+    </nav>
+    {{end}}
+    <div class="masthead__aside">
+      <form class="lang" method="post" action="/lang">
+        {{template "csrf" .}}
+        <input type="hidden" name="next" value="{{.Path}}">
+        <span class="sr-only">{{.L.T "nav.language"}}</span>
+        <button class="lang__btn" type="submit" name="lang" value="ru" lang="ru" aria-pressed="{{if eq .L.Lang "ru"}}true{{else}}false{{end}}">RU</button>
+        <button class="lang__btn" type="submit" name="lang" value="en" lang="en" aria-pressed="{{if eq .L.Lang "en"}}true{{else}}false{{end}}">EN</button>
+      </form>
+      {{if .Me}}
+      <span class="who mono" title="{{.Me.Email}}">{{.Me.Email}}</span>
+      <form method="post" action="/logout">
+        {{template "csrf" .}}
+        <button class="link-btn" type="submit">{{.L.T "nav.logout"}}</button>
+      </form>
+      {{end}}
+    </div>
+  </div>
+</header>
+<main id="main" class="page" tabindex="-1">
+{{template "flash" .}}
+{{template "content" .}}
+</main>
+<footer class="foot">
+  <span>{{.Product}}</span>
+  <span class="foot__note">{{.L.T "foot.note"}}</span>
+</footer>
+</body>
+</html>
