@@ -106,6 +106,7 @@ type deployRow struct {
 type siteData struct {
 	V        service.SiteView
 	Forms    formsSummary
+	Data     []service.CollectionView
 	Deploys  []deployRow
 	MaxSize  int64
 	Domain   string
@@ -148,6 +149,9 @@ func (s *server) sitePage(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	}
 	if err == nil {
 		data.Forms, err = s.formsSummary(r, rc, data.V.Site.ID)
+	}
+	if err == nil {
+		_, data.Data, err = s.svc.ListCollections(r.Context(), rc.actor, data.V.Site.ID)
 	}
 	if err != nil {
 		s.failPage(w, r, rc, err)

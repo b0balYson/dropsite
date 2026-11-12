@@ -1,0 +1,60 @@
+{{define "title"}}{{.L.T "data.title"}} — {{.D.V.Site.Title}}{{end}}
+
+{{define "content"}}
+{{$v := .D.V}}{{$base := printf "/sites/%s/data" $v.Site.ID}}
+<nav class="crumbs" aria-label="{{.L.T "nav.breadcrumbs"}}"><a href="/sites/{{$v.Site.ID}}">← {{$v.Site.Title}}</a></nav>
+<header class="page-head">
+  <div class="page-head__text">
+    <p class="eyebrow mono addr-break">{{wbr (host $v.URL)}}</p>
+    <h1 class="display">{{.L.T "data.title"}}</h1>
+    <p class="lede">{{.L.T "data.lede"}}</p>
+  </div>
+</header>
+
+<section class="section" aria-labelledby="colls-h">
+  <h2 class="section-title" id="colls-h">{{.L.T "data.collections"}}</h2>
+  {{if .D.Collections}}
+  {{template "collection_rows" (bundle $ .D.Collections)}}
+  {{range .D.Collections}}
+  {{$edit := $.D.Edit}}
+  <details class="howto" {{if eq $edit.Name .Name}}open{{end}}>
+    <summary>{{$.L.T "data.edit" "name" .Name}}</summary>
+    {{if eq $edit.Name .Name}}{{with $edit.Error}}<p class="notice notice--error" role="alert">{{.}}</p>{{end}}{{end}}
+    <form class="stack" method="post" action="{{$base}}/{{.Name}}">
+      {{template "csrf" $}}
+      {{if eq $edit.Name .Name}}
+      {{template "collection_fields" (bundle $ $edit)}}
+      {{else}}
+      {{template "collection_fields" (bundle $ (dict "Name" .Name "Title" .Title "Mode" (printf "%s" .Mode) "Schema" (printf "%s" .Schema)))}}
+      {{end}}
+      <p class="hint">{{$.L.T "data.schema.later"}}</p>
+      <button class="btn btn--primary" type="submit">{{$.L.T "data.save"}}</button>
+    </form>
+    <form class="stack danger" method="post" action="{{$base}}/{{.Name}}/delete">
+      {{template "csrf" $}}
+      <div class="field">
+        <label class="field__label" for="confirm-{{.Name}}">{{$.L.T "data.delete.confirm" "name" .Name "n" .Documents}}</label>
+        <input class="input mono" id="confirm-{{.Name}}" name="confirm" required autocomplete="off">
+      </div>
+      <button class="btn btn--danger" type="submit">{{$.L.T "data.delete"}}</button>
+    </form>
+  </details>
+  {{end}}
+  {{else}}<p class="empty-line">{{.L.T "data.empty"}}</p>{{end}}
+</section>
+
+<section class="section" aria-labelledby="new-coll-h">
+  <h2 class="section-title" id="new-coll-h">{{.L.T "data.new"}}</h2>
+  {{with .D.New.Error}}<p class="notice notice--error" role="alert">{{.}}</p>{{end}}
+  <form class="panel--tight stack" method="post" action="{{$base}}">
+    {{template "csrf" .}}
+    <div class="field">
+      <label class="field__label" for="new-name">{{.L.T "data.field.name"}}</label>
+      <input class="input mono" id="new-name" name="name" required maxlength="64" pattern="[a-zA-Z0-9][a-zA-Z0-9_\-]*" value="{{.D.New.Name}}" placeholder="menu">
+      <p class="hint">{{.L.T "data.field.name.hint"}}</p>
+    </div>
+    {{template "collection_fields" (bundle $ (dict "Name" "new" "Title" .D.New.Title "Mode" .D.New.Mode "Schema" .D.New.Schema))}}
+    <button class="btn btn--primary" type="submit">{{.L.T "data.create"}}</button>
+  </form>
+</section>
+{{end}}
