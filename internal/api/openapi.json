@@ -2164,7 +2164,7 @@
         "responses": {
           "200": {
             "description": "The screenshot",
-            "headers": { "X-Dropsite-Deploy-Id": { "schema": { "type": "string" } } },
+            "headers": { "X-Dropsite-Site-Id": { "schema": { "type": "string" } }, "X-Dropsite-Deploy-Id": { "schema": { "type": "string" } }, "X-Dropsite-Device": { "schema": { "type": "string" } }, "X-Dropsite-Viewport": { "description": "e.g. 1280x800", "schema": { "type": "string" } } },
             "content": { "image/png": { "schema": { "type": "string", "format": "binary" } } }
           },
           "400": { "$ref": "#/components/responses/Invalid" },

@@ -171,7 +171,10 @@ func (a *api) screenshot(w http.ResponseWriter, r *http.Request) error {
 	}
 	w.Header().Set("Content-Type", "image/png")
 	w.Header().Set("Cache-Control", "private, max-age=300")
+	w.Header().Set("X-Dropsite-Site-Id", shot.SiteID)
 	w.Header().Set("X-Dropsite-Deploy-Id", shot.DeployID)
+	w.Header().Set("X-Dropsite-Device", shot.Device)
+	w.Header().Set("X-Dropsite-Viewport", strconv.Itoa(shot.Width)+"x"+strconv.Itoa(shot.Height))
 	w.Header().Set("Content-Length", strconv.Itoa(len(shot.PNG)))
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(shot.PNG)
