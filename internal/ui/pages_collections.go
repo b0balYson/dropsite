@@ -21,7 +21,9 @@ const collectionPageSize = 50
 
 func dataPath(siteID string) string { return sitePath(siteID) + "/data" }
 
-func collectionPagePath(siteID, name string) string { return dataPath(siteID) + "/" + url.PathEscape(name) }
+func collectionPagePath(siteID, name string) string {
+	return dataPath(siteID) + "/" + url.PathEscape(name)
+}
 
 // collectionForm is a submitted create or edit form, kept for re-rendering.
 type collectionForm struct {

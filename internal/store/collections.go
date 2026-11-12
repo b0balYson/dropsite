@@ -416,7 +416,7 @@ func (db *DB) ListDocuments(ctx context.Context, f DocumentFilter) ([]domain.Doc
 		args = append(args, string(f.Status))
 	}
 	orderBy, cond, condArgs := orderSQL(f.Order, f.After)
-	q += cond + " ORDER BY " + orderBy + " LIMIT ?"
+	q += cond + " ORDER BY " + orderBy + " LIMIT ?" //nolint:gosec // G202: constant fragments only, values are bound
 	args = append(append(args, condArgs...), f.Limit+1)
 	rows, err := db.r.QueryContext(ctx, q, args...)
 	if err != nil {
