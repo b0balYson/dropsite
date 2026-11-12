@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/b0balYson/dropsite/internal/mcp"
 )
 
 func (e *testEnv) app() *app {
@@ -61,6 +63,14 @@ func TestLocalMCPNotConnected(t *testing.T) {
 	cs := mcpClient(t, e.app())
 	if _, msg := callTool(t, cs, "list_sites", map[string]any{}); !strings.Contains(msg, "Connect AI") {
 		t.Fatalf("not connected: %q", msg)
+	}
+	// The guide and the instructions do not need a login.
+	if cs.InitializeResult().Instructions != mcp.Instructions {
+		t.Fatal("local server sends other instructions")
+	}
+	if g, msg := callTool(t, cs, "get_guide", map[string]any{"topic": "forms"}); msg != "" ||
+		!strings.Contains(g["guide"].(string), "/_form/") {
+		t.Fatalf("get_guide: %v %q", g, msg)
 	}
 	tools, _ := cs.ListTools(context.Background(), nil)
 	names := []string{}

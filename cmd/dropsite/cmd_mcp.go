@@ -17,12 +17,6 @@ import (
 	"github.com/b0balYson/dropsite/internal/mcp"
 )
 
-const localInstructions = "Publish static websites from folders on this computer to the user's " + brand.DisplayName +
-	" server and manage them. To publish, call deploy_folder with the absolute path of the site's build output " +
-	"folder that contains index.html (build the project first if it has a build step; never pass a project, " +
-	"home or system folder: everything in the folder becomes public); it returns the link to give to the user. " +
-	"Never delete a site unless the user explicitly asked and confirmed."
-
 var errMCPNotConnected = errors.New(brand.Name + " is not connected on this computer: ask the user to open the " +
 	"Connect AI page of the " + brand.Name + " web interface, press Connect and run the command shown there, then retry")
 
@@ -51,7 +45,7 @@ func (a *app) mcpServer() *sdk.Server {
 		}
 		return localBackend{a: a, c: c}, nil
 	}
-	return mcp.NewServer(brand.Version, resolve, mcp.Options{Folder: true, Instructions: localInstructions})
+	return mcp.NewServer(brand.Version, resolve, mcp.Options{Folder: true, Instructions: mcp.Instructions})
 }
 
 type nopCloser struct{ io.Reader }

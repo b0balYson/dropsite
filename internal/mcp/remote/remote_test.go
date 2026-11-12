@@ -14,6 +14,7 @@ import (
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/b0balYson/dropsite/internal/domain"
+	"github.com/b0balYson/dropsite/internal/mcp"
 	"github.com/b0balYson/dropsite/internal/service"
 	"github.com/b0balYson/dropsite/internal/testenv"
 )
@@ -75,8 +76,12 @@ func TestRemoteToolsWithAPIToken(t *testing.T) {
 	r := newRig(t)
 	alice := r.env.User("alice@pp.test")
 	cs := r.session(r.env.Token(alice, "mcp"))
-	if !strings.Contains(cs.InitializeResult().Instructions, "deploy_files") {
+	if cs.InitializeResult().Instructions != mcp.Instructions || !strings.Contains(mcp.Instructions, "deploy_files") {
 		t.Fatal("no instructions")
+	}
+	if g, msg := call(t, cs, "get_guide", map[string]any{"topic": "update"}); msg != "" ||
+		!strings.Contains(g["guide"].(string), "base_deploy_id") {
+		t.Fatalf("get_guide: %v %q", g, msg)
 	}
 
 	out, msg := call(t, cs, "deploy_files", map[string]any{"title": "Promo",
