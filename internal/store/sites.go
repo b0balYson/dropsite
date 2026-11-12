@@ -144,7 +144,7 @@ func (db *DB) MarkSitePurged(ctx context.Context, siteID string, now time.Time) 
 		if _, err := tx.ExecContext(ctx, "DELETE FROM deploys WHERE site_id = ?", siteID); err != nil {
 			return fmt.Errorf("delete deploys: %w", err)
 		}
-		return nil
+		return deleteSiteStats(ctx, tx, siteID)
 	})
 }
 

@@ -103,11 +103,13 @@ type deployRow struct {
 }
 
 type siteData struct {
-	V       service.SiteView
-	Deploys []deployRow
-	MaxSize int64
-	Domain  string
-	Domains siteDomains
+	V        service.SiteView
+	Deploys  []deployRow
+	MaxSize  int64
+	Domain   string
+	Domains  siteDomains
+	Stats    statsView
+	Counters service.SiteCounters
 }
 
 func (s *server) loadSite(r *http.Request, rc *reqCtx) (siteData, error) {
@@ -132,6 +134,12 @@ func (s *server) loadSite(r *http.Request, rc *reqCtx) (siteData, error) {
 
 func (s *server) sitePage(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	data, err := s.loadSite(r, rc)
+	if err == nil {
+		data.Stats, err = s.siteStatsView(r, rc, data.V.Site.ID)
+	}
+	if err == nil {
+		data.Counters, err = s.svc.GetSiteCounters(r.Context(), rc.actor, data.V.Site.ID)
+	}
 	if err != nil {
 		s.failPage(w, r, rc, err)
 		return

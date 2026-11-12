@@ -96,6 +96,12 @@ A site can also open on the owner's domain, such as `promo.example.com`: add it 
 | Reserved | `/_form/` and `/_dropsite/` belong to the platform |
 | Caching | HTML `no-cache`; other files `public, max-age=3600` |
 
+## Visit statistics and analytics counters
+
+The site screen shows page views per day for the last 30 days, totals, top pages and top referrers; administrators also see views over 7 days in "All sites". The numbers come from Caddy's access log, so sites need no scripts: robots and asset requests are not counted, and a visitor is recognised by IP address and browser within one UTC day without storing either. The same data is available at `GET /api/v1/sites/{ref}/stats?days=30`.
+
+Site owners may enter a Yandex Metrica counter number and/or a GA4 Measurement ID (administrators also global ones for every site). dropsite then inserts the standard tracking code before `</head>` in every HTML page of each new release; changing a site's IDs creates a new release with the updated code. Only IDs are accepted, never HTML. Details: [docs/statistics.md](docs/statistics.md).
+
 ## TLS certificates and Let's Encrypt limits
 
 By default every address gets its own certificate on first visit (`TLS_MODE=ondemand`). Caddy only requests a certificate for addresses that exist.
@@ -131,15 +137,17 @@ In this mode every release also gets its own preview address `https://p-<release
 | `MAX_DOMAINS_PER_SITE` | no | `5` | Own domains per site, 1–100 |
 | `SERVER_IPS` | no | addresses of `BASE_DOMAIN` | Public IPs of the server, comma separated: DNS target shown to owners and used by the domain DNS check |
 | `LOG_LEVEL` | no | `info` | `debug`, `info`, `warn`, `error` |
+| `STATS_INTERVAL` | no | `1m` | How often control reads the sites access log (1s to 1h) |
+| `STATS_LOG_FILE` | no | `/logs/sites-access.log` | Sites access log inside control; `off` disables statistics |
 
 ## Operations
 
 - **Backup:** `docker compose exec -T control /control backup - > backup-$(date +%F).tar.gz`. See [docs/backup.md](docs/backup.md) for restore.
 - **Upgrade:** back up, then `docker compose pull && docker compose up -d`. Migrations run automatically; downgrades are not supported.
-- **Logs:** JSON on stdout of both containers: `docker compose logs -f`.
+- **Logs:** JSON on stdout of both containers: `docker compose logs -f`. Caddy also writes the sites access log to the `logs` volume for statistics (rotated at 50 MB, 5 old files kept).
 - **Health:** `docker compose ps` shows the `control` health check.
 
-More: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [docs/tls.md](docs/tls.md), [docs/external-domains.md](docs/external-domains.md), [docs/production-checklist.md](docs/production-checklist.md).
+More: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [docs/tls.md](docs/tls.md), [docs/external-domains.md](docs/external-domains.md), [docs/production-checklist.md](docs/production-checklist.md), [docs/statistics.md](docs/statistics.md).
 
 ## Security model
 

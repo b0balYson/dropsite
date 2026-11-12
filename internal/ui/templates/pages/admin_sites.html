@@ -29,6 +29,7 @@
     <dl class="site-row__meta">
       <div class="kv"><dt>{{$.L.T "allsites.owner"}}</dt><dd class="mono addr-break">{{wbr $s.OwnerEmail}}</dd></div>
       <div class="kv"><dt>{{$.L.T "sites.lastdeploy"}}</dt><dd>{{if $s.LastDeployAt}}{{$.L.DatePtr $s.LastDeployAt}}{{else}}<span class="muted">{{$.L.T "sites.nodeploy"}}</span>{{end}}</dd></div>
+      <div class="kv"><dt>{{$.L.T "allsites.views" "days" 7}}</dt><dd class="mono">{{$.L.Num $s.Views}}</dd></div>
       <div class="kv"><dt>{{$.L.T "sites.size"}}</dt><dd class="mono">{{if $s.SizeBytes}}{{$.L.Size $s.SizeBytes}}{{else}}—{{end}}</dd></div>
     </dl>
     <details class="row-actions">
