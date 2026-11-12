@@ -974,7 +974,7 @@ input.input, select.input { height: 2.75rem; }
 .flag-list { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-3); }
 .site-row__main .flag-list { margin-top: var(--s-2); }
 .expiry-notice { margin-top: var(--s-6); }
-.access__group { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: var(--s-2); }
+.access__group { border: 0; padding: 0; margin-inline: 0; margin-bottom: 0; min-width: 0; display: grid; gap: var(--s-2); }
 .access__group + .access__group { padding-top: var(--s-4); border-top: var(--rule-thin) solid var(--c-hair); }
 .access__group > .field { margin-top: var(--s-2); }
 .field__label--sub { font-weight: 500; color: var(--c-ink-2); }
