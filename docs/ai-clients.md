@@ -1,12 +1,55 @@
 # Connecting AI assistants
 
-dropsite reaches AI assistants in three ways. All of them start on the **Connect AI** page of the web interface.
+dropsite is meant to be used from a chat: the user connects it once and then asks in plain words ("make a coffee shop site and publish it", "show the latest requests", "close the site with a password"). Everything starts on the **Connect AI** page of the web interface.
 
-| Assistant | How it publishes | How it is connected |
+| Assistant | How it works with sites | How it is connected |
 | --- | --- | --- |
-| Claude Code, Codex, Cursor | `dropsite-publish` skill → `dropsite deploy <folder>` | one command (`dropsite setup`) |
-| Claude Desktop | local MCP server `dropsite mcp` (tool `deploy_folder`) | one command (`dropsite setup`) |
-| ChatGPT, claude.ai | remote MCP `https://api.<BASE_DOMAIN>/mcp` (tool `deploy_files`, up to 1 MB) | custom connector + OAuth with a connect code |
+| ChatGPT, claude.ai, Claude Desktop, Claude Code (main path) | remote MCP `https://api.<BASE_DOMAIN>/mcp`: every chat tool (publish, change files, forms, statistics, access, domains, rollback) | connector + OAuth with a connect code |
+| Claude Code, Codex, Cursor on a computer (optional) | `dropsite-publish` skill → `dropsite deploy <folder>` | one command (`dropsite setup`) |
+| Claude Desktop on a computer (optional) | local MCP server `dropsite mcp` (tool `deploy_folder`) | one command (`dropsite setup`) |
+
+## Chats: ChatGPT, claude.ai, Claude Desktop, Claude Code
+
+All of them connect to the remote MCP endpoint `https://api.<BASE_DOMAIN>/mcp` (Streamable HTTP, OAuth):
+
+- **ChatGPT:** Settings → Apps → Advanced settings → developer mode; create an app with the server address and OAuth authentication. Custom MCP apps are not available on every ChatGPT plan and workspace admins may have to allow them; the official sources differ on plans, so check the current terms at [help.openai.com](https://help.openai.com/).
+- **claude.ai and Claude Desktop:** Settings → Connectors → Add custom connector, paste the address, press Add and Connect. The connector appears in Claude Desktop too. On a Team or Enterprise plan an owner adds it for the organisation first.
+- **Claude Code:** `claude mcp add --transport http dropsite https://api.<BASE_DOMAIN>/mcp`, then `/mcp` in Claude Code to sign in.
+
+When the dropsite page opens, the user presses **Connect** on the Connect AI page, enters the one-time code and presses **Allow**. The page shows the application name, the domain it returns to and the permissions; it never asks for a password (passwords are typed only on the private interface).
+
+Example requests (the Connect AI page shows them in the interface language):
+
+| English | Русский |
+| --- | --- |
+| "Make a coffee shop site and publish it" | «Сделай сайт кофейни и опубликуй» |
+| "Change the photos and prices on my site" | «Измени фотографии и цены на моём сайте» |
+| "Show visits for the week" | «Покажи посещаемость за неделю» |
+| "Show the latest requests" | «Покажи последние заявки» |
+| "Send requests to Telegram" | «Присылай заявки в Telegram» |
+| "Close the site with a password" | «Закрой сайт паролем» |
+| "Bring back the previous version" | «Верни предыдущую версию» |
+| Administrator: "Put this placeholder on the root domain" | Администратор: «Поставь эту заглушку на корневой домен» |
+
+What people do themselves, and the assistant says so: the first connection; DNS records of an own domain at the domain provider (the assistant gives the exact values) and the administrator's approval of the domain; confirming a delivery channel (Start in Telegram, the code from the e-mail); installation settings (Telegram bot, mail server, users, limits) in the web interface.
+
+### How the assistant learns the rules
+
+Chats differ in which MCP features reach the model (checked November 2026):
+
+| Feature | ChatGPT | claude.ai, Claude Desktop | Claude Code |
+| --- | --- | --- | --- |
+| server `instructions` | used; the first 512 characters matter most ([Apps SDK](https://developers.openai.com/apps-sdk/build/mcp-server)) | not documented; reports of instructions being dropped for remote servers | used, up to 4096 characters ([docs](https://code.claude.com/docs/en/mcp)) |
+| tool descriptions and annotations | used; annotations drive write confirmations | used; read-only tools run without a prompt, destructive ones always ask ([review criteria](https://claude.com/docs/connectors/building/review-criteria.md)) | used |
+| prompts, resources | not used for the model | user-invoked only | user-invoked only |
+
+So dropsite delivers its rules three ways, from one source:
+
+1. **Server instructions** sent on `initialize` by both servers: the essentials in the first paragraph (plain language, give the link, confirm before deleting, call `get_guide`), then short rules for every task.
+2. **`get_guide`**, a read-only tool that works even before the user has connected. `topic` is one of `overview`, `create`, `update`, `large_sites`, `assets`, `forms`, `stats`, `addresses`, `protection`, `rollback`, `account`, `errors`, or `all` (default).
+3. **Tool descriptions** say when to call each tool and what to tell the user, and point to `get_guide`.
+
+The guide lives in `skills/guide/*.md` and is embedded into both binaries. Its sections on self-contained sites and on forms are also part of the `dropsite-publish` skill and the Codex snippet: `skills/dropsite-publish/SKILL.md` and `skills/codex/AGENTS.md` are generated from `skills/parts/*.md` and those sections. After editing any of them run `go test ./skills -update`; the tests fail while the files are out of date.
 
 ## Connect codes
 
@@ -41,24 +84,17 @@ The Claude Desktop config is rewritten atomically with its permissions and every
 
 ### Local MCP server
 
-`dropsite mcp` speaks MCP over stdio and calls the API with the saved login: `list_sites`, `create_site`, `get_site`, `set_slug`, `list_deploys`, `rollback`, `delete_site` and `deploy_folder` (an absolute folder path; packed exactly like `dropsite deploy`, including `.dropsite.json`). Without a login every tool answers with instructions to press **Connect**.
+`dropsite mcp` speaks MCP over stdio and calls the API with the saved login. It sends the same instructions and offers `get_guide` (also without a login), plus `list_sites`, `create_site`, `get_site`, `set_slug`, `list_deploys`, `rollback`, `delete_site` and `deploy_folder` (an absolute folder path; packed exactly like `dropsite deploy`, including `.dropsite.json`). Without a login every tool answers with instructions to press **Connect**.
 
 Because the assistant can be steered by content it reads, `deploy_folder` is guarded: the home folder, folders directly inside it and file system roots are refused (symbolic links are resolved), and a folder with secret-looking files — `.env*`, `.npmrc`, `.netrc`, `.git-credentials`, `.pypirc`, `.ssh/`, `.aws/`, `.gnupg/`, `*.pem`, `*.key`, `id_rsa*`, `id_dsa*`, `id_ecdsa*`, `id_ed25519*` — is refused with the list of those files. With `skip_sensitive_files: true` the folder is published without them; the tool has no way to publish them. Other dotfiles such as `.well-known/` are published as usual. The tool description tells the assistant to pass only the build output folder.
 
 `dropsite deploy` applies the same secret-file check (not the folder check): it stops and lists the files unless `--skip-sensitive` (leave them out) or `--include-sensitive` (publish them, when they really are public) is given.
 
-## ChatGPT and claude.ai
+## Remote MCP: tools and rights
 
-Both connect to the remote MCP endpoint `https://api.<BASE_DOMAIN>/mcp`:
+The remote server offers every chat tool. A whole small site is published in one call with `deploy_files` (instead of the local `deploy_folder`): `files` is an array of `{path, content, encoding}` (`utf8` or `base64`), at most 1 MB decoded in total; omit `site` to create a new site. Larger sites go up in an upload session where the server offers one; otherwise the error recommends the web interface, the CLI or Claude Desktop. Releases published this way have the source `mcp`.
 
-- **ChatGPT:** Settings → Apps (Connectors) → Advanced → developer mode; create an app with the server address and OAuth authentication. Custom MCP connectors are not available on every ChatGPT plan and workspace admins may have to allow them; check the current terms at [help.openai.com](https://help.openai.com/).
-- **claude.ai:** Settings → Connectors → Add custom connector, paste the address, press Connect.
-
-When the dropsite page opens, the user enters a connect code from the **Connect AI** page and presses **Allow**. The page shows the application name, the domain it returns to and the permissions; it never asks for a password (passwords are typed only on the private interface).
-
-Tools: the same as the local server, with `deploy_files` instead of `deploy_folder`: `files` is an array of `{path, content, encoding}` (`utf8` or `base64`), at most 1 MB decoded in total; omit `site` to create a new site. Larger sites get an error that recommends the CLI or Claude Desktop. Releases published this way have the source `mcp`.
-
-Whatever token reaches `/mcp` (an OAuth token or an API token), the assistant works only with the user's own sites: an administrator's assistant gets no administrator powers and cannot see, publish to, roll back or delete other users' sites. Administration stays in the web interface, the API and the CLI.
+Whatever token reaches `/mcp` (an OAuth token or an API token), the assistant works only with the user's own sites: an administrator's assistant gets no administrator powers and cannot see, publish to, roll back or delete other users' sites. Administration stays in the web interface, the API and the CLI; the only installation-level action available to an administrator's chat is the root domain, with explicit confirmation.
 
 Connected applications are listed on the **Connect AI** page; **Disconnect** revokes every token of that application at once.
 
