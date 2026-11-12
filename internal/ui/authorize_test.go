@@ -75,6 +75,8 @@ func (r *consentRig) post(form url.Values) (*reply, string) {
 	r.t.Helper()
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, r.srv.URL+"/oauth/authorize?ui_lang=en", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", r.srv.URL)
+	req.Header.Set("Sec-Fetch-Site", "same-origin")
 	return r.do(req)
 }
 
@@ -82,6 +84,9 @@ func TestConsentPage(t *testing.T) {
 	r := newConsentRig(t)
 	body, csrf, sealed := r.open("en")
 	wantContains(t, body, "Local tool", "7777", "runs on this computer", "ui_lang=ru", "/oauth/static/app.css")
+	// no-referrer makes Firefox send Origin: null on this form's POST,
+	// which the same-origin CSRF check must reject.
+	wantContains(t, body, `<meta name="referrer" content="same-origin">`)
 
 	// A wrong code keeps the user on the page with an explanation.
 	resp, page := r.post(url.Values{"_csrf": {csrf}, "request": {sealed}, "code": {"AAAA-AAAA-AAAAA"}})
