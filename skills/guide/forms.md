@@ -9,7 +9,7 @@ Every submission is stored first, even when no channel is connected, and kept fo
   The channel delivers only after it is confirmed. Check with list_channels and tell the user when it works.
 - Turn a channel off or on with set_channel_enabled; a webhook that kept failing gets paused and is resumed the same way after the receiver is fixed. Delete with delete_channel only after the user confirmed.
 - If the installation has no Telegram bot or mail server configured, add_channel says so: tell the user that their dropsite administrator has to set it up, and offer another channel.
-- Form settings (for example requiring the anti-robot check Altcha): get_form_settings and set_form_settings. Turn Altcha on when the user complains about spam; the widget is already on the page if the form was built as above.
+- Form settings (for example requiring the anti-robot check Altcha): get_form_settings and set_form_settings. get_form_settings also returns form_snippet, a ready form for this site; adapt its fields instead of writing one from scratch. Turn Altcha on when the user complains about spam; the widget is already on the page if the form was built as above.
 
 ## Reading requests
 
