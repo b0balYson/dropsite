@@ -10,6 +10,7 @@ import (
 const (
 	maxLengths    = 5000
 	maxVarResolve = 4
+	maxResolved   = 512
 	minFontPx     = 8
 	maxFontPx     = 200
 	maxSpacingPx  = 400
@@ -123,20 +124,50 @@ func (st *styleStats) collectVars(s *sheet) {
 	}
 }
 
+// resolve substitutes var() references, at most maxVarResolve levels deep.
+// The result is cut at maxResolved bytes in every round: a chain of
+// properties that reference each other many times would otherwise grow
+// exponentially (the page is untrusted).
 func (st *styleStats) resolve(v string) string {
+	v = cut(v, maxResolved)
 	for range maxVarResolve {
 		if !strings.Contains(v, "var(") {
 			return v
 		}
-		v = varRe.ReplaceAllStringFunc(v, func(m string) string {
-			sm := varRe.FindStringSubmatch(m)
-			if val, ok := st.vars[sm[1]]; ok {
-				return val
-			}
-			return strings.TrimSpace(sm[2])
-		})
+		v = st.substitute(v)
 	}
 	return v
+}
+
+// substitute replaces each var() of v once, stopping at maxResolved bytes.
+func (st *styleStats) substitute(v string) string {
+	var b strings.Builder
+	last := 0
+	for _, m := range varRe.FindAllStringSubmatchIndex(v, -1) {
+		b.WriteString(v[last:m[0]])
+		last = m[1]
+		if val, ok := st.vars[v[m[2]:m[3]]]; ok {
+			b.WriteString(cut(val, maxResolved-b.Len()))
+		} else if m[4] >= 0 {
+			b.WriteString(strings.TrimSpace(v[m[4]:m[5]]))
+		}
+		if b.Len() >= maxResolved {
+			return cut(b.String(), maxResolved)
+		}
+	}
+	b.WriteString(v[last:])
+	return cut(b.String(), maxResolved)
+}
+
+// cut shortens s to at most n bytes.
+func cut(s string, n int) string {
+	if n <= 0 {
+		return ""
+	}
+	if len(s) > n {
+		return s[:n]
+	}
+	return s
 }
 
 func (st *styleStats) add(s *sheet) {
