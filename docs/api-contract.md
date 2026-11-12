@@ -103,6 +103,7 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 | `POST /templates/{name}/sites` | `{title?, slug?, lang?}` | `201 DeployResult`; `404 template_not_found` |
 | `GET /sites/{ref}/screenshot?deploy_id=&device=` | | `200 image/png` with `X-Dropsite-Site-Id`, `X-Dropsite-Deploy-Id`, `X-Dropsite-Device`, `X-Dropsite-Viewport`; `503 renderer_unavailable` without a renderer ([screenshots.md](screenshots.md)) |
 | `GET /sites/{ref}/visual-diff?from=&to=&device=` | | `{site_id, from_deploy_id, to_deploy_id, device, changed_percent, width, height, image_png}` (base64 PNG); `503 renderer_unavailable` |
+| `POST /references/inspect` | `{url}` | design brief of a reference page (`palette`, `fonts`, `outline`, `components`, …, `summary`) and `screenshot: {status, width, height, image_png}`; `400 invalid_input`, `400 fetch_failed`, `429 rate_limited` ([references.md](references.md)) |
 | `GET /sites/{ref}/forms/channels` | | `List<Channel>` (no secrets) |
 | `POST /sites/{ref}/forms/channels` | `{kind, target?}` | `201 {channel: Channel, secret?, link?}` |
 | `PATCH /sites/{ref}/forms/channels/{id}` | `{enabled}` | `Channel`; `true` also resumes a paused channel |

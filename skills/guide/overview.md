@@ -23,6 +23,7 @@ Most users are not technical. They say things like "make a coffee shop site and 
 Call get_guide with one of these topics when you need details:
 
 - `create`: build a new site and publish it.
+- `references`: a site in the style of a link or picture the user likes, without copying it.
 - `update`: change an existing site, also from a new chat.
 - `large_sites`: sites over 16 MB (many photos, several pages).
 - `assets`: self-contained, fast, mobile-friendly, accessible sites (read before building any site).

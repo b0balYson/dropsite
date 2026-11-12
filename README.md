@@ -94,6 +94,8 @@ What stays with people:
 
 A site can also start from one of five built-in templates, be copied into a new site, go live at a given time (a prepared version waits, then the site switches), and, when the optional renderer is enabled, be checked by the assistant with screenshots and a before/after comparison: [docs/screenshots.md](docs/screenshots.md).
 
+Give the assistant a link or a picture of a site you like and it builds an original site in a similar style, never a copy; for a link the server returns a design brief (palette, fonts, spacing, layout) without the page's texts or images: [docs/references.md](docs/references.md).
+
 How the assistant learns the rules (server instructions, the `get_guide` tool, tool descriptions) and what each chat supports: [docs/ai-clients.md](docs/ai-clients.md).
 
 ## Publishing
