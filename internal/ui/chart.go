@@ -15,8 +15,8 @@ import (
 // its container; on narrow screens the wrapper scrolls instead of shrinking
 // the text below legibility (see .chart in app.css).
 const (
-	chartW       = 640.0
-	chartH       = 220.0
+	chartW       = 760.0
+	chartH       = 240.0
 	chartLeft    = 44.0 // y tick labels
 	chartRight   = 18.0
 	chartTop     = 22.0 // label of the highest bar

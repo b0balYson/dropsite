@@ -984,14 +984,20 @@ input.input, select.input { height: 2.75rem; }
   padding-top: var(--s-4);
 }
 .stats__head .section-title { margin-bottom: 0; }
+/* Narrow: the headline number on its own row, the other two side by side.
+   Wide: one row, separated by hairlines. */
 .stats__totals {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
-  gap: var(--s-4) var(--s-6);
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-4) var(--s-5);
   margin-top: var(--s-5);
 }
-.stat { border-left: var(--rule-thin) solid var(--c-hair); padding-left: var(--s-3); }
-.stat:first-child { border-left: 0; padding-left: 0; }
+.stat:first-child { grid-column: 1 / -1; }
+@media (min-width: 48rem) {
+  .stats__totals { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); gap: var(--s-6); }
+  .stat:first-child { grid-column: auto; }
+  .stat + .stat { border-left: var(--rule-thin) solid var(--c-hair); padding-left: var(--s-4); }
+}
 .stat__label { font-size: var(--t-xs); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--c-ink-2); }
 .stat__value {
   font-size: var(--t-xl);
@@ -1003,9 +1009,11 @@ input.input, select.input { height: 2.75rem; }
 .stat:first-child .stat__value { font-size: var(--t-display); letter-spacing: -0.04em; line-height: 0.95; }
 
 .chart { margin-top: var(--s-6); }
-.chart__scroll { overflow-x: auto; overscroll-behavior-x: contain; }
+/* On narrow screens the chart keeps a legible size and scrolls; rtl on the
+   wrapper makes it open scrolled to the newest days (no script needed). */
+.chart__scroll { overflow-x: auto; overscroll-behavior-x: contain; direction: rtl; }
 .chart__scroll:focus-visible { outline-offset: 4px; }
-.chart__svg { width: 100%; min-width: 34rem; height: auto; overflow: visible; }
+.chart__svg { direction: ltr; margin-right: auto; width: 100%; min-width: 40rem; max-width: 60rem; height: auto; overflow: visible; }
 .chart figcaption { margin-top: var(--s-2); }
 .chart__line { stroke: var(--c-hair); stroke-width: 1; }
 .chart__base { stroke: var(--c-ink); stroke-width: 1; }
