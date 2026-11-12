@@ -19,6 +19,9 @@ type SiteView struct {
 	URLs      []string // every address, primary first
 	Slug      string
 	Current   *domain.Deploy
+	// CurrentPreviewURL is the preview address of Current (wildcard TLS mode
+	// only), otherwise empty.
+	CurrentPreviewURL string
 }
 
 const maxSiteIDAttempts = 5
@@ -62,6 +65,7 @@ func (s *Service) view(ctx context.Context, site domain.Site) (SiteView, error) 
 			return SiteView{}, err
 		}
 		v.Current = &d
+		v.CurrentPreviewURL = s.PreviewURL(d)
 	}
 	return v, nil
 }
@@ -322,6 +326,11 @@ func (s *Service) DeleteSite(ctx context.Context, a Actor, ref string) error {
 	}
 	unlock := s.siteLocks.lock(site.ID)
 	defer unlock()
+	// Listed first: deploys of a deleted site are no longer visible.
+	deploys, err := s.repo.ListDeploys(ctx, site.ID)
+	if err != nil {
+		return err
+	}
 	removed, err := s.repo.SoftDeleteSite(ctx, site.ID, s.now())
 	if err != nil {
 		return err
@@ -330,6 +339,9 @@ func (s *Service) DeleteSite(ctx context.Context, a Actor, ref string) error {
 		if err := s.files.UnlinkHost(h); err != nil {
 			return fmt.Errorf("unlink host: %w", err)
 		}
+	}
+	if err := s.unlinkPreviews(ctx, site.ID, deploys); err != nil {
+		return fmt.Errorf("unlink previews: %w", err)
 	}
 	s.audit(ctx, a, "site.delete", siteTarget(site.ID), map[string]any{"title": site.Title, "hosts": removed})
 	return nil

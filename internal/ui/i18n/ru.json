@@ -93,6 +93,8 @@
   "history.pruned": "удалён",
   "history.failed": "ошибка",
   "history.files": "файлов: {n}",
+  "history.preview": "превью",
+  "history.preview.label": "Открыть релиз {id} по отдельному адресу",
   "history.rollback": "Откатить",
   "history.pruned.hint": "файлы уже очищены",
   "history.empty": "Релизов ещё нет. Загрузите первый архив — он появится здесь.",

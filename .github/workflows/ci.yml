@@ -55,6 +55,12 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: false
           build-args: VERSION=${{ github.sha }}
+      - name: Caddy image with DNS plugins (amd64, arm64)
+        uses: docker/build-push-action@v7
+        with:
+          context: deploy/caddy
+          platforms: linux/amd64,linux/arm64
+          push: false
 
   e2e:
     runs-on: ubuntu-24.04

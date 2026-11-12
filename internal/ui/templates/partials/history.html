@@ -16,6 +16,7 @@
       <span>{{$.L.T (printf "source.%s" .Source)}}</span>
     </p>
     <div class="release__action">
+      {{if .PreviewURL}}<a class="release__preview" href="{{.PreviewURL}}" title="{{.PreviewURL}}" target="_blank" rel="noopener noreferrer" aria-label="{{$.L.T "history.preview.label" "id" .ID}}">{{$.L.T "history.preview"}}<span aria-hidden="true"> ↗</span></a>{{end}}
       {{if and (not .Current) (eq .Status "ready")}}
       <form method="post" action="/sites/{{.SiteID}}/rollback">
         {{template "csrf" $}}
