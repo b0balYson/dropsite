@@ -295,5 +295,14 @@
   "err.archive_empty": "The archive is empty. Add the site's files to it, including index.html.",
   "users.revoke_tokens": "Revoke keys",
   "users.tokens_revoked": "Revoked {count} access keys of {email}. Tools and assistants can no longer publish on their behalf.",
-  "audit.action.user.tokens_revoke": "All user keys revoked"
+  "audit.action.user.tokens_revoke": "All user keys revoked",
+  "err.domain_invalid": "This does not look like a domain. Enter a name such as promo.example.com, without https://, a path or a port.",
+  "err.domain_forbidden": "This domain belongs to the platform itself. For an address on the base domain, set a slug instead.",
+  "err.domain_taken": "The domain {domain} is already added to another site. If it is yours, contact the administrator.",
+  "err.domain_limit_reached": "This site already has the maximum of {limit} own domains. Remove one to add another.",
+  "err.domain_reason_invalid": "Give the reason on one line, at most {max} characters.",
+  "audit.action.domain.add": "Own domain added",
+  "audit.action.domain.remove": "Own domain removed",
+  "audit.action.domain.approve": "Domain approved",
+  "audit.action.domain.reject": "Domain rejected"
 }

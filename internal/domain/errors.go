@@ -46,6 +46,13 @@ const (
 	CodeTokenInvalid   = "token_name_invalid"
 	CodeSettingInvalid = "setting_invalid"
 
+	// External domain codes.
+	CodeDomainInvalid       = "domain_invalid"
+	CodeDomainForbidden     = "domain_forbidden"
+	CodeDomainTaken         = "domain_taken"
+	CodeDomainLimit         = "domain_limit_reached"
+	CodeDomainReasonInvalid = "domain_reason_invalid"
+
 	// Archive validation codes (produced by internal/archive).
 	CodeArchiveFormat      = "archive_unsupported_format"
 	CodeArchiveCorrupt     = "archive_corrupt"

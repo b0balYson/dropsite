@@ -54,7 +54,16 @@ type Config struct {
 	AdminAddr    string
 
 	TrustedProxies []netip.Prefix
+
+	// MaxDomainsPerSite caps external domains per site (any status).
+	MaxDomainsPerSite int
+	// ServerIPs are the public addresses external domains must point at; when
+	// empty, the DNS check uses the addresses of BASE_DOMAIN and API_HOST.
+	ServerIPs []netip.Addr
 }
+
+// maxDomainsPerSiteLimit bounds MAX_DOMAINS_PER_SITE.
+const maxDomainsPerSiteLimit = 100
 
 // Getenv is the environment lookup function, injectable for tests.
 type Getenv func(string) (string, bool)
@@ -132,6 +141,11 @@ func Load(get Getenv) (*Config, error) {
 	c.LogLevel = r.logLevel()
 	c.ReservedSlugs = splitList(r.str("RESERVED_SLUGS", ""))
 	c.TrustedProxies = r.prefixes("TRUSTED_PROXIES", "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8,::1/128")
+	c.MaxDomainsPerSite = r.positiveInt("MAX_DOMAINS_PER_SITE", domain.DefaultMaxDomainsPerSite)
+	if c.MaxDomainsPerSite > maxDomainsPerSiteLimit {
+		r.fail("MAX_DOMAINS_PER_SITE", "must be at most %d", maxDomainsPerSiteLimit)
+	}
+	c.ServerIPs = r.addrs("SERVER_IPS")
 
 	switch c.TLSMode {
 	case TLSModeOnDemand:
@@ -236,6 +250,19 @@ func (r *reader) prefixes(key, def string) []netip.Prefix {
 			continue
 		}
 		out = append(out, p.Masked())
+	}
+	return out
+}
+
+func (r *reader) addrs(key string) []netip.Addr {
+	var out []netip.Addr
+	for _, s := range splitList(r.str(key, "")) {
+		a, err := netip.ParseAddr(s)
+		if err != nil {
+			r.fail(key, "invalid IP address %q", s)
+			continue
+		}
+		out = append(out, a.Unmap())
 	}
 	return out
 }

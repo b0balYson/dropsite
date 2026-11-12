@@ -295,5 +295,14 @@
   "err.archive_empty": "Архив пустой. Добавьте в него файлы сайта, включая index.html.",
   "users.revoke_tokens": "Отозвать ключи",
   "users.tokens_revoked": "У {email} отозвано ключей доступа: {count}. Программы и ассистенты больше не смогут публиковать от его имени.",
-  "audit.action.user.tokens_revoke": "Отозваны все ключи пользователя"
+  "audit.action.user.tokens_revoke": "Отозваны все ключи пользователя",
+  "err.domain_invalid": "Это не похоже на домен. Укажите имя вида promo.example.ru — без https://, пути и порта.",
+  "err.domain_forbidden": "Этот домен принадлежит самой платформе. Для адреса на базовом домене задайте короткий адрес (slug).",
+  "err.domain_taken": "Домен {domain} уже добавлен к другому сайту. Если это ваш домен, обратитесь к администратору.",
+  "err.domain_limit_reached": "У сайта уже максимум своих доменов ({limit}). Удалите ненужный, чтобы добавить новый.",
+  "err.domain_reason_invalid": "Укажите причину отказа одной строкой, не длиннее {max} символов.",
+  "audit.action.domain.add": "Добавлен свой домен",
+  "audit.action.domain.remove": "Удалён свой домен",
+  "audit.action.domain.approve": "Домен подтверждён",
+  "audit.action.domain.reject": "Домен отклонён"
 }

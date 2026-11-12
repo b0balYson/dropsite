@@ -100,6 +100,8 @@ services:
       MAX_SITES_PER_USER: ${MAX_SITES_PER_USER:-}
       KEEP_RELEASES: ${KEEP_RELEASES:-}
       RESERVED_SLUGS: ${RESERVED_SLUGS:-}
+      MAX_DOMAINS_PER_SITE: ${MAX_DOMAINS_PER_SITE:-}
+      SERVER_IPS: ${SERVER_IPS:-}
       LOG_LEVEL: ${LOG_LEVEL:-}
       # Port visitors use for HTTPS; only differs from 443 in local development.
       SITES_HTTPS_PORT: ${SITES_HTTPS_PORT:-}

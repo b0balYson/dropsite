@@ -16,7 +16,7 @@ type SiteView struct {
 	OwnerID   int64
 	Hostnames []domain.Hostname
 	URL       string   // primary URL: slug if set, otherwise default
-	URLs      []string // every address, primary first
+	URLs      []string // every active address, primary first
 	Slug      string
 	Current   *domain.Deploy
 }
@@ -66,7 +66,9 @@ func (s *Service) view(ctx context.Context, site domain.Site) (SiteView, error) 
 	return v, nil
 }
 
-// orderHosts puts the primary address first: slug, then default, then apex.
+// orderHosts puts the primary address first: slug, then default, then apex,
+// then external domains. URLs list only active addresses: an external domain
+// waiting for approval does not serve the site.
 func (s *Service) orderHosts(hosts []domain.Hostname) ([]domain.Hostname, []string, string) {
 	rank := map[domain.HostKind]int{domain.HostSlug: 0, domain.HostDefault: 1, domain.HostApex: 2, domain.HostExternal: 3}
 	sorted := append([]domain.Hostname(nil), hosts...)
@@ -74,7 +76,9 @@ func (s *Service) orderHosts(hosts []domain.Hostname) ([]domain.Hostname, []stri
 	urls := make([]string, 0, len(sorted))
 	slug := ""
 	for _, h := range sorted {
-		urls = append(urls, s.SiteURL(h.Hostname))
+		if h.Active() {
+			urls = append(urls, s.SiteURL(h.Hostname))
+		}
 		if h.Kind == domain.HostSlug {
 			slug = h.Hostname[:len(h.Hostname)-len(s.cfg.BaseDomain)-1]
 		}
