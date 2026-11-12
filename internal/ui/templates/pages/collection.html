@@ -1,0 +1,97 @@
+{{define "title"}}{{.D.C.Name}} — {{.D.V.Site.Title}}{{end}}
+
+{{define "content"}}
+{{$v := .D.V}}{{$c := .D.C}}{{$base := printf "/sites/%s/data/%s" $v.Site.ID $c.Name}}
+<nav class="crumbs" aria-label="{{.L.T "nav.breadcrumbs"}}"><a href="/sites/{{$v.Site.ID}}/data">← {{.L.T "data.title"}} · {{$v.Site.Title}}</a></nav>
+<header class="page-head">
+  <div class="page-head__text">
+    <p class="eyebrow mono addr-break">{{if $c.PublicURL}}{{wbr (host $c.PublicURL)}}{{end}}</p>
+    <h1 class="display">{{if $c.Title}}{{$c.Title}}{{else}}{{$c.Name}}{{end}}</h1>
+    <p class="lede">{{.L.T (printf "data.mode.%s" $c.Mode)}} · {{.L.T "data.documents.n" "n" $c.Documents}}{{if $c.Pending}} · {{.L.T "data.pending.n" "n" $c.Pending}}{{end}}</p>
+  </div>
+</header>
+
+<section class="section" aria-labelledby="docs-h">
+  <h2 class="section-title" id="docs-h">{{.L.T "data.documents"}}</h2>
+  <nav class="chips" aria-label="{{.L.T "data.filter"}}">
+    {{range .D.Statuses}}<a class="chip" href="{{$base}}?status={{.}}" {{if eq . $.D.Status}}aria-current="page"{{end}}>{{$.L.T (printf "data.status.%s" .)}}</a>{{end}}
+  </nav>
+  {{if .D.Docs}}
+  <form method="post" action="{{$base}}/moderate" id="moderate-form">
+    {{template "csrf" .}}
+  </form>
+  <ul class="domain-list">
+    {{range .D.Docs}}
+    <li class="domain-row {{if eq (printf "%s" .Status) "pending"}}domain-row--pending{{else}}domain-row--active{{end}}">
+      <div class="domain-row__head">
+        {{if eq (printf "%s" .Status) "pending"}}<label class="check"><input type="checkbox" name="ids" value="{{.ID}}" form="moderate-form"> <span class="mono">{{.ID}}</span></label>{{else}}<span class="mono">{{.ID}}</span>{{end}}
+        <span class="badge {{if eq (printf "%s" .Status) "pending"}}badge--warn{{else}}badge--ok{{end}}">{{$.L.T (printf "data.status.%s" .Status)}}</span>
+        <span class="muted small">#{{.Position}} · {{$.L.Date .UpdatedAt}}</span>
+      </div>
+      <pre class="code"><code>{{printf "%s" .Data}}</code></pre>
+      <div class="row-actions">
+        {{if eq (printf "%s" .Status) "pending"}}
+        <form method="post" action="{{$base}}/moderate">
+          {{template "csrf" $}}<input type="hidden" name="ids" value="{{.ID}}">
+          <button class="btn btn--small btn--ok" type="submit" name="action" value="approve">{{$.L.T "data.approve"}}</button>
+          <button class="btn btn--small btn--danger-ghost" type="submit" name="action" value="reject">{{$.L.T "data.reject"}}</button>
+        </form>
+        {{end}}
+        <a class="btn btn--small btn--ghost" href="{{$base}}?edit={{.ID}}#doc-form">{{$.L.T "data.doc.edit"}}</a>
+        {{if ne (printf "%s" .Status) "pending"}}
+        <form method="post" action="{{$base}}/documents/delete">
+          {{template "csrf" $}}<input type="hidden" name="id" value="{{.ID}}">
+          <button class="btn btn--small btn--danger-ghost" type="submit">{{$.L.T "data.doc.delete"}}</button>
+        </form>
+        {{end}}
+      </div>
+    </li>
+    {{end}}
+  </ul>
+  {{if $c.Pending}}
+  <div class="row-actions">
+    <span class="hint">{{.L.T "data.selected"}}</span>
+    <button class="btn btn--small btn--ok" type="submit" form="moderate-form" name="action" value="approve">{{.L.T "data.approve.selected"}}</button>
+    <button class="btn btn--small btn--danger-ghost" type="submit" form="moderate-form" name="action" value="reject">{{.L.T "data.reject.selected"}}</button>
+  </div>
+  {{end}}
+  {{if or .D.First .D.Next}}
+  <nav class="pager" aria-label="{{.L.T "pager.label"}}">
+    {{if .D.First}}<a class="btn btn--small btn--ghost" href="{{.D.First}}">{{.L.T "data.first"}}</a>{{end}}
+    {{if .D.Next}}<a class="btn btn--small btn--ghost" href="{{.D.Next}}" rel="next">{{.L.T "data.next"}}</a>{{end}}
+  </nav>
+  {{end}}
+  {{else}}<p class="empty-line">{{.L.T "data.documents.empty"}}</p>{{end}}
+</section>
+
+<section class="section" aria-labelledby="doc-form">
+  <h2 class="section-title" id="doc-form">{{if .D.Form.Editing}}{{.L.T "data.doc.editing" "id" .D.Form.ID}}{{else}}{{.L.T "data.doc.new"}}{{end}}</h2>
+  <form class="panel--tight stack" method="post" action="{{$base}}/documents">
+    {{template "csrf" .}}
+    {{if .D.Form.Editing}}<input type="hidden" name="editing" value="1">{{end}}
+    <div class="form-grid">
+      <div class="field">
+        <label class="field__label" for="doc-id">{{.L.T "data.doc.id"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+        <input class="input mono" id="doc-id" name="id" maxlength="64" value="{{.D.Form.ID}}" {{if .D.Form.Editing}}readonly{{end}}>
+      </div>
+      <div class="field">
+        <label class="field__label" for="doc-pos">{{.L.T "data.doc.position"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+        <input class="input mono" id="doc-pos" name="position" inputmode="numeric" value="{{.D.Form.Position}}">
+      </div>
+    </div>
+    <div class="field">
+      <label class="field__label" for="doc-data">{{.L.T "data.doc.data"}}</label>
+      <textarea class="input mono" id="doc-data" name="data" rows="10" spellcheck="false" required {{if .D.Form.Error}}aria-invalid="true" aria-describedby="doc-error"{{end}}>{{.D.Form.Data}}</textarea>
+      {{with .D.Form.Error}}<p class="notice notice--error" id="doc-error" role="alert">{{.}}</p>{{end}}
+    </div>
+    <button class="btn btn--primary" type="submit">{{.L.T "data.doc.save"}}</button>
+  </form>
+</section>
+
+<section class="section" aria-labelledby="howto-h">
+  <h2 class="section-title" id="howto-h">{{.L.T "data.howto"}}</h2>
+  <p class="small">{{.L.T "data.howto.text"}}</p>
+  <pre class="code code--tall" id="data-snippet"><code>{{.D.Snippet}}</code></pre>
+  <button class="btn btn--small" type="button" data-copy="#data-snippet" data-copied="{{.L.T "copy.done"}}">{{.L.T "copy.button"}}</button>
+</section>
+{{end}}

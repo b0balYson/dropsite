@@ -44,6 +44,7 @@ var topics = []struct {
 	{"large_sites", []string{"large_sites.md"}},
 	{"assets", []string{"assets.md"}},
 	{"forms", []string{"form_html.md", "forms.md"}},
+	{"data", []string{"data.md"}},
 	{"stats", []string{"stats.md"}},
 	{"addresses", []string{"addresses.md"}},
 	{"protection", []string{"protection.md"}},

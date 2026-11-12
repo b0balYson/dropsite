@@ -1,0 +1,45 @@
+{{define "site_data"}}
+{{$v := .D.V}}
+<section class="section site-block" aria-labelledby="data-h">
+  <div class="section-head">
+    <h2 class="section-title" id="data-h">{{.L.T "data.title"}}{{if .D.Data}} <span class="muted">{{len .D.Data}}</span>{{end}}</h2>
+    <a class="btn btn--small btn--ghost" href="/sites/{{$v.Site.ID}}/data">{{.L.T "data.manage"}}</a>
+  </div>
+  {{if .D.Data}}
+  {{template "collection_rows" (bundle $ .D.Data)}}
+  {{else}}
+  <p class="empty-line">{{.L.T "data.empty"}}</p>
+  {{end}}
+</section>
+{{end}}
+
+{{define "collection_rows"}}{{$r := .R}}
+<ul class="domain-list">
+  {{range .V}}
+  <li class="domain-row domain-row--active">
+    <div class="domain-row__head">
+      <a class="domain-row__host mono" href="/sites/{{.SiteID}}/data/{{.Name}}">{{.Name}}</a>
+      <span class="badge {{if eq (printf "%s" .Mode) "moderated"}}badge--warn{{else}}badge--muted{{end}}">{{$r.L.T (printf "data.mode.%s" .Mode)}}</span>
+      {{if .Pending}}<span class="badge badge--warn">{{$r.L.T "data.pending.n" "n" .Pending}}</span>{{end}}
+    </div>
+    <p class="domain-row__note">{{if .Title}}{{.Title}} · {{end}}{{$r.L.T "data.documents.n" "n" .Documents}}{{if .PublicURL}} · <span class="mono addr-break">{{wbr (host .PublicURL)}}</span>{{end}}</p>
+  </li>
+  {{end}}
+</ul>
+{{end}}
+
+{{define "collection_fields"}}{{$r := .R}}{{$f := .V}}
+<div class="field">
+  <label class="field__label" for="title-{{$f.Name}}">{{$r.L.T "data.field.title"}} <span class="optional">{{$r.L.T "form.optional"}}</span></label>
+  <input class="input" id="title-{{$f.Name}}" name="title" maxlength="200" value="{{$f.Title}}">
+</div>
+<fieldset class="field">
+  <legend class="field__label">{{$r.L.T "data.field.mode"}}</legend>
+  <label class="check"><input type="radio" name="mode" value="public" {{if ne $f.Mode "moderated"}}checked{{end}}> {{$r.L.T "data.mode.public"}} — <span class="hint">{{$r.L.T "data.mode.public.hint"}}</span></label>
+  <label class="check"><input type="radio" name="mode" value="moderated" {{if eq $f.Mode "moderated"}}checked{{end}}> {{$r.L.T "data.mode.moderated"}} — <span class="hint">{{$r.L.T "data.mode.moderated.hint"}}</span></label>
+</fieldset>
+<div class="field">
+  <label class="field__label" for="schema-{{$f.Name}}">{{$r.L.T "data.field.schema"}} <span class="optional">{{$r.L.T "data.field.schema.note"}}</span></label>
+  <textarea class="input mono" id="schema-{{$f.Name}}" name="schema" rows="6" spellcheck="false">{{$f.Schema}}</textarea>
+</div>
+{{end}}

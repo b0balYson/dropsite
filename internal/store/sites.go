@@ -135,7 +135,7 @@ func (db *DB) SoftDeleteSite(ctx context.Context, siteID string, now time.Time) 
 		if _, err := tx.ExecContext(ctx, "DELETE FROM hostnames WHERE site_id = ?", siteID); err != nil {
 			return fmt.Errorf("delete hostnames: %w", err)
 		}
-		return nil
+		return deleteSiteCollections(ctx, tx, siteID)
 	})
 	return removed, err
 }

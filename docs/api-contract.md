@@ -54,6 +54,10 @@ Connection {kind, id, name, detail|null, connected_at, last_used_at|null, expire
 SiteFile {path, size, sha256, type}
 FilesResult {deploy_id, url, urls[], deploy: Deploy, site: Site, base_deploy_id, written, deleted, fetched[{url, path, type, bytes, original_bytes, resized}]}
 Upload   {id, mode, site_id, base_deploy_id, files, bytes, expires_at, max_bytes, max_files, max_file_bytes, max_call_bytes, fetched[]}
+Collection {name, title, mode, schema|null, documents, pending, public_url, created_at, updated_at}
+                                                mode: public | moderated
+Document {id, data{}, position, status, created_at, updated_at}
+                                                status: approved | pending
 FormSettings {telegram{bot, token_set}, smtp{host, port, username, password_set, from, security}, retention_days, altcha_max_number, secrets_unreadable}
 ```
 
@@ -100,6 +104,15 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 | `GET /sites/{ref}/forms/submissions.csv` | `?form` | `text/csv`, up to 10 000 newest and 64 MB, streamed; 100 field columns + `_other` (JSON) |
 | `GET /sites/{ref}/forms/submissions/search` | `?form&q&since&until&days&limit&cursor` | `{items: Submission[], total, next_cursor\|null, server_time, cabinet_url}` (newest first) |
 | `GET /sites/{ref}/forms/submissions/export` | `?form&q&since&until&days&max_rows` | `{csv, rows, total, truncated, cabinet_url}` |
+| `GET /sites/{ref}/collections` | | `List<Collection>` |
+| `POST /sites/{ref}/collections` | `{name, title?, mode?, schema?}` | `201 Collection` |
+| `PATCH /sites/{ref}/collections/{name}` | `{title?, mode?, schema?}` (`schema: null` removes it) | `Collection` |
+| `DELETE /sites/{ref}/collections/{name}` | `{confirm}` or `?confirm` = the name | `204` |
+| `GET /sites/{ref}/collections/{name}/documents` | `?status&order&limit&cursor` | `{items: Document[], next_cursor\|null}` |
+| `POST /sites/{ref}/collections/{name}/documents` | `{documents[{id?, data, position?}], replace?}` (≤ 1000, body ≤ 20 MiB) | `{ids[], collection: Collection}` |
+| `POST /sites/{ref}/collections/{name}/delete-documents` | `{ids[]}` | `{count, collection: Collection}` |
+| `DELETE /sites/{ref}/collections/{name}/documents/{doc}` | | `204` |
+| `POST /sites/{ref}/collections/{name}/moderate` | `{ids[], action}` (`approve` \| `reject`) | `{count, collection: Collection}` |
 | `GET /tokens` | | `List<Token>` |
 | `POST /tokens` | `{name, expires_in_days?}` | `201 {token: Token, value}`; `value` is shown once |
 | `DELETE /tokens/{id}` | | `204` |
@@ -157,3 +170,15 @@ External domains (see `docs/external-domains.md`): `hostname` is normalised (low
 Outside `/api/v1` the API host also serves `/mcp`, `/.well-known/oauth-protected-resource[/mcp]`, `/.well-known/oauth-authorization-server` and `/oauth/*` (see [ai-clients.md](ai-clients.md)).
 
 Site forms (see `docs/forms.md`): a webhook channel returns its signing `secret` only on creation and rotation; a Telegram channel created without `target` returns a binding `link` (`https://t.me/<bot>?start=<code>`). Telegram channels with a chat ID and e-mail channels start `pending` and become `active` after `verify` with the code sent to them (30 minutes, 5 attempts; `channel_code_invalid`). A webhook channel is paused (`paused_at` set) after 10 failed attempts in a row; turning a channel off cancels its queued deliveries. Confirmation codes are limited to 3 per recipient per 24 hours and 100 per installation per hour (`rate_limited`). Other codes: `channel_invalid`, `channel_unavailable` (Telegram or SMTP not configured, or the code could not be sent), `channel_limit_reached` (10 per site, 403), `telegram_token_invalid`, `setting_invalid`. In `PATCH /admin/forms/settings` a missing field keeps the value and an empty string clears it; the bot token and SMTP password are never returned. Visitor endpoints on site hosts (`POST /_form/<name>`, `GET /_form/challenge`, `GET /_dropsite/altcha.js`, and the sign-in page of protected sites `/_dropsite/login` with its challenge `GET /_dropsite/login/challenge`) are not part of API v1.
+
+Site collections: small JSON data of a site that its pages read without a new release. A collection name and a document ID are 1-64 characters `a-z`, `0-9`, `-`, `_` starting with a letter or digit (lower-cased). `mode` is `public` (only the owner writes) or `moderated` (visitors propose, only approved documents are public; a `schema` is required). A `schema` is a JSON Schema (draft-07 or 2020-12) with `"type": "object"`, at most 16 KB; `$ref` may point only inside the schema (`#/...` or `#anchor`) and must not loop back without descending into a property or an item, and `$dynamicRef` and nested `$id` are refused; a changed schema applies only to documents written afterwards. Limits: 20 collections per site, 5000 documents per collection, 16 KB per document in compact form, 1000 documents per write, 1000 pending documents (`limit_exceeded`, 403). Owner writes are atomic and approved at once; an error in any document rejects the whole write with `document_invalid` and `details{index, field}`. Other codes: `collection_invalid` (`details.field`: `name`, `title`, `mode` or `schema`), `collection_exists` (409). Another user's site answers 404.
+
+Visitor endpoints on site hosts, served after the access check of protected sites (also not part of API v1; every answer is JSON with `Cache-Control: no-cache`):
+
+| Method and path | Request | Response |
+| --- | --- | --- |
+| `GET /_dropsite/data/<name>` | `?order=position\|newest\|oldest&limit=1..500&after=<next>` | `{items[{id, data, position, created_at, updated_at}], next\|null}`, approved documents only, `ETag` (304 on `If-None-Match`) |
+| `GET /_dropsite/data/<name>/<id>` | | one approved document |
+| `POST /_dropsite/data/<name>` | `application/json` object ≤ 8 KB | `202 {ok: true, status: "pending"}` |
+
+A proposal drops keys starting with `_` and `altcha`, rejects keys missing from the schema's `properties` (`400 document_invalid`) and is protected like site forms: a non-empty `_hp` is answered like success and not stored, a foreign `Origin` gives `403 form_origin_mismatch`, rate limits per IP and per site give `429`, the site flag "require Altcha" needs a valid unused `altcha` solution from `GET /_form/challenge` (`400 form_captcha_invalid`). `POST` to a public collection gives `405 collection_read_only`; a full collection gives `429 collection_pending_full`; another content type gives `415`. Unknown collections and documents, pending documents and inactive addresses give 404.

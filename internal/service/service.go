@@ -95,6 +95,7 @@ type Service struct {
 	visitorKeySet    *visitorKeySet
 	formState
 	siteFilesState
+	collectionState
 }
 
 // New builds a Service.
@@ -134,6 +135,7 @@ func New(d Deps) *Service {
 		visitorSiteLimit: ratelimit.New(VisitorFailuresPerSite, VisitorFailuresWindow).WithClock(now),
 		formState:        newFormState(d, now),
 		siteFilesState:   newSiteFilesState(d, now),
+		collectionState:  newCollectionState(now),
 	}
 }
 
