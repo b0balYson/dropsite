@@ -16,6 +16,9 @@ func (s *Service) Start(ctx context.Context) error {
 	if err := s.files.Init(ctx); err != nil {
 		return fmt.Errorf("initialise sites volume: %w", err)
 	}
+	if err := s.startForms(); err != nil {
+		return fmt.Errorf("initialise form secrets: %w", err)
+	}
 	created, err := s.Bootstrap(ctx)
 	if err != nil {
 		return err
@@ -84,7 +87,7 @@ func (s *Service) Housekeeping(ctx context.Context) error {
 	if _, err := s.repo.DeleteExpiredInvites(ctx, now.Add(-InviteTTL)); err != nil {
 		return fmt.Errorf("delete expired invites: %w", err)
 	}
-	return nil
+	return s.purgeForms(ctx, now)
 }
 
 func (s *Service) purgeSite(ctx context.Context, id string, now time.Time) error {

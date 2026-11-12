@@ -52,6 +52,8 @@ type Deps struct {
 	Extract ExtractFunc
 	// UploadDir holds temporary uploads; it must be on the state volume.
 	UploadDir string
+	// FormSender replaces form delivery transports (tests).
+	FormSender FormSender
 }
 
 // Service implements the use cases.
@@ -73,6 +75,8 @@ type Service struct {
 	siteLocks    keyedMutex
 	settingsMu   sync.RWMutex
 	settingsData *effectiveSettings
+
+	formState
 }
 
 // New builds a Service.
@@ -102,6 +106,7 @@ func New(d Deps) *Service {
 		accountLimit: ratelimit.New(FailedLoginsPerAccount, FailedLoginsWindow).WithClock(now),
 		tokenLimit:   ratelimit.New(FailedTokensPerIP, FailedLoginsWindow).WithClock(now),
 		hasher:       newPasswordHasher(),
+		formState:    newFormState(d, now),
 	}
 }
 
