@@ -2577,6 +2577,47 @@
         }
       }
     },
+    "/references/inspect": {
+      "post": {
+        "operationId": "inspectReference",
+        "summary": "Design brief of a reference page (palette, type, layout; no texts or images)",
+        "description": "Fetches one https page on a public address and its same-site stylesheets (at most 8, 512 KB each, 2 MB in total) and returns a design brief. The brief never contains the page's texts (except the title), images, logos, class names or scripts. With the optional renderer, screenshot.image_png is a PNG of the first screen (1280x800) of a sanitized copy of the page, without scripts, pictures or fonts from other servers. 30 inspections per user and hour. robots.txt is not consulted: this is a one-off fetch on the user's request; the User-Agent is dropsite-reference.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReferenceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferenceBrief"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
     "/sites/{ref}/forms/submissions/search": {
       "parameters": [
         {
@@ -6067,6 +6108,295 @@
           "width": { "type": "integer" },
           "height": { "type": "integer" },
           "image_png": { "type": "string", "contentEncoding": "base64", "description": "PNG: before | after, changes highlighted on the right" }
+        }
+      },
+      "ReferenceRequest": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "https:// address of the reference page"
+          }
+        }
+      },
+      "ReferenceBrief": {
+        "type": "object",
+        "required": [
+          "url",
+          "color_scheme",
+          "has_dark_mode",
+          "palette",
+          "custom_properties",
+          "fonts",
+          "font_sizes",
+          "spacing",
+          "radius",
+          "shadows",
+          "outline",
+          "components",
+          "stylesheets",
+          "summary",
+          "screenshot"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "The analyzed page after redirects"
+          },
+          "title": {
+            "type": "string",
+            "description": "Page title, at most 120 characters"
+          },
+          "color_scheme": {
+            "type": "string",
+            "enum": [
+              "light",
+              "dark"
+            ]
+          },
+          "has_dark_mode": {
+            "type": "boolean"
+          },
+          "palette": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "object",
+              "required": [
+                "hex",
+                "role",
+                "uses"
+              ],
+              "properties": {
+                "hex": {
+                  "type": "string",
+                  "description": "#rrggbb"
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "background",
+                    "surface",
+                    "text",
+                    "muted",
+                    "accent",
+                    "accent2",
+                    "border",
+                    "other"
+                  ]
+                },
+                "uses": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "custom_properties": {
+            "type": "array",
+            "maxItems": 40,
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "value"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "fonts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "family",
+                "role",
+                "web"
+              ],
+              "properties": {
+                "family": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "headings",
+                    "body",
+                    "other"
+                  ]
+                },
+                "web": {
+                  "type": "boolean",
+                  "description": "A web font the page loads"
+                }
+              }
+            }
+          },
+          "font_sizes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Largest first, in px"
+          },
+          "spacing": {
+            "type": "object",
+            "required": [
+              "values",
+              "tendency",
+              "uses"
+            ],
+            "properties": {
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Most common values in px"
+              },
+              "tendency": {
+                "type": "string"
+              },
+              "median_px": {
+                "type": "number"
+              },
+              "uses": {
+                "type": "integer"
+              }
+            },
+            "description": "tendency: compact, regular or airy"
+          },
+          "radius": {
+            "type": "object",
+            "required": [
+              "values",
+              "tendency",
+              "uses"
+            ],
+            "properties": {
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Most common values in px"
+              },
+              "tendency": {
+                "type": "string"
+              },
+              "median_px": {
+                "type": "number"
+              },
+              "uses": {
+                "type": "integer"
+              }
+            },
+            "description": "tendency: sharp, subtle, rounded or pill"
+          },
+          "shadows": {
+            "type": "string",
+            "enum": [
+              "none",
+              "subtle",
+              "strong"
+            ]
+          },
+          "outline": {
+            "type": "array",
+            "maxItems": 30,
+            "items": {
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "description": "header, nav, hero, section, cards, gallery, form, footer, ..."
+                },
+                "headings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Heading levels, e.g. h2"
+                },
+                "images": {
+                  "type": "integer"
+                },
+                "repeated_items": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "sticky_header, hero_image, hero_split, hero_text, hero_video, cards, gallery, carousel, features, pricing, testimonials, team, faq, cta, form, map, video"
+          },
+          "stylesheets": {
+            "type": "object",
+            "required": [
+              "fetched",
+              "inline",
+              "skipped"
+            ],
+            "properties": {
+              "fetched": {
+                "type": "integer"
+              },
+              "inline": {
+                "type": "integer"
+              },
+              "skipped": {
+                "type": "integer"
+              },
+              "truncated": {
+                "type": "boolean"
+              }
+            }
+          },
+          "summary": {
+            "type": "string"
+          },
+          "screenshot": {
+            "type": "object",
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "included",
+                  "unavailable"
+                ]
+              },
+              "width": {
+                "type": "integer"
+              },
+              "height": {
+                "type": "integer"
+              },
+              "image_png": {
+                "type": "string",
+                "contentEncoding": "base64",
+                "description": "PNG of the first screen, only when included"
+              }
+            }
+          }
         }
       },
       "CommitUploadRequest": {

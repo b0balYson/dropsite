@@ -102,11 +102,17 @@ type options struct {
 	sender service.FormSender
 	proxy  http.RoundTripper
 	render service.Screenshotter
+	pages  service.PageFetcher
 }
 
 // WithRenderer sets the screenshot renderer (none by default).
 func WithRenderer(r service.Screenshotter) Option {
 	return func(o *options) { o.render = r }
+}
+
+// WithPageFetcher replaces the downloader of reference pages.
+func WithPageFetcher(f service.PageFetcher) Option {
+	return func(o *options) { o.pages = f }
 }
 
 // WithFormSender replaces the transports used for form delivery.
@@ -187,6 +193,7 @@ func start(t testing.TB, cfg *config.Config, o *options) *Env {
 		FormSender:     o.sender,
 		ProxyTransport: o.proxy,
 		Renderer:       o.render,
+		PageFetcher:    o.pages,
 	})
 	if err := svc.Start(ctx); err != nil {
 		t.Fatalf("testenv: start service: %v", err)
