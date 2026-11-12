@@ -58,6 +58,9 @@ func (a *api) routes() []route {
 		{Method: http.MethodPost, Path: "/sites/{ref}/deploys", handle: a.deploy},
 		{Method: http.MethodGet, Path: "/sites/{ref}/deploys", handle: a.listDeploys},
 		{Method: http.MethodPost, Path: "/sites/{ref}/rollback", handle: a.rollback},
+		{Method: http.MethodGet, Path: "/sites/{ref}/hostnames", handle: a.listHostnames},
+		{Method: http.MethodPost, Path: "/sites/{ref}/hostnames", handle: a.addHostname},
+		{Method: http.MethodDelete, Path: "/sites/{ref}/hostnames/{hostname}", handle: a.removeHostname},
 		{Method: http.MethodGet, Path: "/tokens", handle: a.listTokens},
 		{Method: http.MethodPost, Path: "/tokens", handle: a.createToken},
 		{Method: http.MethodDelete, Path: "/tokens/{id}", handle: a.revokeToken},
@@ -69,6 +72,10 @@ func (a *api) routes() []route {
 		{Method: http.MethodDelete, Path: "/admin/sites/{ref}/apex", handle: adminOnly(a.clearApex)},
 		{Method: http.MethodPost, Path: "/admin/sites/{ref}/transfer", handle: adminOnly(a.transfer)},
 		{Method: http.MethodGet, Path: "/admin/audit", handle: adminOnly(a.listAudit)},
+		{Method: http.MethodGet, Path: "/admin/domains", handle: adminOnly(a.listDomains)},
+		{Method: http.MethodPost, Path: "/admin/domains/{hostname}/approve", handle: adminOnly(a.approveDomain)},
+		{Method: http.MethodPost, Path: "/admin/domains/{hostname}/reject", handle: adminOnly(a.rejectDomain)},
+		{Method: http.MethodPost, Path: "/admin/domains/{hostname}/dns-check", handle: adminOnly(a.checkDomainDNS)},
 	}
 }
 

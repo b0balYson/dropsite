@@ -15,6 +15,7 @@ import (
 var (
 	errEmailTaken    = domain.E(domain.KindConflict, domain.CodeEmailTaken, "email is already registered")
 	errSlugTaken     = domain.E(domain.KindConflict, domain.CodeSlugTaken, "address is already taken")
+	errDomainTaken   = domain.E(domain.KindConflict, domain.CodeDomainTaken, "this domain is already added to a site")
 	errInviteInvalid = domain.E(domain.KindInvalid, domain.CodeInviteInvalid, "invite link is invalid, used or expired")
 )
 

@@ -23,6 +23,8 @@ func TestForeignResourcesLookMissing(t *testing.T) {
 	second := decodeAs[deployResultDTO](t, h.deploy(site.ID, owner, testenv.Zip(t, index("v2"))))
 	ownerTokens := decodeAs[list[tokenDTO]](t, h.do(http.MethodGet, "/api/v1/tokens", owner, nil))
 	foreignToken := ownerTokens.Items[0].ID
+	wantStatus(t, h.do(http.MethodPost, "/api/v1/sites/"+site.ID+"/hostnames", owner,
+		map[string]string{"hostname": "mine.example.ru"}), http.StatusCreated)
 
 	archive, ctype := multipartBody(t, "archive", testenv.Zip(t, index("hijack")))
 	type call struct {
@@ -39,6 +41,9 @@ func TestForeignResourcesLookMissing(t *testing.T) {
 			{http.MethodGet, "/api/v1/sites/" + ref + "/deploys", nil, ""},
 			{http.MethodPost, "/api/v1/sites/" + ref + "/rollback", nil, ""},
 			{http.MethodPost, "/api/v1/sites/" + ref + "/rollback", []byte(`{"deploy_id":"` + second.DeployID + `"}`), "application/json"},
+			{http.MethodGet, "/api/v1/sites/" + ref + "/hostnames", nil, ""},
+			{http.MethodPost, "/api/v1/sites/" + ref + "/hostnames", []byte(`{"hostname":"steal.example.ru"}`), "application/json"},
+			{http.MethodDelete, "/api/v1/sites/" + ref + "/hostnames/mine.example.ru", nil, ""},
 			{http.MethodDelete, "/api/v1/tokens/" + tokenID, nil, ""},
 			{http.MethodGet, "/api/v1/admin/users", nil, ""},
 			{http.MethodPost, "/api/v1/admin/users", []byte(`{"email":"x@pp.test"}`), "application/json"},
@@ -48,6 +53,10 @@ func TestForeignResourcesLookMissing(t *testing.T) {
 			{http.MethodDelete, "/api/v1/admin/sites/" + ref + "/apex", nil, ""},
 			{http.MethodPost, "/api/v1/admin/sites/" + ref + "/transfer", []byte(`{"user_id":"1"}`), "application/json"},
 			{http.MethodGet, "/api/v1/admin/audit", nil, ""},
+			{http.MethodGet, "/api/v1/admin/domains", nil, ""},
+			{http.MethodPost, "/api/v1/admin/domains/mine.example.ru/approve", nil, ""},
+			{http.MethodPost, "/api/v1/admin/domains/mine.example.ru/reject", []byte(`{"reason":"x"}`), "application/json"},
+			{http.MethodPost, "/api/v1/admin/domains/mine.example.ru/dns-check", nil, ""},
 		}
 	}
 	send := func(c call) *httptest.ResponseRecorder {
@@ -79,6 +88,9 @@ func TestForeignResourcesLookMissing(t *testing.T) {
 	s := decodeAs[siteDTO](t, h.do(http.MethodGet, "/api/v1/sites/"+site.ID, owner, nil))
 	if s.Title != "Private" || s.CurrentDeploy == nil || s.CurrentDeploy.ID != second.DeployID {
 		t.Fatalf("site changed: %+v", s)
+	}
+	if len(s.Hostnames) != 3 || s.Hostnames[2].Hostname != "mine.example.ru" || s.Hostnames[2].Status != "pending" {
+		t.Fatalf("domains changed: %+v", s.Hostnames)
 	}
 	if got, _ := h.env.Served("private-slug.pp.test", "index.html"); got != "v2" {
 		t.Fatalf("served %q", got)

@@ -23,6 +23,7 @@ type Repository interface {
 	SessionRepository
 	TokenRepository
 	SiteRepository
+	ExternalHostRepository
 	DeployRepository
 	AuditRepository
 	SettingsRepository
@@ -115,6 +116,22 @@ type SiteRepository interface {
 	MarkSitePurged(ctx context.Context, siteID string, now time.Time) error
 }
 
+// ExternalHostRepository manages external domains and their review. Every
+// method ignores hostnames of deleted sites.
+type ExternalHostRepository interface {
+	// AddExternalHost inserts h as an unverified external hostname. A deleted
+	// or missing site → ErrNotFound; maxPerSite external hostnames (any
+	// status) already → CodeDomainLimit; a taken name (any kind) → CodeDomainTaken.
+	AddExternalHost(ctx context.Context, h domain.Hostname, maxPerSite int) error
+	// RemoveExternalHost deletes the site's external hostname and returns it.
+	RemoveExternalHost(ctx context.Context, siteID, hostname string, now time.Time) (domain.Hostname, error)
+	// ReviewExternalHost approves or rejects the site's external hostname.
+	ReviewExternalHost(ctx context.Context, r ExternalReview) (domain.Hostname, error)
+	GetExternalHost(ctx context.Context, hostname string) (ExternalHost, error)
+	// ListExternalHosts returns matches oldest first plus the total count.
+	ListExternalHosts(ctx context.Context, f ExternalHostFilter) ([]ExternalHost, int, error)
+}
+
 // DeployRepository manages releases.
 type DeployRepository interface {
 	// InsertDeployAndActivate inserts d and points the site at it atomically.
@@ -189,6 +206,32 @@ type SiteLayout struct {
 	CurrentDeployID *string
 	Hostnames       []string
 	ReadyDeployIDs  []string
+}
+
+// ExternalHost is an external hostname with its site and owner.
+type ExternalHost struct {
+	Hostname   domain.Hostname
+	SiteTitle  string
+	OwnerID    int64
+	OwnerEmail string
+}
+
+// ExternalHostFilter filters ListExternalHosts. Status "" means any; Query
+// matches substrings of the hostname, the site title and the owner email.
+type ExternalHostFilter struct {
+	Status domain.HostStatus
+	Query  string
+	Page
+}
+
+// ExternalReview is an administrator's decision. Approve false rejects with Reason.
+type ExternalReview struct {
+	Hostname   string
+	SiteID     string
+	Approve    bool
+	Reason     string
+	ReviewerID int64
+	At         time.Time
 }
 
 // AuditFilter filters ListAudit.

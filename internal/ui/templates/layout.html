@@ -24,6 +24,7 @@
       <span class="nav__group" role="group" aria-label="{{.L.T "nav.admin"}}">
         <a class="nav__link" href="/admin/users" {{if eq .Nav "users"}}aria-current="page"{{end}}>{{.L.T "nav.users"}}</a>
         <a class="nav__link" href="/admin/sites" {{if eq .Nav "allsites"}}aria-current="page"{{end}}>{{.L.T "nav.allsites"}}</a>
+        <a class="nav__link" href="/admin/domains" {{if eq .Nav "domains"}}aria-current="page"{{end}}>{{.L.T "nav.domains"}}</a>
         <a class="nav__link" href="/admin/audit" {{if eq .Nav "audit"}}aria-current="page"{{end}}>{{.L.T "nav.audit"}}</a>
         <a class="nav__link" href="/admin/settings" {{if eq .Nav "settings"}}aria-current="page"{{end}}>{{.L.T "nav.settings"}}</a>
       </span>

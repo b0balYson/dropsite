@@ -76,6 +76,10 @@ Windows (PowerShell):
 irm https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.ps1 | iex
 ```
 
+### Свои домены
+
+Сайт можно открыть и на домене владельца, например `promo.example.ru`: добавьте его в блоке **Свои домены** на экране сайта, командой `dropsite domains add <сайт> <домен>` или через `POST /sites/{id}/hostnames`. Направьте домен на сервер (CNAME на случайный адрес сайта или записи A/AAAA для корня домена). Сертификат и раздачу домен получает только после подтверждения администратором на экране **Внешние домены**, поэтому никто не может заставить сервер запрашивать сертификаты на произвольные имена. Подробности: [docs/external-domains.md](docs/external-domains.md).
+
 ### Что может быть в архиве сайта
 
 `index.html` в корне (единственная папка верхнего уровня вроде `dist/` разворачивается автоматически). По умолчанию до 50 МБ в распакованном виде, до 20 МБ на файл, до 2000 файлов. Симлинки, абсолютные пути и `..` отклоняются. `.git`, `node_modules`, `__MACOSX`, `.DS_Store`, `Thumbs.db` пропускаются.
@@ -124,6 +128,8 @@ docker compose -f docker-compose.yml -f compose.wildcard.yml up -d
 | `CF_API_TOKEN` | только для wildcard | — | Токен Cloudflare с правом `Zone.DNS:Edit`, передаётся только Caddy |
 | `MAX_SITE_BYTES`, `MAX_FILE_BYTES`, `MAX_FILES`, `MAX_SITES_PER_USER`, `KEEP_RELEASES` | нет | 50 МБ, 20 МБ, 2000, 10, 5 | Лимиты; администратор может переопределить их в интерфейсе |
 | `RESERVED_SLUGS` | нет | | Дополнительные запрещённые slug через запятую |
+| `MAX_DOMAINS_PER_SITE` | нет | `5` | Своих доменов на сайт, 1–100 |
+| `SERVER_IPS` | нет | адреса `BASE_DOMAIN` | Публичные IP сервера через запятую: цель DNS, которую видит владелец, и эталон для DNS-проверки доменов |
 | `LOG_LEVEL` | нет | `info` | `debug`, `info`, `warn`, `error` |
 
 ## Эксплуатация
@@ -133,7 +139,7 @@ docker compose -f docker-compose.yml -f compose.wildcard.yml up -d
 - **Логи:** JSON в stdout обоих контейнеров: `docker compose logs -f`.
 - **Здоровье:** `docker compose ps` показывает проверку здоровья `control`.
 
-Подробнее: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [docs/tls.md](docs/tls.md), [docs/production-checklist.md](docs/production-checklist.md).
+Подробнее: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [docs/tls.md](docs/tls.md), [docs/external-domains.md](docs/external-domains.md), [docs/production-checklist.md](docs/production-checklist.md).
 
 ## Модель безопасности
 

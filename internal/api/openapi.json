@@ -163,6 +163,49 @@
         }
       }
     },
+    "/sites/{ref}/hostnames": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }],
+      "get": {
+        "operationId": "listHostnames",
+        "summary": "Every address of the site with its status, including external domains",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HostnameList" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      },
+      "post": {
+        "operationId": "addHostname",
+        "summary": "Add an external domain; it serves the site only after an administrator approves it",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AddHostnameRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Added, status pending", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Hostname" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/LimitReached" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/sites/{ref}/hostnames/{hostname}": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }, { "$ref": "#/components/parameters/Hostname" }],
+      "delete": {
+        "operationId": "removeHostname",
+        "summary": "Remove an external domain in any status; other addresses answer 404",
+        "responses": {
+          "204": { "description": "Removed" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
     "/tokens": {
       "get": {
         "operationId": "listTokens",
@@ -333,6 +376,69 @@
           "500": { "$ref": "#/components/responses/Internal" }
         }
       }
+    },
+    "/admin/domains": {
+      "get": {
+        "operationId": "adminListDomains",
+        "summary": "External domains of all sites, oldest first (admin)",
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "active", "rejected", "all"], "default": "all" } },
+          { "name": "q", "in": "query", "schema": { "type": "string" }, "description": "Substring of the domain, site title or owner email" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Offset" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DomainList" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/admin/domains/{hostname}/approve": {
+      "parameters": [{ "$ref": "#/components/parameters/Hostname" }],
+      "post": {
+        "operationId": "adminApproveDomain",
+        "summary": "Approve an external domain: it gets a certificate and serves its site (admin)",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Domain" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/admin/domains/{hostname}/reject": {
+      "parameters": [{ "$ref": "#/components/parameters/Hostname" }],
+      "post": {
+        "operationId": "adminRejectDomain",
+        "summary": "Reject a pending domain or withdraw an approval; it stops serving at once (admin)",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RejectDomainRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Domain" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/admin/domains/{hostname}/dns-check": {
+      "parameters": [{ "$ref": "#/components/parameters/Hostname" }],
+      "post": {
+        "operationId": "adminCheckDomainDNS",
+        "summary": "Resolve the domain and compare it with the server addresses; informational, at most 5 s (admin)",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DNSCheck" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
     }
   },
   "components": {
@@ -342,19 +448,20 @@
     "parameters": {
       "SiteRef": { "name": "ref", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Site ID or slug" },
       "ID": { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+      "Hostname": { "name": "hostname", "in": "path", "required": true, "schema": { "type": "string" }, "description": "External domain, e.g. promo.example.com" },
       "Limit": { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 200, "default": 50 } },
       "Offset": { "name": "offset", "in": "query", "schema": { "type": "integer", "minimum": 0, "default": 0 } }
     },
     "responses": {
-      "Invalid": { "description": "Invalid input or archive validation failed (codes invalid_input, slug_*, title_invalid, archive_*, ...)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "Invalid": { "description": "Invalid input or archive validation failed (codes invalid_input, slug_*, title_invalid, domain_*, archive_*, ...)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
       "Unauthorized": {
         "description": "Missing or invalid token",
         "headers": { "WWW-Authenticate": { "schema": { "type": "string" } } },
         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
       },
-      "LimitReached": { "description": "Quota reached (site_limit_reached)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "LimitReached": { "description": "Quota reached (site_limit_reached, domain_limit_reached)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
       "NotFound": { "description": "Not found, including resources of other users and admin endpoints for non-admins", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-      "Conflict": { "description": "Conflict (email_taken, slug_taken)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "Conflict": { "description": "Conflict (email_taken, slug_taken, domain_taken)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
       "TooLarge": { "description": "Upload or unpacked archive too large (archive_too_large, archive_file_too_large, archive_too_many_files)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
       "RateLimited": {
         "description": "Too many requests",
@@ -419,10 +526,53 @@
       },
       "Hostname": {
         "type": "object",
-        "required": ["hostname", "kind"],
+        "description": "An address of a site. Only active addresses serve the site; external domains are pending until an administrator approves them.",
+        "required": ["hostname", "kind", "verified", "status", "reason", "created_at", "reviewed_at"],
         "properties": {
           "hostname": { "type": "string" },
-          "kind": { "type": "string", "enum": ["default", "slug", "apex"] }
+          "kind": { "type": "string", "enum": ["default", "slug", "apex", "external"] },
+          "verified": { "type": "boolean" },
+          "status": { "type": "string", "enum": ["active", "pending", "rejected"] },
+          "reason": { "type": ["string", "null"], "description": "Why an administrator rejected the domain" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "reviewed_at": { "type": ["string", "null"], "format": "date-time" }
+        }
+      },
+      "HostnameList": {
+        "type": "object",
+        "required": ["items", "total"],
+        "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/Hostname" } }, "total": { "type": "integer" } }
+      },
+      "Domain": {
+        "description": "An external domain with its site and owner (admin endpoints).",
+        "allOf": [
+          { "$ref": "#/components/schemas/Hostname" },
+          {
+            "type": "object",
+            "required": ["site_id", "site_title", "owner_id", "owner_email"],
+            "properties": {
+              "site_id": { "type": "string" },
+              "site_title": { "type": "string" },
+              "owner_id": { "type": "string" },
+              "owner_email": { "type": "string" }
+            }
+          }
+        ]
+      },
+      "DomainList": {
+        "type": "object",
+        "required": ["items", "total"],
+        "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/Domain" } }, "total": { "type": "integer" } }
+      },
+      "DNSCheck": {
+        "type": "object",
+        "required": ["hostname", "verdict", "addresses", "cname", "expected"],
+        "properties": {
+          "hostname": { "type": "string" },
+          "verdict": { "type": "string", "enum": ["points_here", "points_elsewhere", "no_records", "failed", "unknown"] },
+          "addresses": { "type": "array", "items": { "type": "string" }, "description": "A/AAAA records after following CNAMEs" },
+          "cname": { "type": ["string", "null"] },
+          "expected": { "type": "array", "items": { "type": "string" }, "description": "SERVER_IPS, or the addresses of the base domain and API host" }
         }
       },
       "Deploy": {
@@ -606,6 +756,18 @@
         "required": ["user_id"],
         "additionalProperties": false,
         "properties": { "user_id": { "type": ["string", "integer"] } }
+      },
+      "AddHostnameRequest": {
+        "type": "object",
+        "required": ["hostname"],
+        "additionalProperties": false,
+        "properties": { "hostname": { "type": "string", "description": "Domain name; Unicode names are stored in punycode" } }
+      },
+      "RejectDomainRequest": {
+        "type": "object",
+        "required": ["reason"],
+        "additionalProperties": false,
+        "properties": { "reason": { "type": "string", "minLength": 1, "maxLength": 200 } }
       }
     }
   }

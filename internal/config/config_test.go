@@ -156,3 +156,32 @@ func TestUIURLMustNotBeOnBaseDomain(t *testing.T) {
 		}
 	}
 }
+
+func TestExternalDomainSettings(t *testing.T) {
+	c, err := Load(env(base()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.MaxDomainsPerSite != 5 || len(c.ServerIPs) != 0 {
+		t.Fatalf("defaults: %d %v", c.MaxDomainsPerSite, c.ServerIPs)
+	}
+	e := base()
+	e["MAX_DOMAINS_PER_SITE"] = "12"
+	e["SERVER_IPS"] = " 203.0.113.7, 2001:DB8::1 ,"
+	if c, err = Load(env(e)); err != nil {
+		t.Fatal(err)
+	}
+	if c.MaxDomainsPerSite != 12 || len(c.ServerIPs) != 2 || c.ServerIPs[0].String() != "203.0.113.7" ||
+		c.ServerIPs[1].String() != "2001:db8::1" {
+		t.Fatalf("overrides: %d %v", c.MaxDomainsPerSite, c.ServerIPs)
+	}
+	for _, kv := range [][2]string{
+		{"MAX_DOMAINS_PER_SITE", "101"}, {"SERVER_IPS", "example.com"}, {"SERVER_IPS", "10.0.0.0/8"},
+	} {
+		e := base()
+		e[kv[0]] = kv[1]
+		if _, err := Load(env(e)); err == nil || !strings.Contains(err.Error(), kv[0]) {
+			t.Errorf("%s=%s: want error, got %v", kv[0], kv[1], err)
+		}
+	}
+}

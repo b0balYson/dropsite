@@ -1,0 +1,78 @@
+{{define "domain_badge"}}{{$st := .H.Status}}{{if eq $st "active"}}<span class="badge badge--ok">{{.L.T "domains.status.active"}}</span>{{else if eq $st "rejected"}}<span class="badge badge--error">{{.L.T "domains.status.rejected"}}</span>{{else}}<span class="badge badge--warn">{{.L.T "domains.status.pending"}}</span>{{end}}{{end}}
+
+{{define "site_domains"}}{{$v := .D.V}}{{$d := .D.Domains}}
+<section class="section domains" aria-labelledby="domains-h">
+  <div class="domains__head">
+    <h2 class="section-title" id="domains-h">{{.L.T "domains.title"}}</h2>
+    <span class="domains__count mono">{{.L.T "domains.count" "n" $d.Count "max" $d.Setup.MaxDomains}}</span>
+  </div>
+  <div class="domains__grid">
+    <div class="domains__main">
+      <p class="hint">{{.L.T "domains.lede"}}</p>
+      {{if $d.AtLimit}}
+      <p class="notice notice--warn">{{.L.T "domains.atlimit" "max" $d.Setup.MaxDomains}}</p>
+      {{else}}
+      <form class="domain-add" method="post" action="/sites/{{$v.Site.ID}}/domains">
+        {{template "csrf" .}}
+        <label class="sr-only" for="domain-new">{{.L.T "domains.field"}}</label>
+        <input class="input mono" id="domain-new" name="domain" required maxlength="253" placeholder="promo.example.com"
+          autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="url">
+        <button class="btn btn--primary" type="submit">{{.L.T "domains.add"}}</button>
+      </form>
+      {{end}}
+      {{if $d.List}}
+      <ul class="domain-list">
+        {{range $d.List}}{{$h := .H}}
+        <li class="domain-row domain-row--{{$h.Status}}">
+          <div class="domain-row__head">
+            {{if eq $h.Status "active"}}<a class="domain-row__host mono" href="{{.URL}}" target="_blank" rel="noopener noreferrer">{{wbr $h.Hostname}}</a>
+            {{else}}<span class="domain-row__host mono">{{wbr $h.Hostname}}</span>{{end}}
+            {{if .Display}}<span class="domain-row__idn">{{.Display}}</span>{{end}}
+            {{template "domain_badge" (dict "H" $h "L" $.L)}}
+          </div>
+          {{if eq $h.Status "rejected"}}<p class="domain-row__note"><span class="domain-row__label">{{$.L.T "domains.reason"}}:</span> {{$h.RejectReason}}</p>
+          {{else if eq $h.Status "pending"}}<p class="domain-row__note muted">{{$.L.T "domains.pending.hint"}}</p>{{end}}
+          <details class="domain-row__remove">
+            <summary class="btn btn--small btn--ghost" aria-label="{{$.L.T "domains.remove"}} {{$h.Hostname}}">{{$.L.T "domains.remove"}}</summary>
+            <form class="domain-row__confirm" method="post" action="/sites/{{$v.Site.ID}}/domains/remove">
+              {{template "csrf" $}}
+              <input type="hidden" name="domain" value="{{$h.Hostname}}">
+              <p class="small">{{$.L.T "domains.remove.confirm" "domain" $h.Hostname}}</p>
+              <button class="btn btn--small btn--danger" type="submit">{{$.L.T "domains.remove.submit"}}</button>
+            </form>
+          </details>
+        </li>
+        {{end}}
+      </ul>
+      {{else}}<p class="empty-line">{{.L.T "domains.empty"}}</p>{{end}}
+    </div>
+    <aside class="domains__dns panel panel--tight" aria-labelledby="dns-h">
+      <h3 class="domains__dns-title" id="dns-h">{{.L.T "domains.dns.title"}}</h3>
+      <dl class="dns-help">
+        <div class="dns-help__item">
+          <dt>{{.L.T "domains.dns.sub"}}</dt>
+          <dd><span class="dns-help__line"><span class="dns-help__type mono">CNAME</span> <span class="mono addr-break">{{wbr $d.Setup.CNAMETarget}}</span></span></dd>
+        </div>
+        <div class="dns-help__item">
+          <dt>{{.L.T "domains.dns.root"}}</dt>
+          <dd>{{if $d.Setup.ServerIPs}}{{range $d.Setup.ServerIPs}}<span class="dns-help__line"><span class="dns-help__type mono">{{if .Is4}}A{{else}}AAAA{{end}}</span> <span class="mono addr-break">{{.}}</span></span>{{end}}
+            {{else}}<span class="muted">{{.L.T "domains.dns.noip"}}</span>{{end}}</dd>
+        </div>
+      </dl>
+      <p class="hint">{{.L.T "domains.dns.after"}}</p>
+    </aside>
+  </div>
+</section>
+{{end}}
+
+{{define "dns_check"}}{{with .D}}
+<div class="dns-check dns-check--{{.Tone}}">
+  <p><span class="dns-check__title">{{$.L.T "dns.title"}}</span> <span class="status status--{{if eq .Tone "ok"}}ok{{else if eq .Tone "error"}}error{{else}}warn{{end}}">{{$.L.T (printf "dns.%s" .Verdict)}}</span></p>
+  <dl class="dns-check__facts">
+    {{if .CNAME}}<div><dt>CNAME</dt><dd class="mono addr-break">{{wbr .CNAME}}</dd></div>{{end}}
+    <div><dt>{{$.L.T "dns.found"}}</dt><dd class="mono addr-break">{{if .Found}}{{.Found}}{{else}}—{{end}}</dd></div>
+    <div><dt>{{$.L.T "dns.expected"}}</dt><dd class="mono addr-break">{{if .Expected}}{{.Expected}}{{else}}—{{end}}</dd></div>
+  </dl>
+  <button class="link-btn small" type="button" hx-get="/admin/domains/{{.Host}}/dns" hx-target="closest .xdomain__dns">{{$.L.T "dns.recheck"}}</button>
+</div>
+{{end}}{{end}}
