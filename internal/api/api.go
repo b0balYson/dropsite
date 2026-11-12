@@ -41,6 +41,7 @@ func New(svc *service.Service, log *slog.Logger) http.Handler {
 	a := &api{svc: svc, log: log}
 	mux := http.NewServeMux()
 	a.register(mux, a.routes())
+	a.registerSitePaths(mux)
 	return a.middleware(mux)
 }
 
@@ -58,6 +59,16 @@ func (a *api) routes() []route {
 		{Method: http.MethodPost, Path: "/sites/{ref}/deploys", handle: a.deploy},
 		{Method: http.MethodGet, Path: "/sites/{ref}/deploys", handle: a.listDeploys},
 		{Method: http.MethodPost, Path: "/sites/{ref}/rollback", handle: a.rollback},
+		{Method: http.MethodGet, Path: "/sites/{ref}/forms/channels", handle: a.listChannels},
+		{Method: http.MethodPost, Path: "/sites/{ref}/forms/channels", handle: a.createChannel},
+		{Method: http.MethodPatch, Path: "/sites/{ref}/forms/channels/{id}", handle: a.updateChannel},
+		{Method: http.MethodDelete, Path: "/sites/{ref}/forms/channels/{id}", handle: a.deleteChannel},
+		{Method: http.MethodPost, Path: "/sites/{ref}/forms/channels/{id}/verify", handle: a.verifyChannel},
+		{Method: http.MethodPost, Path: "/sites/{ref}/forms/channels/{id}/secret", handle: a.rotateChannelSecret},
+		{Method: http.MethodGet, Path: "/sites/{ref}/forms/settings", handle: a.getFormSiteSettings},
+		{Method: http.MethodPatch, Path: "/sites/{ref}/forms/settings", handle: a.updateFormSiteSettings},
+		{Method: http.MethodGet, Path: "/sites/{ref}/forms/submissions", handle: a.listSubmissions},
+		{Method: http.MethodGet, Path: "/sites/{ref}/forms/submissions.csv", handle: a.exportSubmissions},
 		{Method: http.MethodGet, Path: "/tokens", handle: a.listTokens},
 		{Method: http.MethodPost, Path: "/tokens", handle: a.createToken},
 		{Method: http.MethodDelete, Path: "/tokens/{id}", handle: a.revokeToken},
@@ -69,6 +80,8 @@ func (a *api) routes() []route {
 		{Method: http.MethodDelete, Path: "/admin/sites/{ref}/apex", handle: adminOnly(a.clearApex)},
 		{Method: http.MethodPost, Path: "/admin/sites/{ref}/transfer", handle: adminOnly(a.transfer)},
 		{Method: http.MethodGet, Path: "/admin/audit", handle: adminOnly(a.listAudit)},
+		{Method: http.MethodGet, Path: "/admin/forms/settings", handle: adminOnly(a.getFormSettings)},
+		{Method: http.MethodPatch, Path: "/admin/forms/settings", handle: adminOnly(a.updateFormSettings)},
 	}
 }
 

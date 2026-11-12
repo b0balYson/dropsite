@@ -96,6 +96,12 @@ type Option func(*options)
 type options struct {
 	env    map[string]string
 	mutate []func(*config.Config)
+	sender service.FormSender
+}
+
+// WithFormSender replaces the transports used for form delivery.
+func WithFormSender(s service.FormSender) Option {
+	return func(o *options) { o.sender = s }
 }
 
 // WithEnv sets an environment variable read by config.Load.
@@ -124,7 +130,7 @@ func New(t testing.TB, opts ...Option) *Env {
 		opt(o)
 	}
 	cfg := loadConfig(t, o)
-	return start(t, cfg)
+	return start(t, cfg, o.sender)
 }
 
 func loadConfig(t testing.TB, o *options) *config.Config {
@@ -142,7 +148,7 @@ func loadConfig(t testing.TB, o *options) *config.Config {
 	return cfg
 }
 
-func start(t testing.TB, cfg *config.Config) *Env {
+func start(t testing.TB, cfg *config.Config, sender service.FormSender) *Env {
 	t.Helper()
 	ctx := context.Background()
 	uploads := filepath.Join(cfg.StateDir, "uploads")
@@ -159,6 +165,7 @@ func start(t testing.TB, cfg *config.Config) *Env {
 	clock := &Clock{t: Start}
 	svc := service.New(service.Deps{
 		Config: cfg, Repo: db, Files: storage.NewFS(cfg.SitesDir), Now: clock.Now, UploadDir: uploads,
+		FormSender: sender,
 	})
 	if err := svc.Start(ctx); err != nil {
 		t.Fatalf("testenv: start service: %v", err)
