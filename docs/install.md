@@ -20,7 +20,7 @@ Certificates are issued on first visit; see [tls.md](tls.md) for limits.
 
 | File | Purpose |
 | --- | --- |
-| `docker-compose.yml` | Services `caddy-init`, `caddy`, `control`; volumes `sites`, `state`, `caddy_data` |
+| `docker-compose.yml` | Services `caddy-init`, `caddy`, `control`; volumes `sites`, `state`, `caddy_data`, `logs` |
 | `Caddyfile` | Static Caddy configuration; do not edit unless you know why each rule is there |
 | `.env` | Your settings, from `.env.example` |
 
@@ -30,7 +30,7 @@ Volumes:
 | --- | --- | --- |
 | `sites` | control (rw), caddy (ro) | releases and host-name symlinks |
 | `state` | control | SQLite database, temporary uploads |
-| `caddy_data` | caddy | certificates and ACME account |
+| `caddy_data` | caddy | certificates and ACME account | | `logs` | caddy (rw), control (ro) | access log of published sites for statistics, rotated by Caddy (see [statistics.md](statistics.md)) |
 
 ## Web interface access
 

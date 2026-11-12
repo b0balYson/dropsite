@@ -92,6 +92,12 @@ irm https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.ps
 | Зарезервировано | `/_form/` и `/_dropsite/` принадлежат платформе |
 | Кэш | HTML — `no-cache`, остальное — `public, max-age=3600` |
 
+## Статистика посещений и счётчики аналитики
+
+На экране сайта видны просмотры страниц по дням за 30 дней, итоги, популярные страницы и источники переходов; администратор в «Все сайты» видит ещё и просмотры за 7 дней. Числа берутся из access-лога Caddy, поэтому скрипты на сайтах не нужны: роботы и запросы к картинкам, стилям и скриптам не учитываются, а посетитель определяется по IP-адресу и браузеру в пределах суток UTC, при этом ни то ни другое не хранится. Те же данные отдаёт `GET /api/v1/sites/{ref}/stats?days=30`.
+
+Владелец сайта может указать номер счётчика Яндекс.Метрики и/или Measurement ID GA4 (администратор — ещё и общие для всех сайтов). dropsite вставит стандартный код счётчика перед `</head>` во все HTML-страницы каждого нового релиза; смена ID сайта создаёт новый релиз с обновлённым кодом. Принимаются только идентификаторы, не HTML. Подробности: [docs/statistics.md](docs/statistics.md).
+
 ## Сертификаты и лимиты Let's Encrypt
 
 По умолчанию каждый адрес получает свой сертификат при первом обращении (`TLS_MODE=ondemand`). Caddy запрашивает сертификат только для существующих адресов.
@@ -125,15 +131,17 @@ docker compose -f docker-compose.yml -f compose.wildcard.yml up -d
 | `MAX_SITE_BYTES`, `MAX_FILE_BYTES`, `MAX_FILES`, `MAX_SITES_PER_USER`, `KEEP_RELEASES` | нет | 50 МБ, 20 МБ, 2000, 10, 5 | Лимиты; администратор может переопределить их в интерфейсе |
 | `RESERVED_SLUGS` | нет | | Дополнительные запрещённые slug через запятую |
 | `LOG_LEVEL` | нет | `info` | `debug`, `info`, `warn`, `error` |
+| `STATS_INTERVAL` | нет | `1m` | Как часто control читает access-лог сайтов (от 1s до 1h) |
+| `STATS_LOG_FILE` | нет | `/logs/sites-access.log` | Access-лог сайтов внутри control; `off` выключает статистику |
 
 ## Эксплуатация
 
 - **Бэкап:** `docker compose exec -T control /control backup - > backup-$(date +%F).tar.gz`. Восстановление — в [docs/backup.md](docs/backup.md).
 - **Обновление:** сделайте бэкап, затем `docker compose pull && docker compose up -d`. Миграции применяются автоматически, откат схемы не поддерживается.
-- **Логи:** JSON в stdout обоих контейнеров: `docker compose logs -f`.
+- **Логи:** JSON в stdout обоих контейнеров: `docker compose logs -f`. Кроме того, Caddy пишет access-лог сайтов на том `logs` для статистики (ротация по 50 МБ, хранятся 5 старых файлов).
 - **Здоровье:** `docker compose ps` показывает проверку здоровья `control`.
 
-Подробнее: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [docs/tls.md](docs/tls.md), [docs/production-checklist.md](docs/production-checklist.md).
+Подробнее: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [docs/tls.md](docs/tls.md), [docs/statistics.md](docs/statistics.md), [docs/production-checklist.md](docs/production-checklist.md).
 
 ## Модель безопасности
 
