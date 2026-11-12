@@ -136,6 +136,10 @@ func (a *app) run(ctx context.Context) error {
 		return nil
 	})
 	g.Go(func() error {
+		a.svc.RunStats(gctx, a.cfg.StatsInterval)
+		return nil
+	})
+	g.Go(func() error {
 		<-gctx.Done()
 		a.log.Info("shutting down")
 		sctx, cancel := context.WithTimeout(context.WithoutCancel(gctx), shutdownTimeout)

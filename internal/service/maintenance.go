@@ -65,8 +65,8 @@ func toStorageLayout(in []store.SiteLayout) []storage.SiteLayout {
 	return out
 }
 
-// Housekeeping purges deleted sites past their retention and expired
-// sessions and invites. It is safe to run repeatedly.
+// Housekeeping purges deleted sites past their retention, expired sessions
+// and invites, and statistics older than StatsRetentionDays. It is safe to run repeatedly.
 func (s *Service) Housekeeping(ctx context.Context) error {
 	now := s.now()
 	ids, err := s.repo.ListSitesToPurge(ctx, now.Add(-DeletedSiteTTL))
@@ -83,6 +83,9 @@ func (s *Service) Housekeeping(ctx context.Context) error {
 	}
 	if _, err := s.repo.DeleteExpiredInvites(ctx, now.Add(-InviteTTL)); err != nil {
 		return fmt.Errorf("delete expired invites: %w", err)
+	}
+	if err := s.pruneStats(ctx); err != nil {
+		return fmt.Errorf("delete old statistics: %w", err)
 	}
 	return nil
 }
