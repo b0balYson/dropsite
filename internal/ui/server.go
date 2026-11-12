@@ -90,6 +90,8 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /sites/{ref}/publish-settings", s.user(s.sitePublishSettings))
 	mux.HandleFunc("POST /sites/{ref}/deploy", s.upload(s.deploy))
 	mux.HandleFunc("POST /sites/{ref}/rollback", s.user(s.rollback))
+	mux.HandleFunc("POST /sites/{ref}/draft/publish", s.user(s.publishDraft))
+	mux.HandleFunc("POST /sites/{ref}/draft/discard", s.user(s.discardDraft))
 	mux.HandleFunc("POST /sites/from-template", s.user(s.createFromTemplate))
 	mux.HandleFunc("POST /sites/{ref}/clone", s.user(s.cloneSite))
 	mux.HandleFunc("POST /sites/{ref}/schedules", s.user(s.scheduleRelease))

@@ -23,6 +23,8 @@
   {{end}}
 </header>
 
+{{template "site_draft" .}}
+
 {{if .D.Access.Soon}}
 <p class="notice notice--warn expiry-notice" role="status">{{.L.T "access.expires.soon" "date" (.L.DatePtr $v.Site.ExpiresAt)}}</p>
 {{end}}
@@ -34,6 +36,7 @@
       data-msg-uploading="{{.L.T "deploy.uploading"}}" data-msg-processing="{{.L.T "deploy.processing"}}"
       data-msg-failed="{{.L.T "deploy.failed"}}" data-msg-open="{{.L.T "deploy.open"}}" data-msg-wrongtype="{{.L.T "deploy.wrongtype"}}">
       <input type="hidden" name="_csrf" value="{{.CSRF}}">
+      {{template "draft_toggle" .}}
       <div class="dropzone__body">
         <p class="dropzone__title">{{.L.T "deploy.drop"}}</p>
         <p class="hint">{{.L.T "deploy.hint" "size" (.L.Size .D.MaxSize)}}</p>

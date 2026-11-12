@@ -24,6 +24,8 @@ type deployReply struct {
 	URLs     []string `json:"urls,omitempty"`
 	DeployID string   `json:"deploy_id,omitempty"`
 	Message  string   `json:"message,omitempty"`
+	// Reload asks the page to reload (a draft is shown in its own block).
+	Reload bool `json:"reload,omitempty"`
 }
 
 var errNoFile = errors.New("no archive in the upload")
@@ -61,6 +63,7 @@ func (s *server) streamDeploy(r *http.Request, rc *reqCtx, ref string) (service.
 	if err != nil {
 		return service.DeployResult{}, errNoFile
 	}
+	var opts service.PublishOptions
 	for {
 		part, err := mr.NextPart()
 		if errors.Is(err, io.EOF) {
@@ -73,6 +76,9 @@ func (s *server) streamDeploy(r *http.Request, rc *reqCtx, ref string) (service.
 		case csrfField:
 			b, _ := io.ReadAll(io.LimitReader(part, maxFieldBytes))
 			rc.csrfChecked = rc.csrfChecked || tokensEqual(rc.csrf, string(b))
+		case draftField:
+			b, _ := io.ReadAll(io.LimitReader(part, maxFieldBytes))
+			opts.Draft = len(b) > 0
 		case "archive":
 			if !rc.csrfChecked {
 				return service.DeployResult{}, errForbidden
@@ -80,7 +86,7 @@ func (s *server) streamDeploy(r *http.Request, rc *reqCtx, ref string) (service.
 			if part.FileName() == "" {
 				return service.DeployResult{}, errNoFile
 			}
-			return s.svc.Deploy(r.Context(), rc.actor, ref, part, domain.SourceUI)
+			return s.svc.DeployWith(r.Context(), rc.actor, ref, part, domain.SourceUI, opts)
 		default:
 			_, _ = io.Copy(io.Discard, io.LimitReader(part, maxFieldBytes))
 		}
@@ -88,6 +94,10 @@ func (s *server) streamDeploy(r *http.Request, rc *reqCtx, ref string) (service.
 }
 
 func (s *server) deployDone(w http.ResponseWriter, r *http.Request, rc *reqCtx, res service.DeployResult) {
+	if res.Site.Draft != nil && res.Site.Draft.Deploy.ID == res.Deploy.ID {
+		s.draftSaved(w, r, rc, res)
+		return
+	}
 	if wantsJSON(r) {
 		writeJSON(w, http.StatusOK, deployReply{
 			OK: true, URL: res.Site.URL, URLs: res.Site.URLs, DeployID: res.Deploy.ID,
