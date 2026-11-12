@@ -54,6 +54,8 @@ When the dropsite page opens, the user enters a connect code from the **Connect 
 
 Tools: the same as the local server, with `deploy_files` instead of `deploy_folder`: `files` is an array of `{path, content, encoding}` (`utf8` or `base64`), at most 1 MB decoded in total; omit `site` to create a new site. Larger sites get an error that recommends the CLI or Claude Desktop. Releases published this way have the source `mcp`.
 
+Whatever token reaches `/mcp` (an OAuth token or an API token), the assistant works only with the user's own sites: an administrator's assistant gets no administrator powers and cannot see, publish to, roll back or delete other users' sites. Administration stays in the web interface, the API and the CLI.
+
 Connected applications are listed on the **Connect AI** page; **Disconnect** revokes every token of that application at once.
 
 ## OAuth server reference

@@ -131,10 +131,16 @@ func New(d Deps) *Service {
 type Actor struct {
 	User domain.User
 	IP   string
+	// ViaMCP marks an actor authenticated on the MCP endpoint (an OAuth
+	// access token or an API token presented to /mcp). An AI assistant acts
+	// only on the user's own resources: it never gets administrator powers,
+	// so a prompt injection cannot reach other users' sites.
+	ViaMCP bool
 }
 
-// IsAdmin reports whether the actor is an administrator.
-func (a Actor) IsAdmin() bool { return a.User.IsAdmin() }
+// IsAdmin reports whether the actor may use administrator powers: an
+// administrator acting directly, never through an AI assistant.
+func (a Actor) IsAdmin() bool { return a.User.IsAdmin() && !a.ViaMCP }
 
 func (a Actor) id() *int64 {
 	if a.User.ID == 0 {

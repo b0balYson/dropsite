@@ -335,6 +335,7 @@ func (s *Service) RevokeOAuthToken(ctx context.Context, token string) error {
 func (s *Service) AuthenticateMCP(ctx context.Context, token, ip string) (Actor, time.Time, error) {
 	if strings.HasPrefix(token, brand.TokenPrefix) {
 		a, err := s.AuthenticateToken(ctx, token, ip)
+		a.ViaMCP = true
 		return a, time.Time{}, err
 	}
 	res, ok, retry := s.tokenLimit.Reserve(ipKey(ip))
@@ -361,7 +362,7 @@ func (s *Service) AuthenticateMCP(ctx context.Context, token, ip string) (Actor,
 		}
 	}
 	res.Cancel()
-	return Actor{User: u, IP: ip}, t.ExpiresAt, nil
+	return Actor{User: u, IP: ip, ViaMCP: true}, t.ExpiresAt, nil
 }
 
 // ListOAuthGrants returns the actor's connected applications.
