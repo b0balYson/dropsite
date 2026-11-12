@@ -48,6 +48,7 @@ var topics = []struct {
 	{"addresses", []string{"addresses.md"}},
 	{"protection", []string{"protection.md"}},
 	{"rollback", []string{"rollback.md"}},
+	{"workflow", []string{"workflow.md"}},
 	{"account", []string{"account.md"}},
 	{"errors", []string{"errors.md"}},
 }
