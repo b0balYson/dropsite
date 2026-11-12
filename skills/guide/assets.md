@@ -7,7 +7,7 @@ Sites published with dropsite must work on their own: no part of the page may de
 - Every image, font, icon, script and stylesheet is a file of the site. No Google Fonts, no CDN links (jsDelivr, unpkg, cdnjs), no hotlinked photos (Unsplash, Pexels, other sites), no external icon kits.
 - To use a picture or a font from the web, download it into the site: in a chat, add a `fetch` entry (`url` + `path` inside the site) to update_site_files or upload_files and the server downloads it; when publishing a folder, save the file into the folder. Then reference it by a relative path (`img/hero.webp`, `fonts/inter.woff2`).
 - Use only images and fonts the user owns or that are free to use (for example, fonts under the SIL Open Font License, photos with a free license). Never take images from someone else's site.
-- Allowed external links: ordinary `<a href>` links (maps, social networks, messengers), and analytics counters that dropsite inserts itself when the user turns them on (do not add counter code by hand).
+- Allowed external links: ordinary `<a href>` links (maps, social networks, messengers), analytics counters that dropsite inserts itself when the user turns them on (do not add counter code by hand), and maps, videos or chat widgets the user explicitly asked for (see "Maps, videos and chat widgets").
 - Prefer system fonts (`font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`). If a brand font matters, ship one or two WOFF2 files with `font-display: swap`.
 - Keep JavaScript minimal; a typical business site needs none, except the form widget described under "Forms on the site".
 

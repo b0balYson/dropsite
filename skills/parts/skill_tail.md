@@ -9,5 +9,6 @@ The CLI prints the server message. Common ones:
 | no `index.html` | Publish the folder that contains `index.html`, or rename the main page |
 | archive too large, too many files, file too large | Remove unused assets (videos, source images) or compress them, then retry |
 | symbolic link | Replace symlinks with real files |
+| secret keys found (`secrets_found`, a list of file:line) | Remove the secret keys from those files (use only public keys on a site) and tell the user to rotate them; `--include-sensitive` does not override this |
 | site limit reached | Ask the user to delete an old site or contact the administrator |
 | too many requests | Wait the time the CLI shows, then retry once |

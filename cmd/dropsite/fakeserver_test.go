@@ -72,6 +72,7 @@ func newFakeServer(t *testing.T) *fakeServer {
 	mux.HandleFunc("GET /api/v1/sites", f.listSites)
 	mux.HandleFunc("POST /api/v1/sites", f.createSite)
 	mux.HandleFunc("GET /api/v1/sites/{ref}", f.withSite(f.getSite))
+	mux.HandleFunc("GET /api/v1/sites/{ref}/attachments", f.withSite(f.siteAttachments))
 	mux.HandleFunc("PATCH /api/v1/sites/{ref}", f.withSite(f.patchSite))
 	mux.HandleFunc("DELETE /api/v1/sites/{ref}", f.withSite(f.deleteSite))
 	mux.HandleFunc("POST /api/v1/sites/{ref}/deploys", f.withSite(f.deploy))
@@ -297,6 +298,14 @@ func (f *fakeServer) createSite(w http.ResponseWriter, r *http.Request) {
 
 func (f *fakeServer) getSite(w http.ResponseWriter, _ *http.Request, s *fakeSite) {
 	reply(w, 200, s.json())
+}
+
+// siteAttachments answers that nothing is attached to the site.
+func (f *fakeServer) siteAttachments(w http.ResponseWriter, _ *http.Request, s *fakeSite) {
+	reply(w, 200, map[string]any{"site_id": s.ID,
+		"forms":       map[string]any{"names": []string{}, "channels": 0, "working_channels": 0, "require_altcha": false},
+		"counters":    map[string]any{"own": map[string]string{}, "global": map[string]string{}},
+		"collections": []any{}, "proxy_endpoints": []string{}})
 }
 
 // exchange trades goodCode (once) for goodToken.

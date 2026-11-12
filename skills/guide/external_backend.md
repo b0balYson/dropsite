@@ -1,0 +1,10 @@
+# Accounts, databases and logins (external backend)
+
+dropsite serves static files only. When the user needs sign-in, a database, a shared list or file uploads, connect the site to a backend service the user owns: Supabase, Firebase, PocketBase or Appwrite. Use it only when a form submission is not enough; a simple request form needs no backend (see "Forms on the site").
+
+- Ask the user to create the project in that service themselves and to send you only the **public** values: the project URL and the public key (Supabase `anon` or `sb_publishable_…` key, Firebase web config with its `apiKey`, Appwrite project ID, PocketBase URL). These are designed to be shipped in a web page.
+- Never put a secret key into the site: no Supabase `service_role` or `sb_secret_…` key, no Firebase service account JSON or Admin SDK key, no Appwrite API key, no PocketBase admin password. Everything in the site is public. dropsite refuses to publish files that contain such keys. If the user pastes one into the chat, do not use it and tell them to rotate it in the service.
+- The public key is safe only with access rules. Before going live, tell the user to turn on and check them: Supabase Row Level Security on every table with policies for exactly what visitors may read or write; Firebase Security Rules (never `allow read, write: if true`); Appwrite collection permissions; PocketBase API rules. Write the rules for them as text they paste into the service.
+- Ship the SDK with the site: download the ES module build into the site (`fetch` entry or save it into the folder, for example `js/supabase.js`) and import it by a relative path. No CDN links (jsDelivr, unpkg, esm.sh, gstatic).
+- The service's own sign-in redirect and allowed origins must include the site's address: tell the user to add the link (and their own domain, if any) in the service settings.
+- Keep the page working when the backend is down: show a short message instead of a blank page.

@@ -53,6 +53,14 @@ var topics = []struct {
 	{"rollback", []string{"rollback.md"}},
 	{"account", []string{"account.md"}},
 	{"errors", []string{"errors.md"}},
+	{"external_backend", []string{"external_backend.md"}},
+	{"payments", []string{"payments.md"}},
+	{"booking", []string{"booking.md"}},
+	{"legal", []string{"legal.md"}},
+	{"seo", []string{"seo.md"}},
+	{"multilingual", []string{"multilingual.md"}},
+	{"quiz", []string{"quiz.md"}},
+	{"embeds", []string{"embeds.md"}},
 }
 
 // Topics returns the guide topic names in reading order, without "all".

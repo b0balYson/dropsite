@@ -80,8 +80,16 @@ func apiHints(ae *client.APIError) []string {
 	case http.StatusTooManyRequests:
 		hints = append(hints, retryHint(ae.RetryAfter))
 	}
+	if ae.Code == domain.CodeSecretsFound {
+		hints = append(hints, secretsHint)
+	}
 	return hints
 }
+
+// secretsHint explains the server's refusal of secret keys; unlike the
+// check of secret-looking file names it has no override flag.
+const secretsHint = "Remove the secret keys from the listed files, keep only public keys on the site and replace " +
+	"(rotate) the exposed keys. --include-sensitive does not override this check."
 
 func retryHint(d time.Duration) string {
 	if d <= 0 {

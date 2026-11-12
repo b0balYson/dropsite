@@ -82,8 +82,10 @@ func (t tools) register(s *sdk.Server, o Options) {
 			"Usually not needed: deploy_files without site creates and publishes a new site in one step. Use it " +
 			"when the user wants an address reserved before the content is ready."}, t.createSite)
 	sdk.AddTool(s, &sdk.Tool{Name: "get_site", Annotations: readOnly("Get site"),
-		Description: "Get one site: its name, every link (primary first) and the version being served. Show the " +
-			"user the primary link."}, t.getSite)
+		Description: "Get one site: its name, every link (primary first), the version being served, password, " +
+			"search engine and expiry settings, own domains, and what is attached (forms with requests, delivery " +
+			"channels, analytics counters). Call it when a chat turns to an existing site, and build on what is " +
+			"already set up instead of offering it again. Show the user the primary link."}, t.getSite)
 	sdk.AddTool(s, &sdk.Tool{Name: "set_slug", Annotations: writes("Set address", false, true),
 		Description: "Set, change or remove (empty slug) the memorable address of a site, e.g. coffee-river." +
 			"<base domain>. The random address keeps working. If the label is taken, suggest variants. Tell the " +
@@ -154,7 +156,17 @@ func (t tools) getSite(ctx context.Context, req *sdk.CallToolRequest, in siteArg
 		return nil, Site{}, err
 	}
 	s, err := b.GetSite(ctx, in.Site)
-	return nil, s, err
+	if err != nil {
+		return nil, Site{}, err
+	}
+	if at, ok := b.(SiteAttacher); ok {
+		a, err := at.SiteAttachments(ctx, s.ID)
+		if err != nil {
+			return nil, Site{}, err
+		}
+		s.Attached = &a
+	}
+	return nil, s, nil
 }
 
 func (t tools) setSlug(ctx context.Context, req *sdk.CallToolRequest, in slugArgs) (*sdk.CallToolResult, Site, error) {

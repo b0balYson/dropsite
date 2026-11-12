@@ -37,4 +37,17 @@ Call get_guide with one of these topics when you need details:
 - `account`: limits, connected apps, what only the web interface or an administrator can do.
 - `errors`: what errors mean and what to tell the user.
 
+Common requests have their own topics; read the one that fits before building:
+
+- `external_backend`: sign-in, databases and file uploads through Supabase, Firebase, PocketBase or Appwrite (public keys only, access rules).
+- `payments`: taking payments through payment links (YooKassa, CloudPayments, Stripe) and an order form.
+- `booking`: appointments through the user's booking service or a request form.
+- `legal`: consent in forms, privacy policy, cookie banner (152-FZ, GDPR).
+- `seo`: search engines and link previews (structured data, robots.txt, sitemap.xml, Open Graph).
+- `multilingual`: sites in several languages.
+- `quiz`: lead quizzes and calculators.
+- `embeds`: maps, videos and chat widgets.
+
+When get_site shows what is already attached to a site (forms, delivery channels, counters, password, domains), build on it instead of offering to set it up again.
+
 Some tools may be missing in a given connection (for example, a desktop client publishes folders instead of files). If a tool you need is not available, do not improvise: tell the user which button in the dropsite web interface does the same.

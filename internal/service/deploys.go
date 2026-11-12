@@ -116,6 +116,10 @@ func (s *Service) publish(ctx context.Context, a Actor, site domain.Site, upload
 		s.discard(site.ID, id)
 		return domain.Deploy{}, err
 	}
+	if err := checkSecrets(ctx, staging); err != nil {
+		s.discard(site.ID, id)
+		return domain.Deploy{}, err
+	}
 	opt := s.optimizeRelease(ctx, site, staging)
 	// The report sees the site's files before the platform's counters.
 	rep := s.analyzeRelease(ctx, site, staging, opt)

@@ -92,6 +92,8 @@ Because the assistant can be steered by content it reads, `deploy_folder` is gua
 
 `dropsite deploy` applies the same secret-file check (not the folder check): it stops and lists the files unless `--skip-sensitive` (leave them out) or `--include-sensitive` (publish them, when they really are public) is given.
 
+Independently of file names, the server refuses every publication whose files contain secret keys (`secrets_found`, with `path:line (kind)` for each hit and never the key itself; see `docs/api-contract.md`). This applies to the web interface, the CLI, the API and both MCP servers alike; `--include-sensitive` and `skip_sensitive_files` do not override it. Public keys meant for web pages (Supabase anon, Stripe `pk_`) are accepted.
+
 ## Remote MCP: tools and rights
 
 The remote server offers every chat tool. A whole small site is published in one call with `deploy_files` (instead of the local `deploy_folder`): `files` is an array of `{path, content, encoding}` (`utf8` or `base64`), at most 16 MB decoded in total; omit `site` to create a new site. Larger sites go up in an upload session where the server offers one; otherwise the error recommends the web interface, the CLI or Claude Desktop. Releases published this way have the source `mcp`.
@@ -136,7 +138,7 @@ Upload sessions: at most 50 open per user, closed after 24 idle hours (every `up
 
 `fetch` entries let the assistant put images, fonts, CSS and JS inside the site instead of linking to other servers. The server downloads them only over `https` on port 443, without a proxy, and only from public addresses: the address actually connected to is checked after every DNS lookup and on every redirect (at most 3), so private, loopback, link-local, cloud metadata and other reserved networks are never reached. Allowed: images (PNG, JPEG, GIF, WebP, AVIF, SVG, ICO), fonts (WOFF, WOFF2, TTF, OTF, EOT), `.css`, `.js`, `.mjs` — by the response type and the target extension. Limits: 500 URLs and 256 MB per call, 50 MB per file (and at most the owner's `MAX_FILE_BYTES`), 10 minutes per call, 100000 URLs per user per hour. JPEG and PNG wider than 2000 px are scaled down to 2000 px when that makes the file smaller. One failed URL cancels the whole call and the error names it.
 
-`list_sites` and `get_site` also return `hidden_from_search`, `password_protected`, `expires_at`, `root_domain` and `own_domains`. Answers carry ready links and a short `summary` the assistant can repeat. The local `dropsite mcp` offers all of these tools through the API (see [api-contract.md](api-contract.md)).
+`list_sites` and `get_site` also return `hidden_from_search`, `password_protected`, `expires_at`, `root_domain` and `own_domains`. `get_site` adds `attached`: forms that received requests, the number of delivery channels and of working ones, whether Altcha is required, the site's own counters, whether an administrator adds counters to every site, and a `summary`, so an assistant in a new chat sees what is already set up (both servers; the local one reads `GET /sites/{ref}/attachments`). Answers carry ready links and a short `summary` the assistant can repeat. The local `dropsite mcp` offers all of these tools through the API (see [api-contract.md](api-contract.md)).
 
 No tool issues credentials: API tokens and connect codes are created only in the web interface.
 
