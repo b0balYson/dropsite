@@ -70,8 +70,32 @@ func (a *api) createUser(w http.ResponseWriter, r *http.Request) error {
 }
 
 type updateUserRequest struct {
-	Blocked       *bool `json:"blocked"`
-	ReissueInvite *bool `json:"reissue_invite"`
+	Blocked       *bool      `json:"blocked"`
+	ReissueInvite *bool      `json:"reissue_invite"`
+	Limits        *overrides `json:"limits"`
+}
+
+func (a *api) getUser(w http.ResponseWriter, r *http.Request) error {
+	id, ok := parseID(r.PathValue("id"))
+	if !ok {
+		return domain.ErrNotFound
+	}
+	ul, err := a.svc.GetUserLimits(r.Context(), actorFrom(r.Context()), id)
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusOK, toUserDetail(ul))
+	return nil
+}
+
+func (a *api) setUserLimits(w http.ResponseWriter, r *http.Request, id int64, o overrides) error {
+	ul, err := a.svc.SetUserLimits(r.Context(), actorFrom(r.Context()), id, o.domain())
+	if err != nil {
+		return err
+	}
+	lim, ov := toLimits(ul.Effective), toOverrides(ul.Overrides)
+	writeJSON(w, http.StatusOK, inviteDTO{User: toUser(ul.User), Limits: &lim, LimitOverrides: &ov})
+	return nil
 }
 
 func (a *api) updateUser(w http.ResponseWriter, r *http.Request) error {
@@ -83,14 +107,22 @@ func (a *api) updateUser(w http.ResponseWriter, r *http.Request) error {
 	if err := decodeJSON(w, r, &req); err != nil {
 		return err
 	}
-	switch {
-	case req.Blocked != nil && req.ReissueInvite == nil:
-		return a.setBlocked(w, r, id, *req.Blocked)
-	case req.ReissueInvite != nil && req.Blocked == nil && *req.ReissueInvite:
-		return a.reissueInvite(w, r, id)
-	default:
-		return invalid(`send exactly one of {"blocked": bool} or {"reissue_invite": true}`)
+	n := 0
+	for _, set := range []bool{req.Blocked != nil, req.ReissueInvite != nil, req.Limits != nil} {
+		if set {
+			n++
+		}
 	}
+	switch {
+	case n != 1:
+	case req.Blocked != nil:
+		return a.setBlocked(w, r, id, *req.Blocked)
+	case req.ReissueInvite != nil && *req.ReissueInvite:
+		return a.reissueInvite(w, r, id)
+	case req.Limits != nil:
+		return a.setUserLimits(w, r, id, *req.Limits)
+	}
+	return invalid(`send exactly one of {"blocked": bool}, {"reissue_invite": true} or {"limits": {...}}`)
 }
 
 func (a *api) setBlocked(w http.ResponseWriter, r *http.Request, id int64, blocked bool) error {

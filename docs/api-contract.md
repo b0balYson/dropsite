@@ -29,8 +29,11 @@ User     {id, email, role, status, created_at}
 Limits   {max_site_bytes, max_file_bytes, max_files, max_sites_per_user, keep_releases}
 Hostname {hostname, kind}                       kind: default | slug | apex
 Deploy   {id, site_id, source, size_bytes, file_count, status, created_at, created_by, current}
-Site     {id, title, url, urls[], slug|null, hostnames[], owner_id, created_at, updated_at, current_deploy: Deploy|null}
-SiteItem {id, title, url, urls[], slug|null, owner_id, owner_email, last_deploy_at|null, size_bytes, created_at, updated_at}
+Site     {id, title, url, urls[], slug|null, hostnames[], owner_id, created_at, updated_at, current_deploy: Deploy|null,
+          noindex, protected, expires_at|null}
+SiteItem {id, title, url, urls[], slug|null, owner_id, owner_email, last_deploy_at|null, size_bytes, created_at, updated_at,
+          noindex, protected, expires_at|null}
+LimitOverrides {max_site_bytes|null, max_file_bytes|null, max_files|null, max_sites_per_user|null, keep_releases|null}
 Token    {id, name, prefix, created_at, last_used_at|null, expires_at|null, revoked_at|null}
 Audit    {id, actor_id|null, actor_email, action, target, meta{}, ip, created_at}
 List     {items[], total}
@@ -48,7 +51,7 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 | `GET /sites` | `?limit&offset` | `List<SiteItem>` (own sites) |
 | `POST /sites` | `{title, slug?}` | `201 Site` |
 | `GET /sites/{ref}` | | `Site` |
-| `PATCH /sites/{ref}` | `{title?, slug?}`; `slug: ""` or `null` removes it | `Site` |
+| `PATCH /sites/{ref}` | `{title?, slug?, noindex?, protected?, password?, expires_at?}`; `slug: ""` or `null` removes it | `Site` |
 | `DELETE /sites/{ref}` | | `204` |
 | `POST /sites/{ref}/deploys` | `multipart/form-data`, field `archive` (zip or tar.gz) | `201 {deploy_id, url, urls[], deploy: Deploy, site: Site}` |
 | `GET /sites/{ref}/deploys` | | `List<Deploy>` (newest first) |
@@ -58,7 +61,8 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 | `DELETE /tokens/{id}` | | `204` |
 | `GET /admin/users` | `?q&status&limit&offset` | `List<User + site_count>` |
 | `POST /admin/users` | `{email, role?}` | `201 {user: User, invite_url, invite_expires_at}` |
-| `PATCH /admin/users/{id}` | `{blocked: bool}` or `{reissue_invite: true}` | `{user: User, invite_url?, invite_expires_at?}` |
+| `GET /admin/users/{id}` | | `{user: User, limits: Limits, limit_overrides: LimitOverrides}` |
+| `PATCH /admin/users/{id}` | `{blocked: bool}`, `{reissue_invite: true}` or `{limits: LimitOverrides}` | `{user: User, invite_url?, invite_expires_at?, limits?, limit_overrides?}` |
 | `GET /admin/sites` | `?q&limit&offset` | `List<SiteItem>` (all sites) |
 | `POST /admin/sites/{ref}/apex` | | `Site` |
 | `DELETE /admin/sites/{ref}/apex` | | `Site` |
@@ -71,3 +75,10 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 `expires_in_days` accepts 1–3650; omitted means the token never expires. In `GET /admin/audit`, `from` and `to` accept RFC 3339 or `YYYY-MM-DD`; `from` is inclusive, an RFC 3339 `to` is exclusive and a date `to` includes the whole day. `PATCH /admin/users/{id}` with `blocked` returns only `{user}`; the invite fields appear only with `reissue_invite`.
 
 The deploy source is `cli` when the request carries `X-Dropsite-Client: cli/<version>`, otherwise `api`. The upload may be at most `max_site_bytes + max_files KiB + 1 MiB`; larger bodies get 413 without being read fully.
+
+## Site access and limits
+
+- `noindex: true` makes every response of the site carry `X-Robots-Tag: noindex, nofollow`.
+- `password` (10–256 bytes) protects the site or changes its password; it is stored as an argon2id hash and never returned. `protected: true` without `password` is accepted only when the site already has one (otherwise `400 site_password_required`); `protected: false` removes protection and must not come with `password`. Changing or removing the password signs every visitor out.
+- `expires_at` is an RFC 3339 time in the future, at most 10 years ahead (`400 expiry_invalid` otherwise); `null` removes it. Within a minute after it passes the site is soft-deleted (`site.expire` in the audit log) and purged 7 days later.
+- `limits` in `PATCH /admin/users/{id}` replaces the user's personal overrides; a missing or `null` field inherits the global value, `{}` resets all. Effective limits follow user override → admin setting → environment → default; `GET /me` returns them. Deploy size limits and release pruning use the limits of the site's owner.

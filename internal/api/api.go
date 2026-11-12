@@ -72,6 +72,7 @@ func (a *api) routes() []route {
 		{Method: http.MethodDelete, Path: "/tokens/{id}", handle: a.revokeToken},
 		{Method: http.MethodGet, Path: "/admin/users", handle: adminOnly(a.listUsers)},
 		{Method: http.MethodPost, Path: "/admin/users", handle: adminOnly(a.createUser)},
+		{Method: http.MethodGet, Path: "/admin/users/{id}", handle: adminOnly(a.getUser)},
 		{Method: http.MethodPatch, Path: "/admin/users/{id}", handle: adminOnly(a.updateUser)},
 		{Method: http.MethodGet, Path: "/admin/sites", handle: adminOnly(a.listAllSites)},
 		{Method: http.MethodPost, Path: "/admin/sites/{ref}/apex", handle: adminOnly(a.setApex)},
