@@ -1,0 +1,134 @@
+<!-- Reviews from the moderated collection __COLLECTION__: approved reviews and a form for new ones.
+     No styles on purpose: style it with the site's own CSS (the data-* attributes and elements are the
+     hooks). Keep the honeypot and the Altcha widget: they are the spam protection. -->
+<section id="__COLLECTION__" aria-labelledby="__COLLECTION__-title">
+  <h2 id="__COLLECTION__-title">Reviews</h2>
+  <ul data-items>
+    <!-- Fallback content: shown when the data cannot be loaded and read by search engines. -->
+    <li data-item>
+      <article>
+        <h3>Anna</h3>
+        <p data-rating aria-label="Rating: 5 of 5">★★★★★</p>
+        <p data-text>Cozy place and very friendly staff. The cheesecake is the best in town!</p>
+      </article>
+    </li>
+  </ul>
+  <form data-form aria-labelledby="__COLLECTION__-form-title">
+    <h3 id="__COLLECTION__-form-title">Leave a review</h3>
+    <p>
+      <label for="__COLLECTION__-name">Your name</label>
+      <input id="__COLLECTION__-name" name="name" required maxlength="60" autocomplete="given-name">
+    </p>
+    <p>
+      <label for="__COLLECTION__-rating">Rating</label>
+      <select id="__COLLECTION__-rating" name="rating">
+        <option value="">No rating</option>
+        <option value="5">5 of 5</option>
+        <option value="4">4 of 5</option>
+        <option value="3">3 of 5</option>
+        <option value="2">2 of 5</option>
+        <option value="1">1 of 5</option>
+      </select>
+    </p>
+    <p>
+      <label for="__COLLECTION__-text">Review</label>
+      <textarea id="__COLLECTION__-text" name="text" required maxlength="1000" rows="5"></textarea>
+    </p>
+    <!-- Honeypot: hidden from people, bots fill it in. -->
+    <p hidden aria-hidden="true">
+      <label>Leave this field empty <input name="_hp" tabindex="-1" autocomplete="off"></label>
+    </p>
+    <altcha-widget challenge="/_form/challenge"></altcha-widget>
+    <button type="submit">Send</button>
+    <p data-status role="status" aria-live="polite"></p>
+  </form>
+</section>
+<script async defer src="/_dropsite/altcha.js" type="module"></script>
+<script>
+(() => {
+  const NAME = '__COLLECTION__';
+  const TEXT = {
+    sending: 'Sending…',
+    thanks: 'Thank you! Your review will appear after moderation.',
+    tooMany: 'Too many reviews from your network right now; please try again later.',
+    failed: 'The review could not be sent. Please check the fields and try again.',
+    rating: (n) => 'Rating: ' + n + ' of 5',
+  };
+  const root = document.getElementById(NAME);
+  const box = root.querySelector('[data-items]');
+  const form = root.querySelector('[data-form]');
+  const status = root.querySelector('[data-status]');
+  const lang = document.documentElement.lang || undefined;
+  const day = new Intl.DateTimeFormat(lang, { dateStyle: 'medium' });
+  const el = (tag, text, attr) => {
+    const e = document.createElement(tag);
+    if (text !== undefined && text !== null && text !== '') e.textContent = String(text);
+    if (attr) e.setAttribute(attr, '');
+    return e;
+  };
+
+  async function loadAll() {
+    const items = [];
+    let after = '';
+    for (let page = 0; page < 5; page++) {
+      const r = await fetch('/_dropsite/data/' + NAME + '?order=newest&limit=200' + (after ? '&after=' + encodeURIComponent(after) : ''));
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const body = await r.json();
+      items.push(...body.items);
+      if (!body.next) break;
+      after = body.next;
+    }
+    return items;
+  }
+
+  function review({ data, created_at: created }) {
+    const li = el('li', null, 'data-item');
+    const article = el('article');
+    article.append(el('h3', data.name));
+    if (Number.isInteger(data.rating) && data.rating >= 1 && data.rating <= 5) {
+      const stars = el('p', '★'.repeat(data.rating) + '☆'.repeat(5 - data.rating), 'data-rating');
+      stars.setAttribute('aria-label', TEXT.rating(data.rating));
+      article.append(stars);
+    }
+    article.append(el('p', data.text, 'data-text'));
+    const t = el('time', day.format(new Date(created)));
+    t.dateTime = created;
+    article.append(el('p'));
+    article.lastChild.append(t);
+    li.append(article);
+    return li;
+  }
+
+  function render(items) {
+    if (items.length === 0) return; // keep the fallback rather than an empty block
+    box.replaceChildren(...items.map(review));
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const f = new FormData(form);
+    const body = { name: f.get('name'), text: f.get('text'), _hp: f.get('_hp') || '' };
+    if (f.get('rating')) body.rating = Number(f.get('rating'));
+    if (f.get('altcha')) body.altcha = f.get('altcha');
+    status.textContent = TEXT.sending;
+    try {
+      const r = await fetch('/_dropsite/data/' + NAME, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (r.status === 202) {
+        form.reset();
+        status.textContent = TEXT.thanks; // the review waits for approval
+      } else {
+        status.textContent = r.status === 429 ? TEXT.tooMany : TEXT.failed;
+      }
+    } catch {
+      status.textContent = TEXT.failed;
+    }
+  });
+
+  // Values are set with textContent and properties only: never innerHTML with data.
+  loadAll().then(render).catch(() => { /* keep the fallback content */ });
+})();
+</script>

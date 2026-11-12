@@ -1,0 +1,26 @@
+{
+  "name": "catalog",
+  "title": "Product catalog",
+  "description": "Products with a photo, price, stock state and a link to a product page or an order form; the owner adds products and changes prices from the chat. For small shops, makers, rentals.",
+  "mode": "public",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+      "price": { "type": "number", "minimum": 0 },
+      "old_price": { "type": "number", "minimum": 0 },
+      "category": { "type": "string", "maxLength": 60 },
+      "description": { "type": "string", "maxLength": 1000 },
+      "image": { "type": "string", "maxLength": 300, "description": "path of a photo in the site files, e.g. /images/mug.webp" },
+      "image_alt": { "type": "string", "maxLength": 200 },
+      "url": { "type": "string", "maxLength": 300, "description": "product page path or https link" },
+      "sku": { "type": "string", "maxLength": 60 },
+      "in_stock": { "type": "boolean" }
+    },
+    "required": ["name", "price"]
+  },
+  "samples": [
+    { "id": "mug-blue", "position": 10, "data": { "name": "Blue ceramic mug", "price": 18, "category": "Mugs", "description": "Hand-thrown stoneware, 350 ml, dishwasher safe.", "image": "/images/mug-blue.webp", "image_alt": "A blue glazed mug on a wooden table", "url": "/products/mug-blue/", "sku": "MUG-01", "in_stock": true } },
+    { "id": "bowl-sand", "position": 20, "data": { "name": "Sand bowl", "price": 24, "old_price": 30, "category": "Bowls", "description": "Wide serving bowl with a matte finish.", "image": "/images/bowl-sand.webp", "image_alt": "A beige matte bowl seen from above", "sku": "BWL-02", "in_stock": false } }
+  ]
+}

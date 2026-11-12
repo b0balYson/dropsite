@@ -1,0 +1,23 @@
+{
+  "name": "events",
+  "title": "Events and schedule",
+  "description": "Upcoming events or classes with date and time, place and a link; past events disappear from the page by themselves. For venues, clubs, courses, concerts, meetups.",
+  "mode": "public",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+      "start": { "type": "string", "format": "date-time", "maxLength": 40, "description": "start time with offset, e.g. 2026-12-05T19:00:00+03:00" },
+      "end": { "type": "string", "format": "date-time", "maxLength": 40 },
+      "location": { "type": "string", "maxLength": 200 },
+      "description": { "type": "string", "maxLength": 1000 },
+      "url": { "type": "string", "maxLength": 300, "description": "page or ticket link: a site path or https" },
+      "price": { "type": "string", "maxLength": 60, "description": "free text, e.g. Free or 15 EUR" }
+    },
+    "required": ["title", "start"]
+  },
+  "samples": [
+    { "id": "jazz-night", "position": 10, "data": { "title": "Jazz night", "start": "2030-12-05T19:00:00+03:00", "end": "2030-12-05T22:00:00+03:00", "location": "Main hall", "description": "Live trio, standards and originals.", "price": "15 EUR", "url": "/events/jazz-night/" } },
+    { "id": "pottery-class", "position": 20, "data": { "title": "Pottery class for beginners", "start": "2030-12-12T11:00:00+03:00", "location": "Studio 2", "price": "Free" } }
+  ]
+}

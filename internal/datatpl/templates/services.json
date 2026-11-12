@@ -1,0 +1,24 @@
+{
+  "name": "services",
+  "title": "Price list of services",
+  "description": "Services with a price (exact or starting from), unit and duration, grouped by category. For salons, studios, repair shops, tutors, clinics.",
+  "mode": "public",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+      "price": { "type": "number", "minimum": 0 },
+      "price_from": { "type": "boolean", "description": "true when the price is a starting price" },
+      "unit": { "type": "string", "maxLength": 40, "description": "e.g. per hour, per visit" },
+      "duration_minutes": { "type": "integer", "minimum": 1, "maximum": 1440 },
+      "category": { "type": "string", "maxLength": 60 },
+      "description": { "type": "string", "maxLength": 500 }
+    },
+    "required": ["name", "price"]
+  },
+  "samples": [
+    { "id": "haircut", "position": 10, "data": { "name": "Haircut", "price": 30, "duration_minutes": 45, "category": "Hair", "description": "Wash, cut and styling." } },
+    { "id": "coloring", "position": 20, "data": { "name": "Coloring", "price": 60, "price_from": true, "duration_minutes": 120, "category": "Hair" } },
+    { "id": "consultation", "position": 30, "data": { "name": "Consultation", "price": 0, "unit": "per visit", "duration_minutes": 15, "category": "Other" } }
+  ]
+}

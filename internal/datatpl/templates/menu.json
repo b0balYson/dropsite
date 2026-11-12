@@ -1,0 +1,25 @@
+{
+  "name": "menu",
+  "title": "Menu",
+  "description": "Dishes or drinks with categories, prices and short descriptions; the owner changes prices and hides sold-out items from the chat. For cafes, restaurants, bakeries, food trucks.",
+  "mode": "public",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+      "price": { "type": "number", "minimum": 0 },
+      "category": { "type": "string", "maxLength": 60 },
+      "description": { "type": "string", "maxLength": 500 },
+      "weight": { "type": "string", "maxLength": 40 },
+      "tags": { "type": "array", "items": { "type": "string", "maxLength": 30 }, "maxItems": 10 },
+      "available": { "type": "boolean" }
+    },
+    "required": ["name", "price"]
+  },
+  "samples": [
+    { "id": "cappuccino", "position": 10, "data": { "name": "Cappuccino", "price": 3.5, "category": "Coffee", "description": "Double espresso with steamed milk.", "weight": "250 ml", "available": true } },
+    { "id": "flat-white", "position": 20, "data": { "name": "Flat white", "price": 3.8, "category": "Coffee", "description": "Ristretto with a thin layer of milk.", "weight": "200 ml", "available": true } },
+    { "id": "croissant", "position": 30, "data": { "name": "Butter croissant", "price": 2.9, "category": "Bakery", "description": "Baked every morning.", "tags": ["vegetarian"], "available": true } },
+    { "id": "cheesecake", "position": 40, "data": { "name": "Cheesecake", "price": 4.5, "category": "Desserts", "available": false } }
+  ]
+}

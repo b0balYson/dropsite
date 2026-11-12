@@ -67,12 +67,16 @@ type CollectionView struct {
 	PublicURL string
 }
 
-// CollectionInput creates a collection. Schema may be empty.
+// CollectionInput creates a collection. Schema may be empty. Template
+// names a built-in template that fills an empty title, mode and schema;
+// WithSamples then also writes its sample documents.
 type CollectionInput struct {
-	Name   string
-	Title  string
-	Mode   domain.CollectionMode
-	Schema json.RawMessage
+	Name        string
+	Title       string
+	Mode        domain.CollectionMode
+	Schema      json.RawMessage
+	Template    string
+	WithSamples bool
 }
 
 // CollectionUpdate changes a collection; nil fields stay. A non-nil Schema
@@ -214,6 +218,10 @@ func (s *Service) CreateCollection(ctx context.Context, a Actor, ref string, in 
 		return CollectionView{}, collectionErr("name", "the name must be 1-64 characters a-z, 0-9, - and _, "+
 			"starting with a letter or digit")
 	}
+	in, tpl, err := applyTemplate(in)
+	if err != nil {
+		return CollectionView{}, err
+	}
 	title, err := checkTitle(in.Title)
 	if err != nil {
 		return CollectionView{}, err
@@ -230,7 +238,13 @@ func (s *Service) CreateCollection(ctx context.Context, a Actor, ref string, in 
 	if err := s.repo.CreateCollection(ctx, c, MaxCollectionsPerSite); err != nil {
 		return CollectionView{}, err
 	}
-	s.audit(ctx, a, "collection.create", siteTarget(site.ID), map[string]any{"name": name, "mode": string(in.Mode)})
+	s.audit(ctx, a, "collection.create", siteTarget(site.ID), map[string]any{"name": name, "mode": string(in.Mode),
+		"template": in.Template})
+	if in.WithSamples {
+		if err := s.writeSamples(ctx, c, tpl); err != nil {
+			return CollectionView{}, err
+		}
+	}
 	v, err := s.view(ctx, site)
 	if err != nil {
 		return CollectionView{}, err

@@ -1,0 +1,87 @@
+<!-- Menu from the collection __COLLECTION__. No styles on purpose: style it with the site's own CSS
+     (the data-* attributes and elements are the hooks). Keep the fallback in sync with the data. -->
+<section id="__COLLECTION__" aria-labelledby="__COLLECTION__-title">
+  <h2 id="__COLLECTION__-title">Menu</h2>
+  <div data-items>
+    <!-- Fallback content: shown when the data cannot be loaded and read by search engines. -->
+    <section data-category>
+      <h3>Coffee</h3>
+      <ul>
+        <li data-item>
+          <span data-name>Cappuccino</span>
+          <data data-price value="3.5">$3.50</data>
+          <p data-description>Double espresso with steamed milk.</p>
+        </li>
+      </ul>
+    </section>
+  </div>
+  <p data-empty hidden>The menu is being updated.</p>
+</section>
+<script>
+(() => {
+  const NAME = '__COLLECTION__';
+  const CURRENCY = 'USD'; // ISO 4217 code of the prices
+  const root = document.getElementById(NAME);
+  const box = root.querySelector('[data-items]');
+  const lang = document.documentElement.lang || undefined;
+  const money = new Intl.NumberFormat(lang, { style: 'currency', currency: CURRENCY });
+  const el = (tag, text, attr) => {
+    const e = document.createElement(tag);
+    if (text !== undefined && text !== null && text !== '') e.textContent = String(text);
+    if (attr) e.setAttribute(attr, '');
+    return e;
+  };
+
+  async function loadAll() {
+    const items = [];
+    let after = '';
+    for (let page = 0; page < 25; page++) {
+      const r = await fetch('/_dropsite/data/' + NAME + '?limit=200' + (after ? '&after=' + encodeURIComponent(after) : ''));
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const body = await r.json();
+      items.push(...body.items);
+      if (!body.next) break;
+      after = body.next;
+    }
+    return items;
+  }
+
+  function item(d) {
+    const li = el('li', null, 'data-item');
+    li.append(el('span', d.name, 'data-name'), ' ');
+    const price = el('data', money.format(d.price), 'data-price');
+    price.value = String(d.price);
+    li.append(price);
+    if (d.weight) li.append(' ', el('span', d.weight, 'data-weight'));
+    if (d.description) li.append(el('p', d.description, 'data-description'));
+    if (Array.isArray(d.tags) && d.tags.length) {
+      const tags = el('ul', null, 'data-tags');
+      tags.append(...d.tags.map((t) => el('li', t)));
+      li.append(tags);
+    }
+    return li;
+  }
+
+  function render(items) {
+    const groups = new Map(); // categories in the order of their first item
+    for (const { data } of items) {
+      if (data.available === false) continue;
+      const key = data.category || '';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(data);
+    }
+    box.replaceChildren(...[...groups].map(([category, list]) => {
+      const section = el('section', null, 'data-category');
+      if (category) section.append(el('h3', category));
+      const ul = el('ul');
+      ul.append(...list.map(item));
+      section.append(ul);
+      return section;
+    }));
+    root.querySelector('[data-empty]').hidden = groups.size > 0;
+  }
+
+  // Values are set with textContent only: never innerHTML with data.
+  loadAll().then(render).catch(() => { /* keep the fallback content */ });
+})();
+</script>

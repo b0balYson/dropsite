@@ -1,0 +1,87 @@
+<!-- Price list from the collection __COLLECTION__. No styles on purpose: style it with the site's own CSS
+     (the data-* attributes and elements are the hooks). Keep the fallback in sync with the data. -->
+<section id="__COLLECTION__" aria-labelledby="__COLLECTION__-title">
+  <h2 id="__COLLECTION__-title">Prices</h2>
+  <div data-items>
+    <!-- Fallback content: shown when the data cannot be loaded and read by search engines. -->
+    <section data-category>
+      <h3>Hair</h3>
+      <dl>
+        <div data-item>
+          <dt>Haircut</dt>
+          <dd><data data-price value="30">$30.00</data> · <span data-duration>45 min</span></dd>
+          <dd data-description>Wash, cut and styling.</dd>
+        </div>
+      </dl>
+    </section>
+  </div>
+  <p data-empty hidden>Ask us about prices.</p>
+</section>
+<script>
+(() => {
+  const NAME = '__COLLECTION__';
+  const CURRENCY = 'USD'; // ISO 4217 code of the prices
+  const FROM = 'from'; // shown before a starting price
+  const MINUTES = 'min';
+  const root = document.getElementById(NAME);
+  const box = root.querySelector('[data-items]');
+  const lang = document.documentElement.lang || undefined;
+  const money = new Intl.NumberFormat(lang, { style: 'currency', currency: CURRENCY });
+  const el = (tag, text, attr) => {
+    const e = document.createElement(tag);
+    if (text !== undefined && text !== null && text !== '') e.textContent = String(text);
+    if (attr) e.setAttribute(attr, '');
+    return e;
+  };
+
+  async function loadAll() {
+    const items = [];
+    let after = '';
+    for (let page = 0; page < 25; page++) {
+      const r = await fetch('/_dropsite/data/' + NAME + '?limit=200' + (after ? '&after=' + encodeURIComponent(after) : ''));
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const body = await r.json();
+      items.push(...body.items);
+      if (!body.next) break;
+      after = body.next;
+    }
+    return items;
+  }
+
+  function service(d) {
+    const row = el('div', null, 'data-item');
+    row.append(el('dt', d.name));
+    const dd = el('dd');
+    if (d.price_from) dd.append(FROM + ' ');
+    const price = el('data', money.format(d.price), 'data-price');
+    price.value = String(d.price);
+    dd.append(price);
+    if (d.unit) dd.append(' ', el('span', d.unit, 'data-unit'));
+    if (d.duration_minutes) dd.append(' · ', el('span', d.duration_minutes + ' ' + MINUTES, 'data-duration'));
+    row.append(dd);
+    if (d.description) row.append(el('dd', d.description, 'data-description'));
+    return row;
+  }
+
+  function render(items) {
+    const groups = new Map(); // categories in the order of their first item
+    for (const { data } of items) {
+      const key = data.category || '';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(data);
+    }
+    box.replaceChildren(...[...groups].map(([category, list]) => {
+      const section = el('section', null, 'data-category');
+      if (category) section.append(el('h3', category));
+      const dl = el('dl');
+      dl.append(...list.map(service));
+      section.append(dl);
+      return section;
+    }));
+    root.querySelector('[data-empty]').hidden = items.length > 0;
+  }
+
+  // Values are set with textContent only: never innerHTML with data.
+  loadAll().then(render).catch(() => { /* keep the fallback content */ });
+})();
+</script>

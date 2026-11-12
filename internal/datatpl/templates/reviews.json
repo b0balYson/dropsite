@@ -1,0 +1,20 @@
+{
+  "name": "reviews",
+  "title": "Reviews",
+  "description": "Visitor reviews with a name, text and a 1-5 rating: visitors send them from a form on the page, only reviews the owner approved are shown. Moderated: ask the user to approve new reviews from the chat.",
+  "mode": "moderated",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": { "type": "string", "minLength": 1, "maxLength": 60 },
+      "text": { "type": "string", "minLength": 1, "maxLength": 1000 },
+      "rating": { "type": "integer", "minimum": 1, "maximum": 5 }
+    },
+    "required": ["name", "text"],
+    "additionalProperties": false
+  },
+  "samples": [
+    { "id": "anna", "position": 0, "data": { "name": "Anna", "text": "Cozy place and very friendly staff. The cheesecake is the best in town!", "rating": 5 } },
+    { "id": "oleg", "position": 0, "data": { "name": "Oleg", "text": "Good coffee, a bit crowded on weekends.", "rating": 4 } }
+  ]
+}

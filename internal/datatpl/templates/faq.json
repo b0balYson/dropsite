@@ -1,0 +1,20 @@
+{
+  "name": "faq",
+  "title": "Questions and answers",
+  "description": "Frequently asked questions with answers, optionally grouped; the owner adds answers from the chat. For any site that gets the same questions again and again.",
+  "mode": "public",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "question": { "type": "string", "minLength": 1, "maxLength": 300 },
+      "answer": { "type": "string", "minLength": 1, "maxLength": 3000, "description": "plain text; an empty line starts a new paragraph" },
+      "category": { "type": "string", "maxLength": 60 }
+    },
+    "required": ["question", "answer"]
+  },
+  "samples": [
+    { "id": "delivery", "position": 10, "data": { "question": "Do you deliver?", "answer": "Yes, within the city in 1-2 days.\n\nDelivery is free for orders over 50 EUR.", "category": "Orders" } },
+    { "id": "returns", "position": 20, "data": { "question": "Can I return an item?", "answer": "Within 14 days, if it was not used.", "category": "Orders" } },
+    { "id": "hours", "position": 30, "data": { "question": "When are you open?", "answer": "Every day from 9:00 to 21:00." } }
+  ]
+}
