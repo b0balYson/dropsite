@@ -130,6 +130,9 @@ func (a *api) readCollection(w http.ResponseWriter, r *http.Request) error {
 		}
 		limit = n
 	}
+	if err := a.svc.AllowDataRead(infoFrom(r.Context()).ip); err != nil {
+		return err
+	}
 	p, err := a.svc.ReadCollection(r.Context(), service.DataRead{Host: r.Host, Collection: r.PathValue("collection"),
 		Order: q.Get("order"), After: q.Get("after"), Limit: limit})
 	if err != nil {
@@ -147,6 +150,9 @@ func (a *api) readCollection(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (a *api) readDocument(w http.ResponseWriter, r *http.Request) error {
+	if err := a.svc.AllowDataRead(infoFrom(r.Context()).ip); err != nil {
+		return err
+	}
 	d, version, err := a.svc.ReadDocument(r.Context(), r.Host, r.PathValue("collection"), r.PathValue("id"))
 	if err != nil {
 		return err

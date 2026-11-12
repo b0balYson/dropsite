@@ -65,7 +65,7 @@ func (s *Service) ReadCollection(ctx context.Context, q DataRead) (PublicPage, e
 	if err != nil {
 		return PublicPage{}, err
 	}
-	p, err := s.listDocuments(ctx, c, domain.DocumentApproved, q.Order, q.After, q.Limit)
+	p, err := s.listDocuments(ctx, c, domain.DocumentApproved, q.Order, q.After, publicPageLimit(q.Limit))
 	if err != nil {
 		return PublicPage{}, err
 	}
@@ -201,9 +201,23 @@ func (s *Service) checkVisitorDocument(c domain.Collection, obj map[string]any) 
 	if err := validateDocument(rs, obj, -1); err != nil {
 		return nil, err
 	}
-	data, err := json.Marshal(obj)
-	if err != nil {
+	return encodeVisitorDocument(obj)
+}
+
+// encodeVisitorDocument stores a proposal without HTML escaping (which
+// would turn "<" into six bytes) and enforces the stored document limit:
+// decoding and encoding again can still grow a body, e.g. invalid UTF-8
+// becomes U+FFFD and "1e5" becomes 100000.
+func encodeVisitorDocument(obj map[string]any) (json.RawMessage, error) {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(obj); err != nil {
 		return nil, docErr(-1, "", "the document cannot be stored")
+	}
+	data := bytes.TrimSuffix(buf.Bytes(), []byte("\n"))
+	if len(data) > MaxDocumentBytes {
+		return nil, docErr(-1, "", "the document is larger than 16 KB once stored")
 	}
 	return data, nil
 }

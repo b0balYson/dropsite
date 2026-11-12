@@ -45,6 +45,7 @@ type collectionState struct {
 	schemas      *schemaCache
 	dataPostIP   *ratelimit.Window
 	dataPostSite *ratelimit.Window
+	dataReadIP   *ratelimit.Window
 }
 
 // Visitor proposals have their own windows with the values of form posts,
@@ -54,6 +55,7 @@ func newCollectionState(now func() time.Time) collectionState {
 		schemas:      &schemaCache{},
 		dataPostIP:   ratelimit.New(FormPostsPerIP, FormPostsPerIPWindow).WithClock(now),
 		dataPostSite: ratelimit.New(FormPostsPerSite, time.Hour).WithClock(now),
+		dataReadIP:   newDataReadLimit(now),
 	}
 }
 
