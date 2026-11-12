@@ -1,0 +1,30 @@
+# End-to-end override for site forms: a webhook receiver inside the compose
+# network that prints every request (signature header and body) as one JSON
+# line on stdout, and permission for control to reach it over plain http
+# although it is a private address.
+services:
+  webhook-sink:
+    image: python:3.13-alpine
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    command:
+      - python
+      - -u
+      - -c
+      - |
+        import json
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+        class H(BaseHTTPRequestHandler):
+            def do_POST(self):
+                body = self.rfile.read(int(self.headers.get("Content-Length", 0))).decode()
+                print(json.dumps({"sig": self.headers.get("X-Dropsite-Signature", ""), "body": body}), flush=True)
+                self.send_response(204)
+                self.end_headers()
+            def log_message(self, *args):
+                pass
+        HTTPServer(("0.0.0.0", 9000), H).serve_forever()
+
+  control:
+    environment:
+      FORM_WEBHOOK_ALLOW_CIDRS: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"

@@ -49,7 +49,8 @@ func compose(ctx context.Context, args ...string) *exec.Cmd {
 	root := repoRoot()
 	base := []string{"compose", "-p", project,
 		"-f", filepath.Join(root, "deploy", "docker-compose.yml"),
-		"-f", filepath.Join(root, "deploy", "compose.local.yml")}
+		"-f", filepath.Join(root, "deploy", "compose.local.yml"),
+		"-f", filepath.Join(root, "test", "e2e", "compose.forms.yml")}
 	if wildcardStand() {
 		base = append(base, "-f", filepath.Join(root, "deploy", "compose.wildcard.yml"))
 	}
