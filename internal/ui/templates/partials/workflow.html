@@ -1,0 +1,120 @@
+{{define "site_templates"}}
+<section class="panel" id="templates" aria-labelledby="templates-h">
+  <h2 class="section-title" id="templates-h">{{.L.T "workflow.templates.title"}}</h2>
+  <p class="hint">{{.L.T "workflow.templates.hint"}}</p>
+  <form class="form-grid" method="post" action="/sites/from-template">
+    {{template "csrf" .}}
+    <fieldset class="form-grid__full template-pick">
+      <legend class="field__label">{{.L.T "workflow.templates.pick"}}</legend>
+      {{range $i, $t := .D.Templates}}
+      <label class="check template-pick__item">
+        <input type="radio" name="template" value="{{$t.Name}}"{{if eq $i 0}} checked{{end}} required>
+        <span><strong>{{$t.Title}}</strong><br><span class="muted small">{{$t.Description}}</span></span>
+      </label>
+      {{end}}
+    </fieldset>
+    <div class="field">
+      <label class="field__label" for="tpl-title">{{.L.T "site.field.title"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+      <input class="input" id="tpl-title" name="title" maxlength="120">
+    </div>
+    <div class="field">
+      <label class="field__label" for="tpl-slug">{{.L.T "site.field.slug"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+      <input class="input mono" id="tpl-slug" name="slug" maxlength="63" autocomplete="off" autocapitalize="off" spellcheck="false">
+    </div>
+    <div class="field">
+      <label class="field__label" for="tpl-lang">{{.L.T "workflow.templates.lang"}}</label>
+      <select class="input" id="tpl-lang" name="lang">
+        <option value="ru"{{if eq .L.Lang "ru"}} selected{{end}}>Русский</option>
+        <option value="en"{{if eq .L.Lang "en"}} selected{{end}}>English</option>
+      </select>
+    </div>
+    <div class="form-grid__full">
+      <button class="btn btn--primary" type="submit">{{.L.T "workflow.templates.submit"}}</button>
+    </div>
+  </form>
+</section>
+{{end}}
+
+{{define "site_workflow"}}{{$v := .D.V}}{{$w := .D.Workflow}}
+<section class="section site-block" aria-labelledby="workflow-h">
+  <h2 class="section-title" id="workflow-h">{{.L.T "workflow.title"}}</h2>
+
+  {{if and $w.Shots $v.Current}}
+  <figure class="shot">
+    <a href="/sites/{{$v.Site.ID}}/screenshot.png" target="_blank" rel="noopener">
+      <img class="shot__img" src="/sites/{{$v.Site.ID}}/screenshot.png" width="640" height="400" loading="lazy" alt="{{.L.T "workflow.shot.alt" "title" $v.Site.Title}}">
+    </a>
+    <figcaption class="hint">{{.L.T "workflow.shot.caption"}} <a href="/sites/{{$v.Site.ID}}/screenshot.png?device=mobile" target="_blank" rel="noopener">{{.L.T "workflow.shot.mobile"}}</a></figcaption>
+  </figure>
+  {{end}}
+
+  {{if and $w.Shots $w.Ready}}
+  <form class="stack" method="get" action="/sites/{{$v.Site.ID}}/compare.png" target="_blank">
+    <div class="field">
+      <label class="field__label" for="compare-from">{{.L.T "workflow.compare.label"}}</label>
+      <select class="input mono" id="compare-from" name="from" required>
+        {{range $w.Ready}}<option value="{{.ID}}">{{$.L.Date .CreatedAt}} · {{.ID}}</option>{{end}}
+      </select>
+    </div>
+    <button class="btn btn--ghost" type="submit">{{.L.T "workflow.compare.submit"}}</button>
+  </form>
+  {{end}}
+
+  <h3 class="field__label">{{.L.T "workflow.schedule.title"}}</h3>
+  {{if $w.Schedules}}
+  <ul class="schedules">
+    {{range $w.Schedules}}
+    <li class="schedule schedule--{{.Status}}">
+      <span>{{$.L.Date .PublishAt}}</span>
+      <span class="mono">{{.DeployID}}</span>
+      <span class="badge {{if eq .Status "pending"}}badge--current{{else if eq .Status "done"}}badge--ok{{else}}badge--muted{{end}}">{{$.L.T (printf "workflow.status.%s" .Status)}}</span>
+      {{if .PreviewURL}}<a href="{{.PreviewURL}}" target="_blank" rel="noopener noreferrer">{{$.L.T "history.preview"}}</a>{{end}}
+      {{if .Error}}<span class="muted small">{{.Error}}</span>{{end}}
+      {{if eq .Status "pending"}}
+      <form method="post" action="/sites/{{.SiteID}}/schedules/{{.ID}}/cancel">
+        {{template "csrf" $}}
+        <button class="btn btn--small btn--ghost" type="submit">{{$.L.T "workflow.schedule.cancel"}}</button>
+      </form>
+      {{end}}
+    </li>
+    {{end}}
+  </ul>
+  {{else}}
+  <p class="empty-line">{{.L.T "workflow.schedule.empty"}}</p>
+  {{end}}
+
+  {{if $w.Ready}}
+  <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/schedules" data-tz-form>
+    {{template "csrf" .}}
+    <input type="hidden" name="tz_offset" value="" data-tz-offset>
+    <div class="site-block__row">
+      <div class="field">
+        <label class="field__label" for="schedule-deploy">{{.L.T "workflow.schedule.release"}}</label>
+        <select class="input mono" id="schedule-deploy" name="deploy" required>
+          {{range $w.Ready}}<option value="{{.ID}}">{{$.L.Date .CreatedAt}} · {{.ID}}</option>{{end}}
+        </select>
+      </div>
+      <div class="field">
+        <label class="field__label" for="schedule-at">{{.L.T "workflow.schedule.at"}}</label>
+        <input class="input mono" id="schedule-at" name="publish_at" type="datetime-local" required aria-describedby="schedule-hint">
+        <p class="hint" id="schedule-hint">{{.L.T "workflow.schedule.hint"}}</p>
+      </div>
+    </div>
+    <button class="btn btn--primary" type="submit">{{.L.T "workflow.schedule.submit"}}</button>
+  </form>
+  {{end}}
+
+  {{if $v.Current}}
+  <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/clone">
+    {{template "csrf" .}}
+    <div class="field">
+      <label class="field__label" for="clone-title">{{.L.T "workflow.clone.label"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+      <input class="input" id="clone-title" name="title" maxlength="120" aria-describedby="clone-hint">
+      <p class="hint" id="clone-hint">{{.L.T "workflow.clone.hint"}}</p>
+    </div>
+    <button class="btn btn--ghost" type="submit">{{.L.T "workflow.clone.submit"}}</button>
+  </form>
+  {{end}}
+</section>
+<script src="{{.Asset "workflow.js"}}" defer></script>
+{{end}}
