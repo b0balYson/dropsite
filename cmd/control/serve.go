@@ -139,6 +139,10 @@ func (a *app) run(ctx context.Context) error {
 		return nil
 	})
 	g.Go(func() error {
+		a.svc.RunStats(gctx, a.cfg.StatsInterval)
+		return nil
+	})
+	g.Go(func() error {
 		a.svc.RunExpiry(gctx, service.ExpiryCheckInterval)
 		return nil
 	})

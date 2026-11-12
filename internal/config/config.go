@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/net/idna"
 
@@ -26,6 +27,12 @@ const (
 	// MinKeepReleases guarantees the previous release survives a switch, so a
 	// visitor never resolves a symlink into a deleted directory.
 	MinKeepReleases = 2
+
+	// DefaultStatsLogFile is where Caddy writes the sites access log.
+	DefaultStatsLogFile  = "/logs/sites-access.log"
+	DefaultStatsInterval = time.Minute
+	minStatsInterval     = time.Second
+	maxStatsInterval     = time.Hour
 
 	TLSModeOnDemand = "ondemand"
 	TLSModeWildcard = "wildcard"
@@ -54,7 +61,20 @@ type Config struct {
 	AdminAddr    string
 
 	TrustedProxies []netip.Prefix
+
+	// MaxDomainsPerSite caps external domains per site (any status).
+	MaxDomainsPerSite int
+	// ServerIPs are the public addresses external domains must point at; when
+	// empty, the DNS check uses the addresses of BASE_DOMAIN and API_HOST.
+	ServerIPs []netip.Addr
+	// StatsLogFile is the sites access log read for visit statistics; empty
+	// disables collection. StatsInterval is how often it is read.
+	StatsLogFile  string
+	StatsInterval time.Duration
 }
+
+// maxDomainsPerSiteLimit bounds MAX_DOMAINS_PER_SITE.
+const maxDomainsPerSiteLimit = 100
 
 // Wildcard reports whether sites under the base domain use one wildcard
 // certificate (TLS_MODE=wildcard); release previews exist only in this mode.
@@ -135,7 +155,17 @@ func Load(get Getenv) (*Config, error) {
 	}
 	c.LogLevel = r.logLevel()
 	c.ReservedSlugs = splitList(r.str("RESERVED_SLUGS", ""))
+	c.StatsLogFile = r.str("STATS_LOG_FILE", DefaultStatsLogFile)
+	if strings.EqualFold(c.StatsLogFile, "off") {
+		c.StatsLogFile = ""
+	}
+	c.StatsInterval = r.duration("STATS_INTERVAL", DefaultStatsInterval, minStatsInterval, maxStatsInterval)
 	c.TrustedProxies = r.prefixes("TRUSTED_PROXIES", "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8,::1/128")
+	c.MaxDomainsPerSite = r.positiveInt("MAX_DOMAINS_PER_SITE", domain.DefaultMaxDomainsPerSite)
+	if c.MaxDomainsPerSite > maxDomainsPerSiteLimit {
+		r.fail("MAX_DOMAINS_PER_SITE", "must be at most %d", maxDomainsPerSiteLimit)
+	}
+	c.ServerIPs = r.addrs("SERVER_IPS")
 
 	// The DNS provider token is deliberately not read here: only Caddy needs
 	// it, and compose refuses to start the wildcard override without it.
@@ -231,6 +261,19 @@ func (r *reader) logLevel() slog.Level {
 	return lvl
 }
 
+func (r *reader) duration(key string, def, lo, hi time.Duration) time.Duration {
+	raw := r.str(key, "")
+	if raw == "" {
+		return def
+	}
+	d, err := time.ParseDuration(raw)
+	if err != nil || d < lo || d > hi {
+		r.fail(key, "must be a duration between %s and %s such as 1m, got %q", lo, hi, raw)
+		return def
+	}
+	return d
+}
+
 func (r *reader) prefixes(key, def string) []netip.Prefix {
 	var out []netip.Prefix
 	for _, s := range splitList(r.str(key, def)) {
@@ -240,6 +283,19 @@ func (r *reader) prefixes(key, def string) []netip.Prefix {
 			continue
 		}
 		out = append(out, p.Masked())
+	}
+	return out
+}
+
+func (r *reader) addrs(key string) []netip.Addr {
+	var out []netip.Addr
+	for _, s := range splitList(r.str(key, "")) {
+		a, err := netip.ParseAddr(s)
+		if err != nil {
+			r.fail(key, "invalid IP address %q", s)
+			continue
+		}
+		out = append(out, a.Unmap())
 	}
 	return out
 }

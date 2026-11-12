@@ -1,0 +1,68 @@
+{{define "site_stats"}}
+{{$st := .D.Stats}}
+<section class="section stats" aria-labelledby="stats-h">
+  <div class="stats__head">
+    <h2 class="section-title" id="stats-h">{{.L.T "stats.title"}}</h2>
+    <p class="hint">{{.L.T "stats.period" "from" (.L.ShortDay $st.From) "to" (.L.ShortDay $st.To)}}</p>
+  </div>
+  {{if $st.Empty}}
+  <div class="stats__empty">
+    <p class="stats__empty-title">{{.L.T "stats.empty.title"}}</p>
+    <p class="hint">{{.L.T "stats.empty.text"}}</p>
+  </div>
+  {{else}}
+  <dl class="stats__totals">
+    <div class="stat">
+      <dt class="stat__label">{{.L.T "stats.views"}}</dt>
+      <dd class="stat__value">{{.L.Num $st.Views}}</dd>
+    </div>
+    <div class="stat">
+      <dt class="stat__label">{{.L.T "stats.visitors"}}</dt>
+      <dd class="stat__value">{{.L.Num $st.Visitors}}</dd>
+    </div>
+    <div class="stat">
+      <dt class="stat__label">{{.L.T "stats.peak"}}</dt>
+      <dd class="stat__value">{{.L.Num $st.MaxViews}}</dd>
+    </div>
+  </dl>
+  <figure class="chart">
+    <div class="chart__scroll" tabindex="0" aria-label="{{.L.T "stats.chart.scroll"}}">{{$st.Chart}}</div>
+    <figcaption class="hint">{{.L.T "stats.caption"}}</figcaption>
+  </figure>
+  <details class="stats__table">
+    <summary>{{.L.T "stats.table"}}</summary>
+    <div class="table-wrap">
+      <table class="table table--compact">
+        <caption class="sr-only">{{.L.T "stats.chart.title" "days" (len $st.Days)}}</caption>
+        <thead><tr><th scope="col">{{.L.T "stats.col.date"}}</th><th scope="col" class="num">{{.L.T "stats.views"}}</th><th scope="col" class="num">{{.L.T "stats.visitors"}}</th></tr></thead>
+        <tbody>
+          {{range $st.Days}}<tr><td data-label="{{$.L.T "stats.col.date"}}">{{$.L.ShortDay .Day}}</td><td class="num mono" data-label="{{$.L.T "stats.views"}}">{{$.L.Num .Views}}</td><td class="num mono" data-label="{{$.L.T "stats.visitors"}}">{{$.L.Num .Visitors}}</td></tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </details>
+  <div class="stats__tops">
+    <div>
+      <h3 class="stats__subtitle">{{.L.T "stats.pages"}}</h3>
+      <ol class="toplist">
+        {{range $st.TopPages}}
+        <li class="toplist__row"><span class="toplist__name mono">{{if eq .Name "*"}}{{$.L.T "stats.other"}}{{else}}{{wbr .Name}}{{end}}</span><span class="toplist__value mono">{{$.L.Num .Views}}</span></li>
+        {{end}}
+      </ol>
+    </div>
+    <div>
+      <h3 class="stats__subtitle">{{.L.T "stats.referrers"}}</h3>
+      <ol class="toplist">
+        {{range $st.TopReferrers}}
+        <li class="toplist__row"><span class="toplist__name{{if and (ne .Name "") (ne .Name "*")}} mono{{end}}">{{if eq .Name ""}}{{$.L.T "stats.direct"}}{{else if eq .Name "*"}}{{$.L.T "stats.other"}}{{else}}{{wbr .Name}}{{end}}</span><span class="toplist__value mono">{{$.L.Num .Views}}</span></li>
+        {{else}}
+        <li class="toplist__row toplist__row--empty hint">{{$.L.T "stats.referrers.none"}}</li>
+        {{end}}
+      </ol>
+    </div>
+  </div>
+  {{end}}
+  <p class="hint stats__note">{{.L.T "stats.note"}}</p>
+</section>
+{{end}}

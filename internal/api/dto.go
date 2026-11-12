@@ -38,9 +38,16 @@ type meDTO struct {
 	SiteCount int       `json:"site_count"`
 }
 
+// hostnameDTO is an address of a site. Status is active for every kind
+// except external domains, which are pending or rejected until approved.
 type hostnameDTO struct {
-	Hostname string `json:"hostname"`
-	Kind     string `json:"kind"`
+	Hostname   string     `json:"hostname"`
+	Kind       string     `json:"kind"`
+	Verified   bool       `json:"verified"`
+	Status     string     `json:"status"`
+	Reason     *string    `json:"reason"`
+	CreatedAt  time.Time  `json:"created_at"`
+	ReviewedAt *time.Time `json:"reviewed_at"`
 }
 
 type deployDTO struct {
@@ -216,10 +223,17 @@ func toDeploys(ds []domain.Deploy, currentID *string, previewURL func(domain.Dep
 	return out
 }
 
+func toHostname(h domain.Hostname) hostnameDTO {
+	return hostnameDTO{
+		Hostname: h.Hostname, Kind: string(h.Kind), Verified: h.Verified, Status: string(h.Status()),
+		Reason: optional(h.RejectReason), CreatedAt: utc(h.CreatedAt), ReviewedAt: utcPtr(h.ReviewedAt),
+	}
+}
+
 func toHostnames(hs []domain.Hostname) []hostnameDTO {
 	out := make([]hostnameDTO, 0, len(hs))
 	for _, h := range hs {
-		out = append(out, hostnameDTO{Hostname: h.Hostname, Kind: string(h.Kind)})
+		out = append(out, toHostname(h))
 	}
 	return out
 }

@@ -45,6 +45,7 @@ type fakeSite struct {
 	Deploys []fakeDeploy // oldest first
 	Current int          // index into Deploys, -1 if none
 	Owner   string       // owner_id; empty means the logged-in user "u1"
+	Domains []map[string]any
 }
 
 type fakeDeploy struct {
@@ -73,6 +74,9 @@ func newFakeServer(t *testing.T) *fakeServer {
 	mux.HandleFunc("POST /api/v1/sites/{ref}/deploys", f.withSite(f.deploy))
 	mux.HandleFunc("GET /api/v1/sites/{ref}/deploys", f.withSite(f.listDeploys))
 	mux.HandleFunc("POST /api/v1/sites/{ref}/rollback", f.withSite(f.rollback))
+	mux.HandleFunc("GET /api/v1/sites/{ref}/hostnames", f.withSite(f.listHostnames))
+	mux.HandleFunc("POST /api/v1/sites/{ref}/hostnames", f.withSite(f.addHostname))
+	mux.HandleFunc("DELETE /api/v1/sites/{ref}/hostnames/{hostname}", f.withSite(f.removeHostname))
 	f.Server = httptest.NewServer(f.auth(mux))
 	t.Cleanup(f.Close)
 	return f
@@ -180,7 +184,45 @@ func (s *fakeSite) json() map[string]any {
 		owner = "u1"
 	}
 	return map[string]any{"id": s.ID, "title": s.Title, "url": s.url(), "urls": []string{s.url()},
-		"slug": s.Slug, "owner_id": owner, "current_deploy": cur}
+		"slug": s.Slug, "owner_id": owner, "current_deploy": cur, "hostnames": s.hostnames()}
+}
+
+func (s *fakeSite) hostnames() []map[string]any {
+	out := []map[string]any{{"hostname": s.ID + ".sites.test", "kind": "default", "verified": true, "status": "active"}}
+	if s.Slug != nil {
+		out = append(out, map[string]any{"hostname": *s.Slug + ".sites.test", "kind": "slug", "verified": true, "status": "active"})
+	}
+	return append(out, s.Domains...)
+}
+
+func (f *fakeServer) listHostnames(w http.ResponseWriter, _ *http.Request, s *fakeSite) {
+	hs := s.hostnames()
+	reply(w, 200, map[string]any{"items": hs, "total": len(hs)})
+}
+
+func (f *fakeServer) addHostname(w http.ResponseWriter, r *http.Request, s *fakeSite) {
+	var in struct {
+		Hostname string `json:"hostname"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&in)
+	if !strings.Contains(in.Hostname, ".") {
+		fail(w, apiErr{400, "domain_invalid", "domain must be a name such as promo.example.com", nil})
+		return
+	}
+	h := map[string]any{"hostname": strings.ToLower(in.Hostname), "kind": "external", "status": "pending", "reason": nil}
+	s.Domains = append(s.Domains, h)
+	reply(w, 201, h)
+}
+
+func (f *fakeServer) removeHostname(w http.ResponseWriter, r *http.Request, s *fakeSite) {
+	for i, d := range s.Domains {
+		if d["hostname"] == r.PathValue("hostname") {
+			s.Domains = append(s.Domains[:i], s.Domains[i+1:]...)
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+	}
+	fail(w, apiErr{404, "not_found", "not found", nil})
 }
 
 func (s *fakeSite) deployJSON(i int) map[string]any {

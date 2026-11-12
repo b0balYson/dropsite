@@ -30,10 +30,17 @@ type Me struct {
 	SiteCount int    `json:"site_count"`
 }
 
-// Hostname is one address a site answers on. Kind is default, slug or apex.
+// Hostname is one address of a site. Kind is default, slug, apex or
+// external; Status is active, pending or rejected (only external domains are
+// ever inactive). Reason explains a rejection.
 type Hostname struct {
-	Hostname string `json:"hostname"`
-	Kind     string `json:"kind"`
+	Hostname   string     `json:"hostname"`
+	Kind       string     `json:"kind"`
+	Verified   bool       `json:"verified"`
+	Status     string     `json:"status"`
+	Reason     *string    `json:"reason"`
+	CreatedAt  time.Time  `json:"created_at"`
+	ReviewedAt *time.Time `json:"reviewed_at"`
 }
 
 // Deploy is one release of a site.

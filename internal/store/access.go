@@ -10,11 +10,12 @@ import (
 	"github.com/b0balYson/dropsite/internal/domain"
 )
 
-// FindSiteByHostname resolves an active hostname to its active site.
+// FindSiteByHostname resolves an active, verified hostname to its active
+// site (an external domain awaiting approval is not an address yet).
 func (db *DB) FindSiteByHostname(ctx context.Context, hostname string) (domain.Site, error) {
 	s, err := scanSite(db.r.QueryRowContext(ctx, "SELECT "+siteColsS+` FROM hostnames h
 		JOIN sites s ON s.id = h.site_id
-		WHERE h.hostname = ? AND s.deleted_at IS NULL`, hostname))
+		WHERE h.hostname = ? AND h.verified = 1 AND s.deleted_at IS NULL`, hostname))
 	if err != nil {
 		return domain.Site{}, mapNoRows(err, "find site by hostname")
 	}

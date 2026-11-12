@@ -56,6 +56,11 @@ func TestClosedDatabaseErrors(t *testing.T) {
 		"SoftDeleteSite":        func() error { _, err := db.SoftDeleteSite(ctx, "s", t0); return err },
 		"ListHostnames":         func() error { _, err := db.ListHostnames(ctx, "s"); return err },
 		"ActiveLayout":          func() error { _, err := db.ActiveLayout(ctx); return err },
+		"AddExternalHost":       func() error { return db.AddExternalHost(ctx, h, 5) },
+		"RemoveExternalHost":    func() error { _, err := db.RemoveExternalHost(ctx, "s", "x", t0); return err },
+		"ReviewExternalHost":    func() error { _, err := db.ReviewExternalHost(ctx, ExternalReview{}); return err },
+		"GetExternalHost":       func() error { _, err := db.GetExternalHost(ctx, "x"); return err },
+		"ListExternalHosts":     func() error { _, _, err := db.ListExternalHosts(ctx, ExternalHostFilter{}); return err },
 		"ListSitesToPurge":      func() error { _, err := db.ListSitesToPurge(ctx, t0); return err },
 		"MarkSitePurged":        func() error { return db.MarkSitePurged(ctx, "s", t0) },
 		"InsertDeployAndActivate": func() error {

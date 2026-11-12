@@ -11,7 +11,7 @@ Three per-site settings and per-user limits. All of them are changed in the web 
 /data/flags/protected/<hostname>   Caddy asks control before serving
 ```
 
-Markers exist for every address of the site: the random address, the slug, the base domain root and, in wildcard mode, every release preview. They are created before a new address starts serving and removed after an address is released, so an address is never less restricted than its site. On start `control` brings the markers in line with the database.
+Markers exist for every address of the site: the random address, the slug, the base domain root, approved external domains and, in wildcard mode, every release preview. A pending or rejected external domain is not an address and gets none. They are created before a new address starts serving and removed after an address is released, so an address is never less restricted than its site. On start `control` brings the markers in line with the database.
 
 Caddy checks the markers with a `file` matcher on every request, so nothing is reloaded:
 

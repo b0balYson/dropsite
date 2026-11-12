@@ -118,8 +118,11 @@ func (db *DB) ActiveLayout(ctx context.Context) ([]SiteLayout, error) {
 		if out, err = activeSites(ctx, tx); err != nil {
 			return err
 		}
+		// Only verified hostnames are published: an external domain without an
+		// administrator's approval must never reach by-host (no certificate).
 		hosts, err := groupPairs(ctx, tx, `SELECT h.site_id, h.hostname FROM hostnames h
-			JOIN sites s ON s.id = h.site_id WHERE s.deleted_at IS NULL ORDER BY h.site_id, h.hostname`)
+			JOIN sites s ON s.id = h.site_id WHERE s.deleted_at IS NULL AND h.verified = 1
+			ORDER BY h.site_id, h.hostname`)
 		if err != nil {
 			return err
 		}

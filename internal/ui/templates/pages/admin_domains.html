@@ -1,0 +1,69 @@
+{{define "content"}}
+<header class="page-head">
+  <div class="page-head__text">
+    <p class="eyebrow">{{.L.T "nav.admin"}} · {{.L.T "xdomains.pending" "n" .D.Pending}}</p>
+    <h1 class="display">{{.L.T "xdomains.title"}}</h1>
+    <p class="lede">{{.L.T "xdomains.lede"}}</p>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="{{.L.T "xdomains.filter"}}">
+  {{range .D.Tabs}}<a class="tabs__link" href="{{.URL}}" {{if .Current}}aria-current="page"{{end}}>{{$.L.T (printf "xdomains.filter.%s" .Key)}}</a>{{end}}
+</nav>
+
+<form class="search" method="get" action="/admin/domains" role="search">
+  <input type="hidden" name="status" value="{{.D.Status}}">
+  <label class="sr-only" for="q">{{.L.T "search.label"}}</label>
+  <input class="input" id="q" name="q" type="search" value="{{.D.Query}}" placeholder="{{.L.T "xdomains.search"}}">
+  <button class="btn btn--ghost" type="submit">{{.L.T "search.submit"}}</button>
+  {{if .D.Query}}<a class="link-btn" href="/admin/domains?status={{.D.Status}}">{{.L.T "search.reset"}}</a>{{end}}
+</form>
+
+{{if .D.Rows}}
+<ol class="xdomain-list">
+  {{range $i, $r := .D.Rows}}{{$h := $r.Hostname}}{{$row := $r.Row}}
+  <li class="xdomain xdomain--{{$h.Status}}">
+    <div class="xdomain__main">
+      <div class="xdomain__head">
+        {{if eq $h.Status "active"}}<a class="xdomain__host mono" href="{{$row.URL}}" target="_blank" rel="noopener noreferrer">{{wbr $h.Hostname}}</a>
+        {{else}}<span class="xdomain__host mono">{{wbr $h.Hostname}}</span>{{end}}
+        {{if $row.Display}}<span class="domain-row__idn">{{$row.Display}}</span>{{end}}
+        {{template "domain_badge" (dict "H" $h "L" $.L)}}
+      </div>
+      <dl class="xdomain__meta">
+        <div class="kv"><dt>{{$.L.T "xdomains.site"}}</dt><dd><a href="/sites/{{$h.SiteID}}">{{$r.SiteTitle}}</a> <span class="mono muted small">{{$h.SiteID}}</span></dd></div>
+        <div class="kv"><dt>{{$.L.T "xdomains.owner"}}</dt><dd class="mono addr-break">{{wbr $r.OwnerEmail}}</dd></div>
+        <div class="kv"><dt>{{$.L.T "xdomains.added"}}</dt><dd>{{$.L.Date $h.CreatedAt}}</dd></div>
+      </dl>
+      {{if eq $h.Status "rejected"}}<p class="domain-row__note"><span class="domain-row__label">{{$.L.T "domains.reason"}}:</span> {{$h.RejectReason}}</p>{{end}}
+    </div>
+    <div class="xdomain__dns" hx-get="/admin/domains/{{$h.Hostname}}/dns" hx-trigger="load" hx-swap="innerHTML" aria-live="polite">
+      <p class="dns-check dns-check--wait"><span class="dns-check__title">{{$.L.T "dns.title"}}</span> <span class="muted">{{$.L.T "dns.checking"}}</span></p>
+    </div>
+    <div class="xdomain__actions">
+      {{if ne $h.Status "active"}}
+      <form method="post" action="/admin/domains/{{$h.Hostname}}/approve">
+        {{template "csrf" $}}<input type="hidden" name="back" value="{{$.D.Back}}">
+        <button class="btn btn--small btn--primary" type="submit" aria-label="{{$.L.T "xdomains.approve"}} {{$h.Hostname}}">{{$.L.T "xdomains.approve"}}</button>
+      </form>
+      {{end}}
+      {{if ne $h.Status "rejected"}}
+      <details class="xdomain__reject">
+        <summary class="btn btn--small btn--ghost">{{if eq $h.Status "active"}}{{$.L.T "xdomains.revoke"}}{{else}}{{$.L.T "xdomains.reject"}}{{end}}</summary>
+        <form class="stack xdomain__reject-form" method="post" action="/admin/domains/{{$h.Hostname}}/reject">
+          {{template "csrf" $}}<input type="hidden" name="back" value="{{$.D.Back}}">
+          <div class="field">
+            <label class="field__label" for="reason-{{$i}}">{{$.L.T "xdomains.reason.label"}}</label>
+            <input class="input" id="reason-{{$i}}" name="reason" required maxlength="200" autocomplete="off">
+          </div>
+          <button class="btn btn--small btn--danger" type="submit">{{if eq $h.Status "active"}}{{$.L.T "xdomains.revoke"}}{{else}}{{$.L.T "xdomains.reject"}}{{end}}</button>
+        </form>
+      </details>
+      {{end}}
+    </div>
+  </li>
+  {{end}}
+</ol>
+{{template "pager" .}}
+{{else}}<p class="empty-line">{{if .D.Query}}{{.L.T "xdomains.nomatch"}}{{else}}{{.L.T (printf "xdomains.empty.%s" .D.Status)}}{{end}}</p>{{end}}
+{{end}}

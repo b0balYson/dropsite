@@ -10,6 +10,7 @@ import (
 
 	"github.com/b0balYson/dropsite/internal/archive"
 	"github.com/b0balYson/dropsite/internal/domain"
+	"github.com/b0balYson/dropsite/internal/tracking"
 )
 
 // DeployResult is what a successful publication returns.
@@ -112,26 +113,44 @@ func (s *Service) publish(ctx context.Context, a Actor, site domain.Site, upload
 		s.discard(site.ID, id)
 		return domain.Deploy{}, err
 	}
-	if err := s.files.CommitRelease(site.ID, id); err != nil {
+	set, err := s.countersFor(ctx, site.ID)
+	if err != nil {
 		s.discard(site.ID, id)
+		return domain.Deploy{}, err
+	}
+	var delta int64
+	if !set.Empty() {
+		inj, err := tracking.Inject(staging, set, now)
+		if err != nil {
+			s.discard(site.ID, id)
+			return domain.Deploy{}, err
+		}
+		delta = inj.DeltaBytes
+	}
+	return s.commit(ctx, site.ID, domain.Deploy{
+		ID: id, SiteID: site.ID, CreatedBy: a.User.ID, Source: source,
+		SizeBytes: res.Bytes + delta, FileCount: res.Files, Status: domain.DeployReady, CreatedAt: now,
+	})
+}
+
+// commit turns a filled staging directory into the site's current release.
+func (s *Service) commit(ctx context.Context, siteID string, d domain.Deploy) (domain.Deploy, error) {
+	if err := s.files.CommitRelease(siteID, d.ID); err != nil {
+		s.discard(siteID, d.ID)
 		return domain.Deploy{}, fmt.Errorf("commit release: %w", err)
 	}
-	d := domain.Deploy{
-		ID: id, SiteID: site.ID, CreatedBy: a.User.ID, Source: source,
-		SizeBytes: res.Bytes, FileCount: res.Files, Status: domain.DeployReady, CreatedAt: now,
-	}
-	if err := s.repo.InsertDeployAndActivate(ctx, d, now); err != nil {
-		if rmErr := s.files.DeleteRelease(site.ID, id); rmErr != nil {
-			s.log.Error("remove orphan release failed", "site", site.ID, "deploy", id, "err", rmErr)
+	if err := s.repo.InsertDeployAndActivate(ctx, d, d.CreatedAt); err != nil {
+		if rmErr := s.files.DeleteRelease(siteID, d.ID); rmErr != nil {
+			s.log.Error("remove orphan release failed", "site", siteID, "deploy", d.ID, "err", rmErr)
 		}
 		return domain.Deploy{}, err
 	}
-	if err := s.files.ActivateRelease(site.ID, id); err != nil {
+	if err := s.files.ActivateRelease(siteID, d.ID); err != nil {
 		// The database already points at the release; reconciliation on the
 		// next start repairs the link.
 		return domain.Deploy{}, fmt.Errorf("activate release: %w", err)
 	}
-	s.linkPreview(ctx, site.ID, id)
+	s.linkPreview(ctx, siteID, d.ID)
 	return d, nil
 }
 

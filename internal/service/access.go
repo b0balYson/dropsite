@@ -127,7 +127,9 @@ func (s *Service) hostnamesOf(ctx context.Context, siteID string) ([]string, err
 	}
 	out := make([]string, 0, len(hs))
 	for _, h := range hs {
-		out = append(out, h.Hostname)
+		if h.Verified { // unapproved external domains are not served
+			out = append(out, h.Hostname)
+		}
 	}
 	previews, err := s.previewHosts(ctx, siteID)
 	if err != nil {

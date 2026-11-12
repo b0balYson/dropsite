@@ -26,7 +26,7 @@ const (
 	HostDefault  HostKind = "default"
 	HostSlug     HostKind = "slug"
 	HostApex     HostKind = "apex"
-	HostExternal HostKind = "external" // stage 2
+	HostExternal HostKind = "external"
 )
 
 // DeploySource records where a deploy came from.
@@ -146,13 +146,19 @@ type SiteAccess struct {
 	Version      int64
 }
 
-// Hostname binds a host name to a site.
+// Hostname binds a host name to a site. Only verified hostnames serve the
+// site; every kind except external is verified on creation. RejectReason,
+// ReviewedAt and ReviewedBy record an administrator's decision on an
+// external hostname.
 type Hostname struct {
-	Hostname  string
-	SiteID    string
-	Kind      HostKind
-	Verified  bool
-	CreatedAt time.Time
+	Hostname     string
+	SiteID       string
+	Kind         HostKind
+	Verified     bool
+	CreatedAt    time.Time
+	RejectReason string
+	ReviewedAt   *time.Time
+	ReviewedBy   *int64
 }
 
 // Deploy is an immutable release of a site.

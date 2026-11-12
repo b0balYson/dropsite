@@ -76,6 +76,10 @@ Windows (PowerShell):
 irm https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.ps1 | iex
 ```
 
+### Свои домены
+
+Сайт можно открыть и на домене владельца, например `promo.example.ru`: добавьте его в блоке **Свои домены** на экране сайта, командой `dropsite domains add <сайт> <домен>` или через `POST /sites/{id}/hostnames`. Направьте домен на сервер (CNAME на случайный адрес сайта или записи A/AAAA для корня домена). Сертификат и раздачу домен получает только после подтверждения администратором на экране **Внешние домены**, поэтому никто не может заставить сервер запрашивать сертификаты на произвольные имена. Подробности: [docs/external-domains.md](docs/external-domains.md).
+
 ### Что может быть в архиве сайта
 
 `index.html` в корне (единственная папка верхнего уровня вроде `dist/` разворачивается автоматически). По умолчанию до 50 МБ в распакованном виде, до 20 МБ на файл, до 2000 файлов. Симлинки, абсолютные пути и `..` отклоняются. `.git`, `node_modules`, `__MACOSX`, `.DS_Store`, `Thumbs.db` пропускаются.
@@ -101,6 +105,12 @@ irm https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.ps
 - **Срок жизни** (`expires_at`, в CLI `--expires 7d`): после последнего дня сайт перестаёт открываться в течение минуты и удаляется через 7 дней, как удалённый. Интерфейс предупреждает за 3 дня.
 
 Подробнее: [docs/site-access.md](docs/site-access.md).
+
+## Статистика посещений и счётчики аналитики
+
+На экране сайта видны просмотры страниц по дням за 30 дней, итоги, популярные страницы и источники переходов; администратор в «Все сайты» видит ещё и просмотры за 7 дней. Числа берутся из access-лога Caddy, поэтому скрипты на сайтах не нужны: роботы и запросы к картинкам, стилям и скриптам не учитываются, а посетитель определяется по IP-адресу и браузеру в пределах суток UTC, при этом ни то ни другое не хранится. Те же данные отдаёт `GET /api/v1/sites/{ref}/stats?days=30`.
+
+Владелец сайта может указать номер счётчика Яндекс.Метрики и/или Measurement ID GA4 (администратор — ещё и общие для всех сайтов). dropsite вставит стандартный код счётчика перед `</head>` во все HTML-страницы каждого нового релиза; смена ID сайта создаёт новый релиз с обновлённым кодом. Принимаются только идентификаторы, не HTML. Подробности: [docs/statistics.md](docs/statistics.md).
 
 ## Сертификаты и лимиты Let's Encrypt
 
@@ -134,16 +144,20 @@ docker compose -f docker-compose.yml -f compose.wildcard.yml up -d
 | `CF_API_TOKEN` | только для wildcard | — | Токен Cloudflare с правом `Zone.DNS:Edit`, передаётся только Caddy |
 | `MAX_SITE_BYTES`, `MAX_FILE_BYTES`, `MAX_FILES`, `MAX_SITES_PER_USER`, `KEEP_RELEASES` | нет | 50 МБ, 20 МБ, 2000, 10, 5 | Лимиты; администратор переопределяет их глобально («Настройки») и для пользователя («Пользователи» → «Лимиты»): пользователь → настройка администратора → окружение → умолчание |
 | `RESERVED_SLUGS` | нет | | Дополнительные запрещённые slug через запятую |
+| `MAX_DOMAINS_PER_SITE` | нет | `5` | Своих доменов на сайт, 1–100 |
+| `SERVER_IPS` | нет | адреса `BASE_DOMAIN` | Публичные IP сервера через запятую: цель DNS, которую видит владелец, и эталон для DNS-проверки доменов |
 | `LOG_LEVEL` | нет | `info` | `debug`, `info`, `warn`, `error` |
+| `STATS_INTERVAL` | нет | `1m` | Как часто control читает access-лог сайтов (от 1s до 1h) |
+| `STATS_LOG_FILE` | нет | `/logs/sites-access.log` | Access-лог сайтов внутри control; `off` выключает статистику |
 
 ## Эксплуатация
 
 - **Бэкап:** `docker compose exec -T control /control backup - > backup-$(date +%F).tar.gz`. Восстановление — в [docs/backup.md](docs/backup.md).
 - **Обновление:** сделайте бэкап, затем `docker compose pull && docker compose up -d`. Миграции применяются автоматически, откат схемы не поддерживается.
-- **Логи:** JSON в stdout обоих контейнеров: `docker compose logs -f`.
+- **Логи:** JSON в stdout обоих контейнеров: `docker compose logs -f`. Кроме того, Caddy пишет access-лог сайтов на том `logs` для статистики (ротация по 50 МБ, хранятся 5 старых файлов).
 - **Здоровье:** `docker compose ps` показывает проверку здоровья `control`.
 
-Подробнее: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [docs/tls.md](docs/tls.md), [docs/production-checklist.md](docs/production-checklist.md).
+Подробнее: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [docs/tls.md](docs/tls.md), [docs/external-domains.md](docs/external-domains.md), [docs/production-checklist.md](docs/production-checklist.md), [docs/statistics.md](docs/statistics.md).
 
 ## Модель безопасности
 
