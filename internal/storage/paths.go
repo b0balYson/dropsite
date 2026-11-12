@@ -5,6 +5,7 @@
 //	<root>/sites/<site_id>/current -> releases/<deploy_id> | ../../empty
 //	<root>/by-host/<hostname> -> ../sites/<site_id>/current
 //	<root>/empty/                                      shared empty directory
+//	<root>/flags/<flag>/<hostname>                     per-host marker files
 //
 // Caddy mounts the root read-only, possibly at another path, so every link is
 // relative. Every link replacement is atomic (temporary link + rename(2)).
@@ -41,6 +42,8 @@ type Storage interface {
 	ActivateEmpty(siteID string) error
 	LinkHost(hostname, siteID string) error
 	UnlinkHost(hostname string) error
+	SetHostFlag(flag HostFlag, hostname string) error
+	ClearHostFlag(flag HostFlag, hostname string) error
 	DeleteRelease(siteID, deployID string) error
 	DeleteSite(siteID string) error
 	Reconcile(ctx context.Context, desired []SiteLayout, keep Retained) (ReconcileReport, error)
@@ -59,9 +62,13 @@ func NewFS(root string) *FS {
 	return &FS{root: filepath.Clean(root)}
 }
 
-// Init creates sites/, by-host/ and empty/ if missing.
+// Init creates sites/, by-host/, empty/ and the flag directories if missing.
 func (f *FS) Init(ctx context.Context) error {
-	for _, d := range []string{sitesDir, byHostDir, emptyDir} {
+	dirs := []string{sitesDir, byHostDir, emptyDir}
+	for _, fl := range AllHostFlags {
+		dirs = append(dirs, filepath.Join(flagsDir, string(fl)))
+	}
+	for _, d := range dirs {
 		if err := ctx.Err(); err != nil {
 			return err
 		}

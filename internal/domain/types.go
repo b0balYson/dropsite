@@ -132,6 +132,18 @@ type Site struct {
 	UpdatedAt       time.Time
 	DeletedAt       *time.Time
 	PurgedAt        *time.Time
+	// Access controls (stage 2). Protected is true when a visitor password is
+	// set; the hash itself is never part of Site (see SiteAccess).
+	Noindex   bool
+	Protected bool
+	ExpiresAt *time.Time
+}
+
+// SiteAccess is the visitor password state of a site. Version grows on every
+// password change or removal; visitor cookies are bound to it.
+type SiteAccess struct {
+	PasswordHash string
+	Version      int64
 }
 
 // Hostname binds a host name to a site.
@@ -173,4 +185,42 @@ type Limits struct {
 	MaxFiles        int
 	MaxSitesPerUser int
 	KeepReleases    int
+}
+
+// LimitOverrides are per-user limit values set by an administrator; nil
+// fields fall back to the global effective value.
+type LimitOverrides struct {
+	MaxSiteBytes    *int64
+	MaxFileBytes    *int64
+	MaxFiles        *int64
+	MaxSitesPerUser *int64
+	KeepReleases    *int64
+}
+
+// Empty reports whether no limit is overridden.
+func (o LimitOverrides) Empty() bool {
+	return o.MaxSiteBytes == nil && o.MaxFileBytes == nil && o.MaxFiles == nil &&
+		o.MaxSitesPerUser == nil && o.KeepReleases == nil
+}
+
+// Apply returns l with the overrides applied. A file limit above the site
+// limit is capped at the site limit.
+func (o LimitOverrides) Apply(l Limits) Limits {
+	if o.MaxSiteBytes != nil {
+		l.MaxSiteBytes = *o.MaxSiteBytes
+	}
+	if o.MaxFileBytes != nil {
+		l.MaxFileBytes = *o.MaxFileBytes
+	}
+	if o.MaxFiles != nil {
+		l.MaxFiles = int(*o.MaxFiles)
+	}
+	if o.MaxSitesPerUser != nil {
+		l.MaxSitesPerUser = int(*o.MaxSitesPerUser)
+	}
+	if o.KeepReleases != nil {
+		l.KeepReleases = int(*o.KeepReleases)
+	}
+	l.MaxFileBytes = min(l.MaxFileBytes, l.MaxSiteBytes)
+	return l
 }

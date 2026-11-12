@@ -10,21 +10,40 @@ import (
 )
 
 const (
-	siteCols  = "id, owner_id, title, current_deploy_id, created_at, updated_at, deleted_at, purged_at"
-	siteColsS = "s.id, s.owner_id, s.title, s.current_deploy_id, s.created_at, s.updated_at, s.deleted_at, s.purged_at"
+	siteInsertCols = "id, owner_id, title, current_deploy_id, created_at, updated_at, deleted_at, purged_at"
+	siteCols       = siteInsertCols + ", noindex, access_password_hash != '', expires_at"
+	siteColsS      = "s.id, s.owner_id, s.title, s.current_deploy_id, s.created_at, s.updated_at, s.deleted_at, s.purged_at, " +
+		"s.noindex, s.access_password_hash != '', s.expires_at"
 )
+
+// siteScan holds raw values of siteCols: dest gives the scan targets, finish
+// converts them into the site.
+type siteScan struct {
+	current          sql.NullString
+	created, updated int64
+	deleted, purged  sql.NullInt64
+	expires          sql.NullInt64
+}
+
+func (r *siteScan) dest(site *domain.Site) []any {
+	return []any{&site.ID, &site.OwnerID, &site.Title, &r.current, &r.created, &r.updated, &r.deleted, &r.purged,
+		&site.Noindex, &site.Protected, &r.expires}
+}
+
+func (r *siteScan) finish(site *domain.Site) {
+	site.CurrentDeployID = fromNullString(r.current)
+	site.CreatedAt, site.UpdatedAt = fromMS(r.created), fromMS(r.updated)
+	site.DeletedAt, site.PurgedAt = fromNullMS(r.deleted), fromNullMS(r.purged)
+	site.ExpiresAt = fromNullMS(r.expires)
+}
 
 func scanSite(s rowScanner) (domain.Site, error) {
 	var site domain.Site
-	var current sql.NullString
-	var created, updated int64
-	var deleted, purged sql.NullInt64
-	if err := s.Scan(&site.ID, &site.OwnerID, &site.Title, &current, &created, &updated, &deleted, &purged); err != nil {
+	var raw siteScan
+	if err := s.Scan(raw.dest(&site)...); err != nil {
 		return domain.Site{}, err
 	}
-	site.CurrentDeployID = fromNullString(current)
-	site.CreatedAt, site.UpdatedAt = fromMS(created), fromMS(updated)
-	site.DeletedAt, site.PurgedAt = fromNullMS(deleted), fromNullMS(purged)
+	raw.finish(&site)
 	return site, nil
 }
 
@@ -50,7 +69,7 @@ func (db *DB) CountActiveSites(ctx context.Context, ownerID int64) (int, error) 
 // CreateSite inserts the site and its hostnames in one transaction.
 func (db *DB) CreateSite(ctx context.Context, s domain.Site, hosts []domain.Hostname) error {
 	return db.withTx(ctx, func(tx *sql.Tx) error {
-		if _, err := tx.ExecContext(ctx, `INSERT INTO sites (`+siteCols+`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		if _, err := tx.ExecContext(ctx, `INSERT INTO sites (`+siteInsertCols+`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 			s.ID, s.OwnerID, s.Title, s.CurrentDeployID, toMS(s.CreatedAt), toMS(s.UpdatedAt),
 			nullMS(s.DeletedAt), nullMS(s.PurgedAt)); err != nil {
 			return fmt.Errorf("insert site %s: %w", s.ID, err)
@@ -136,7 +155,7 @@ func (db *DB) ListSitesToPurge(ctx context.Context, deletedBefore time.Time) ([]
 // The site row stays as a tombstone. An active or missing site → ErrNotFound.
 func (db *DB) MarkSitePurged(ctx context.Context, siteID string, now time.Time) error {
 	return db.withTx(ctx, func(tx *sql.Tx) error {
-		res, err := tx.ExecContext(ctx, `UPDATE sites SET purged_at = ?, current_deploy_id = NULL
+		res, err := tx.ExecContext(ctx, `UPDATE sites SET purged_at = ?, current_deploy_id = NULL, access_password_hash = ''
 			WHERE id = ? AND deleted_at IS NOT NULL`, toMS(now), siteID)
 		if err := expectAffected(res, err, "mark site purged"); err != nil {
 			return err
