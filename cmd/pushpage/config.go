@@ -18,6 +18,7 @@ import (
 const (
 	envServer      = "PUSHPAGE_SERVER"
 	envToken       = "PUSHPAGE_TOKEN"
+	envCAFile      = "PUSHPAGE_CA_FILE" // extra trusted root CA (PEM) for private installations
 	configFileName = "config.json"
 	configDirPerm  = 0o700
 	configFilePerm = 0o600

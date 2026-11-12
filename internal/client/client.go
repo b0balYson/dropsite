@@ -5,12 +5,15 @@ package client
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -61,6 +64,29 @@ func New(server, token string, opts ...Option) *Client {
 		c.http = defaultHTTPClient()
 	}
 	return c
+}
+
+// WithRootCAFile trusts the PEM certificates in file in addition to the
+// system roots (for installations behind a private certificate authority).
+func WithRootCAFile(file string) (Option, error) {
+	pem, err := os.ReadFile(file) //nolint:gosec // path comes from the user's own PUSHPAGE_CA_FILE
+	if err != nil {
+		return nil, fmt.Errorf("read CA file: %w", err)
+	}
+	pool, err := x509.SystemCertPool()
+	if err != nil || pool == nil {
+		pool = x509.NewCertPool()
+	}
+	if !pool.AppendCertsFromPEM(pem) {
+		return nil, fmt.Errorf("CA file %s contains no PEM certificates", file)
+	}
+	return func(c *Client) {
+		h := defaultHTTPClient()
+		if tr, ok := h.Transport.(*http.Transport); ok {
+			tr.TLSClientConfig = &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}
+		}
+		c.http = h
+	}, nil
 }
 
 func defaultHTTPClient() *http.Client {

@@ -139,6 +139,14 @@ func (a *app) report(err error) int {
 
 func (a *app) newClient(server, token string) *client.Client {
 	var opts []client.Option
+	if ca := a.getenv(envCAFile); ca != "" && a.httpClient == nil {
+		opt, err := client.WithRootCAFile(ca)
+		if err != nil {
+			fmt.Fprintf(a.stderr, "%s: ignoring %s: %v\n", brand.Name, envCAFile, err)
+		} else {
+			opts = append(opts, opt)
+		}
+	}
 	if a.httpClient != nil {
 		opts = append(opts, client.WithHTTPClient(a.httpClient))
 	}

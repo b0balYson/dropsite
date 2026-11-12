@@ -3,10 +3,13 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -276,5 +279,37 @@ func must(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestWithRootCAFile(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"user":{"id":"1","email":"a@b.co","role":"user","status":"active"},"limits":{},"site_count":0}`))
+	}))
+	defer srv.Close()
+	dir := t.TempDir()
+	caFile := filepath.Join(dir, "ca.pem")
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw})
+	if err := os.WriteFile(caFile, certPEM, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := New(srv.URL, "t").Me(context.Background()); err == nil {
+		t.Fatal("untrusted certificate must fail without the CA file")
+	}
+	opt, err := WithRootCAFile(caFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := New(srv.URL, "t", opt).Me(context.Background()); err != nil {
+		t.Fatalf("trusted via CA file: %v", err)
+	}
+	bad := filepath.Join(dir, "bad.pem")
+	_ = os.WriteFile(bad, []byte("nope"), 0o600)
+	if _, err := WithRootCAFile(bad); err == nil {
+		t.Fatal("non-PEM file must fail")
+	}
+	if _, err := WithRootCAFile(filepath.Join(dir, "missing")); err == nil {
+		t.Fatal("missing file must fail")
 	}
 }
