@@ -141,8 +141,13 @@ func (db *DB) GetSchedule(ctx context.Context, id int64) (domain.ScheduledPublis
 	return sp, nil
 }
 
-// ListSchedules lists the publishes of one site or of every active site of
-// an owner.
+// scheduleVisibleTo limits ListSchedules to the sites visible to user ?2:
+// personal sites of the user and sites of the user's workspaces.
+const scheduleVisibleTo = ` AND ((s.workspace_id IS NULL AND s.owner_id = ?2)
+	OR s.workspace_id IN (SELECT m.workspace_id FROM workspace_members m WHERE m.user_id = ?2))`
+
+// ListSchedules lists the publishes of one site or of every active site visible to
+// a user (personal sites and sites of the user's workspaces).
 func (db *DB) ListSchedules(ctx context.Context, ownerID int64, siteID string, since time.Time, limit int) ([]domain.ScheduledPublish, error) {
 	q := "SELECT " + scheduleColsP + ` FROM scheduled_publishes p
 		JOIN sites s ON s.id = p.site_id AND s.deleted_at IS NULL
@@ -152,7 +157,7 @@ func (db *DB) ListSchedules(ctx context.Context, ownerID int64, siteID string, s
 		q += " AND p.site_id = ?2"
 		args = append(args, siteID)
 	} else {
-		q += " AND " + visibleSite("?2")
+		q += scheduleVisibleTo
 		args = append(args, ownerID)
 	}
 	q += " ORDER BY p.publish_at, p.id LIMIT ?3"

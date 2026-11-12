@@ -9,11 +9,13 @@ import (
 )
 
 // siteListWhere filters active sites by owner (?1, NULL = all), by
-// visibility to a user (?5, NULL = all: see visibleSite), by workspace (?6,
+// visibility to a user (?5, NULL = all: a personal site of the user or a
+// site of one of their workspaces), by workspace (?6,
 // NULL = any, 0 = personal sites only) and by a LIKE pattern (?2, empty =
 // none) over title, owner email and any hostname. ?3 and ?4 are the page.
-var siteListWhere = ` WHERE s.deleted_at IS NULL AND (?1 IS NULL OR s.owner_id = ?1)
-	AND (?5 IS NULL OR ` + visibleSite("?5") + `)
+const siteListWhere = ` WHERE s.deleted_at IS NULL AND (?1 IS NULL OR s.owner_id = ?1)
+	AND (?5 IS NULL OR (s.workspace_id IS NULL AND s.owner_id = ?5)
+		OR s.workspace_id IN (SELECT m.workspace_id FROM workspace_members m WHERE m.user_id = ?5))
 	AND (?6 IS NULL OR (?6 = 0 AND s.workspace_id IS NULL) OR s.workspace_id = ?6)
 	AND (?2 = '' OR s.title LIKE ?2 ESCAPE '\' OR u.email LIKE ?2 ESCAPE '\'
 		OR EXISTS (SELECT 1 FROM hostnames h WHERE h.site_id = s.id AND h.hostname LIKE ?2 ESCAPE '\'))`
@@ -84,13 +86,6 @@ func scanSiteSummary(rows *sql.Rows) (SiteSummary, error) {
 // args binds ?1..?6 of siteListWhere; a caller that pages fills ?3 and ?4.
 func (f SiteFilter) args(pattern string) []any {
 	return []any{f.OwnerID, pattern, 0, 0, f.VisibleTo, f.Workspace}
-}
-
-// visibleSite is the SQL condition "site s is visible to the user bound to
-// param": a personal site of the user, or a site of one of their workspaces.
-func visibleSite(param string) string {
-	return `((s.workspace_id IS NULL AND s.owner_id = ` + param + `)
-		OR s.workspace_id IN (SELECT m.workspace_id FROM workspace_members m WHERE m.user_id = ` + param + `))`
 }
 
 // attachHostnames fills Hostnames for every site of the page in one query.
