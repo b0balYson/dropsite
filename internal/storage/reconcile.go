@@ -15,6 +15,15 @@ type SiteLayout struct {
 	CurrentDeployID *string // nil: current points at the shared empty directory
 	Hostnames       []string
 	ReadyDeployIDs  []string
+	// Previews are by-host entries pointing at a release directory instead
+	// of current (wildcard TLS mode only); empty otherwise.
+	Previews []Preview
+}
+
+// Preview is the by-host entry of one release.
+type Preview struct {
+	Hostname string
+	DeployID string
 }
 
 // Retained lists soft-deleted sites whose files must be kept until purge.
@@ -36,18 +45,21 @@ type ReconcileReport struct {
 	// the other fields it is reported on every call while the mismatch with
 	// the database persists, so a restart does not hide the emergency.
 	MissingCurrent []string
+	// MissingPreviews lists previews whose release directory is missing; no
+	// entry exists for them. Reported on every call, like MissingCurrent.
+	MissingPreviews []string
 }
 
 // Empty reports whether the report contains no changes and no anomalies.
 func (r ReconcileReport) Empty() bool {
 	return len(r.RemovedTemp)+len(r.RemovedReleases)+len(r.RemovedSites)+
-		len(r.LinkedHosts)+len(r.UnlinkedHosts)+len(r.FixedCurrent)+len(r.MissingCurrent) == 0
+		len(r.LinkedHosts)+len(r.UnlinkedHosts)+len(r.FixedCurrent)+len(r.MissingCurrent)+len(r.MissingPreviews) == 0
 }
 
 func (r *ReconcileReport) sort() {
 	for _, s := range []*[]string{
 		&r.RemovedTemp, &r.RemovedReleases, &r.RemovedSites, &r.LinkedHosts,
-		&r.UnlinkedHosts, &r.FixedCurrent, &r.MissingCurrent,
+		&r.UnlinkedHosts, &r.FixedCurrent, &r.MissingCurrent, &r.MissingPreviews,
 	} {
 		slices.Sort(*s)
 	}
@@ -84,10 +96,23 @@ func (f *FS) Reconcile(ctx context.Context, desired []SiteLayout, keep Retained)
 	return rep, nil
 }
 
+// hostLink is the desired by-host entry of one hostname.
+type hostLink struct {
+	siteID   string
+	deployID string // empty: the entry points at current
+}
+
+func (h hostLink) target() string {
+	if h.deployID != "" {
+		return previewTarget(h.siteID, h.deployID)
+	}
+	return hostTarget(h.siteID)
+}
+
 // indexDesired validates desired and indexes it by site ID and by hostname.
-func indexDesired(desired []SiteLayout) (map[string]SiteLayout, map[string]string, error) {
+func indexDesired(desired []SiteLayout) (map[string]SiteLayout, map[string]hostLink, error) {
 	want := make(map[string]SiteLayout, len(desired))
-	hosts := map[string]string{}
+	hosts := map[string]hostLink{}
 	for _, s := range desired {
 		if err := validateSiteID(s.SiteID); err != nil {
 			return nil, nil, err
@@ -109,14 +134,41 @@ func indexDesired(desired []SiteLayout) (map[string]SiteLayout, map[string]strin
 			if err := validateHostname(h); err != nil {
 				return nil, nil, err
 			}
-			if other, dup := hosts[h]; dup && other != s.SiteID {
-				return nil, nil, fmt.Errorf("%w: hostname %s claimed by %s and %s", ErrInvalidName, h, other, s.SiteID)
+			if other, dup := hosts[h]; dup && other.siteID != s.SiteID {
+				return nil, nil, fmt.Errorf("%w: hostname %s claimed by %s and %s", ErrInvalidName, h, other.siteID, s.SiteID)
 			}
-			hosts[h] = s.SiteID
+			hosts[h] = hostLink{siteID: s.SiteID}
 		}
 		want[s.SiteID] = s
 	}
+	// Previews after every hostname, so a collision is found in any order.
+	for _, s := range desired {
+		if err := indexPreviews(s, hosts); err != nil {
+			return nil, nil, err
+		}
+	}
 	return want, hosts, nil
+}
+
+// indexPreviews adds a site's previews to hosts. A preview must name one of
+// the site's ready releases and must not collide with any other entry.
+func indexPreviews(s SiteLayout, hosts map[string]hostLink) error {
+	for _, p := range s.Previews {
+		if err := validateHostname(p.Hostname); err != nil {
+			return err
+		}
+		if err := validateDeployID(p.DeployID); err != nil {
+			return err
+		}
+		if !slices.Contains(s.ReadyDeployIDs, p.DeployID) {
+			return fmt.Errorf("%w: preview %s of release %s that is not ready", ErrInvalidName, p.Hostname, p.DeployID)
+		}
+		if _, dup := hosts[p.Hostname]; dup {
+			return fmt.Errorf("%w: preview %s collides with another hostname", ErrInvalidName, p.Hostname)
+		}
+		hosts[p.Hostname] = hostLink{siteID: s.SiteID, deployID: p.DeployID}
+	}
+	return nil
 }
 
 func (f *FS) reconcileSites(ctx context.Context, want map[string]SiteLayout, kept map[string]bool, rep *ReconcileReport) error {
@@ -246,7 +298,10 @@ func (f *FS) fixCurrent(s SiteLayout, rep *ReconcileReport) error {
 	return nil
 }
 
-func (f *FS) reconcileHosts(ctx context.Context, hosts map[string]string, rep *ReconcileReport) error {
+func (f *FS) reconcileHosts(ctx context.Context, hosts map[string]hostLink, rep *ReconcileReport) error {
+	if err := f.dropMissingPreviews(hosts, rep); err != nil {
+		return err
+	}
 	entries, err := os.ReadDir(f.byHostPath())
 	if err != nil {
 		return fmt.Errorf("storage: read by-host: %w", err)
@@ -268,16 +323,35 @@ func (f *FS) reconcileHosts(ctx context.Context, hosts map[string]string, rep *R
 			rep.UnlinkedHosts = append(rep.UnlinkedHosts, name)
 		}
 	}
-	for host, siteID := range hosts {
+	for host, l := range hosts {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		changed, err := ensureSymlink(hostTarget(siteID), f.hostPath(host))
+		changed, err := ensureSymlink(l.target(), f.hostPath(host))
 		if err != nil {
 			return fmt.Errorf("storage: link host %s: %w", host, err)
 		}
 		if changed {
 			rep.LinkedHosts = append(rep.LinkedHosts, host)
+		}
+	}
+	return nil
+}
+
+// dropMissingPreviews removes from hosts the previews whose release directory
+// is gone, so neither a new nor a stale dangling entry survives.
+func (f *FS) dropMissingPreviews(hosts map[string]hostLink, rep *ReconcileReport) error {
+	for host, l := range hosts {
+		if l.deployID == "" {
+			continue
+		}
+		ok, err := isDir(f.releasePath(l.siteID, l.deployID))
+		if err != nil {
+			return fmt.Errorf("storage: stat release: %w", err)
+		}
+		if !ok {
+			delete(hosts, host)
+			rep.MissingPreviews = append(rep.MissingPreviews, host)
 		}
 	}
 	return nil

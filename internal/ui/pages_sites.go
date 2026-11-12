@@ -98,7 +98,8 @@ func (s *server) slugCheck(w http.ResponseWriter, r *http.Request, rc *reqCtx, r
 
 type deployRow struct {
 	domain.Deploy
-	Current bool
+	Current    bool
+	PreviewURL string // wildcard TLS mode only
 }
 
 type siteData struct {
@@ -120,7 +121,7 @@ func (s *server) loadSite(r *http.Request, rc *reqCtx) (siteData, error) {
 	}
 	rows := make([]deployRow, 0, len(ds))
 	for _, d := range ds {
-		rows = append(rows, deployRow{Deploy: d, Current: v.Current != nil && v.Current.ID == d.ID})
+		rows = append(rows, deployRow{Deploy: d, Current: v.Current != nil && v.Current.ID == d.ID, PreviewURL: s.svc.PreviewURL(d)})
 	}
 	doms, err := s.loadSiteDomains(r, rc, v)
 	if err != nil {

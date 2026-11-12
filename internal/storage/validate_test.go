@@ -115,6 +115,10 @@ func TestLinkTargetValidators(t *testing.T) {
 		{HostTargetValid, "../sites/" + site + "/releases", false},
 		{HostTargetValid, "../sites/../current", false},
 		{HostTargetValid, "/sites/" + site + "/current", false},
+		{HostTargetValid, previewTarget(site, deploy), true},
+		{HostTargetValid, "../sites/" + site + "/releases/" + deploy + "/..", false},
+		{HostTargetValid, "../sites/" + site + "/releases/x", false},
+		{HostTargetValid, "../sites/" + site + "/releases/" + deploy + ".tmp", false},
 	}
 	for _, tc := range cases {
 		if got := tc.fn(tc.target); got != tc.want {

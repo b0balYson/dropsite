@@ -33,7 +33,7 @@ Hostname {hostname, kind, verified, status, reason|null, created_at, reviewed_at
 Domain   Hostname + {site_id, site_title, owner_id, owner_email}
 DNSCheck {hostname, verdict, addresses[], cname|null, expected[]}
                                                 verdict: points_here | points_elsewhere | no_records | failed | unknown
-Deploy   {id, site_id, source, size_bytes, file_count, status, created_at, created_by, current}
+Deploy   {id, site_id, source, size_bytes, file_count, status, created_at, created_by, current, preview_url|null}
 Site     {id, title, url, urls[], slug|null, hostnames[], owner_id, created_at, updated_at, current_deploy: Deploy|null}
 SiteItem {id, title, url, urls[], slug|null, owner_id, owner_email, last_deploy_at|null, size_bytes, created_at, updated_at}
 Token    {id, name, prefix, created_at, last_used_at|null, expires_at|null, revoked_at|null}
@@ -85,3 +85,5 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 The deploy source is `cli` when the request carries `X-Dropsite-Client: cli/<version>`, otherwise `api`. The upload may be at most `max_site_bytes + max_files KiB + 1 MiB`; larger bodies get 413 without being read fully.
 
 External domains (see `docs/external-domains.md`): `hostname` is normalised (lower case, punycode, no trailing dot) and refused with `domain_invalid` (not a name of two or more labels, an IP, a scheme, path or port) or `domain_forbidden` (the base domain or below it, the API host or below it, the UI host or one of its parents). A site holds at most `MAX_DOMAINS_PER_SITE` external domains in any status (`domain_limit_reached`, `details.limit`). `reject` requires a reason of 1–200 characters (`domain_reason_invalid`); rejecting an approved domain withdraws the approval. In `GET /admin/domains`, `status` is `pending`, `active`, `rejected` or `all` (default). `dns-check` takes at most 5 seconds and never fails because of DNS: problems are reported in `verdict`.
+
+`preview_url` is the address that serves exactly this release, `https://p-<deploy id>-<site id>.<BASE_DOMAIN>/` (with `X-Robots-Tag: noindex`). It is set only when the installation runs with `TLS_MODE=wildcard` and the release is `ready`; otherwise it is `null` (see `docs/tls.md`).

@@ -52,3 +52,20 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: VERSION=${{ github.ref_name }}
+      # Caddy with DNS plugins for TLS_MODE=wildcard, tagged by its Caddy
+      # version (compose.wildcard.yml pins it) and by the dropsite release.
+      - id: caddy-meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/dropsite-caddy
+          tags: |
+            type=raw,value=2.11.9
+            type=semver,pattern={{version}}
+            type=raw,value=latest
+      - uses: docker/build-push-action@v7
+        with:
+          context: deploy/caddy
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.caddy-meta.outputs.tags }}
+          labels: ${{ steps.caddy-meta.outputs.labels }}

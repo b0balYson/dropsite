@@ -577,7 +577,7 @@
       },
       "Deploy": {
         "type": "object",
-        "required": ["id", "site_id", "source", "size_bytes", "file_count", "status", "created_at", "created_by", "current"],
+        "required": ["id", "site_id", "source", "size_bytes", "file_count", "status", "created_at", "created_by", "current", "preview_url"],
         "properties": {
           "id": { "type": "string" },
           "site_id": { "type": "string" },
@@ -587,7 +587,11 @@
           "status": { "type": "string", "enum": ["ready", "failed", "pruned"] },
           "created_at": { "type": "string", "format": "date-time" },
           "created_by": { "type": "string" },
-          "current": { "type": "boolean" }
+          "current": { "type": "boolean" },
+          "preview_url": {
+            "type": ["string", "null"],
+            "description": "Address serving exactly this release (TLS_MODE=wildcard and status ready only), with X-Robots-Tag: noindex; null otherwise"
+          }
         }
       },
       "Site": {

@@ -4,6 +4,7 @@
 //	<root>/sites/<site_id>/releases/<deploy_id>.tmp/  extraction in progress
 //	<root>/sites/<site_id>/current -> releases/<deploy_id> | ../../empty
 //	<root>/by-host/<hostname> -> ../sites/<site_id>/current
+//	<root>/by-host/<preview>  -> ../sites/<site_id>/releases/<deploy_id>
 //	<root>/empty/                                      shared empty directory
 //
 // Caddy mounts the root read-only, possibly at another path, so every link is
@@ -40,6 +41,7 @@ type Storage interface {
 	ActivateRelease(siteID, deployID string) error
 	ActivateEmpty(siteID string) error
 	LinkHost(hostname, siteID string) error
+	LinkPreview(hostname, siteID, deployID string) error
 	UnlinkHost(hostname string) error
 	DeleteRelease(siteID, deployID string) error
 	DeleteSite(siteID string) error
@@ -107,6 +109,12 @@ func releaseTarget(deployID string) string {
 // hostTarget is the by-host target for a site, relative to by-host/.
 func hostTarget(siteID string) string {
 	return "../" + sitesDir + "/" + siteID + "/" + currentLink
+}
+
+// previewTarget is the by-host target of a release preview, relative to
+// by-host/: the release itself, so a rollback does not change the preview.
+func previewTarget(siteID, deployID string) string {
+	return "../" + sitesDir + "/" + siteID + "/" + releasesDir + "/" + deployID
 }
 
 // isDir reports whether p exists and is a real directory (not a symlink).

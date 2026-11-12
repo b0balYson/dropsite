@@ -65,6 +65,10 @@ type Config struct {
 // maxDomainsPerSiteLimit bounds MAX_DOMAINS_PER_SITE.
 const maxDomainsPerSiteLimit = 100
 
+// Wildcard reports whether sites under the base domain use one wildcard
+// certificate (TLS_MODE=wildcard); release previews exist only in this mode.
+func (c *Config) Wildcard() bool { return c.TLSMode == TLSModeWildcard }
+
 // Getenv is the environment lookup function, injectable for tests.
 type Getenv func(string) (string, bool)
 
@@ -147,12 +151,12 @@ func Load(get Getenv) (*Config, error) {
 	}
 	c.ServerIPs = r.addrs("SERVER_IPS")
 
+	// The DNS provider token is deliberately not read here: only Caddy needs
+	// it, and compose refuses to start the wildcard override without it.
 	switch c.TLSMode {
-	case TLSModeOnDemand:
-	case TLSModeWildcard:
-		r.fail("TLS_MODE", "wildcard mode is not supported in this version, see docs/tls.md")
+	case TLSModeOnDemand, TLSModeWildcard:
 	default:
-		r.fail("TLS_MODE", "must be %q, got %q", TLSModeOnDemand, c.TLSMode)
+		r.fail("TLS_MODE", "must be %q or %q, got %q (see docs/tls.md)", TLSModeOnDemand, TLSModeWildcard, c.TLSMode)
 	}
 	if c.Limits.KeepReleases < MinKeepReleases {
 		r.fail("KEEP_RELEASES", "must be at least %d", MinKeepReleases)
