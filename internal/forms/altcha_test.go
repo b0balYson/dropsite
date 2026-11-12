@@ -29,7 +29,7 @@ func solveAltcha(t *testing.T, ch altcha.Challenge) string {
 
 func TestAltchaRoundTrip(t *testing.T) {
 	a := testAltcha()
-	ch, err := a.Challenge("promo.test", MinAltchaMaxNumber, time.Now())
+	ch, err := a.Challenge("promo.test", PurposeForm, MinAltchaMaxNumber, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,30 +37,30 @@ func TestAltchaRoundTrip(t *testing.T) {
 		t.Fatalf("challenge %+v", ch.Parameters)
 	}
 	payload := solveAltcha(t, ch)
-	v, err := a.Verify(payload, "promo.test")
+	v, err := a.Verify(payload, "promo.test", PurposeForm)
 	if err != nil || v.Signature != ch.Signature || v.ExpiresAt.Unix() != ch.Parameters.ExpiresAt {
 		t.Fatalf("verify %+v %v", v, err)
 	}
-	if _, err := a.Verify(payload, "other.test"); !errors.Is(err, ErrAltcha) {
+	if _, err := a.Verify(payload, "other.test", PurposeForm); !errors.Is(err, ErrAltcha) {
 		t.Fatal("solution accepted for another host")
 	}
 	other := a
 	other.SignatureSecret = "forged"
-	if _, err := other.Verify(payload, "promo.test"); !errors.Is(err, ErrAltcha) {
+	if _, err := other.Verify(payload, "promo.test", PurposeForm); !errors.Is(err, ErrAltcha) {
 		t.Fatal("forged signature accepted")
 	}
 }
 
 func TestAltchaRejectsExpiredAndTampered(t *testing.T) {
 	a := testAltcha()
-	ch, err := a.Challenge("promo.test", MinAltchaMaxNumber, time.Now().Add(-AltchaTTL-time.Minute))
+	ch, err := a.Challenge("promo.test", PurposeForm, MinAltchaMaxNumber, time.Now().Add(-AltchaTTL-time.Minute))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := a.Verify(solveAltcha(t, ch), "promo.test"); !errors.Is(err, ErrAltcha) {
+	if _, err := a.Verify(solveAltcha(t, ch), "promo.test", PurposeForm); !errors.Is(err, ErrAltcha) {
 		t.Fatal("expired challenge accepted")
 	}
-	ch, _ = a.Challenge("promo.test", MinAltchaMaxNumber, time.Now())
+	ch, _ = a.Challenge("promo.test", PurposeForm, MinAltchaMaxNumber, time.Now())
 	payload := solveAltcha(t, ch)
 	raw, _ := base64.StdEncoding.DecodeString(payload)
 	var p altcha.Payload
@@ -71,12 +71,12 @@ func TestAltchaRejectsExpiredAndTampered(t *testing.T) {
 	}
 	p.Solution.DerivedKey = string(bytes.Repeat([]byte("ab"), 32))
 	b, _ := json.Marshal(p)
-	if _, err := a.Verify(base64.StdEncoding.EncodeToString(b), "promo.test"); !errors.Is(err, ErrAltcha) {
+	if _, err := a.Verify(base64.StdEncoding.EncodeToString(b), "promo.test", PurposeForm); !errors.Is(err, ErrAltcha) {
 		t.Fatal("wrong derived key accepted")
 	}
 	test, _ := json.Marshal(map[string]any{"challenge": nil, "solution": nil, "test": true})
 	for _, bad := range []string{"", "!!!", base64.StdEncoding.EncodeToString([]byte("{}")), base64.StdEncoding.EncodeToString(test)} {
-		if _, err := a.Verify(bad, "promo.test"); !errors.Is(err, ErrAltcha) {
+		if _, err := a.Verify(bad, "promo.test", PurposeForm); !errors.Is(err, ErrAltcha) {
 			t.Fatalf("%q accepted", bad)
 		}
 	}
@@ -88,5 +88,47 @@ func TestAltchaWidgetEmbedded(t *testing.T) {
 	}
 	if !bytes.Contains(AltchaLicense, []byte("MIT License")) {
 		t.Fatal("license missing")
+	}
+}
+
+func TestAltchaBoundToPurpose(t *testing.T) {
+	a := testAltcha()
+	login, err := a.Challenge("promo.test", PurposeLogin, MinAltchaMaxNumber, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload := solveAltcha(t, login)
+	if _, err := a.Verify(payload, "promo.test", PurposeForm); !errors.Is(err, ErrAltcha) {
+		t.Fatal("login solution accepted by a form")
+	}
+	if _, err := a.Verify(payload, "promo.test", PurposeLogin); err != nil {
+		t.Fatalf("login solution: %v", err)
+	}
+	form, _ := a.Challenge("promo.test", PurposeForm, MinAltchaMaxNumber, time.Now())
+	if _, err := a.Verify(solveAltcha(t, form), "promo.test", PurposeLogin); !errors.Is(err, ErrAltcha) {
+		t.Fatal("form solution accepted by the login page")
+	}
+}
+
+// A challenge signed before purposes existed (no "purpose" in its data) is
+// a form challenge.
+func TestAltchaLegacyChallengeIsForm(t *testing.T) {
+	a := testAltcha()
+	counter := 60
+	expires := time.Now().Add(AltchaTTL)
+	ch, err := altcha.CreateChallenge(altcha.CreateChallengeOptions{
+		Algorithm: altchaAlgorithm, Cost: AltchaCost, KeyLength: 32, Counter: &counter,
+		DeriveKey: altcha.DeriveKeyPBKDF2(), ExpiresAt: &expires, Data: map[string]any{"host": "promo.test"},
+		HMACSignatureSecret: a.SignatureSecret, HMACKeySignatureSecret: a.KeySecret,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload := solveAltcha(t, ch)
+	if _, err := a.Verify(payload, "promo.test", PurposeLogin); !errors.Is(err, ErrAltcha) {
+		t.Fatal("legacy challenge accepted for login")
+	}
+	if _, err := a.Verify(payload, "promo.test", PurposeForm); err != nil {
+		t.Fatalf("legacy form challenge: %v", err)
 	}
 }

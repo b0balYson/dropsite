@@ -135,6 +135,23 @@ body {
 .gate__submit:hover { opacity: 0.88; }
 .gate__submit:active { transform: translateY(1px); }
 
+/* Altcha widget: full width and the page's own tokens, so the automatic
+   check reads as part of the form rather than a third-party box. */
+.gate__form altcha-widget {
+  display: block;
+  --altcha-max-width: 100%;
+  --altcha-border-radius: var(--radius);
+  --altcha-border-color: var(--line);
+  --altcha-color-base: var(--surface);
+  --altcha-color-base-content: var(--ink);
+  --altcha-color-neutral: var(--line);
+  --altcha-color-primary: var(--accent);
+  --altcha-color-primary-content: var(--on-accent);
+  --altcha-spinner-color: var(--muted);
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
 .gate__error {
   margin: 0 0 0.5rem;
   padding: 0.625rem 0.75rem;

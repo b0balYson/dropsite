@@ -2,6 +2,9 @@ package siteauth
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -10,6 +13,10 @@ import (
 	"testing"
 	"time"
 
+	altcha "github.com/altcha-org/altcha-lib-go/v2"
+
+	"github.com/b0balYson/dropsite/internal/domain"
+	"github.com/b0balYson/dropsite/internal/forms"
 	"github.com/b0balYson/dropsite/internal/service"
 	"github.com/b0balYson/dropsite/internal/testenv"
 )
@@ -23,6 +30,7 @@ type harness struct {
 	login http.Handler
 	host  string // slug host of a protected site
 	open  string // default host of an open site
+	ip    string // visitor address seen by the login handler
 }
 
 func newHarness(t *testing.T) *harness {
@@ -42,11 +50,47 @@ func newHarness(t *testing.T) *harness {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &harness{
-		t: t, env: e, check: AuthCheck(e.Svc, nil),
-		login: Login(e.Svc, nil, func(*http.Request) string { return "203.0.113.7" }),
-		host:  "docs." + testenv.BaseDomain, open: open.Site.ID + "." + testenv.BaseDomain,
+	// The lowest base difficulty keeps solving cheap in tests.
+	m := forms.MinAltchaMaxNumber
+	if _, err := e.Svc.UpdateFormSettings(ctx, e.Admin, service.FormSettingsUpdate{AltchaMaxNumber: &m}); err != nil {
+		t.Fatal(err)
 	}
+	h := &harness{
+		t: t, env: e, check: AuthCheck(e.Svc, nil),
+		host: "docs." + testenv.BaseDomain, open: open.Site.ID + "." + testenv.BaseDomain, ip: "203.0.113.7",
+	}
+	h.login = Login(e.Svc, nil, func(*http.Request) string { return h.ip })
+	return h
+}
+
+// solve fetches the login challenge of host without any cookie and solves
+// it like the widget does.
+func (h *harness) solve(host string) string {
+	h.t.Helper()
+	rec := h.serve(http.MethodGet, host, ChallengePath, nil)
+	if rec.Code != http.StatusOK || !strings.HasPrefix(rec.Header().Get("Content-Type"), "application/json") {
+		h.t.Fatalf("challenge: %d %s", rec.Code, rec.Body)
+	}
+	var ch altcha.Challenge
+	if err := json.Unmarshal(rec.Body.Bytes(), &ch); err != nil {
+		h.t.Fatal(err)
+	}
+	sol, err := altcha.SolveChallenge(altcha.SolveChallengeOptions{Challenge: ch, DeriveKey: altcha.DeriveKeyPBKDF2(), Timeout: time.Minute})
+	if err != nil || sol == nil {
+		h.t.Fatalf("solve: %v", err)
+	}
+	b, _ := json.Marshal(altcha.Payload{Challenge: ch, Solution: *sol})
+	return base64.StdEncoding.EncodeToString(b)
+}
+
+// form is a login submission with a fresh Altcha solution.
+func (h *harness) form(token, password, next string) url.Values {
+	h.t.Helper()
+	v := url.Values{"_csrf": {token}, "password": {password}, "altcha": {h.solve(h.host)}}
+	if next != "" {
+		v.Set("next", next)
+	}
+	return v
 }
 
 func (h *harness) authCheck(host, uri string, cookies ...*http.Cookie) *httptest.ResponseRecorder {
@@ -169,17 +213,17 @@ func TestLoginFlow(t *testing.T) {
 	}
 
 	token, nonce := h.getForm(h.host)
-	if !nonce.HttpOnly || !nonce.Secure || nonce.SameSite != http.SameSiteStrictMode || nonce.Path != Prefix {
+	if !nonce.HttpOnly || !nonce.Secure || nonce.SameSite != http.SameSiteStrictMode || nonce.Path != "/" {
 		t.Fatalf("nonce cookie %+v", nonce)
 	}
 	// Wrong password: 401, form again, no access cookie.
-	rec := h.serve(http.MethodPost, h.host, LoginPath, url.Values{"_csrf": {token}, "password": {"wrong-pass-123"}, "next": {"/docs/"}}, withCookie(nonce))
+	rec := h.serve(http.MethodPost, h.host, LoginPath, h.form(token, "wrong-pass-123", "/docs/"), withCookie(nonce))
 	if rec.Code != http.StatusUnauthorized || accessCookie(rec) != nil || !strings.Contains(rec.Body.String(), `role="alert"`) {
 		t.Fatalf("wrong password: %d", rec.Code)
 	}
 	// Right password with a hostile next: cookie set, redirect stays local.
 	rec = h.serve(http.MethodPost, h.host, LoginPath,
-		url.Values{"_csrf": {token}, "password": {sitePass}, "next": {"https://evil.example/"}},
+		h.form(token, sitePass, "https://evil.example/"),
 		withCookie(nonce), withHeader("Origin", "https://"+h.host), withHeader("Sec-Fetch-Site", "same-origin"))
 	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/" {
 		t.Fatalf("login: %d %q", rec.Code, rec.Header().Get("Location"))
@@ -196,13 +240,13 @@ func TestLoginFlow(t *testing.T) {
 	}
 	// Next is kept when it is a local path.
 	rec = h.serve(http.MethodPost, h.host, LoginPath,
-		url.Values{"_csrf": {token}, "password": {sitePass}, "next": {"/docs/?q=1"}}, withCookie(nonce))
+		h.form(token, sitePass, "/docs/?q=1"), withCookie(nonce))
 	if rec.Header().Get("Location") != "/docs/?q=1" {
 		t.Fatalf("next %q", rec.Header().Get("Location"))
 	}
 	// Firefox sends "Origin: null" for a same-origin POST under a strict
 	// referrer policy; Fetch Metadata confirms it is same-origin.
-	rec = h.serve(http.MethodPost, h.host, LoginPath, url.Values{"_csrf": {token}, "password": {sitePass}},
+	rec = h.serve(http.MethodPost, h.host, LoginPath, h.form(token, sitePass, ""),
 		withCookie(nonce), withHeader("Origin", "null"), withHeader("Sec-Fetch-Site", "same-origin"))
 	if rec.Code != http.StatusSeeOther || accessCookie(rec) == nil {
 		t.Fatalf("origin null, same-origin: %d", rec.Code)
@@ -234,14 +278,14 @@ func TestLoginCSRF(t *testing.T) {
 	}
 }
 
-func TestLoginRateLimited(t *testing.T) {
+// The per-source limit itself is tested in the service; here only its page.
+func TestLoginRateLimitedPage(t *testing.T) {
 	h := newHarness(t)
-	token, nonce := h.getForm(h.host)
-	for range service.VisitorFailuresPerIP {
-		h.serve(http.MethodPost, h.host, LoginPath, url.Values{"_csrf": {token}, "password": {"wrong-pass-123"}}, withCookie(nonce))
-	}
-	rec := h.serve(http.MethodPost, h.host, LoginPath, url.Values{"_csrf": {token}, "password": {sitePass}}, withCookie(nonce))
-	if rec.Code != http.StatusTooManyRequests || rec.Header().Get("Retry-After") == "" || accessCookie(rec) != nil {
+	l := &login{svc: h.env.Svc, log: slog.New(slog.DiscardHandler)}
+	req := httptest.NewRequest(http.MethodPost, "https://"+h.host+LoginPath, nil)
+	rec := httptest.NewRecorder()
+	l.loginFailed(rec, req, "/", catalog["en"], domain.ErrRateLimited.WithRetryAfter(15*time.Minute))
+	if rec.Code != http.StatusTooManyRequests || rec.Header().Get("Retry-After") != "900" || accessCookie(rec) != nil {
 		t.Fatalf("rate limit: %d %q", rec.Code, rec.Header().Get("Retry-After"))
 	}
 	if !strings.Contains(rec.Body.String(), "15 min") {
@@ -259,6 +303,9 @@ func TestLoginOtherPaths(t *testing.T) {
 		{"api.pp.test", LoginPath, http.StatusNotFound},
 		{h.host, Prefix + "other", http.StatusNotFound},
 		{h.host, cssPath, http.StatusOK},
+		{h.host, ChallengePath, http.StatusOK},
+		{h.open, ChallengePath, http.StatusNotFound},
+		{"unknown.pp.test", ChallengePath, http.StatusNotFound},
 	} {
 		rec := h.serve(http.MethodGet, tc.host, tc.path, nil)
 		if rec.Code != tc.want {

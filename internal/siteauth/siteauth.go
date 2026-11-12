@@ -27,7 +27,13 @@ const (
 	Prefix    = "/_" + brand.Name + "/"
 	LoginPath = Prefix + "login"
 	cssPath   = Prefix + "login.css"
-	maxNext   = 2048
+	// ChallengePath issues the Altcha challenge of the login page. It lies
+	// under Prefix, which Caddy proxies before forward_auth, so it works
+	// without the access cookie (unlike /_form/challenge).
+	ChallengePath = LoginPath + "/challenge"
+	// widgetPath is the Altcha widget script, served by internal/api.
+	widgetPath = Prefix + "altcha.js"
+	maxNext    = 2048
 )
 
 // requestHost returns the host of the request without a port. Caddy passes
@@ -78,11 +84,13 @@ func AuthCheck(svc *service.Service, log *slog.Logger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		host := requestHost(r)
 		w.Header().Set("Cache-Control", "no-store")
-		cookie := ""
-		if c, err := r.Cookie(service.VisitorCookieName); err == nil {
-			cookie = c.Value
+		// Every cookie of the name is passed on: the service accepts any
+		// valid one, so a planted invalid duplicate cannot shadow it.
+		var cookies []string
+		for _, c := range r.CookiesNamed(service.VisitorCookieName) {
+			cookies = append(cookies, c.Value)
 		}
-		d, err := svc.CheckVisitorAccess(r.Context(), host, cookie)
+		d, err := svc.CheckVisitorAccess(r.Context(), host, cookies...)
 		log.Debug("site auth check", "host", host, "decision", int(d), "err", err)
 		switch {
 		case err != nil:

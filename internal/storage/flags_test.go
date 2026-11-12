@@ -132,6 +132,46 @@ func TestReconcileFlags(t *testing.T) {
 	}
 }
 
+// A stray by-host link keeps its marker until the link itself is removed:
+// if the run stops in between, the host is not served unprotected.
+func TestReconcileClearsMarkersAfterLinks(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	f, root := newTestFS(t)
+	const stray = "stray.example.com"
+	byHost := filepath.Join(root, "by-host")
+	if err := os.Symlink(filepath.Join("..", "sites", siteA, "current"), filepath.Join(byHost, stray)); err != nil {
+		t.Fatal(err)
+	}
+	write(t, flagPath(root, FlagProtected, stray))
+	// The stray link cannot be removed: the run fails half-way.
+	if err := os.Chmod(byHost, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(byHost, 0o755) })
+	desired := []SiteLayout{{SiteID: siteA, Hostnames: []string{hostA}, Protected: true}}
+	if _, err := f.Reconcile(context.Background(), desired, Retained{}); err == nil {
+		t.Fatal("reconcile succeeded with a read-only by-host")
+	}
+	if !exists(t, flagPath(root, FlagProtected, stray)) {
+		t.Fatal("marker of a still linked stray host removed before the link")
+	}
+	if !exists(t, flagPath(root, FlagProtected, hostA)) {
+		t.Fatal("missing marker not created before links")
+	}
+	// Once links can be fixed, the stray marker goes too.
+	if err := os.Chmod(byHost, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.Reconcile(context.Background(), desired, Retained{}); err != nil {
+		t.Fatal(err)
+	}
+	if exists(t, flagPath(root, FlagProtected, stray)) {
+		t.Fatal("stray marker kept")
+	}
+}
+
 func assertStrings(t *testing.T, what string, got, want []string) {
 	t.Helper()
 	if len(got) != len(want) {

@@ -140,12 +140,34 @@ func desiredFlags(desired []SiteLayout) map[HostFlag]map[string]bool {
 	return out
 }
 
-// reconcileFlags removes stray and temporary markers and creates missing ones.
-func (f *FS) reconcileFlags(ctx context.Context, want map[HostFlag]map[string]bool, rep *ReconcileReport) error {
+// addMissingFlags creates the markers desired but absent. Reconcile runs it
+// before touching by-host links, so a host is never served unflagged.
+func (f *FS) addMissingFlags(ctx context.Context, want map[HostFlag]map[string]bool, rep *ReconcileReport) error {
 	for _, flag := range AllHostFlags {
 		if err := os.MkdirAll(f.flagDir(flag), dirPerm); err != nil {
 			return fmt.Errorf("storage: create flag dir: %w", err)
 		}
+		for host := range want[flag] {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			changed, err := f.ensureFlag(flag, host)
+			if err != nil {
+				return err
+			}
+			if changed {
+				rep.SetFlags = append(rep.SetFlags, string(flag)+"/"+host)
+			}
+		}
+	}
+	return nil
+}
+
+// removeExtraFlags removes stray and temporary markers. Reconcile runs it
+// after by-host links are repaired, so a stray link that still serves a
+// protected site keeps its marker until the link itself is gone.
+func (f *FS) removeExtraFlags(ctx context.Context, want map[HostFlag]map[string]bool, rep *ReconcileReport) error {
+	for _, flag := range AllHostFlags {
 		entries, err := os.ReadDir(f.flagDir(flag))
 		if err != nil {
 			return fmt.Errorf("storage: read flags: %w", err)
@@ -165,15 +187,6 @@ func (f *FS) reconcileFlags(ctx context.Context, want map[HostFlag]map[string]bo
 				rep.RemovedTemp = append(rep.RemovedTemp, flagsDir+"/"+string(flag)+"/"+name)
 			} else {
 				rep.ClearedFlags = append(rep.ClearedFlags, string(flag)+"/"+name)
-			}
-		}
-		for host := range want[flag] {
-			changed, err := f.ensureFlag(flag, host)
-			if err != nil {
-				return err
-			}
-			if changed {
-				rep.SetFlags = append(rep.SetFlags, string(flag)+"/"+host)
 			}
 		}
 	}

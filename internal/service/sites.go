@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/b0balYson/dropsite/internal/domain"
@@ -349,6 +350,11 @@ func (s *Service) DeleteSite(ctx context.Context, a Actor, ref string) error {
 func (s *Service) softDelete(ctx context.Context, a Actor, site domain.Site, action string) error {
 	unlock := s.siteLocks.lock(site.ID)
 	defer unlock()
+	return s.softDeleteLocked(ctx, a, site, action)
+}
+
+// softDeleteLocked is softDelete for a caller holding the site lock.
+func (s *Service) softDeleteLocked(ctx context.Context, a Actor, site domain.Site, action string) error {
 	// Listed first: deploys of a deleted site are no longer visible.
 	deploys, err := s.repo.ListDeploys(ctx, site.ID)
 	if err != nil {
@@ -370,13 +376,80 @@ func (s *Service) softDelete(ctx context.Context, a Actor, site domain.Site, act
 	return nil
 }
 
-// SetApex binds the base domain root to a site (admin only).
+// apexLockAttempts bounds retries when the apex changes hands while SetApex
+// waits for the site locks.
+const apexLockAttempts = 5
+
+// lockSites takes the locks of several sites in a fixed (ID) order, so two
+// callers locking the same pair cannot deadlock.
+func (s *Service) lockSites(ids ...string) func() {
+	ids = slices.Compact(slices.Sorted(slices.Values(ids)))
+	unlocks := make([]func(), 0, len(ids))
+	for _, id := range ids {
+		if id != "" {
+			unlocks = append(unlocks, s.siteLocks.lock(id))
+		}
+	}
+	return func() {
+		for i := len(unlocks) - 1; i >= 0; i-- {
+			unlocks[i]()
+		}
+	}
+}
+
+// apexOwner returns the site currently holding the apex hostname, or "".
+func (s *Service) apexOwner(ctx context.Context) (string, error) {
+	site, err := s.repo.FindSiteByHostname(ctx, s.cfg.BaseDomain)
+	if errors.Is(err, domain.ErrNotFound) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return site.ID, nil
+}
+
+// lockApex locks siteID and the current apex owner (if another site). It
+// returns the owner seen under the locks, which is the one SetApexHost will
+// take the apex from.
+func (s *Service) lockApex(ctx context.Context, siteID string) (func(), error) {
+	for range apexLockAttempts {
+		owner, err := s.apexOwner(ctx)
+		if err != nil {
+			return nil, err
+		}
+		unlock := s.lockSites(siteID, owner)
+		now, err := s.apexOwner(ctx)
+		if err != nil {
+			unlock()
+			return nil, err
+		}
+		if now == owner {
+			return unlock, nil
+		}
+		unlock()
+	}
+	return nil, fmt.Errorf("apex keeps changing hands")
+}
+
+// SetApex binds the base domain root to a site (admin only). The new and
+// the previous site are locked, so a concurrent protect, unprotect or
+// noindex change of either cannot leave the apex with the wrong markers.
 func (s *Service) SetApex(ctx context.Context, a Actor, ref string) (SiteView, error) {
 	if err := requireAdmin(a); err != nil {
 		return SiteView{}, err
 	}
 	site, err := s.resolveSite(ctx, a, ref)
 	if err != nil {
+		return SiteView{}, err
+	}
+	unlock, err := s.lockApex(ctx, site.ID)
+	if err != nil {
+		return SiteView{}, err
+	}
+	defer unlock()
+	// Re-read under the lock: flags and deletion may have changed.
+	if site, err = s.repo.GetSite(ctx, site.ID); err != nil {
 		return SiteView{}, err
 	}
 	host := domain.Hostname{Hostname: s.cfg.BaseDomain, SiteID: site.ID, Kind: domain.HostApex, Verified: true, CreatedAt: s.now()}
@@ -398,6 +471,11 @@ func (s *Service) ClearApex(ctx context.Context, a Actor, ref string) (SiteView,
 	}
 	site, err := s.resolveSite(ctx, a, ref)
 	if err != nil {
+		return SiteView{}, err
+	}
+	unlock := s.siteLocks.lock(site.ID)
+	defer unlock()
+	if site, err = s.repo.GetSite(ctx, site.ID); err != nil {
 		return SiteView{}, err
 	}
 	removed, err := s.repo.ClearApexHost(ctx, site.ID, s.now())

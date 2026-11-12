@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync/atomic"
 
 	"golang.org/x/crypto/argon2"
 )
@@ -28,6 +29,9 @@ var errBadHash = errors.New("malformed password hash")
 type passwordHasher struct {
 	sem   chan struct{}
 	dummy string // verified against when the user does not exist, to equalise timing
+	// verifies counts argon2id verifications (tests check that rejected
+	// requests never reach the slow hash).
+	verifies atomic.Int64
 }
 
 func newPasswordHasher() *passwordHasher {
@@ -98,6 +102,7 @@ func (h *passwordHasher) verify(ctx context.Context, password, encoded string) (
 		return false, err
 	}
 	defer h.release()
+	h.verifies.Add(1)
 	got := argon2.IDKey([]byte(password), salt, iters, mem, threads, uint32(len(want))) //nolint:gosec // len bounded above
 	return subtle.ConstantTimeCompare(got, want) == 1, nil
 }
