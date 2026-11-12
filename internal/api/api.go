@@ -54,6 +54,7 @@ func New(svc *service.Service, log *slog.Logger, mounts ...Mount) http.Handler {
 		}
 		return r.RemoteAddr
 	}))
+	a.registerSitePaths(mux)
 	return a.middleware(mux)
 }
 
@@ -76,6 +77,16 @@ func (a *api) routes() []route {
 		{Method: http.MethodPost, Path: "/sites/{ref}/hostnames", handle: a.addHostname},
 		{Method: http.MethodDelete, Path: "/sites/{ref}/hostnames/{hostname}", handle: a.removeHostname},
 		{Method: http.MethodGet, Path: "/sites/{ref}/stats", handle: a.siteStats},
+		{Method: http.MethodGet, Path: "/sites/{ref}/forms/channels", handle: a.listChannels},
+		{Method: http.MethodPost, Path: "/sites/{ref}/forms/channels", handle: a.createChannel},
+		{Method: http.MethodPatch, Path: "/sites/{ref}/forms/channels/{id}", handle: a.updateChannel},
+		{Method: http.MethodDelete, Path: "/sites/{ref}/forms/channels/{id}", handle: a.deleteChannel},
+		{Method: http.MethodPost, Path: "/sites/{ref}/forms/channels/{id}/verify", handle: a.verifyChannel},
+		{Method: http.MethodPost, Path: "/sites/{ref}/forms/channels/{id}/secret", handle: a.rotateChannelSecret},
+		{Method: http.MethodGet, Path: "/sites/{ref}/forms/settings", handle: a.getFormSiteSettings},
+		{Method: http.MethodPatch, Path: "/sites/{ref}/forms/settings", handle: a.updateFormSiteSettings},
+		{Method: http.MethodGet, Path: "/sites/{ref}/forms/submissions", handle: a.listSubmissions},
+		{Method: http.MethodGet, Path: "/sites/{ref}/forms/submissions.csv", handle: a.exportSubmissions},
 		{Method: http.MethodGet, Path: "/tokens", handle: a.listTokens},
 		{Method: http.MethodPost, Path: "/tokens", handle: a.createToken},
 		{Method: http.MethodDelete, Path: "/tokens/{id}", handle: a.revokeToken},
@@ -92,6 +103,8 @@ func (a *api) routes() []route {
 		{Method: http.MethodPost, Path: "/admin/domains/{hostname}/approve", handle: adminOnly(a.approveDomain)},
 		{Method: http.MethodPost, Path: "/admin/domains/{hostname}/reject", handle: adminOnly(a.rejectDomain)},
 		{Method: http.MethodPost, Path: "/admin/domains/{hostname}/dns-check", handle: adminOnly(a.checkDomainDNS)},
+		{Method: http.MethodGet, Path: "/admin/forms/settings", handle: adminOnly(a.getFormSettings)},
+		{Method: http.MethodPatch, Path: "/admin/forms/settings", handle: adminOnly(a.updateFormSettings)},
 	}
 }
 

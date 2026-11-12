@@ -106,6 +106,22 @@ $env:DROPSITE_SERVER='https://api.example.com'; $env:DROPSITE_CODE='ABCD-EFGH-JK
 - **Срок жизни** (`expires_at`, в CLI `--expires 7d`): после последнего дня сайт перестаёт открываться в течение минуты и удаляется через 7 дней, как удалённый. Интерфейс предупреждает за 3 дня.
 
 Подробнее: [docs/site-access.md](docs/site-access.md).
+## Формы и заявки
+
+Любой опубликованный сайт принимает заявки с форм без стороннего сервиса: укажите в форме адрес `/_form/<имя>` того же сайта.
+
+```html
+<form action="/_form/lead" method="post">
+  <input name="name" required> <input name="phone" type="tel" required>
+  <input name="_hp" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-10000px">
+  <input type="hidden" name="_next" value="/thanks.html">
+  <altcha-widget challenge="/_form/challenge"></altcha-widget>
+  <button>Отправить</button>
+</form>
+<script async defer src="/_dropsite/altcha.js" type="module"></script>
+```
+
+Каждая заявка сначала сохраняется, затем в фоне с повторами доставляется в каналы, которые владелец добавляет на экране сайта: чат Telegram (один бот на инсталляцию, токен задаёт администратор), адрес почты (SMTP задаёт администратор) или HTTPS-вебхук с подписью HMAC-SHA256. Защита от спама: honeypot-поле `_hp`, необязательная проверка времени заполнения, ограничение частоты по IP и по сайту, лимит тела 64 КБ и, если владелец включит, self-hosted [Altcha](https://altcha.org) — proof-of-work, сложность которого растёт при повторах с одного IP. Заявки хранятся 90 дней (настраивается), видны на экране сайта и выгружаются в CSV. Секреты (токен бота, пароль SMTP, секреты вебхуков) хранятся зашифрованными ключом `state/secrets.key`. Подробности: [docs/forms.md](docs/forms.md).
 
 ## Статистика посещений и счётчики аналитики
 
@@ -150,6 +166,8 @@ docker compose -f docker-compose.yml -f compose.wildcard.yml up -d
 | `LOG_LEVEL` | нет | `info` | `debug`, `info`, `warn`, `error` |
 | `STATS_INTERVAL` | нет | `1m` | Как часто control читает access-лог сайтов (от 1s до 1h) |
 | `STATS_LOG_FILE` | нет | `/logs/sites-access.log` | Access-лог сайтов внутри control; `off` выключает статистику |
+| `TELEGRAM_API_URL` | нет | `https://api.telegram.org` | Адрес Bot API для доставки заявок (прокси или тесты) |
+| `FORM_WEBHOOK_ALLOW_CIDRS` | нет | | Частные сети, куда можно слать вебхуки форм (только тестовые стенды) |
 
 ## Эксплуатация
 
@@ -158,7 +176,7 @@ docker compose -f docker-compose.yml -f compose.wildcard.yml up -d
 - **Логи:** JSON в stdout обоих контейнеров: `docker compose logs -f`. Кроме того, Caddy пишет access-лог сайтов на том `logs` для статистики (ротация по 50 МБ, хранятся 5 старых файлов).
 - **Здоровье:** `docker compose ps` показывает проверку здоровья `control`.
 
-Подробнее: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [docs/tls.md](docs/tls.md), [docs/external-domains.md](docs/external-domains.md), [docs/production-checklist.md](docs/production-checklist.md), [docs/statistics.md](docs/statistics.md).
+Подробнее: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [docs/tls.md](docs/tls.md), [docs/external-domains.md](docs/external-domains.md), [docs/production-checklist.md](docs/production-checklist.md), [docs/statistics.md](docs/statistics.md), [docs/forms.md](docs/forms.md).
 
 ## Модель безопасности
 

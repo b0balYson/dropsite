@@ -1,0 +1,148 @@
+{{define "title"}}{{.L.T "forms.title"}} — {{.D.V.Site.Title}}{{end}}
+
+{{define "content"}}
+{{$v := .D.V}}{{$base := printf "/sites/%s/forms" $v.Site.ID}}
+<nav class="crumbs" aria-label="{{.L.T "nav.breadcrumbs"}}"><a href="/sites/{{$v.Site.ID}}">← {{$v.Site.Title}}</a></nav>
+<header class="page-head">
+  <div class="page-head__text">
+    <p class="eyebrow mono addr-break">{{wbr (host $v.URL)}}</p>
+    <h1 class="display">{{.L.T "forms.title"}}</h1>
+    <p class="lede">{{.L.T "forms.lede"}}</p>
+  </div>
+</header>
+
+{{with .D.Issued}}
+<div class="notice notice--warn issued" role="status">
+  {{if .Secret}}
+  <p class="notice__text"><strong>{{$.L.T "forms.issued.secret"}}</strong> {{$.L.T "forms.issued.secret.warn"}}</p>
+  <pre class="code" id="issued-value"><code>{{.Secret}}</code></pre>
+  <button class="btn btn--small" type="button" data-copy="#issued-value" data-copied="{{$.L.T "copy.done"}}">{{$.L.T "copy.button"}}</button>
+  {{else if .Link}}
+  <p class="notice__text"><strong>{{$.L.T "forms.issued.link"}}</strong> {{$.L.T "forms.issued.link.text"}}</p>
+  <p><a class="btn btn--primary" href="{{.Link}}" target="_blank" rel="noopener noreferrer">{{$.L.T "forms.issued.link.open"}} <span aria-hidden="true">↗</span></a></p>
+  <p class="hint">{{$.L.T "forms.issued.link.after"}}</p>
+  {{end}}
+</div>
+{{end}}
+
+<section class="section" aria-labelledby="channels-h">
+  <h2 class="section-title" id="channels-h">{{.L.T "forms.channels"}}</h2>
+  {{if .D.Summary.Channels}}
+  <ul class="channel-list">
+    {{range .D.Summary.Channels}}
+    <li class="channel{{if not .Enabled}} channel--off{{end}}">
+      <div class="channel__head">
+        <span class="channel__kind">{{$.L.T (printf "forms.kind.%s" .Kind)}}</span>
+        {{template "channel_target" (bundle $ .)}}
+        {{template "channel_badge" (bundle $ .)}}
+      </div>
+      {{if and (eq (printf "%s" .Status) "pending") .Target}}
+      <form class="channel__verify" method="post" action="{{$base}}/channels/{{.ID}}/verify">
+        {{template "csrf" $}}
+        <label class="field__label" for="code-{{.ID}}">{{$.L.T "forms.verify.label"}}</label>
+        <div class="inline-input">
+          <input class="input mono" id="code-{{.ID}}" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
+          <button class="btn btn--small btn--primary" type="submit">{{$.L.T "forms.verify.submit"}}</button>
+        </div>
+      </form>
+      {{else if eq (printf "%s" .Status) "pending"}}
+      <p class="hint">{{$.L.T "forms.channel.waitlink"}}</p>
+      {{end}}
+      <div class="channel__actions">
+        {{if eq (printf "%s" .Status) "active"}}
+        <form method="post" action="{{$base}}/channels/{{.ID}}/toggle">
+          {{template "csrf" $}}<input type="hidden" name="enabled" value="{{if .Enabled}}0{{else}}1{{end}}">
+          <button class="btn btn--small btn--ghost" type="submit">{{if .Enabled}}{{$.L.T "forms.channel.disable"}}{{else}}{{$.L.T "forms.channel.enable"}}{{end}}</button>
+        </form>
+        {{end}}
+        {{if eq (printf "%s" .Kind) "webhook"}}
+        <form method="post" action="{{$base}}/channels/{{.ID}}/secret">
+          {{template "csrf" $}}
+          <button class="btn btn--small btn--ghost" type="submit">{{$.L.T "forms.channel.rotate"}}</button>
+        </form>
+        {{end}}
+        <form method="post" action="{{$base}}/channels/{{.ID}}/delete">
+          {{template "csrf" $}}
+          <button class="btn btn--small btn--danger-ghost" type="submit">{{$.L.T "forms.channel.delete"}}</button>
+        </form>
+      </div>
+    </li>
+    {{end}}
+  </ul>
+  {{else}}<p class="empty-line">{{.L.T "forms.channels.none"}}</p>{{end}}
+
+  {{with .D.Error}}<p class="notice notice--error" role="alert">{{.}}</p>{{end}}
+
+  <h3 class="subhead">{{.L.T "forms.add"}}</h3>
+  <div class="channel-add">
+    <form class="panel--tight stack" method="post" action="{{$base}}/channels">
+      {{template "csrf" .}}<input type="hidden" name="kind" value="telegram">
+      <h4 class="channel-add__title">{{.L.T "forms.kind.telegram"}}</h4>
+      {{if .D.Available.Telegram}}
+      <p class="hint">{{.L.T "forms.add.telegram.hint" "bot" .D.Available.Bot}}</p>
+      <div class="field">
+        <label class="field__label" for="tg-chat">{{.L.T "forms.add.telegram.chat"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+        <input class="input mono" id="tg-chat" name="target" inputmode="numeric" maxlength="21" {{if eq .D.ErrorKind "telegram"}}value="{{.D.FormTarget}}"{{end}}>
+      </div>
+      <button class="btn btn--primary" type="submit">{{.L.T "forms.add.telegram.submit"}}</button>
+      {{else}}<p class="hint">{{.L.T "forms.add.telegram.off"}}</p>{{end}}
+    </form>
+    <form class="panel--tight stack" method="post" action="{{$base}}/channels">
+      {{template "csrf" .}}<input type="hidden" name="kind" value="email">
+      <h4 class="channel-add__title">{{.L.T "forms.kind.email"}}</h4>
+      {{if .D.Available.Email}}
+      <div class="field">
+        <label class="field__label" for="em-to">{{.L.T "forms.add.email.to"}}</label>
+        <input class="input mono" id="em-to" name="target" type="email" required maxlength="254" {{if eq .D.ErrorKind "email"}}value="{{.D.FormTarget}}"{{end}}>
+      </div>
+      <p class="hint">{{.L.T "forms.add.email.hint"}}</p>
+      <button class="btn btn--primary" type="submit">{{.L.T "forms.add.email.submit"}}</button>
+      {{else}}<p class="hint">{{.L.T "forms.add.email.off"}}</p>{{end}}
+    </form>
+    <form class="panel--tight stack" method="post" action="{{$base}}/channels">
+      {{template "csrf" .}}<input type="hidden" name="kind" value="webhook">
+      <h4 class="channel-add__title">{{.L.T "forms.kind.webhook"}}</h4>
+      <div class="field">
+        <label class="field__label" for="wh-url">{{.L.T "forms.add.webhook.url"}}</label>
+        <input class="input mono" id="wh-url" name="target" type="url" required maxlength="2048" placeholder="https://" {{if eq .D.ErrorKind "webhook"}}value="{{.D.FormTarget}}"{{end}}>
+      </div>
+      <p class="hint">{{.L.T "forms.add.webhook.hint"}}</p>
+      <button class="btn btn--primary" type="submit">{{.L.T "forms.add.webhook.submit"}}</button>
+    </form>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="protect-h">
+  <h2 class="section-title" id="protect-h">{{.L.T "forms.protect"}}</h2>
+  {{template "altcha_toggle" (bundle $ (dict "Site" $v.Site.ID "On" .D.Summary.RequireAltcha "Back" "forms"))}}
+  <details class="howto">
+    <summary>{{.L.T "forms.howto"}}</summary>
+    <p class="small">{{.L.T "forms.howto.text"}}</p>
+    <pre class="code code--tall" id="form-snippet"><code>{{.D.Snippet}}</code></pre>
+    <button class="btn btn--small" type="button" data-copy="#form-snippet" data-copied="{{.L.T "copy.done"}}">{{.L.T "copy.button"}}</button>
+  </details>
+</section>
+
+<section class="section" aria-labelledby="subs-h">
+  <div class="section-head">
+    <h2 class="section-title" id="subs-h">{{.L.T "forms.submissions"}} <span class="muted">{{.D.Pager.Total}}</span></h2>
+    <a class="btn btn--small btn--ghost" href="{{$base}}/export.csv{{if .D.Form}}?form={{.D.Form}}{{end}}" download>{{.L.T "forms.export"}}</a>
+  </div>
+  {{if .D.FormNames}}
+  <form class="filters" method="get" action="{{$base}}">
+    <div class="field">
+      <label class="field__label" for="f-form">{{.L.T "forms.filter"}}</label>
+      <select class="input" id="f-form" name="form">
+        <option value="">{{.L.T "audit.any"}}</option>
+        {{range .D.FormNames}}<option value="{{.}}" {{if eq . $.D.Form}}selected{{end}}>{{.}}</option>{{end}}
+      </select>
+    </div>
+    <div class="filters__actions"><button class="btn btn--primary" type="submit">{{.L.T "audit.apply"}}</button></div>
+  </form>
+  {{end}}
+  {{if .D.Subs}}
+  {{template "submission_list" (bundle $ .D.Subs)}}
+  {{template "pager" .}}
+  {{else}}<p class="empty-line">{{.L.T "forms.empty"}}</p>{{end}}
+</section>
+{{end}}

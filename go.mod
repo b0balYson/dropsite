@@ -3,6 +3,7 @@ module github.com/b0balYson/dropsite
 go 1.27.0
 
 require (
+	github.com/altcha-org/altcha-lib-go/v2 v2.4.1
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	golang.org/x/crypto v0.59.0
 	golang.org/x/net v0.62.0

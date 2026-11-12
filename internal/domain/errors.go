@@ -75,6 +75,19 @@ const (
 	CodeArchiveBadName     = "archive_bad_name"
 	CodeArchiveNoIndex     = "archive_no_index"
 	CodeArchiveEmpty       = "archive_empty"
+
+	// Site forms: intake, delivery channels and their settings.
+	CodeFormInvalid         = "form_invalid"
+	CodeFormEmpty           = "form_empty"
+	CodeFormTooLarge        = "form_too_large"
+	CodeFormUnsupported     = "form_unsupported_type"
+	CodeFormOrigin          = "form_origin_mismatch"
+	CodeFormCaptcha         = "form_captcha_invalid"
+	CodeChannelInvalid      = "channel_invalid"
+	CodeChannelUnavailable  = "channel_unavailable"
+	CodeChannelLimit        = "channel_limit_reached"
+	CodeChannelCodeInvalid  = "channel_code_invalid"
+	CodeTelegramTokenFailed = "telegram_token_invalid"
 )
 
 // Error is a domain error with a stable code, an English message for logs and

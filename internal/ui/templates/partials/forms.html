@@ -1,0 +1,76 @@
+{{define "channel_badge"}}{{/* .R = view, .V = domain.FormChannel */}}
+{{- if not .V.Enabled}}<span class="badge badge--muted">{{.R.L.T "forms.channel.off"}}</span>
+{{- else if eq (printf "%s" .V.Status) "active"}}<span class="badge badge--ok">{{.R.L.T "forms.status.active"}}</span>
+{{- else}}<span class="badge badge--warn">{{.R.L.T "forms.status.pending"}}</span>{{end -}}
+{{end}}
+
+{{define "channel_target"}}{{/* .R = view, .V = domain.FormChannel */}}
+{{- if .V.Target}}<span class="mono addr-break">{{wbr .V.Target}}</span>{{else}}<span class="muted">{{.R.L.T "forms.channel.awaiting"}}</span>{{end -}}
+{{end}}
+
+{{define "submission_list"}}{{/* .R = view, .V = []domain.FormSubmission */}}
+<ol class="log submissions">
+  {{range .V}}
+  <li class="log__row">
+    <time class="log__time mono" datetime="{{.CreatedAt.UTC.Format "2006-01-02T15:04:05Z"}}">{{$.R.L.Date .CreatedAt}}</time>
+    <div class="log__main">
+      <p class="log__what"><strong class="mono">{{.Form}}</strong> <span class="mono muted small addr-break">{{wbr .Host}}</span></p>
+      <dl class="fields">
+        {{range .Fields}}<div class="fields__row"><dt class="fields__name">{{.Name}}</dt><dd class="fields__value">{{if .Value}}{{.Value}}{{else}}<span class="muted">—</span>{{end}}</dd></div>{{end}}
+      </dl>
+      <ul class="deliveries">
+        {{range .Deliveries}}
+        <li class="deliveries__item">
+          <span class="badge badge--{{if eq (printf "%s" .Status) "sent"}}ok{{else if eq (printf "%s" .Status) "failed"}}error{{else}}warn{{end}}">{{$.R.L.T (printf "forms.kind.%s" .ChannelKind)}} · {{$.R.L.T (printf "forms.delivery.%s" .Status)}}</span>
+          {{if gt .Attempts 1}}<span class="small muted">{{$.R.L.T "forms.delivery.attempts" "n" .Attempts}}</span>{{end}}
+          {{if .LastError}}<span class="small deliveries__error">{{.LastError}}</span>{{end}}
+        </li>
+        {{else}}<li class="small muted">{{$.R.L.T "forms.delivery.none"}}</li>{{end}}
+      </ul>
+    </div>
+  </li>
+  {{end}}
+</ol>
+{{end}}
+
+{{define "altcha_toggle"}}{{/* .R = view, .V = map: Site, On, Back */}}
+<form class="altcha-toggle" method="post" action="/sites/{{.V.Site}}/forms/settings">
+  {{template "csrf" .R}}
+  <input type="hidden" name="back" value="{{.V.Back}}">
+  <label class="check"><input type="checkbox" name="require_altcha" value="1" {{if .V.On}}checked{{end}}>
+    <span><strong>{{.R.L.T "forms.altcha.label"}}</strong><br><span class="small muted">{{.R.L.T "forms.altcha.hint"}}</span></span></label>
+  <button class="btn btn--small" type="submit">{{.R.L.T "form.save"}}</button>
+</form>
+{{end}}
+
+{{define "site_forms"}}
+{{$v := .D.V}}{{$f := .D.Forms}}
+<section class="section forms-summary" aria-labelledby="forms-h">
+  <div class="section-head">
+    <h2 class="section-title" id="forms-h">{{.L.T "forms.title"}}{{if $f.Total}} <span class="muted">{{$f.Total}}</span>{{end}}</h2>
+    <a class="btn btn--small btn--ghost" href="/sites/{{$v.Site.ID}}/forms">{{.L.T "forms.manage"}}</a>
+  </div>
+  <div class="forms-summary__grid">
+    <div class="forms-summary__side">
+      <p class="field__label">{{.L.T "forms.channels"}}</p>
+      {{if $f.Channels}}
+      <ul class="channel-chips">
+        {{range $f.Channels}}<li class="channel-chip"><span class="channel-chip__kind">{{$.L.T (printf "forms.kind.%s" .Kind)}}</span> {{template "channel_target" (bundle $ .)}} {{template "channel_badge" (bundle $ .)}}</li>{{end}}
+      </ul>
+      {{else}}<p class="hint">{{.L.T "forms.channels.none"}}</p>{{end}}
+      {{template "altcha_toggle" (bundle $ (dict "Site" $v.Site.ID "On" $f.RequireAltcha "Back" "site"))}}
+    </div>
+    <div class="forms-summary__main">
+      {{if $f.Recent}}
+      {{template "submission_list" (bundle $ $f.Recent)}}
+      {{if gt $f.Total (len $f.Recent)}}<p class="small"><a href="/sites/{{$v.Site.ID}}/forms#subs-h">{{.L.T "forms.all" "n" $f.Total}}</a></p>{{end}}
+      {{else}}
+      <div class="empty-line forms-empty">
+        <p>{{.L.T "forms.empty"}}</p>
+        <p class="small">{{.L.T "forms.empty.how"}} <code class="mono">&lt;form action="/_form/lead" method="post"&gt;</code></p>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>
+{{end}}

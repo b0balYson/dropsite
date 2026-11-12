@@ -55,6 +55,8 @@ type Deps struct {
 	UploadDir string
 	// Resolver answers DNS checks of external domains; nil means the system resolver.
 	Resolver dnscheck.Resolver
+	// FormSender replaces form delivery transports (tests).
+	FormSender FormSender
 }
 
 // Service implements the use cases.
@@ -85,6 +87,7 @@ type Service struct {
 	visitorSiteLimit *ratelimit.Window
 	visitorMu        sync.Mutex
 	visitorKeySet    *visitorKeySet
+	formState
 }
 
 // New builds a Service.
@@ -120,6 +123,7 @@ func New(d Deps) *Service {
 
 		visitorIPLimit:   ratelimit.New(VisitorFailuresPerIP, VisitorFailuresWindow).WithClock(now),
 		visitorSiteLimit: ratelimit.New(VisitorFailuresPerSite, VisitorFailuresWindow).WithClock(now),
+		formState:        newFormState(d, now),
 	}
 }
 

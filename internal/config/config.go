@@ -71,6 +71,11 @@ type Config struct {
 	// disables collection. StatsInterval is how often it is read.
 	StatsLogFile  string
 	StatsInterval time.Duration
+	// TelegramAPIURL is the Bot API base URL (overridable for tests).
+	TelegramAPIURL string
+	// FormWebhookAllow lists networks that form webhooks may reach although
+	// they are private (test stacks only); plain http is allowed for them.
+	FormWebhookAllow []netip.Prefix
 }
 
 // maxDomainsPerSiteLimit bounds MAX_DOMAINS_PER_SITE.
@@ -166,6 +171,8 @@ func Load(get Getenv) (*Config, error) {
 		r.fail("MAX_DOMAINS_PER_SITE", "must be at most %d", maxDomainsPerSiteLimit)
 	}
 	c.ServerIPs = r.addrs("SERVER_IPS")
+	c.TelegramAPIURL = r.httpURL("TELEGRAM_API_URL", "https://api.telegram.org")
+	c.FormWebhookAllow = r.prefixes("FORM_WEBHOOK_ALLOW_CIDRS", "")
 
 	// The DNS provider token is deliberately not read here: only Caddy needs
 	// it, and compose refuses to start the wildcard override without it.
@@ -249,6 +256,17 @@ func underDomain(host, domainName string) bool {
 		h = ascii
 	}
 	return h == domainName || strings.HasSuffix(h, "."+domainName)
+}
+
+// httpURL reads an absolute http(s) URL without a trailing slash.
+func (r *reader) httpURL(key, def string) string {
+	raw := strings.TrimSuffix(r.str(key, def), "/")
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil {
+		r.fail(key, "must be an absolute http(s) URL, got %q", raw)
+		return def
+	}
+	return raw
 }
 
 func (r *reader) logLevel() slog.Level {

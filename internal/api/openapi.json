@@ -1175,6 +1175,461 @@
           }
         }
       }
+    },
+    "/sites/{ref}/forms/channels": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SiteRef"
+        }
+      ],
+      "get": {
+        "operationId": "listFormChannels",
+        "summary": "Delivery channels of a site (secrets are never returned)",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormChannelList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createFormChannel",
+        "summary": "Add a channel. Telegram without target returns a binding link; telegram with a chat ID and email send a confirmation code; webhook returns its signing secret once",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFormChannelRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormChannelResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "403": {
+            "$ref": "#/components/responses/LimitReached"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/sites/{ref}/forms/channels/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SiteRef"
+        },
+        {
+          "$ref": "#/components/parameters/ID"
+        }
+      ],
+      "patch": {
+        "operationId": "updateFormChannel",
+        "summary": "Enable or disable a channel",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFormChannelRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormChannel"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteFormChannel",
+        "summary": "Remove a channel and its pending deliveries",
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/sites/{ref}/forms/channels/{id}/verify": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SiteRef"
+        },
+        {
+          "$ref": "#/components/parameters/ID"
+        }
+      ],
+      "post": {
+        "operationId": "verifyFormChannel",
+        "summary": "Confirm a pending channel with the code sent to it (30 minutes, 5 attempts)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyFormChannelRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormChannel"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/sites/{ref}/forms/channels/{id}/secret": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SiteRef"
+        },
+        {
+          "$ref": "#/components/parameters/ID"
+        }
+      ],
+      "post": {
+        "operationId": "rotateFormChannelSecret",
+        "summary": "Issue a new webhook signing secret (shown once)",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormChannelResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/sites/{ref}/forms/settings": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SiteRef"
+        }
+      ],
+      "get": {
+        "operationId": "getFormSiteSettings",
+        "summary": "Form options of a site",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormSiteSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateFormSiteSettings",
+        "summary": "Change form options of a site",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FormSiteSettings"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormSiteSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/sites/{ref}/forms/submissions": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SiteRef"
+        }
+      ],
+      "get": {
+        "operationId": "listFormSubmissions",
+        "summary": "Form submissions with delivery status, newest first",
+        "parameters": [
+          {
+            "name": "form",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only this form name"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Offset"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormSubmissionList"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/sites/{ref}/forms/submissions.csv": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SiteRef"
+        }
+      ],
+      "get": {
+        "operationId": "exportFormSubmissions",
+        "summary": "Up to 10 000 newest submissions as CSV (formula-like cells are prefixed with an apostrophe)",
+        "parameters": [
+          {
+            "name": "form",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV file",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/admin/forms/settings": {
+      "get": {
+        "operationId": "adminGetFormSettings",
+        "summary": "Form delivery settings (admin); secrets are reported only as set",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "adminUpdateFormSettings",
+        "summary": "Change form delivery settings (admin); an empty string clears a value, a missing field keeps it",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FormSettingsUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2460,6 +2915,385 @@
           },
           "limit_overrides": {
             "$ref": "#/components/schemas/LimitOverrides"
+          }
+        }
+      },
+      "FormChannel": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "target",
+          "status",
+          "enabled",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "telegram",
+              "email",
+              "webhook"
+            ]
+          },
+          "target": {
+            "type": "string",
+            "description": "Telegram chat ID (empty while a link binding is pending), e-mail address or webhook URL"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "active"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FormChannelList": {
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FormChannel"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      },
+      "FormChannelResult": {
+        "type": "object",
+        "required": [
+          "channel"
+        ],
+        "properties": {
+          "channel": {
+            "$ref": "#/components/schemas/FormChannel"
+          },
+          "secret": {
+            "type": "string",
+            "description": "Webhook signing secret, returned only on creation and rotation"
+          },
+          "link": {
+            "type": "string",
+            "description": "t.me link that binds a Telegram chat (telegram without target)"
+          }
+        }
+      },
+      "CreateFormChannelRequest": {
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "telegram",
+              "email",
+              "webhook"
+            ]
+          },
+          "target": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdateFormChannelRequest": {
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "VerifyFormChannelRequest": {
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "FormSiteSettings": {
+        "type": "object",
+        "required": [
+          "require_altcha"
+        ],
+        "properties": {
+          "require_altcha": {
+            "type": "boolean"
+          }
+        }
+      },
+      "FormDelivery": {
+        "type": "object",
+        "required": [
+          "channel_id",
+          "kind",
+          "target",
+          "status",
+          "attempts",
+          "last_error",
+          "next_attempt_at",
+          "sent_at"
+        ],
+        "properties": {
+          "channel_id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "sent",
+              "failed"
+            ]
+          },
+          "attempts": {
+            "type": "integer"
+          },
+          "last_error": {
+            "type": "string"
+          },
+          "next_attempt_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "sent_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "FormSubmission": {
+        "type": "object",
+        "required": [
+          "id",
+          "form",
+          "host",
+          "created_at",
+          "fields",
+          "deliveries"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "form": {
+            "type": "string"
+          },
+          "host": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "value"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "deliveries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FormDelivery"
+            }
+          }
+        }
+      },
+      "FormSubmissionList": {
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FormSubmission"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      },
+      "FormSettings": {
+        "type": "object",
+        "required": [
+          "telegram",
+          "smtp",
+          "retention_days",
+          "altcha_max_number",
+          "secrets_unreadable"
+        ],
+        "properties": {
+          "telegram": {
+            "type": "object",
+            "required": [
+              "bot",
+              "token_set"
+            ],
+            "properties": {
+              "bot": {
+                "type": "string"
+              },
+              "token_set": {
+                "type": "boolean"
+              }
+            }
+          },
+          "smtp": {
+            "type": "object",
+            "required": [
+              "host",
+              "port",
+              "username",
+              "password_set",
+              "from",
+              "security"
+            ],
+            "properties": {
+              "host": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "username": {
+                "type": "string"
+              },
+              "password_set": {
+                "type": "boolean"
+              },
+              "from": {
+                "type": "string"
+              },
+              "security": {
+                "type": "string",
+                "enum": [
+                  "starttls",
+                  "tls",
+                  "none"
+                ]
+              }
+            }
+          },
+          "retention_days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3650
+          },
+          "altcha_max_number": {
+            "type": "integer",
+            "description": "Base proof-of-work difficulty; repeated challenges from one IP get 4x harder each (up to 256x)"
+          },
+          "secrets_unreadable": {
+            "type": "boolean",
+            "description": "A stored secret cannot be decrypted (restored without state/secrets.key)"
+          }
+        }
+      },
+      "FormSettingsUpdate": {
+        "type": "object",
+        "properties": {
+          "telegram_token": {
+            "type": "string",
+            "description": "Checked with Telegram getMe; empty string removes it"
+          },
+          "smtp": {
+            "type": "object",
+            "properties": {
+              "host": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              },
+              "username": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              },
+              "from": {
+                "type": "string"
+              },
+              "security": {
+                "type": "string",
+                "enum": [
+                  "starttls",
+                  "tls",
+                  "none"
+                ]
+              }
+            }
+          },
+          "retention_days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3650
+          },
+          "altcha_max_number": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 10000000
           }
         }
       }

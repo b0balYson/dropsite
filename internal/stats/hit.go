@@ -116,7 +116,22 @@ func (h Hit) IsPageView() bool {
 			return false
 		}
 	}
-	return isHTMLPath(h.Path())
+	p := h.Path()
+	if isPlatformPath(p) {
+		return false
+	}
+	return isHTMLPath(p)
+}
+
+// isPlatformPath reports paths answered by the platform rather than the site
+// (form posts, the Altcha challenge and widget, protected-site login).
+func isPlatformPath(p string) bool {
+	for _, prefix := range []string{"/_form", "/_dropsite"} {
+		if p == prefix || strings.HasPrefix(p, prefix+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 // Path is the request path without the query, or "" if it cannot be parsed.

@@ -87,6 +87,11 @@ func TestIsPageView(t *testing.T) {
 		{"curl", "GET", "/", 200, "text/html", "curl/8.7.1", false},
 		{"bad content type", "GET", "/", 200, ";;;", browser, false},
 		{"relative uri", "GET", "*", 200, "text/html", browser, false},
+		{"altcha challenge", "GET", "/_form/challenge", 200, "", browser, false},
+		{"altcha widget", "GET", "/_dropsite/altcha.js", 304, "", browser, false},
+		{"platform page", "GET", "/_dropsite/login", 200, "text/html", browser, false},
+		{"form post", "POST", "/_form/lead", 303, "", browser, false},
+		{"site path like a platform one", "GET", "/_formulas/", 200, "text/html", browser, true},
 	}
 	for _, c := range cases {
 		h, err := ParseLine([]byte(line("a.example.com", c.method, c.uri, c.status, c.ctype, c.ua, "")))

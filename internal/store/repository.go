@@ -35,6 +35,7 @@ type Repository interface {
 	AccessRepository
 	UserLimitsRepository
 	SecretRepository
+	FormRepository
 	Ping(ctx context.Context) error
 }
 

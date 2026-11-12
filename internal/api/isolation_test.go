@@ -57,6 +57,18 @@ func TestForeignResourcesLookMissing(t *testing.T) {
 			{http.MethodPost, "/api/v1/admin/domains/mine.example.ru/approve", nil, ""},
 			{http.MethodPost, "/api/v1/admin/domains/mine.example.ru/reject", []byte(`{"reason":"x"}`), "application/json"},
 			{http.MethodPost, "/api/v1/admin/domains/mine.example.ru/dns-check", nil, ""},
+			{http.MethodGet, "/api/v1/sites/" + ref + "/forms/channels", nil, ""},
+			{http.MethodPost, "/api/v1/sites/" + ref + "/forms/channels", []byte(`{"kind":"webhook","target":"https://h.example.com/"}`), "application/json"},
+			{http.MethodPatch, "/api/v1/sites/" + ref + "/forms/channels/1", []byte(`{"enabled":false}`), "application/json"},
+			{http.MethodDelete, "/api/v1/sites/" + ref + "/forms/channels/1", nil, ""},
+			{http.MethodPost, "/api/v1/sites/" + ref + "/forms/channels/1/verify", []byte(`{"code":"123456"}`), "application/json"},
+			{http.MethodPost, "/api/v1/sites/" + ref + "/forms/channels/1/secret", nil, ""},
+			{http.MethodGet, "/api/v1/sites/" + ref + "/forms/settings", nil, ""},
+			{http.MethodPatch, "/api/v1/sites/" + ref + "/forms/settings", []byte(`{"require_altcha":true}`), "application/json"},
+			{http.MethodGet, "/api/v1/sites/" + ref + "/forms/submissions", nil, ""},
+			{http.MethodGet, "/api/v1/sites/" + ref + "/forms/submissions.csv", nil, ""},
+			{http.MethodGet, "/api/v1/admin/forms/settings", nil, ""},
+			{http.MethodPatch, "/api/v1/admin/forms/settings", []byte(`{"retention_days":5}`), "application/json"},
 		}
 	}
 	send := func(c call) *httptest.ResponseRecorder {

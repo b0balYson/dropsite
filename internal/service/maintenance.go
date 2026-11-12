@@ -16,6 +16,9 @@ func (s *Service) Start(ctx context.Context) error {
 	if err := s.files.Init(ctx); err != nil {
 		return fmt.Errorf("initialise sites volume: %w", err)
 	}
+	if err := s.startForms(); err != nil {
+		return fmt.Errorf("initialise form secrets: %w", err)
+	}
 	created, err := s.Bootstrap(ctx)
 	if err != nil {
 		return err
@@ -88,7 +91,10 @@ func (s *Service) Housekeeping(ctx context.Context) error {
 	if err := s.pruneStats(ctx); err != nil {
 		return fmt.Errorf("delete old statistics: %w", err)
 	}
-	return s.housekeepConnect(ctx, now)
+	if err := s.housekeepConnect(ctx, now); err != nil {
+		return err
+	}
+	return s.purgeForms(ctx, now)
 }
 
 func (s *Service) purgeSite(ctx context.Context, id string, now time.Time) error {
