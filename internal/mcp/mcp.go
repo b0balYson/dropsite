@@ -105,6 +105,9 @@ type Options struct {
 	// Cabinet adds the account and site settings tools; the backend must
 	// implement Cabinet.
 	Cabinet bool
+	// Collections adds the site data tools; the backend must implement
+	// CollectionsBackend.
+	Collections bool
 	// Instructions are sent to the client on initialize.
 	Instructions string
 }

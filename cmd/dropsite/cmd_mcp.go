@@ -54,7 +54,7 @@ func (a *app) mcpServer() *sdk.Server {
 
 // mcpOptions are the tools of the local server: those of the remote server,
 // with deploy_folder instead of deploy_files.
-var mcpOptions = mcp.Options{Folder: true, SiteFiles: true, Forms: true, Cabinet: true, Instructions: mcp.Instructions}
+var mcpOptions = mcp.Options{Folder: true, SiteFiles: true, Forms: true, Cabinet: true, Collections: true, Instructions: mcp.Instructions}
 
 type nopCloser struct{ io.Reader }
 
