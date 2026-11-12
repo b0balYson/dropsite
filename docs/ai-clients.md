@@ -96,6 +96,23 @@ The remote server offers every chat tool. A whole small site is published in one
 
 Form tools (remote server only; details in [forms.md](forms.md#from-a-chat-assistant)): `get_form_settings`, `set_form_settings`, `list_submissions`, `export_submissions`, `list_channels`, `add_channel`, `verify_channel`, `set_channel_enabled`, `delete_channel`, `rotate_channel_secret`.
 
+The remote server also covers the account and site settings of the web interface, so a user can manage everything by asking in plain words:
+
+| Tool | What it does |
+| --- | --- |
+| `get_account` | email, role, sites used of the limit, size limits, web interface address; for administrators the site on the root domain |
+| `update_site` | rename a site and/or change its slug (`set_slug` still works) |
+| `set_site_access` | hide from search engines, set/change/remove the visitor password, set (`expires_on`, last day, UTC) or remove the expiry; with only `site` it reports the current state |
+| `list_domains`, `add_domain`, `remove_domain` | own domains with their status (pending, active, rejected with the reason) and the DNS records the user creates at the domain provider; `remove_domain` takes the domain again in `confirm` |
+| `get_site_stats` | views and visitors per day, totals, busiest day, top pages and sources (default 7 days, up to 400) |
+| `get_counters`, `set_counters` | Yandex Metrica and Google Analytics 4 IDs; only the passed ones change, a published site gets a new release |
+| `list_connections`, `revoke_connection` | connected apps and active API tokens without secrets, the current one marked; revoking takes the name (or ID) again in `confirm` and works on the next call, including for the assistant's own connection |
+| `set_root_site`, `clear_root_site` | administrators only: put any site on the root domain or take it off, with the site's slug or ID in `confirm` |
+
+`list_sites` and `get_site` also return `hidden_from_search`, `password_protected`, `expires_at`, `root_domain` and `own_domains`. Answers carry ready links and a short `summary` the assistant can repeat. These tools exist only on the remote server; the local `dropsite mcp` keeps the tools listed above.
+
+No tool issues credentials: API tokens and connect codes are created only in the web interface.
+
 Whatever token reaches `/mcp` (an OAuth token or an API token), the assistant works only with the user's own sites: an administrator's assistant gets no administrator powers and cannot see, publish to, roll back or delete other users' sites. Administration stays in the web interface, the API and the CLI; the only installation-level action available to an administrator's chat is the root domain, with explicit confirmation.
 
 Connected applications are listed on the **Connect AI** page; **Disconnect** revokes every token of that application at once.

@@ -24,6 +24,7 @@ type Site struct {
 	CurrentDeploy *Deploy  `json:"current_deploy,omitempty" jsonschema:"the release being served, if any"`
 	LastDeployAt  string   `json:"last_deploy_at,omitempty"`
 	UpdatedAt     string   `json:"updated_at,omitempty"`
+	SiteExtras
 }
 
 // Deploy is a release.
@@ -97,6 +98,9 @@ type Options struct {
 	Folder bool
 	// Forms adds the forms tools; the backend must implement FormsBackend.
 	Forms bool
+	// Cabinet adds the account and site settings tools; the backend must
+	// implement Cabinet.
+	Cabinet bool
 	// Instructions are sent to the client on initialize.
 	Instructions string
 }

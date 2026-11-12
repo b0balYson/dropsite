@@ -70,7 +70,7 @@ func (f *formsFake) RotateChannelSecret(_ context.Context, _, id string) (Channe
 	return ChannelAdded{Channel: Channel{ID: id}, Secret: "s"}, nil
 }
 
-func toolNames(t *testing.T, cs *sdk.ClientSession) map[string]*sdk.Tool {
+func listFormTools(t *testing.T, cs *sdk.ClientSession) map[string]*sdk.Tool {
 	t.Helper()
 	list, err := cs.ListTools(context.Background(), nil)
 	if err != nil {
@@ -89,13 +89,13 @@ var formTools = []string{"add_channel", "delete_channel", "export_submissions", 
 func TestFormsToolsRegisteredOnlyWithOption(t *testing.T) {
 	f := &formsFake{fakeBackend: newFake()}
 	res := func(context.Context, *sdk.CallToolRequest) (Backend, error) { return f, nil }
-	tools := toolNames(t, connect(t, NewServer("test", res, Options{Folder: true})))
+	tools := listFormTools(t, connect(t, NewServer("test", res, Options{Folder: true})))
 	for _, n := range formTools {
 		if tools[n] != nil {
 			t.Fatalf("%s registered without Forms", n)
 		}
 	}
-	tools = toolNames(t, connect(t, NewServer("test", res, Options{Files: true, Forms: true})))
+	tools = listFormTools(t, connect(t, NewServer("test", res, Options{Files: true, Forms: true})))
 	for _, n := range formTools {
 		tool := tools[n]
 		if tool == nil {

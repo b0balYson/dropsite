@@ -232,7 +232,7 @@ func (s *Service) AuthenticateToken(ctx context.Context, token, ip string) (Acto
 		}
 	}
 	res.Cancel()
-	return Actor{User: u, IP: ip}, nil
+	return Actor{User: u, IP: ip, TokenID: t.ID}, nil
 }
 
 // NewToken is a freshly issued API token; Value is shown only once.

@@ -121,6 +121,7 @@ func (t tools) register(s *sdk.Server, o Options) {
 				"later publications of the same folder update that site."}, t.deployFolder)
 	}
 	t.registerForms(s, o)
+	t.registerCabinet(s, o)
 }
 
 func (t tools) listSites(ctx context.Context, req *sdk.CallToolRequest, _ struct{}) (*sdk.CallToolResult, sitesOut, error) {

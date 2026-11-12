@@ -41,6 +41,7 @@ func toDeploy(d domain.Deploy, current, preview string) mcp.Deploy {
 func toSite(v service.SiteView) mcp.Site {
 	s := mcp.Site{
 		ID: v.Site.ID, Title: v.Site.Title, URL: v.URL, URLs: v.URLs, Slug: v.Slug, UpdatedAt: stamp(&v.Site.UpdatedAt),
+		SiteExtras: siteExtras(v.Site, v.Hostnames),
 	}
 	if v.Current != nil {
 		d := toDeploy(*v.Current, v.Current.ID, v.CurrentPreviewURL)
@@ -98,6 +99,7 @@ func (b backend) ListSites(ctx context.Context) ([]mcp.Site, error) {
 		out = append(out, mcp.Site{
 			ID: r.ID, Title: r.Title, URL: r.URL, URLs: r.URLs, Slug: r.Slug,
 			LastDeployAt: stamp(r.LastDeployAt), UpdatedAt: stamp(&r.UpdatedAt),
+			SiteExtras: siteExtras(r.Site, r.Hostnames),
 		})
 	}
 	return out, nil
