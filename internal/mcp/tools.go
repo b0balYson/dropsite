@@ -128,6 +128,7 @@ func (t tools) register(s *sdk.Server, o Options) {
 	t.registerPublish(s, o)
 	t.registerQuality(s, o)
 	t.registerWorkflow(s, o)
+	t.registerReferences(s, o)
 }
 
 func (t tools) listSites(ctx context.Context, req *sdk.CallToolRequest, _ struct{}) (*sdk.CallToolResult, sitesOut, error) {
