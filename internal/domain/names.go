@@ -16,6 +16,20 @@ var slugPattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])$`)
 // must never write such a name either.
 var hostPattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$`)
 
+// previewPattern is the form of a release preview label (PreviewLabel). It is
+// mirrored by the @preview matcher in deploy/Caddyfile.
+var previewPattern = regexp.MustCompile(`^p-[0-9]{8}-[0-9]{6}-[a-z0-9]{6}-[a-z0-9]{10}$`)
+
+// PreviewLabel returns the host label of a release preview (wildcard TLS mode
+// only): "p-<deploy id>-<site id>", unique because both IDs are.
+func PreviewLabel(siteID, deployID string) string {
+	return "p-" + deployID + "-" + siteID
+}
+
+// IsPreviewLabel reports whether label has the form of a preview label. Such
+// labels are reserved and never accepted as slugs.
+func IsPreviewLabel(label string) bool { return previewPattern.MatchString(label) }
+
 // BuiltinReservedSlugs can never be used as slugs.
 var BuiltinReservedSlugs = []string{
 	"www", "api", "app", "admin", "mail", "mcp", "static", "cdn", "ns1", "ns2",
@@ -86,7 +100,7 @@ func ValidateSlug(slug string, reserved ReservedSlugs) error {
 		return E(KindInvalid, CodeSlugInvalid,
 			"slug must be 3-63 characters of a-z, 0-9 and hyphens, starting and ending with a letter or digit")
 	}
-	if reserved.Contains(slug) {
+	if reserved.Contains(slug) || IsPreviewLabel(slug) {
 		return E(KindInvalid, CodeSlugReserved, "slug is reserved").
 			WithParams(map[string]any{"slug": slug})
 	}

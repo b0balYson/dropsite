@@ -1,0 +1,29 @@
+# Wildcard TLS mode: one certificate for *.<BASE_DOMAIN> and <BASE_DOMAIN>
+# through the DNS-01 challenge, instead of one certificate per site address.
+# Release previews (p-<deploy>-<site>.<BASE_DOMAIN>) exist only in this mode.
+#
+#   docker compose -f docker-compose.yml -f compose.wildcard.yml up -d
+#
+# Needs CF_API_TOKEN in .env (Cloudflare API token with Zone.DNS:Edit on the
+# zone of BASE_DOMAIN); see docs/tls.md. To go back to ondemand, run the same
+# command without "-f compose.wildcard.yml".
+
+services:
+  caddy:
+    # Stock Caddy plus DNS provider plugins (deploy/caddy/Dockerfile). With
+    # --build compose builds it locally instead of pulling.
+    image: ghcr.io/b0balyson/dropsite-caddy:${DROPSITE_CADDY_VERSION:-2.11.9}
+    build:
+      context: caddy
+    environment:
+      # Selects the tls_wildcard snippet of the Caddyfile.
+      TLS_MODE: wildcard
+      BASE_DOMAIN: ${BASE_DOMAIN:?BASE_DOMAIN is required (base domain for sites), see .env.example}
+      TLS_DNS_PROVIDER: ${TLS_DNS_PROVIDER:-cloudflare}
+      # Only Caddy gets the DNS token; control never sees it.
+      CF_API_TOKEN: ${CF_API_TOKEN:?CF_API_TOKEN is required in wildcard mode (Cloudflare token with Zone.DNS:Edit), see docs/tls.md}
+
+  control:
+    environment:
+      # control creates release previews in this mode.
+      TLS_MODE: wildcard
