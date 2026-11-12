@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -43,10 +45,16 @@ func (a *app) mcpServer() *sdk.Server {
 		if err != nil {
 			return nil, errMCPNotConnected
 		}
-		return localBackend{a: a, c: c}, nil
+		// The assistant gets the rights of the MCP endpoint: its own sites
+		// only, even with an administrator's login.
+		return localBackend{a: a, c: c.AsAssistant()}, nil
 	}
-	return mcp.NewServer(brand.Version, resolve, mcp.Options{Folder: true, Instructions: mcp.Instructions})
+	return mcp.NewServer(brand.Version, resolve, mcpOptions)
 }
+
+// mcpOptions are the tools of the local server: those of the remote server,
+// with deploy_folder instead of deploy_files.
+var mcpOptions = mcp.Options{Folder: true, SiteFiles: true, Forms: true, Cabinet: true, Instructions: mcp.Instructions}
 
 type nopCloser struct{ io.Reader }
 
@@ -62,12 +70,7 @@ type localBackend struct {
 	c *client.Client
 }
 
-func stampTime(t *time.Time) string {
-	if t == nil || t.IsZero() {
-		return ""
-	}
-	return t.UTC().Format(time.RFC3339)
-}
+func stampTime(t *time.Time) string { return mcp.Stamp(t) }
 
 func deref(s *string) string {
 	if s == nil {
@@ -83,8 +86,17 @@ func fromDeploy(d client.Deploy) mcp.Deploy {
 	}
 }
 
+func hosts(hs []client.Hostname) []mcp.Host {
+	out := make([]mcp.Host, 0, len(hs))
+	for _, h := range hs {
+		out = append(out, mcp.Host{Name: h.Hostname, Kind: h.Kind, Status: h.Status})
+	}
+	return out
+}
+
 func fromSite(s client.Site) mcp.Site {
-	out := mcp.Site{ID: s.ID, Title: s.Title, URL: s.URL, URLs: s.URLs, Slug: deref(s.Slug), UpdatedAt: stampTime(&s.UpdatedAt)}
+	out := mcp.Site{ID: s.ID, Title: s.Title, URL: s.URL, URLs: s.URLs, Slug: deref(s.Slug), UpdatedAt: stampTime(&s.UpdatedAt),
+		SiteExtras: mcp.NewSiteExtras(s.Noindex, s.Protected, s.ExpiresAt, hosts(s.Hostnames))}
 	if s.CurrentDeploy != nil {
 		d := fromDeploy(*s.CurrentDeploy)
 		out.CurrentDeploy = &d
@@ -96,8 +108,12 @@ func fromResult(r *client.DeployResult) mcp.DeployResult {
 	return mcp.DeployResult{SiteID: r.Site.ID, DeployID: r.DeployID, URL: r.URL, URLs: r.URLs}
 }
 
-// toolError turns CLI errors into one actionable line for the model.
-func toolError(err error) error {
+// toolError turns CLI errors into one actionable line for the model, worded
+// like the remote server's.
+func toolError(err error) error { return toolErrorFor(err, mcp.NotFoundSite) }
+
+// toolErrorFor is toolError with the not-found text of the tool.
+func toolErrorFor(err error, notFound string) error {
 	if err == nil {
 		return nil
 	}
@@ -107,7 +123,13 @@ func toolError(err error) error {
 		case ae.IsUnauthorized():
 			return errMCPNotConnected
 		case ae.IsNotFound():
-			return errors.New("not found: no such site or release among this user's sites; call list_sites (or list_deploys) to see valid IDs and slugs")
+			return errors.New(notFound)
+		case ae.Status == http.StatusTooManyRequests:
+			return mcp.RateLimitedError(int64(math.Ceil(ae.RetryAfter.Seconds())))
+		case ae.Status >= http.StatusInternalServerError:
+			return errors.New(mcp.InternalErrorText)
+		case ae.Code != "":
+			return mcp.CodedError(ae.Message, ae.Code, ae.Details)
 		}
 	}
 	msg, hints := describeError(err)
@@ -125,7 +147,8 @@ func (b localBackend) ListSites(ctx context.Context) ([]mcp.Site, error) {
 	out := make([]mcp.Site, 0, len(l.Items))
 	for _, s := range l.Items {
 		out = append(out, mcp.Site{ID: s.ID, Title: s.Title, URL: s.URL, URLs: s.URLs, Slug: deref(s.Slug),
-			LastDeployAt: stampTime(s.LastDeployAt), UpdatedAt: stampTime(&s.UpdatedAt)})
+			LastDeployAt: stampTime(s.LastDeployAt), UpdatedAt: stampTime(&s.UpdatedAt),
+			SiteExtras: mcp.NewSiteExtras(s.Noindex, s.Protected, s.ExpiresAt, hosts(s.Hostnames))})
 	}
 	return out, nil
 }
