@@ -5,7 +5,7 @@
 #   docker compose up -d
 #
 # Containers: caddy (serving and TLS), control (API, UI, deploys) and the
-# one-shot caddy-init. Volumes: sites, state, caddy_data.
+# one-shot caddy-init. Volumes: sites, state, caddy_data, logs.
 
 name: dropsite
 
@@ -17,7 +17,8 @@ x-logging: &logging
 
 services:
   # New named volumes are owned by root; Caddy runs as 1000:1000 and must
-  # write certificates to caddy_data. This one-shot job hands it over.
+  # write certificates to caddy_data and the sites access log to logs. This
+  # one-shot job hands both over.
   caddy-init:
     image: caddy:2.11.9
     user: "0:0"
@@ -26,9 +27,10 @@ services:
     cap_drop: [ALL]
     cap_add: [CHOWN]
     security_opt: ["no-new-privileges:true"]
-    command: ["chown", "1000:1000", "/caddy/data"]
+    command: ["chown", "1000:1000", "/caddy/data", "/logs"]
     volumes:
       - caddy_data:/caddy/data
+      - logs:/logs
     logging: *logging
 
   caddy:
@@ -67,6 +69,8 @@ services:
         volume:
           nocopy: true
       - caddy_data:/caddy/data
+      # Access log of published sites (JSON, rotated by Caddy) for statistics.
+      - logs:/logs
     ports:
       - "80:80"
       - "443:443"
@@ -103,9 +107,13 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-}
       # Port visitors use for HTTPS; only differs from 443 in local development.
       SITES_HTTPS_PORT: ${SITES_HTTPS_PORT:-}
+      # Visit statistics: how often the sites access log is read.
+      STATS_INTERVAL: ${STATS_INTERVAL:-}
     volumes:
       - sites:/data
       - state:/state
+      # Read-only: control only reads the access log written by caddy.
+      - logs:/logs:ro
     # Only the admin UI is published. 8080 (public API, behind caddy) and
     # 8081 (internal: healthz) stay inside the compose network.
     ports:
@@ -122,3 +130,4 @@ volumes:
   sites:
   state:
   caddy_data:
+  logs:

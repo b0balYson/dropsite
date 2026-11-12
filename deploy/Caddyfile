@@ -29,6 +29,15 @@
 		output stdout
 		format json
 	}
+	# Access log of published sites, also on stdout for operations. The site
+	# block below names its logger "sites" so it can write the statistics
+	# file too; the adapter then excludes that logger from the default one,
+	# and a catch-all site block can carry only one logger name.
+	log sites_stdout {
+		output stdout
+		format json
+		include http.log.access.sites
+	}
 
 	servers {
 		# A Host header that differs from the TLS SNI name gets 421, so one
@@ -94,7 +103,20 @@ https:// {
 	tls {
 		on_demand
 	}
-	log
+	# Access log "sites" feeds visit statistics (control reads /logs
+	# read-only); the global "sites_stdout" logger copies it to stdout.
+	# Rotated files stay uncompressed so control can finish a file after
+	# rotation, and mode 0644 lets control (uid 65532) read what caddy
+	# (uid 1000) writes.
+	log sites {
+		output file /logs/sites-access.log {
+			roll_size 50MiB
+			roll_keep 5
+			roll_uncompressed
+			mode 0644
+		}
+		format json
+	}
 	import security_headers
 
 	# The site directory is taken from this regexp group, not from {host}:
