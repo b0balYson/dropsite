@@ -17,6 +17,7 @@ type siteForm struct {
 
 type sitesData struct {
 	Sites   []service.SiteSummaryView
+	Soon    map[string]bool // site ID → expires within ExpiryWarning
 	Count   int
 	Limit   int
 	AtLimit bool
@@ -40,7 +41,7 @@ func (s *server) renderSites(w http.ResponseWriter, r *http.Request, rc *reqCtx,
 		return
 	}
 	data := sitesData{
-		Sites: sites, Count: count, Limit: lim.MaxSitesPerUser, AtLimit: count >= lim.MaxSitesPerUser,
+		Sites: sites, Soon: s.expiringSoon(sites), Count: count, Limit: lim.MaxSitesPerUser, AtLimit: count >= lim.MaxSitesPerUser,
 		Domain: s.svc.Config().BaseDomain, Form: form,
 	}
 	s.page(w, r, rc, status, "sites", "sites", "sites.title", data)
@@ -106,6 +107,7 @@ type siteData struct {
 	Deploys []deployRow
 	MaxSize int64
 	Domain  string
+	Access  accessView
 }
 
 func (s *server) loadSite(r *http.Request, rc *reqCtx) (siteData, error) {
@@ -121,7 +123,10 @@ func (s *server) loadSite(r *http.Request, rc *reqCtx) (siteData, error) {
 	for _, d := range ds {
 		rows = append(rows, deployRow{Deploy: d, Current: v.Current != nil && v.Current.ID == d.ID})
 	}
-	return siteData{V: v, Deploys: rows, MaxSize: lim.MaxSiteBytes, Domain: s.svc.Config().BaseDomain}, nil
+	return siteData{
+		V: v, Deploys: rows, MaxSize: lim.MaxSiteBytes, Domain: s.svc.Config().BaseDomain,
+		Access: s.accessView(v.Site),
+	}, nil
 }
 
 func (s *server) sitePage(w http.ResponseWriter, r *http.Request, rc *reqCtx) {

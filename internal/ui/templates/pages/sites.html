@@ -16,6 +16,13 @@
     <span class="site-row__index mono" aria-hidden="true">{{printf "%02d" (inc $i)}}</span>
     <div class="site-row__main">
       <h2 class="site-row__title"><a href="/sites/{{$s.ID}}">{{$s.Title}}</a></h2>
+      {{if or $s.Protected $s.Noindex $s.ExpiresAt}}
+      <ul class="flag-list">
+        {{if $s.Protected}}<li><span class="badge badge--ok">{{$.L.T "access.badge.protected"}}</span></li>{{end}}
+        {{if $s.Noindex}}<li><span class="badge badge--muted">{{$.L.T "access.badge.noindex"}}</span></li>{{end}}
+        {{if $s.ExpiresAt}}<li><span class="badge {{if index $.D.Soon $s.ID}}badge--warn{{else}}badge--muted{{end}}">{{$.L.T "access.badge.expires" "date" ($.L.DatePtr $s.ExpiresAt)}}</span></li>{{end}}
+      </ul>
+      {{end}}
       <ul class="addr-list">
         {{range $j, $u := $s.URLs}}
         <li><a class="addr{{if eq $j 0}} addr--primary{{end}} mono" href="{{$u}}" title="{{$u}}" target="_blank" rel="noopener noreferrer">{{wbr (host $u)}}</a></li>

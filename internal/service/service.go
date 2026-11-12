@@ -170,6 +170,9 @@ func (s *Service) APIURL() string {
 	return "https://" + s.cfg.APIHost
 }
 
+// Now is the service clock (UTC), for adapters that show relative times.
+func (s *Service) Now() time.Time { return s.now() }
+
 // Config exposes the immutable configuration to adapters.
 func (s *Service) Config() *config.Config { return s.cfg }
 

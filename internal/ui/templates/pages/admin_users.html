@@ -64,8 +64,9 @@
         <td data-label="{{$.L.T "users.sites"}}" class="mono">{{.SiteCount}}</td>
         <td data-label="{{$.L.T "users.created"}}">{{$.L.Date .CreatedAt}}</td>
         <td class="table__actions">
-          {{if ne .ID $.D.MeID}}
           <div class="actions">
+            <a class="btn btn--small btn--ghost" href="/admin/users/{{.ID}}/limits" aria-label="{{$.L.T "users.limits"}}: {{.Email}}">{{$.L.T "users.limits"}}</a>
+            {{if ne .ID $.D.MeID}}
             {{if ne .Status "blocked"}}
             <form method="post" action="/admin/users/{{.ID}}/invite">{{template "csrf" $}}
               <button class="btn btn--small btn--ghost" type="submit">{{if eq .Status "active"}}{{$.L.T "users.reset"}}{{else}}{{$.L.T "users.reinvite"}}{{end}}</button></form>
@@ -77,8 +78,8 @@
             <form method="post" action="/admin/users/{{.ID}}/unblock">{{template "csrf" $}}
               <button class="btn btn--small btn--ghost" type="submit" aria-label="{{$.L.T "users.unblock"}}: {{.Email}}">{{$.L.T "users.unblock"}}</button></form>
             {{end}}
+            {{else}}<span class="muted small">{{$.L.T "users.you"}}</span>{{end}}
           </div>
-          {{else}}<span class="muted small">{{$.L.T "users.you"}}</span>{{end}}
         </td>
       </tr>
       {{end}}
