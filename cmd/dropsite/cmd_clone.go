@@ -8,11 +8,12 @@ import (
 )
 
 func cmdClone(ctx context.Context, a *app, args []string) error {
-	fs := a.newFlagSet("clone", "<site> [--title <name>] [--slug <address>] [--json]",
+	fs := a.newFlagSet("clone", "<site> [--title <name>] [--slug <address>] [--workspace <id>] [--json]",
 		"Create a new site from the current release of a site (ID or slug). Only the files are copied:\n"+
 			"forms, domains, the address, password, lifetime and counters stay with the original.")
 	title := fs.String("title", "", "name of the new site (default: the original name with \"(copy)\")")
 	slug := fs.String("slug", "", "memorable address of the new site")
+	workspace := fs.String("workspace", "", "create the copy in this shared workspace (ID from 'dropsite workspaces')")
 	asJSON := fs.Bool("json", false, "print one JSON object {site_id, deploy_id, url, urls}")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
@@ -25,7 +26,7 @@ func cmdClone(ctx context.Context, a *app, args []string) error {
 	if err != nil {
 		return err
 	}
-	res, err := c.CloneSite(ctx, pos[0], client.NewSiteRequest{Title: *title, Slug: *slug})
+	res, err := c.CloneSite(ctx, pos[0], client.NewSiteRequest{Title: *title, Slug: *slug, WorkspaceID: *workspace})
 	if err != nil {
 		return siteError(pos[0], err)
 	}
