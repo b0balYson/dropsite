@@ -65,6 +65,8 @@ type Deps struct {
 	ProxyTransport http.RoundTripper
 	// Renderer takes screenshots; nil means the configured renderer, if any.
 	Renderer Screenshotter
+	// PageFetcher downloads reference pages; nil means sitefetch defaults.
+	PageFetcher PageFetcher
 }
 
 // Service implements the use cases.
@@ -104,6 +106,7 @@ type Service struct {
 	collectionState
 	proxyState
 	shotState
+	referenceState
 }
 
 // New builds a Service.
@@ -146,6 +149,7 @@ func New(d Deps) *Service {
 		collectionState:  newCollectionState(now),
 		proxyState:       newProxyState(d, now),
 		shotState:        newShotState(d, now),
+		referenceState:   newReferenceState(d, now),
 	}
 }
 

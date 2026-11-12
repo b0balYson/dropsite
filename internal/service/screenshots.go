@@ -39,7 +39,10 @@ type Screenshotter interface {
 
 type renderGrant struct {
 	siteID, deployID string
-	expires          time.Time
+	// files, when set, are served instead of a release (reference
+	// snapshots, change design-references).
+	files   fs.FS
+	expires time.Time
 }
 
 type shotState struct {
@@ -241,6 +244,9 @@ func (s *Service) OpenRenderRelease(token string) (fs.FS, func(), bool) {
 	s.grantsMu.Unlock()
 	if !ok || s.now().After(g.expires) {
 		return nil, nil, false
+	}
+	if g.files != nil {
+		return g.files, func() {}, true
 	}
 	root, err := s.files.OpenRelease(g.siteID, g.deployID)
 	if err != nil {
