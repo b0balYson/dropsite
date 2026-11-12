@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -324,7 +325,7 @@ func TestProxyResponseLimits(t *testing.T) {
 	if _, _, err := r.call(ProxyCall{Name: "ai", Path: "/declared"}); domain.AsError(err).Code != domain.CodeProxyUpstream {
 		t.Fatalf("declared size: %v", err)
 	}
-	if _, _, err := r.call(ProxyCall{Name: "ai", Path: "/stream"}); err != ErrProxyResponseTooLarge {
+	if _, _, err := r.call(ProxyCall{Name: "ai", Path: "/stream"}); !errors.Is(err, ErrProxyResponseTooLarge) {
 		t.Fatalf("streamed size: %v", err)
 	}
 	r.up.handler = func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusBadGateway) }
@@ -342,7 +343,10 @@ func TestProxyTransportRefusesInternalAddresses(t *testing.T) {
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 	defer srv.Close()
 	client := newProxyClient(newProxyTransport([]netip.Prefix{netip.MustParsePrefix("127.0.0.0/8")}))
-	_, err := client.Get(srv.URL) //nolint:noctx // test
+	resp, err := client.Get(srv.URL) //nolint:noctx // test
+	if err == nil {
+		_ = resp.Body.Close()
+	}
 	if err == nil || !isBlockedDial(err) {
 		t.Fatalf("loopback reached: %v", err)
 	}
