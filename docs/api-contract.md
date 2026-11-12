@@ -34,6 +34,7 @@ SiteItem {id, title, url, urls[], slug|null, owner_id, owner_email, last_deploy_
 Token    {id, name, prefix, created_at, last_used_at|null, expires_at|null, revoked_at|null}
 Audit    {id, actor_id|null, actor_email, action, target, meta{}, ip, created_at}
 List     {items[], total}
+Stats    {site_id, from, to, days[{date, views, visitors}], totals{views, visitors}, top_pages[{name, views}], top_referrers[{name, views}]}
 ```
 
 IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer` accepts `user_id` as a string or a number. Every response carries `X-Request-Id`, which also appears in server logs.
@@ -53,6 +54,7 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 | `POST /sites/{ref}/deploys` | `multipart/form-data`, field `archive` (zip or tar.gz) | `201 {deploy_id, url, urls[], deploy: Deploy, site: Site}` |
 | `GET /sites/{ref}/deploys` | | `List<Deploy>` (newest first) |
 | `POST /sites/{ref}/rollback` | `{deploy_id?}`; empty means the previous release | `{deploy_id, url, urls[], deploy: Deploy, site: Site}` |
+| `GET /sites/{ref}/stats` | `?days` (1–400, default 30) | `Stats` |
 | `GET /tokens` | | `List<Token>` |
 | `POST /tokens` | `{name, expires_in_days?}` | `201 {token: Token, value}`; `value` is shown once |
 | `DELETE /tokens/{id}` | | `204` |
@@ -71,3 +73,5 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 `expires_in_days` accepts 1–3650; omitted means the token never expires. In `GET /admin/audit`, `from` and `to` accept RFC 3339 or `YYYY-MM-DD`; `from` is inclusive, an RFC 3339 `to` is exclusive and a date `to` includes the whole day. `PATCH /admin/users/{id}` with `blocked` returns only `{user}`; the invite fields appear only with `reissue_invite`.
 
 The deploy source is `cli` when the request carries `X-Dropsite-Client: cli/<version>`, otherwise `api`. The upload may be at most `max_site_bytes + max_files KiB + 1 MiB`; larger bodies get 413 without being read fully.
+
+`GET /sites/{ref}/stats` counts page views of HTML pages from the sites access log (bots and assets excluded), by UTC day; `days` lists every day of the period ending today, oldest first, including days without views. `visitors` is the approximate number of unique visitors of a day (hash of IP and User-Agent with a daily salt); the total is the sum of daily values. In `top_referrers` an empty `name` is a direct visit; in both tops `*` stands for everything beyond the rows stored per day (500 pages, 200 referrers). Statistics lag behind by up to one collection interval (`STATS_INTERVAL`, default one minute).

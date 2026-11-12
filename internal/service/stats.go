@@ -30,6 +30,7 @@ func day(t time.Time) string { return t.UTC().Format(time.DateOnly) }
 
 // SiteStats is the traffic of one site over a period of whole UTC days.
 type SiteStats struct {
+	SiteID       string
 	From, To     string
 	Days         []domain.DayStat // every day of the period, oldest first
 	Views        int64
@@ -51,7 +52,7 @@ func (s *Service) GetSiteStats(ctx context.Context, a Actor, ref string, days in
 		return SiteStats{}, err
 	}
 	now := s.now()
-	st := SiteStats{From: day(now.AddDate(0, 0, -(days - 1))), To: day(now)}
+	st := SiteStats{SiteID: site.ID, From: day(now.AddDate(0, 0, -(days - 1))), To: day(now)}
 	rows, err := s.repo.StatsDaily(ctx, site.ID, st.From, st.To)
 	if err != nil {
 		return SiteStats{}, err

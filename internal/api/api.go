@@ -58,6 +58,7 @@ func (a *api) routes() []route {
 		{Method: http.MethodPost, Path: "/sites/{ref}/deploys", handle: a.deploy},
 		{Method: http.MethodGet, Path: "/sites/{ref}/deploys", handle: a.listDeploys},
 		{Method: http.MethodPost, Path: "/sites/{ref}/rollback", handle: a.rollback},
+		{Method: http.MethodGet, Path: "/sites/{ref}/stats", handle: a.siteStats},
 		{Method: http.MethodGet, Path: "/tokens", handle: a.listTokens},
 		{Method: http.MethodPost, Path: "/tokens", handle: a.createToken},
 		{Method: http.MethodDelete, Path: "/tokens/{id}", handle: a.revokeToken},

@@ -163,6 +163,23 @@
         }
       }
     },
+    "/sites/{ref}/stats": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }],
+      "get": {
+        "operationId": "getSiteStats",
+        "summary": "Visit statistics by UTC day from the sites access log; today is included and may be incomplete",
+        "parameters": [
+          { "name": "days", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 400, "default": 30 }, "description": "Number of days ending today" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SiteStats" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
     "/tokens": {
       "get": {
         "operationId": "listTokens",
@@ -602,6 +619,40 @@
         "required": ["user_id"],
         "additionalProperties": false,
         "properties": { "user_id": { "type": ["string", "integer"] } }
+      },
+      "StatsDay": {
+        "type": "object",
+        "required": ["date", "views", "visitors"],
+        "properties": {
+          "date": { "type": "string", "format": "date" },
+          "views": { "type": "integer", "description": "Page views (HTML pages, bots excluded)" },
+          "visitors": { "type": "integer", "description": "Approximate unique visitors of the day" }
+        }
+      },
+      "StatsCount": {
+        "type": "object",
+        "required": ["name", "views"],
+        "properties": {
+          "name": { "type": "string", "description": "Page path or referrer host; \"\" is a direct visit, \"*\" everything beyond the stored rows" },
+          "views": { "type": "integer" }
+        }
+      },
+      "SiteStats": {
+        "type": "object",
+        "required": ["site_id", "from", "to", "days", "totals", "top_pages", "top_referrers"],
+        "properties": {
+          "site_id": { "type": "string" },
+          "from": { "type": "string", "format": "date" },
+          "to": { "type": "string", "format": "date" },
+          "days": { "type": "array", "items": { "$ref": "#/components/schemas/StatsDay" }, "description": "Every day of the period, oldest first" },
+          "totals": {
+            "type": "object",
+            "required": ["views", "visitors"],
+            "properties": { "views": { "type": "integer" }, "visitors": { "type": "integer", "description": "Sum of daily unique visitors" } }
+          },
+          "top_pages": { "type": "array", "items": { "$ref": "#/components/schemas/StatsCount" } },
+          "top_referrers": { "type": "array", "items": { "$ref": "#/components/schemas/StatsCount" } }
+        }
       }
     }
   }
