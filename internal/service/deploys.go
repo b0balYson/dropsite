@@ -113,6 +113,7 @@ func (s *Service) publish(ctx context.Context, a Actor, site domain.Site, upload
 		s.discard(site.ID, id)
 		return domain.Deploy{}, err
 	}
+	s.optimizeRelease(ctx, site, staging)
 	set, err := s.countersFor(ctx, site.ID)
 	if err != nil {
 		s.discard(site.ID, id)

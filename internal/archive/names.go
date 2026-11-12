@@ -24,10 +24,10 @@ var ignoredSegments = map[string]bool{
 
 // IsIgnored reports whether a slash-separated relative path is silently skipped
 // (.git/, .DS_Store, __MACOSX/, Thumbs.db, node_modules/ at any depth, and
-// brand.ProjectFile at the root).
+// brand.ProjectFile and the brand.GeneratedDir directory at the root).
 func IsIgnored(rel string) bool {
 	rel = strings.Trim(rel, "/")
-	if rel == brand.ProjectFile {
+	if rel == brand.ProjectFile || rel == brand.GeneratedDir || strings.HasPrefix(rel, brand.GeneratedDir+"/") {
 		return true
 	}
 	for _, seg := range strings.Split(rel, "/") {

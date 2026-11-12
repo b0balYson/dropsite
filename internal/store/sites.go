@@ -160,6 +160,9 @@ func (db *DB) MarkSitePurged(ctx context.Context, siteID string, now time.Time) 
 		if err := expectAffected(res, err, "mark site purged"); err != nil {
 			return err
 		}
+		if err := deletePublishData(ctx, tx, siteID); err != nil {
+			return err
+		}
 		if _, err := tx.ExecContext(ctx, "DELETE FROM deploys WHERE site_id = ?", siteID); err != nil {
 			return fmt.Errorf("delete deploys: %w", err)
 		}

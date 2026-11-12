@@ -11,6 +11,10 @@ const DisplayName = "Dropsite"
 // ProjectFile is the per-directory file the CLI writes to remember the site.
 const ProjectFile = "." + Name + ".json"
 
+// GeneratedDir is the release-root directory where the platform keeps files
+// it generates at publish time; archives may not contain it.
+const GeneratedDir = "." + Name
+
 // TokenPrefix starts every API token so it is recognisable in secret scanners.
 const TokenPrefix = "ds_"
 

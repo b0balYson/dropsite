@@ -9,6 +9,10 @@ import (
 func TestIsIgnored(t *testing.T) {
 	cases := map[string]bool{
 		".git":                     true,
+		".dropsite":                true,
+		".dropsite/webp/a.png.webp": true,
+		"sub/.dropsite/x":          false,
+		".dropsitex/a":             false,
 		".git/config":              true,
 		"a/.git/HEAD":              true,
 		".DS_Store":                true,
