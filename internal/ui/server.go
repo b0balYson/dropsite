@@ -108,6 +108,12 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /sites/{ref}/data/{name}/documents", s.user(s.saveDocument))
 	mux.HandleFunc("POST /sites/{ref}/data/{name}/documents/delete", s.user(s.deleteDocument))
 	mux.HandleFunc("POST /sites/{ref}/data/{name}/moderate", s.user(s.moderateDocuments))
+	mux.HandleFunc("GET /sites/{ref}/proxy", s.user(s.proxyPage))
+	mux.HandleFunc("POST /sites/{ref}/proxy", s.user(s.saveProxy))
+	mux.HandleFunc("GET /sites/{ref}/proxy/{name}/edit", s.user(s.editProxy))
+	mux.HandleFunc("POST /sites/{ref}/proxy/{name}/secret", s.user(s.setProxySecret))
+	mux.HandleFunc("POST /sites/{ref}/proxy/{name}/secret/delete", s.user(s.clearProxySecret))
+	mux.HandleFunc("POST /sites/{ref}/proxy/{name}/delete", s.user(s.deleteProxy))
 
 	mux.HandleFunc("GET /connect", s.user(s.connectPage))
 	mux.HandleFunc("POST /connect/code", s.user(s.createCode))

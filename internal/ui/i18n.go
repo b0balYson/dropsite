@@ -3,6 +3,7 @@ package ui
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"math"
 	"net/http"
 	"sort"
@@ -26,20 +27,43 @@ func supportedLang(l string) bool {
 // catalogs maps a language to its locale.
 type catalogs map[string]*locale
 
+// loadCatalogs reads i18n/<lang>.json plus every i18n/<lang>.<part>.json,
+// so a feature can keep its strings in a file of its own. A key defined
+// twice is an error.
 func loadCatalogs() (catalogs, error) {
 	out := catalogs{}
 	for _, lang := range languages {
-		raw, err := assets.ReadFile("i18n/" + lang + ".json")
+		parts, err := fs.Glob(assets, "i18n/"+lang+".*.json")
 		if err != nil {
-			return nil, fmt.Errorf("read catalog %s: %w", lang, err)
+			return nil, fmt.Errorf("list catalog parts %s: %w", lang, err)
 		}
 		msgs := map[string]string{}
-		if err := json.Unmarshal(raw, &msgs); err != nil {
-			return nil, fmt.Errorf("parse catalog %s: %w", lang, err)
+		for _, file := range append([]string{"i18n/" + lang + ".json"}, parts...) {
+			if err := mergeCatalog(msgs, file); err != nil {
+				return nil, err
+			}
 		}
 		out[lang] = &locale{Lang: lang, msgs: msgs}
 	}
 	return out, nil
+}
+
+func mergeCatalog(msgs map[string]string, file string) error {
+	raw, err := assets.ReadFile(file)
+	if err != nil {
+		return fmt.Errorf("read catalog %s: %w", file, err)
+	}
+	part := map[string]string{}
+	if err := json.Unmarshal(raw, &part); err != nil {
+		return fmt.Errorf("parse catalog %s: %w", file, err)
+	}
+	for k, v := range part {
+		if _, dup := msgs[k]; dup {
+			return fmt.Errorf("catalog %s: key %q is already defined", file, k)
+		}
+		msgs[k] = v
+	}
+	return nil
 }
 
 func (c catalogs) locale(lang string) *locale {

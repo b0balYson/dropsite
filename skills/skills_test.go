@@ -66,7 +66,8 @@ func TestDemoteSkipsCodeFences(t *testing.T) {
 }
 
 func TestGuideTopics(t *testing.T) {
-	want := []string{"overview", "create", "update", "large_sites", "assets", "forms", "data", "stats", "addresses",
+	want := []string{"overview", "create", "update", "large_sites", "assets", "forms", "data", "proxy", "stats",
+		"addresses",
 		"protection", "rollback", "account", "errors"}
 	if got := strings.Join(Topics(), ","); got != strings.Join(want, ",") {
 		t.Fatalf("topics: %s", got)
@@ -109,6 +110,8 @@ func TestGuideNamesTheFixedTools(t *testing.T) {
 		"set_channel_enabled", "delete_channel", "rotate_channel_secret", "confirm",
 		"list_collections", "save_collection", "delete_collection", "list_documents", "save_documents",
 		"delete_documents", "moderate_documents", "/_dropsite/data/",
+		"set_channel_enabled", "delete_channel", "rotate_channel_secret", "confirm", "list_proxy_endpoints",
+		"set_proxy_endpoint", "delete_proxy_endpoint", "secret_url",
 	} {
 		if !strings.Contains(all, tool) {
 			t.Errorf("guide does not mention %s", tool)

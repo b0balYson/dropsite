@@ -95,6 +95,9 @@ func (s *Service) Housekeeping(ctx context.Context) error {
 	if err := s.housekeepConnect(ctx, now); err != nil {
 		return err
 	}
+	if err := s.purgeProxy(ctx); err != nil {
+		return fmt.Errorf("purge proxy endpoints: %w", err)
+	}
 	return s.purgeForms(ctx, now)
 }
 

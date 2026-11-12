@@ -99,6 +99,7 @@ The remote server offers every chat tool. A whole small site is published in one
 Form tools (details in [forms.md](forms.md#from-a-chat-assistant)): `get_form_settings`, `set_form_settings`, `list_submissions`, `export_submissions`, `list_channels`, `add_channel`, `verify_channel`, `set_channel_enabled`, `delete_channel`, `rotate_channel_secret`.
 
 Site data tools (collections that pages load from `/_dropsite/data/<name>`, see [api-contract.md](api-contract.md)): `list_collections` (with the public address and a ready loading snippet), `save_collection` (creates or changes), `delete_collection` (with `confirm`), `list_documents`, `save_documents` (`replace` swaps the whole content), `delete_documents`, `moderate_documents` (`approve` or `reject`). Writes are live at once without a new release; rights, limits and errors are those of the HTTP API.
+API key proxy tools (details in [proxy.md](proxy.md)): `list_proxy_endpoints`, `set_proxy_endpoint`, `delete_proxy_endpoint`. No tool takes a key: `set_proxy_endpoint` returns `secret_url`, where the user pastes the key in the web interface.
 
 Both servers also cover the account and site settings of the web interface, so a user can manage everything by asking in plain words:
 

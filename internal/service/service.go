@@ -7,6 +7,7 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"net/http"
 	"strconv"
 	"sync"
 	"time"
@@ -59,6 +60,9 @@ type Deps struct {
 	FormSender FormSender
 	// Fetcher downloads assets for site edits; nil means sitefetch defaults.
 	Fetcher SiteFetcher
+	// ProxyTransport replaces the guarded upstream transport of the secret
+	// proxy (tests).
+	ProxyTransport http.RoundTripper
 }
 
 // Service implements the use cases.
@@ -96,6 +100,7 @@ type Service struct {
 	formState
 	siteFilesState
 	collectionState
+	proxyState
 }
 
 // New builds a Service.
@@ -136,6 +141,7 @@ func New(d Deps) *Service {
 		formState:        newFormState(d, now),
 		siteFilesState:   newSiteFilesState(d, now),
 		collectionState:  newCollectionState(now),
+		proxyState:       newProxyState(d, now),
 	}
 }
 

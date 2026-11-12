@@ -165,6 +165,10 @@ Any published site can receive form submissions without a third-party service: p
 
 Every submission is stored first and then delivered in the background, with retries, to the channels the site owner adds on the site screen: a Telegram chat (one bot per installation, its token is set by an administrator), an e-mail address (SMTP set by an administrator) or an HTTPS webhook signed with HMAC-SHA256. Spam protection: the `_hp` honeypot, an optional fill-time check, rate limits per IP and per site, 64 KB body limit and, when the owner turns it on, a self-hosted [Altcha](https://altcha.org) proof of work whose difficulty grows for repeated attempts from one IP. Submissions are kept 90 days by default, can be browsed on the site screen and exported to CSV. Secrets (bot token, SMTP password, webhook secrets) are stored encrypted with `state/secrets.key`. Details: [docs/forms.md](docs/forms.md).
 
+### API keys for pages
+
+A page can call a third-party API with a key (OpenAI, a CRM, a Telegram bot) through `/_dropsite/proxy/<name>/<path>` on its own address: the server adds the key and forwards the request, the key never reaches the page. The owner pastes the key on the **API keys** screen of the site; the API and the chat never accept or show it. Allowed hosts, methods and paths, size and rate limits and private-network blocking apply; protected sites keep the proxy behind their password. Details: [docs/proxy.md](docs/proxy.md).
+
 From ChatGPT or claude.ai the owner manages the same in plain words ("show the latest submissions", "send submissions to Telegram", "export this week's submissions"): the MCP servers (the remote one and the local `dropsite mcp` of Claude Desktop) have tools for form settings, submissions with filters, a capped CSV export and delivery channels; confirmation codes and the Telegram link still go through the user.
 
 ## Site data

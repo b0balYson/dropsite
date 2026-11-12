@@ -117,6 +117,7 @@ func (t tools) registerCabinet(s *sdk.Server, o Options) {
 	t.registerInsightTools(s)
 	t.registerConnectionTools(s)
 	t.registerRootTools(s)
+	t.registerProxyTools(s)
 }
 
 func (t tools) registerAccountTools(s *sdk.Server) {

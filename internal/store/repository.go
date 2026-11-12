@@ -37,6 +37,7 @@ type Repository interface {
 	SecretRepository
 	FormRepository
 	CollectionRepository
+	ProxyRepository
 	Ping(ctx context.Context) error
 }
 

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -43,14 +44,33 @@ func TestCatalogsHaveSameKeys(t *testing.T) {
 	}
 }
 
-// domainCodes parses internal/domain/errors.go so that a new error code
+// domainCodes parses the files of internal/domain so that a new error code
 // cannot be added without a translation.
 func domainCodes(t *testing.T) []string {
 	t.Helper()
-	f, err := parser.ParseFile(token.NewFileSet(), "../domain/errors.go", nil, 0)
+	files, err := filepath.Glob("../domain/*.go")
 	if err != nil {
 		t.Fatal(err)
 	}
+	var codes []string
+	for _, file := range files {
+		if strings.HasSuffix(file, "_test.go") {
+			continue
+		}
+		f, err := parser.ParseFile(token.NewFileSet(), file, nil, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		codes = append(codes, fileCodes(f)...)
+	}
+	if len(codes) < 30 {
+		t.Fatalf("parsed only %d codes", len(codes))
+	}
+	return codes
+}
+
+// fileCodes returns the string constants named Code* of one file.
+func fileCodes(f *ast.File) []string {
 	var codes []string
 	ast.Inspect(f, func(n ast.Node) bool {
 		vs, ok := n.(*ast.ValueSpec)
@@ -68,9 +88,6 @@ func domainCodes(t *testing.T) []string {
 		}
 		return true
 	})
-	if len(codes) < 30 {
-		t.Fatalf("parsed only %d codes", len(codes))
-	}
 	return codes
 }
 
