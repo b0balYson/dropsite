@@ -114,6 +114,10 @@ services:
       SITES_HTTPS_PORT: ${SITES_HTTPS_PORT:-}
       # Visit statistics: how often the sites access log is read.
       STATS_INTERVAL: ${STATS_INTERVAL:-}
+      # Site forms (docs/forms.md): Bot API address and private networks
+      # webhooks may reach (test stacks only). Empty means the defaults.
+      TELEGRAM_API_URL: ${TELEGRAM_API_URL:-}
+      FORM_WEBHOOK_ALLOW_CIDRS: ${FORM_WEBHOOK_ALLOW_CIDRS:-}
     volumes:
       - sites:/data
       - state:/state

@@ -96,6 +96,23 @@ A site can also open on the owner's domain, such as `promo.example.com`: add it 
 | Reserved | `/_form/` and `/_dropsite/` belong to the platform |
 | Caching | HTML `no-cache`; other files `public, max-age=3600` |
 
+## Forms and submissions
+
+Any published site can receive form submissions without a third-party service: point a form at `/_form/<name>` on the same site.
+
+```html
+<form action="/_form/lead" method="post">
+  <input name="name" required> <input name="phone" type="tel" required>
+  <input name="_hp" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-10000px">
+  <input type="hidden" name="_next" value="/thanks.html">
+  <altcha-widget challenge="/_form/challenge"></altcha-widget>
+  <button>Send</button>
+</form>
+<script async defer src="/_dropsite/altcha.js" type="module"></script>
+```
+
+Every submission is stored first and then delivered in the background, with retries, to the channels the site owner adds on the site screen: a Telegram chat (one bot per installation, its token is set by an administrator), an e-mail address (SMTP set by an administrator) or an HTTPS webhook signed with HMAC-SHA256. Spam protection: the `_hp` honeypot, an optional fill-time check, rate limits per IP and per site, 64 KB body limit and, when the owner turns it on, a self-hosted [Altcha](https://altcha.org) proof of work whose difficulty grows for repeated attempts from one IP. Submissions are kept 90 days by default, can be browsed on the site screen and exported to CSV. Secrets (bot token, SMTP password, webhook secrets) are stored encrypted with `state/secrets.key`. Details: [docs/forms.md](docs/forms.md).
+
 ## Visit statistics and analytics counters
 
 The site screen shows page views per day for the last 30 days, totals, top pages and top referrers; administrators also see views over 7 days in "All sites". The numbers come from Caddy's access log, so sites need no scripts: robots and asset requests are not counted, and a visitor is recognised by IP address and browser within one UTC day without storing either. The same data is available at `GET /api/v1/sites/{ref}/stats?days=30`.
@@ -139,6 +156,8 @@ In this mode every release also gets its own preview address `https://p-<release
 | `LOG_LEVEL` | no | `info` | `debug`, `info`, `warn`, `error` |
 | `STATS_INTERVAL` | no | `1m` | How often control reads the sites access log (1s to 1h) |
 | `STATS_LOG_FILE` | no | `/logs/sites-access.log` | Sites access log inside control; `off` disables statistics |
+| `TELEGRAM_API_URL` | no | `https://api.telegram.org` | Bot API address for form delivery (proxy or tests) |
+| `FORM_WEBHOOK_ALLOW_CIDRS` | no | | Private networks form webhooks may reach (test stacks only) |
 
 ## Operations
 
@@ -147,7 +166,7 @@ In this mode every release also gets its own preview address `https://p-<release
 - **Logs:** JSON on stdout of both containers: `docker compose logs -f`. Caddy also writes the sites access log to the `logs` volume for statistics (rotated at 50 MB, 5 old files kept).
 - **Health:** `docker compose ps` shows the `control` health check.
 
-More: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [docs/tls.md](docs/tls.md), [docs/external-domains.md](docs/external-domains.md), [docs/production-checklist.md](docs/production-checklist.md), [docs/statistics.md](docs/statistics.md).
+More: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [docs/tls.md](docs/tls.md), [docs/external-domains.md](docs/external-domains.md), [docs/production-checklist.md](docs/production-checklist.md), [docs/statistics.md](docs/statistics.md), [docs/forms.md](docs/forms.md).
 
 ## Security model
 
