@@ -202,6 +202,13 @@ func (s *Service) UpdateSiteFiles(ctx context.Context, a Actor, ref, base string
 // replacement), packs base − dels + overlay and publishes it.
 func (s *Service) publishEdit(ctx context.Context, a Actor, siteID, base string, dels []string,
 	overlay map[string]overlayFile, lim domain.Limits, reason string) (UpdateResult, error) {
+	return s.publishEditAs(ctx, a, siteID, base, dels, overlay, lim, reason, false)
+}
+
+// publishEditAs is publishEdit; with prepare the release is created without
+// switching the site to it (a scheduled publish switches later).
+func (s *Service) publishEditAs(ctx context.Context, a Actor, siteID, base string, dels []string,
+	overlay map[string]overlayFile, lim domain.Limits, reason string, prepare bool) (UpdateResult, error) {
 	unlock := s.siteLocks.lock(siteID)
 	defer unlock()
 	site, err := s.repo.GetSite(ctx, siteID)
@@ -227,15 +234,26 @@ func (s *Service) publishEdit(ctx context.Context, a Actor, siteID, base string,
 		return UpdateResult{}, err
 	}
 	defer s.removeUpload(upload)
-	d, err := s.publish(ctx, a, site, upload, lim, domain.SourceMCP)
+	var d domain.Deploy
+	if prepare {
+		d, err = s.prepareRelease(ctx, a, site, upload, lim, domain.SourceMCP)
+	} else {
+		d, err = s.publish(ctx, a, site, upload, lim, domain.SourceMCP)
+	}
 	if err != nil {
 		return UpdateResult{}, err
 	}
-	s.prune(ctx, site.ID, lim.KeepReleases)
-	s.audit(ctx, a, "deploy.create", siteTarget(site.ID), map[string]any{
+	if !prepare {
+		s.prune(ctx, site.ID, lim.KeepReleases)
+	}
+	meta := map[string]any{
 		"deploy": d.ID, "source": domain.SourceMCP, "files": d.FileCount, "bytes": d.SizeBytes,
 		"from": base, "reason": reason, "written": len(overlay), "deleted": removed,
-	})
+	}
+	if prepare {
+		meta["prepared"] = true
+	}
+	s.audit(ctx, a, "deploy.create", siteTarget(site.ID), meta)
 	if site, err = s.repo.GetSite(ctx, site.ID); err != nil {
 		return UpdateResult{}, err
 	}

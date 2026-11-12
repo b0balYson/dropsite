@@ -101,6 +101,16 @@ func (s *Service) receive(r io.Reader, max int64) (string, error) {
 }
 
 func (s *Service) publish(ctx context.Context, a Actor, site domain.Site, upload string, lim domain.Limits, source domain.DeploySource) (domain.Deploy, error) {
+	d, err := s.stage(ctx, a, site, upload, lim, source)
+	if err != nil {
+		return domain.Deploy{}, err
+	}
+	return s.commit(ctx, site.ID, d)
+}
+
+// stage extracts the upload into a staging directory with the site's
+// counters applied and returns the release to commit.
+func (s *Service) stage(ctx context.Context, a Actor, site domain.Site, upload string, lim domain.Limits, source domain.DeploySource) (domain.Deploy, error) {
 	now := s.now()
 	id := domain.NewDeployID(now)
 	staging, err := s.files.StagingDir(site.ID, id)
@@ -127,10 +137,10 @@ func (s *Service) publish(ctx context.Context, a Actor, site domain.Site, upload
 		}
 		delta = inj.DeltaBytes
 	}
-	return s.commit(ctx, site.ID, domain.Deploy{
+	return domain.Deploy{
 		ID: id, SiteID: site.ID, CreatedBy: a.User.ID, Source: source,
 		SizeBytes: res.Bytes + delta, FileCount: res.Files, Status: domain.DeployReady, CreatedAt: now,
-	})
+	}, nil
 }
 
 // commit turns a filled staging directory into the site's current release.
@@ -172,10 +182,15 @@ func (s *Service) prune(ctx context.Context, siteID string, keep int) {
 		s.log.Error("prune: list deploys", "site", siteID, "err", err)
 		return
 	}
+	scheduled, err := s.repo.PendingScheduledDeploys(ctx, siteID)
+	if err != nil {
+		s.log.Error("prune: list scheduled", "site", siteID, "err", err)
+		return
+	}
 	kept := 0
 	var drop []string
 	for _, d := range deploys {
-		if d.Status != domain.DeployReady {
+		if d.Status != domain.DeployReady || scheduled[d.ID] {
 			continue
 		}
 		if site.CurrentDeployID != nil && d.ID == *site.CurrentDeployID {
@@ -271,13 +286,17 @@ func (s *Service) rollbackTarget(ctx context.Context, site domain.Site, deployID
 	if err != nil {
 		return domain.Deploy{}, err
 	}
+	scheduled, err := s.repo.PendingScheduledDeploys(ctx, site.ID)
+	if err != nil {
+		return domain.Deploy{}, err
+	}
 	passedCurrent := site.CurrentDeployID == nil
 	for _, d := range deploys {
 		if !passedCurrent {
 			passedCurrent = d.ID == *site.CurrentDeployID
 			continue
 		}
-		if d.Status == domain.DeployReady {
+		if d.Status == domain.DeployReady && !scheduled[d.ID] {
 			return d, nil
 		}
 	}
