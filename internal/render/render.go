@@ -21,7 +21,7 @@ import (
 )
 
 // TokenHeader carries the render token on every request of the renderer.
-const TokenHeader = "X-Dropsite-Render-Token"
+const TokenHeader = "X-Dropsite-Render-Token" //nolint:gosec // a header name, not a credential
 
 // screenshotPath is Gotenberg's route for a screenshot of a URL.
 const screenshotPath = "/forms/chromium/screenshot/url"

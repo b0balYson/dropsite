@@ -52,17 +52,17 @@ type shotState struct {
 }
 
 func newShotState(d Deps, now func() time.Time) shotState {
-	st := shotState{
+	shooter := d.Renderer
+	if shooter == nil && d.Config.Renderer.Enabled() {
+		shooter = render.New(d.Config.Renderer.URL, nil)
+	}
+	return shotState{
 		shotDir:    filepath.Join(d.Config.StateDir, screenshotsDir),
 		shotLimit:  ratelimit.New(ScreenshotsPerMinute, time.Minute).WithClock(now),
 		grants:     map[string]renderGrant{},
 		renderBase: strings.TrimSuffix(d.Config.Renderer.BaseURL, "/"),
-		shooter:    d.Renderer,
+		shooter:    shooter,
 	}
-	if st.shooter == nil && d.Config.Renderer.Enabled() {
-		st.shooter = render.New(d.Config.Renderer.URL, nil)
-	}
-	return st
 }
 
 // ScreenshotsEnabled reports whether a renderer is configured.
@@ -252,7 +252,16 @@ func (s *Service) OpenRenderRelease(token string) (fs.FS, func(), bool) {
 
 // purgeScreenshots removes cached screenshots older than ScreenshotCacheTTL.
 func (s *Service) purgeScreenshots(now time.Time) {
-	err := filepath.WalkDir(s.shotDir, func(p string, d fs.DirEntry, err error) error {
+	root, err := os.OpenRoot(s.shotDir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return
+	}
+	if err != nil {
+		s.log.Warn("screenshot cache: open", "err", err)
+		return
+	}
+	defer func() { _ = root.Close() }()
+	err = fs.WalkDir(root.FS(), ".", func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				return nil
@@ -267,7 +276,7 @@ func (s *Service) purgeScreenshots(now time.Time) {
 			return nil //nolint:nilerr // removed meanwhile
 		}
 		if now.Sub(info.ModTime()) > ScreenshotCacheTTL {
-			if err := os.Remove(p); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			if err := root.Remove(p); err != nil && !errors.Is(err, fs.ErrNotExist) {
 				s.log.Warn("screenshot cache: remove", "path", p, "err", err)
 			}
 		}

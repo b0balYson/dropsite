@@ -16,13 +16,13 @@ type siteForm struct {
 }
 
 type sitesData struct {
-	Sites   []service.SiteSummaryView
-	Soon    map[string]bool // site ID → expires within ExpiryWarning
-	Count   int
-	Limit   int
-	AtLimit bool
-	Domain  string
-	Form    siteForm
+	Sites     []service.SiteSummaryView
+	Soon      map[string]bool // site ID → expires within ExpiryWarning
+	Count     int
+	Limit     int
+	AtLimit   bool
+	Domain    string
+	Form      siteForm
 	Templates []service.TemplateInfo
 }
 

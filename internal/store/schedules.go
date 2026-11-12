@@ -197,4 +197,3 @@ func (db *DB) PendingScheduledDeploys(ctx context.Context, siteID string) (map[s
 	}
 	return out, nil
 }
-
