@@ -1,0 +1,70 @@
+{{define "authorize_page"}}<!doctype html>
+<html lang="{{.L.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>{{.L.T "oauth.title"}} — {{.Product}}</title>
+<link rel="icon" href="{{.Asset "favicon.svg"}}" type="image/svg+xml">
+<link rel="stylesheet" href="{{.Asset "app.css"}}">
+</head>
+<body>
+<header class="masthead">
+  <div class="masthead__inner">
+    <span class="wordmark"><span class="wordmark__mark" aria-hidden="true"></span>{{.Product}}</span>
+    {{if .D.LangRU}}
+    <div class="masthead__aside">
+      <nav class="lang" aria-label="{{.L.T "nav.language"}}">
+        <a class="lang__btn" href="{{.D.LangRU}}" lang="ru" {{if eq .L.Lang "ru"}}aria-current="true"{{end}}>RU</a>
+        <a class="lang__btn" href="{{.D.LangEN}}" lang="en" {{if eq .L.Lang "en"}}aria-current="true"{{end}}>EN</a>
+      </nav>
+    </div>
+    {{end}}
+  </div>
+</header>
+<main id="main" class="page">
+{{template "content" .}}
+</main>
+</body>
+</html>{{end}}
+
+{{define "content"}}
+<section class="auth consent">
+  {{if .D.Fatal}}
+  <div class="auth__intro">
+    <p class="eyebrow">{{.L.T "oauth.eyebrow"}}</p>
+    <h1 class="display">{{.L.T "oauth.error.title"}}</h1>
+    <p class="lede" role="alert">{{.D.Fatal}}</p>
+  </div>
+  {{else}}
+  <div class="auth__intro">
+    <p class="eyebrow">{{.L.T "oauth.eyebrow"}}</p>
+    <h1 class="display">{{.L.T "oauth.heading" "client" .D.ClientName}}</h1>
+    <dl class="consent__facts">
+      <div><dt>{{.L.T "oauth.app"}}</dt><dd>{{.D.ClientName}}{{with .D.ClientHost}} <span class="mono small">({{wbr .}})</span>{{end}}</dd></div>
+      <div><dt>{{.L.T "oauth.redirect"}}</dt><dd class="mono addr-break">{{wbr .D.RedirectHost}}</dd></div>
+      <div><dt>{{.L.T "oauth.rights"}}</dt><dd>{{.L.T "oauth.rights.sites"}}</dd></div>
+    </dl>
+    {{if .D.Loopback}}<p class="notice notice--warn">{{.L.T "oauth.loopback"}}</p>{{end}}
+    <p class="hint">{{.L.T "oauth.only_you"}}</p>
+  </div>
+  <form class="auth__form stack" method="post" action="/oauth/authorize">
+    <h2 class="section-title">{{.L.T "oauth.code.title"}}</h2>
+    {{template "csrf" .}}
+    <input type="hidden" name="request" value="{{.D.Sealed}}">
+    {{with .D.Error}}<p class="notice notice--error" role="alert">{{.}}</p>{{end}}
+    <p>{{.L.T "oauth.code.where"}}</p>
+    <div class="field">
+      <label class="field__label" for="code">{{.L.T "oauth.code.label"}}</label>
+      <input class="input mono code-input" id="code" name="code" required autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="40" placeholder="XXXX-XXXX-XXXXX" autofocus>
+    </div>
+    <div class="consent__actions">
+      <button class="btn btn--primary" type="submit" name="action" value="allow">{{.L.T "oauth.allow"}}</button>
+      <button class="btn btn--ghost" type="submit" name="action" value="deny" formnovalidate>{{.L.T "oauth.deny"}}</button>
+    </div>
+    <p class="hint">{{.L.T "oauth.password_note"}}</p>
+  </form>
+  {{end}}
+</section>
+{{end}}

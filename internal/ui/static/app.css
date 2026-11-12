@@ -956,3 +956,89 @@ input.input, select.input { height: 2.75rem; }
   .site-list--admin .site-row { grid-template-columns: 3.5rem minmax(0, 1fr) 19rem auto; }
 }
 .row-actions__body { font-size: var(--t-sm); }
+
+/* ---- connect: one command, chat clients, consent page -------------------- */
+
+.page-head:has(+ .connect-hero) { border-bottom: 0; margin-bottom: var(--s-5); }
+.connect-hero {
+  display: grid;
+  gap: var(--s-5) var(--s-8);
+  padding: var(--s-6) 0;
+  border-top: var(--rule-thick) solid var(--c-rule);
+  border-bottom: var(--rule-thin) solid var(--c-rule);
+}
+.connect-hero > * { min-width: 0; }
+.connect-hero__intro > * + * { margin-top: var(--s-4); }
+.connect-hero__intro .step__num { display: block; }
+@media (min-width: 60rem) {
+  .connect-hero { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: start; }
+  .connect-hero__intro .step__num { font-size: var(--t-display); letter-spacing: -0.05em; }
+}
+.assistants { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.assistants li {
+  padding: var(--s-1) var(--s-3);
+  border: var(--rule-thin) solid var(--c-ink);
+  border-radius: var(--r-sm);
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+.connect-block > * + * { margin-top: var(--s-5); }
+.connect-block__form { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-3); }
+.btn--hero { min-height: calc(var(--control-h) * 1.35); padding-inline: var(--s-7); font-size: var(--t-md); }
+.connect-code {
+  display: grid;
+  gap: var(--s-5);
+  padding: var(--s-5);
+  background: var(--c-surface);
+  border: 1.5px solid var(--c-ink);
+  border-left: 6px solid var(--c-current);
+}
+.connect-code__head { display: grid; gap: var(--s-2); }
+.connect-code__value {
+  font-size: var(--t-xl);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  overflow-wrap: anywhere;
+  line-height: 1.1;
+}
+.connect-code__timer { font-size: var(--t-sm); color: var(--c-ink-2); font-variant-numeric: tabular-nums; }
+.connect-code.is-expired { border-left-color: var(--c-error); }
+.connect-code.is-expired .code { opacity: 0.45; }
+.connect-code.is-expired [data-copy] { visibility: hidden; }
+
+.connect-chat > * + * { margin-top: var(--s-4); }
+.connect-chat .step__num { display: block; }
+.chat-steps { display: grid; gap: var(--s-5); }
+@media (min-width: 48rem) { .chat-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-6); } }
+.chat-steps__col { padding-top: var(--s-3); border-top: var(--rule-thin) solid var(--c-hair); min-width: 0; }
+.chat-steps__col > * + * { margin-top: var(--s-3); }
+.chat-steps__title { font-size: var(--t-md); font-weight: 700; letter-spacing: -0.01em; }
+.steps-small { counter-reset: s; display: grid; gap: var(--s-2); font-size: var(--t-sm); }
+.steps-small li { counter-increment: s; padding-left: 2rem; position: relative; }
+.steps-small li::before {
+  content: counter(s);
+  position: absolute;
+  left: 0;
+  font-family: var(--f-mono);
+  font-weight: 600;
+  color: var(--c-ink-3);
+}
+#tokens > h3 { margin-top: var(--s-6); }
+
+.consent__facts { display: grid; gap: var(--s-3); margin-top: var(--s-5); border-top: var(--rule-thin) solid var(--c-hair); }
+.consent__facts > div {
+  display: grid;
+  gap: var(--s-1) var(--s-4);
+  padding-top: var(--s-3);
+  border-bottom: var(--rule-thin) solid var(--c-hair);
+  padding-bottom: var(--s-3);
+}
+.consent__facts dt { font-size: var(--t-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--c-ink-2); }
+.consent__facts dd { margin: 0; font-weight: 600; min-width: 0; }
+@media (min-width: 40rem) { .consent__facts > div { grid-template-columns: 10rem minmax(0, 1fr); align-items: baseline; } }
+.auth__intro > * + * { margin-top: var(--s-4); }
+.code-input { letter-spacing: 0.08em; text-transform: uppercase; }
+.consent__actions { display: flex; flex-wrap: wrap; gap: var(--s-3); }
+.consent__actions .btn { flex: 1 1 8rem; }
+a.lang__btn { text-decoration: none; display: inline-flex; align-items: center; }
+a.lang__btn[aria-current="true"] { background: var(--c-ink); color: var(--c-paper); }

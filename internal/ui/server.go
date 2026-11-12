@@ -90,6 +90,8 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /sites/{ref}/delete", s.user(s.deleteSite))
 
 	mux.HandleFunc("GET /connect", s.user(s.connectPage))
+	mux.HandleFunc("POST /connect/code", s.user(s.createCode))
+	mux.HandleFunc("POST /connect/apps/{id}/revoke", s.user(s.revokeApp))
 	mux.HandleFunc("POST /connect/tokens", s.user(s.createToken))
 	mux.HandleFunc("POST /connect/tokens/{id}/revoke", s.user(s.revokeToken))
 

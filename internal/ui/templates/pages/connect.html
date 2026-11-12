@@ -7,71 +7,92 @@
   </div>
 </header>
 
-<ol class="steps-big">
-  <li class="step">
+<section class="connect-hero" aria-labelledby="hero-h">
+  <div class="connect-hero__intro">
     <span class="step__num mono" aria-hidden="true">01</span>
-    <div class="step__body">
-      <h2 class="section-title">{{.L.T "connect.install.title"}}</h2>
-      <p>{{.L.T "connect.install.text"}}</p>
-      <div class="codeblock">
-        <p class="codeblock__label">{{.L.T "connect.install.unix"}}</p>
-        <pre class="code" id="cmd-sh"><code>{{.D.InstallSh}}</code></pre>
-        <button class="btn btn--small btn--ghost" type="button" data-copy="#cmd-sh" data-copied="{{.L.T "copy.done"}}">{{.L.T "copy.button"}}</button>
-      </div>
-      <div class="codeblock">
-        <p class="codeblock__label">{{.L.T "connect.install.windows"}}</p>
-        <pre class="code" id="cmd-ps"><code>{{.D.InstallPs1}}</code></pre>
-        <button class="btn btn--small btn--ghost" type="button" data-copy="#cmd-ps" data-copied="{{.L.T "copy.done"}}">{{.L.T "copy.button"}}</button>
-      </div>
-      <p class="hint">{{.L.T "connect.install.check" "cli" .D.CLI}}</p>
-    </div>
-  </li>
-
-  <li class="step">
-    <span class="step__num mono" aria-hidden="true">02</span>
-    <div class="step__body">
-      <h2 class="section-title">{{.L.T "connect.token.title"}}</h2>
-      <p>{{.L.T "connect.token.text"}}</p>
-      {{template "token_block" .}}
-    </div>
-  </li>
-
-  <li class="step">
-    <span class="step__num mono" aria-hidden="true">03</span>
-    <div class="step__body">
-      <h2 class="section-title">{{.L.T "connect.agent.title"}}</h2>
-      <p>{{.L.T "connect.agent.text"}}</p>
-      <details class="howto" open>
-        <summary>Claude Code</summary>
-        <p>{{.L.T "connect.claude.text"}}</p>
-        <p class="mono addr-break small">{{.D.SkillPath}}</p>
-        <div class="codeblock">
-          <pre class="code code--tall" id="skill-claude"><code>{{.D.Skill}}</code></pre>
-          <button class="btn btn--small btn--ghost" type="button" data-copy="#skill-claude" data-copied="{{.L.T "copy.done"}}">{{.L.T "copy.button"}}</button>
-        </div>
-      </details>
-      <details class="howto">
-        <summary>Codex</summary>
-        <p>{{.L.T "connect.codex.text"}}</p>
-        <div class="codeblock">
-          <pre class="code code--tall" id="skill-codex"><code>{{.D.Codex}}</code></pre>
-          <button class="btn btn--small btn--ghost" type="button" data-copy="#skill-codex" data-copied="{{.L.T "copy.done"}}">{{.L.T "copy.button"}}</button>
-        </div>
-      </details>
-    </div>
-  </li>
-
-  <li class="step">
-    <span class="step__num mono" aria-hidden="true">04</span>
-    <div class="step__body">
-      <h2 class="section-title">{{.L.T "connect.use.title"}}</h2>
-      <p class="quote">{{.L.T "connect.use.text"}}</p>
-    </div>
-  </li>
-</ol>
-
-<section class="section" aria-labelledby="tokens-h">
-  <h2 class="section-title" id="tokens-h">{{.L.T "connect.tokens.title"}}</h2>
-  {{template "token_list" .}}
+    <h2 class="section-title" id="hero-h">{{.L.T "connect.hero.title"}}</h2>
+    <p>{{.L.T "connect.hero.text"}}</p>
+    <ul class="assistants" aria-label="{{.L.T "connect.hero.list"}}">
+      <li>Claude Code</li><li>Codex</li><li>Cursor</li><li>Claude Desktop</li>
+    </ul>
+  </div>
+  {{template "connect_block" .}}
 </section>
+
+<section class="section connect-chat" aria-labelledby="chat-h">
+  <span class="step__num mono" aria-hidden="true">02</span>
+  <h2 class="section-title" id="chat-h">{{.L.T "connect.chat.title"}}</h2>
+  <p>{{.L.T "connect.chat.text"}}</p>
+  <div class="codeblock">
+    <p class="codeblock__label">{{.L.T "connect.chat.url"}}</p>
+    <pre class="code" id="mcp-url"><code>{{.D.MCPURL}}</code></pre>
+    <button class="btn btn--small btn--ghost" type="button" data-copy="#mcp-url" data-copied="{{.L.T "copy.done"}}">{{.L.T "copy.button"}}</button>
+  </div>
+  <div class="chat-steps">
+    <div class="chat-steps__col">
+      <h3 class="chat-steps__title">ChatGPT</h3>
+      <ol class="steps-small">
+        <li>{{.L.T "connect.chat.gpt.1"}}</li>
+        <li>{{.L.T "connect.chat.gpt.2"}}</li>
+        <li>{{.L.T "connect.chat.gpt.3"}}</li>
+      </ol>
+      <p class="hint">{{.L.T "connect.chat.gpt.plans"}} <a href="https://help.openai.com/" rel="noopener noreferrer" target="_blank">help.openai.com</a></p>
+    </div>
+    <div class="chat-steps__col">
+      <h3 class="chat-steps__title">Claude (claude.ai)</h3>
+      <ol class="steps-small">
+        <li>{{.L.T "connect.chat.claude.1"}}</li>
+        <li>{{.L.T "connect.chat.claude.2"}}</li>
+        <li>{{.L.T "connect.chat.claude.3"}}</li>
+      </ol>
+    </div>
+  </div>
+  <p class="hint">{{.L.T "connect.chat.code"}}</p>
+</section>
+
+<section class="section" id="apps" aria-labelledby="apps-h">
+  <h2 class="section-title" id="apps-h">{{.L.T "connect.apps.title"}}</h2>
+  {{if .D.Apps}}
+  <table class="table">
+    <thead><tr>
+      <th scope="col">{{.L.T "connect.apps.name"}}</th>
+      <th scope="col">{{.L.T "connect.apps.redirect"}}</th>
+      <th scope="col">{{.L.T "connect.apps.created"}}</th>
+      <th scope="col">{{.L.T "connect.apps.used"}}</th>
+      <th scope="col"><span class="sr-only">{{.L.T "table.actions"}}</span></th>
+    </tr></thead>
+    <tbody>
+    {{range .D.Apps}}
+    <tr>
+      <td data-label="{{$.L.T "connect.apps.name"}}">{{.ClientName}}</td>
+      <td data-label="{{$.L.T "connect.apps.redirect"}}" class="mono addr-break">{{wbr .RedirectHost}}</td>
+      <td data-label="{{$.L.T "connect.apps.created"}}">{{$.L.Date .CreatedAt}}</td>
+      <td data-label="{{$.L.T "connect.apps.used"}}">{{if .LastUsedAt}}{{$.L.DatePtr .LastUsedAt}}{{else}}{{$.L.T "connect.tokens.never"}}{{end}}</td>
+      <td class="table__actions">
+        <form method="post" action="/connect/apps/{{.ID}}/revoke">
+          {{template "csrf" $}}
+          <button class="btn btn--small btn--danger-ghost" type="submit" aria-label="{{$.L.T "connect.apps.revoke"}}: {{.ClientName}}">{{$.L.T "connect.apps.revoke"}}</button>
+        </form>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p class="empty-line">{{.L.T "connect.apps.empty"}}</p>
+  {{end}}
+</section>
+
+<section class="section" aria-labelledby="use-h">
+  <h2 class="section-title" id="use-h">{{.L.T "connect.use.title"}}</h2>
+  <p class="quote">{{.L.T "connect.use.text"}}</p>
+</section>
+
+<details class="howto section" id="tokens" {{if .D.TokensOpen}}open{{end}}>
+  <summary>{{.L.T "connect.tokens.manual"}}</summary>
+  <p>{{.L.T "connect.tokens.manual.text"}}</p>
+  {{template "token_block" .}}
+  <h3 class="chat-steps__title">{{.L.T "connect.tokens.title"}}</h3>
+  {{template "token_list" .}}
+</details>
 {{end}}

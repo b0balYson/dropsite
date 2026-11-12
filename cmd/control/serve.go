@@ -16,6 +16,8 @@ import (
 	"github.com/b0balYson/dropsite/internal/api"
 	"github.com/b0balYson/dropsite/internal/brand"
 	"github.com/b0balYson/dropsite/internal/config"
+	"github.com/b0balYson/dropsite/internal/mcp/remote"
+	"github.com/b0balYson/dropsite/internal/oauth"
 	"github.com/b0balYson/dropsite/internal/service"
 	"github.com/b0balYson/dropsite/internal/storage"
 	"github.com/b0balYson/dropsite/internal/store"
@@ -72,10 +74,29 @@ func build(ctx context.Context, cfg *config.Config, log *slog.Logger) (*app, err
 	}
 	return &app{
 		cfg: cfg, log: log, db: db, svc: svc,
-		public: api.New(svc, log),
+		public: publicHandler(svc, log),
 		intern: internalHandler(svc),
 		admin:  ui.New(svc, log),
 	}, nil
+}
+
+// publicHandler serves the API host: API v1, the remote MCP endpoint and
+// the OAuth authorization server with its consent page.
+func publicHandler(svc *service.Service, log *slog.Logger) http.Handler {
+	reqIP := func(r *http.Request) string { return api.RequestIP(r.Context()) }
+	az := oauth.New(svc, oauth.Options{ClientIP: reqIP, Logger: log})
+	mounts := []api.Mount{{
+		Pattern: remote.Path,
+		Handler: remote.New(svc, remote.Options{ClientIP: reqIP, OnAuth: api.SetRequestUser, Logger: log}),
+	}}
+	for _, rt := range az.Routes() {
+		mounts = append(mounts, api.Mount{Pattern: rt.Pattern, Handler: rt.Handler})
+	}
+	consent := ui.NewAuthorize(svc, az, reqIP, log)
+	mounts = append(mounts,
+		api.Mount{Pattern: oauth.AuthorizePath, Handler: consent},
+		api.Mount{Pattern: "/oauth/static/", Handler: consent})
+	return api.New(svc, log, mounts...)
 }
 
 func internalHandler(svc *service.Service) http.Handler {
