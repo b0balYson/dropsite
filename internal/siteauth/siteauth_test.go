@@ -200,6 +200,13 @@ func TestLoginFlow(t *testing.T) {
 	if rec.Header().Get("Location") != "/docs/?q=1" {
 		t.Fatalf("next %q", rec.Header().Get("Location"))
 	}
+	// Firefox sends "Origin: null" for a same-origin POST under a strict
+	// referrer policy; Fetch Metadata confirms it is same-origin.
+	rec = h.serve(http.MethodPost, h.host, LoginPath, url.Values{"_csrf": {token}, "password": {sitePass}},
+		withCookie(nonce), withHeader("Origin", "null"), withHeader("Sec-Fetch-Site", "same-origin"))
+	if rec.Code != http.StatusSeeOther || accessCookie(rec) == nil {
+		t.Fatalf("origin null, same-origin: %d", rec.Code)
+	}
 }
 
 func TestLoginCSRF(t *testing.T) {
@@ -211,6 +218,7 @@ func TestLoginCSRF(t *testing.T) {
 		"no nonce":       h.serve(http.MethodPost, h.host, LoginPath, good),
 		"cross site":     h.serve(http.MethodPost, h.host, LoginPath, good, withCookie(nonce), withHeader("Sec-Fetch-Site", "cross-site")),
 		"foreign origin": h.serve(http.MethodPost, h.host, LoginPath, good, withCookie(nonce), withHeader("Origin", "https://evil.example")),
+		"null origin":    h.serve(http.MethodPost, h.host, LoginPath, good, withCookie(nonce), withHeader("Origin", "null")),
 		"other nonce": h.serve(http.MethodPost, h.host, LoginPath, good,
 			withCookie(&http.Cookie{Name: nonceCookie, Value: strings.Repeat("A", 24)})),
 	}

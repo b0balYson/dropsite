@@ -74,7 +74,7 @@ func headers(next http.Handler) http.Handler {
 		h.Set("X-Robots-Tag", "noindex, nofollow")
 		h.Set("Content-Security-Policy", pageCSP)
 		h.Set("X-Frame-Options", "DENY")
-		h.Set("Referrer-Policy", "no-referrer")
+		h.Set("Referrer-Policy", "same-origin") // keeps Origin on the login POST
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("Cache-Control", "no-store")
 		next.ServeHTTP(w, r)
@@ -187,7 +187,11 @@ func (l *login) checkCSRF(ctx context.Context, r *http.Request, host string) err
 	if site := r.Header.Get("Sec-Fetch-Site"); site != "" && site != "same-origin" {
 		return errCSRF
 	}
-	if origin := r.Header.Get("Origin"); origin != "" && origin != "https://"+r.Host {
+	// Browsers send "Origin: null" for a same-origin POST from a page with a
+	// strict referrer policy; accept it only when Fetch Metadata vouches for it.
+	origin := r.Header.Get("Origin")
+	sameOriginNull := origin == "null" && r.Header.Get("Sec-Fetch-Site") == "same-origin"
+	if origin != "" && origin != "https://"+r.Host && !sameOriginNull {
 		return errCSRF
 	}
 	if !l.svc.CheckVisitorCSRF(ctx, host, currentNonce(r), r.PostFormValue("_csrf")) {
