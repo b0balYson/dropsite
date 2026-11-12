@@ -54,11 +54,18 @@ type composeVolume struct {
 }
 
 type composeService struct {
+	Image       string          `json:"image"`
+	Build       *composeBuild   `json:"build"`
 	User        string          `json:"user"`
 	ReadOnly    bool            `json:"read_only"`
 	SecurityOpt []string        `json:"security_opt"`
 	Command     []string        `json:"command"`
 	Volumes     []composeVolume `json:"volumes"`
+}
+
+type composeBuild struct {
+	Context    string `json:"context"`
+	Dockerfile string `json:"dockerfile"`
 }
 
 type composeFile struct {
@@ -88,8 +95,51 @@ func TestComposeConfig(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			args := append(append([]string{"compose"}, files...), "--env-file", env, "config", "--format", "json")
-			checkCompose(t, run(t, "docker", args...))
+			out := run(t, "docker", args...)
+			checkCompose(t, out)
+			checkSourceBuild(t, out, name == "wildcard")
 		})
+	}
+}
+
+// Verify the resolved configuration: wildcard must clear the stock Caddy
+// image, or Compose can start it instead of the build with the DNS plugin.
+func checkSourceBuild(t *testing.T, out []byte, wildcard bool) {
+	t.Helper()
+	var cf composeFile
+	if err := json.Unmarshal(out, &cf); err != nil {
+		t.Fatal(err)
+	}
+	control := cf.Services["control"]
+	if control.Image != "" {
+		t.Errorf("control must build locally without a registry image, got %q", control.Image)
+	}
+	checkBuildContext(t, control.Build, "..", "deploy/Dockerfile")
+	caddy := cf.Services["caddy"]
+	if wildcard {
+		if caddy.Image != "" {
+			t.Errorf("wildcard Caddy must replace the stock image with a local build, got %q", caddy.Image)
+		}
+		checkBuildContext(t, caddy.Build, "caddy", "Dockerfile")
+	} else if caddy.Image != caddyImage || caddy.Build != nil {
+		t.Errorf("ondemand Caddy must use the stock image, got image=%q build=%+v", caddy.Image, caddy.Build)
+	}
+}
+
+func checkBuildContext(t *testing.T, build *composeBuild, contextDir, dockerfile string) {
+	t.Helper()
+	if build == nil {
+		t.Fatal("missing local build configuration")
+	}
+	want, err := filepath.Abs(contextDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if build.Context != want || build.Dockerfile != dockerfile {
+		t.Errorf("build=%+v, want context=%q dockerfile=%q", build, want, dockerfile)
+	}
+	if _, err := os.Stat(filepath.Join(build.Context, build.Dockerfile)); err != nil {
+		t.Errorf("Dockerfile must exist in the checkout: %v", err)
 	}
 }
 

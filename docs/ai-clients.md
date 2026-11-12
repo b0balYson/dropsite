@@ -85,3 +85,18 @@ The endpoint follows the MCP authorization specification (2025-11-25) and the re
 - Blocking a user stops their OAuth tokens immediately.
 
 Caddy proxies the whole `API_HOST` to `control`, so no proxy changes are needed. The endpoint is stateless (every POST is authorised on its own; no server-sent event streams).
+
+## OAuth discovery troubleshooting
+
+If ChatGPT reports that it could not determine OAuth settings, check the public API host before entering settings manually:
+
+```bash
+dig +short api.example.com
+curl -i https://api.example.com/.well-known/oauth-protected-resource/mcp
+curl -i https://api.example.com/.well-known/oauth-authorization-server
+curl -i https://api.example.com/mcp
+```
+
+Replace `api.example.com` with your API host. DNS must return the server IP. Both metadata URLs must return HTTP 200 and JSON, with HTTPS validated without `-k`. The unauthenticated `/mcp` request must return HTTP 401 and a `WWW-Authenticate` header containing `resource_metadata`. The metadata `issuer` and `authorization_servers` must refer to your public API host.
+
+`NXDOMAIN` means a DNS record is missing. Add an `A` record for the API host pointing at the server (and an `AAAA` record only if working IPv6 is available). Check the base domain and wildcard records too. Caddy cannot obtain a public certificate before these names resolve. Inspect `docker compose logs --tail=100 caddy` from `dropsite/deploy` for DNS and certificate errors. Manual OAuth settings do not fix DNS or HTTPS errors. After fixing DNS and HTTPS, retry creating the ChatGPT connection.

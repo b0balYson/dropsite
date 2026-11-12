@@ -2,7 +2,7 @@
 # through the DNS-01 challenge, instead of one certificate per site address.
 # Release previews (p-<deploy>-<site>.<BASE_DOMAIN>) exist only in this mode.
 #
-#   docker compose -f docker-compose.yml -f compose.wildcard.yml up -d
+#   docker compose -f docker-compose.yml -f compose.wildcard.yml up -d --build --wait
 #
 # Needs CF_API_TOKEN in .env (Cloudflare API token with Zone.DNS:Edit on the
 # zone of BASE_DOMAIN); see docs/tls.md. To go back to ondemand, run the same
@@ -10,9 +10,9 @@
 
 services:
   caddy:
-    # Stock Caddy plus DNS provider plugins (deploy/caddy/Dockerfile). With
-    # --build compose builds it locally instead of pulling.
-    image: ghcr.io/b0balyson/dropsite-caddy:${DROPSITE_CADDY_VERSION:-2.11.9}
+    # Replace the stock image with a local build containing DNS plugins.
+    # !reset clears the image inherited from docker-compose.yml.
+    image: !reset null
     build:
       context: caddy
     environment:

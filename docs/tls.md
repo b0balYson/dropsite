@@ -52,7 +52,7 @@ What changes:
 ### Requirements
 
 - DNS of `BASE_DOMAIN` is hosted by a supported provider. Built in: **Cloudflare**.
-- The Caddy image with the DNS plugin: `ghcr.io/b0balyson/dropsite-caddy` (stock Caddy 2.11.9 plus the plugin, amd64 and arm64), built from [`deploy/caddy/Dockerfile`](../deploy/caddy/Dockerfile).
+- The full repository checkout. Compose builds Caddy 2.11.9 with the DNS plugin locally from [`deploy/caddy/Dockerfile`](../deploy/caddy/Dockerfile); no dropsite registry is used.
 - `compose.wildcard.yml` next to `docker-compose.yml`.
 
 ### Switching to wildcard
@@ -68,11 +68,10 @@ What changes:
 4. **Start with the override:**
 
    ```sh
-   docker compose -f docker-compose.yml -f compose.wildcard.yml pull
-   docker compose -f docker-compose.yml -f compose.wildcard.yml up -d
+   docker compose -f docker-compose.yml -f compose.wildcard.yml up -d --build --wait
    ```
 
-   Without `pull`, `up --build` builds the Caddy image locally from `deploy/caddy` (needs the repository checkout).
+   Run this from `dropsite/deploy`. The override replaces stock Caddy with the local build, including its DNS plugin.
 
 5. **Check.** In `docker compose logs caddy` look for `certificate obtained successfully` with `"identifier":"*.<BASE_DOMAIN>"` and `"identifier":"<BASE_DOMAIN>"` (the first issuance takes up to a minute while the TXT record propagates). Then:
 
@@ -96,7 +95,7 @@ Keep using `-f docker-compose.yml -f compose.wildcard.yml` with every `docker co
 ### Rolling back to ondemand
 
 ```sh
-docker compose -f docker-compose.yml up -d
+docker compose -f docker-compose.yml up -d --build --wait
 ```
 
 Both containers return to ondemand mode (make sure `.env` has no `TLS_MODE=wildcard`). Caddy issues per-address certificates again on the next visit of each address, which counts against the limits above; `control` removes all preview addresses on start. The wildcard certificates stay in the `caddy_data` volume and are reused if you switch back.
@@ -117,7 +116,7 @@ Caddy has plugins for most providers (<https://github.com/caddy-dns>). To add on
    }
    ```
 
-3. In a copy of `compose.wildcard.yml` set your image, `TLS_DNS_PROVIDER: route53` and the provider's variables instead of `CF_API_TOKEN`.
+3. In a copy of `compose.wildcard.yml` keep the local `build` configuration and set `TLS_DNS_PROVIDER: route53` and the provider's variables instead of `CF_API_TOKEN`.
 
 The mode and provider are chosen by environment only: `import tls_{$TLS_MODE}` and `import dns_{$TLS_DNS_PROVIDER}` in the Caddyfile pick the snippets, so no other line changes. An unknown mode or provider stops Caddy at start-up with `File to import not found`.
 

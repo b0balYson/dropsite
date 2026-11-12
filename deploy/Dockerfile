@@ -21,10 +21,13 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 COPY cmd ./cmd
 COPY internal ./internal
 COPY skills ./skills
+# SQLite compilation is memory-heavy on 1 GB hosts. Build one package at a
+# time and collect garbage sooner; GOMEMLIMIT is a soft per-process target.
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
-    go build -trimpath \
+    GOMAXPROCS=1 GOGC=20 GOMEMLIMIT=256MiB \
+    go build -p=1 -trimpath \
       -ldflags "-s -w -X github.com/b0balYson/dropsite/internal/brand.Version=${VERSION}" \
       -o /out/control ./cmd/control
 

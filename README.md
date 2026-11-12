@@ -4,7 +4,7 @@
 
 Self-hosted publishing of static sites. A marketer builds a landing page with an AI assistant, says "publish it" or drops a zip into the web interface, and gets an HTTPS link on a subdomain of your domain in seconds. No VPS per site, no git, no DevOps.
 
-- One server, one command: `docker compose up -d`.
+- One server. Build from source and start: `docker compose up -d --build --wait`.
 - Archive in, HTTPS link out. Every site gets a random address such as `k3f9x2m7qa.example.site` and an optional readable one such as `promo-may.example.site`.
 - Every publish is an immutable release: switch and roll back instantly, with zero failed requests during the switch.
 - Each user sees and changes only their own sites. Admins manage users, all sites, limits and the audit log.
@@ -17,9 +17,9 @@ dropsite serves finished static files only (HTML, CSS, JS, images). It does not 
 
 Two containers. **Caddy** serves files by host name and obtains TLS certificates on demand; its configuration is static and never reloads. **control** (one Go binary) owns the database, accounts, the API and the web interface, and publishes releases by atomically switching symlinks on a shared volume that Caddy reads.
 
-## Install in 5 minutes
+## Install from the repository
 
-Requirements: a Linux server with Docker and the Compose plugin, ports 80 and 443 open, and a domain.
+Requirements: a Linux server (amd64 or arm64), Git, Docker Engine 24+ and Compose 2.24.4+, ports 80 and 443 open, and a domain. For a server with 1 CPU and 1 GB RAM, provide 2 GB swap for building; see [build memory](docs/install.md#build-memory). Go is not needed on the host: Docker downloads the toolchain and builds the application inside a container. Internet access is needed for base images and dependencies. The first build can take several minutes.
 
 ### 1. Choose a dedicated base domain
 
@@ -32,17 +32,25 @@ Use a domain (or a subdomain such as `sites.example.com`) that hosts **nothing e
 | A (and AAAA if you have IPv6) | `example.site` | server IP |
 | A (and AAAA) | `*.example.site` | server IP |
 
+The `*` record also covers `api.example.site` unless a separate record at `api` overrides it. With Cloudflare, the zone must be **Active** and the registrar must use the nameservers assigned by Cloudflare.
+
+Check `dig +short example.site` and `dig +short api.example.site`: both must return the server IP. `NXDOMAIN` means the DNS record does not exist. Until DNS works, Caddy cannot obtain a certificate and ChatGPT cannot discover OAuth settings. Use **DNS only** in Cloudflare during setup.
+
 ### 3. Configure and start
 
 ```bash
-mkdir dropsite && cd dropsite
-base=https://raw.githubusercontent.com/b0balYson/dropsite/main/deploy
-curl -fsSLO "$base/docker-compose.yml" -fsSLO "$base/Caddyfile"
-curl -fsSL "$base/.env.example" -o .env
+git clone https://github.com/b0balYson/dropsite.git
+cd dropsite/deploy
+cp .env.example .env
+chmod 600 .env
 # Fill in BASE_DOMAIN, ACME_EMAIL, ADMIN_EMAIL, ADMIN_PASSWORD
 nano .env
-docker compose up -d
+docker compose config --quiet
+docker compose up -d --build --wait
+docker compose ps
 ```
+
+Run `docker compose` commands from `dropsite/deploy`. Docker builds `control` from this repository. No prebuilt dropsite image is required. Keep the full checkout for future builds. In `docker compose ps`, `control` must be `healthy` and `caddy` must be `running`. If startup fails, run `docker compose logs --tail=100 control caddy`.
 
 ### 4. Open the web interface
 
@@ -76,6 +84,8 @@ $env:DROPSITE_SERVER='https://api.example.com'; $env:DROPSITE_CODE='ABCD-EFGH-JK
 ```
 
 Without `--server` and `--code` the installers only install the CLI. `dropsite setup --remove` takes the integrations out again.
+
+The CLI installers download a binary from GitHub Releases. If no release is available, [build the CLI from source](docs/install.md#cli-from-source) on your computer. The server and web publishing do not need the CLI.
 
 ### Own domains
 
@@ -141,7 +151,7 @@ Every issued certificate is published in public Certificate Transparency logs, s
 
 ```sh
 # .env: CF_API_TOKEN=<token>
-docker compose -f docker-compose.yml -f compose.wildcard.yml up -d
+docker compose -f docker-compose.yml -f compose.wildcard.yml up -d --build --wait
 ```
 
 In this mode every release also gets its own preview address `https://p-<release>-<site>.<BASE_DOMAIN>/` (not indexed by search engines), shown in the release history. Step-by-step switch and rollback: [docs/tls.md](docs/tls.md).
@@ -172,7 +182,7 @@ In this mode every release also gets its own preview address `https://p-<release
 ## Operations
 
 - **Backup:** `docker compose exec -T control /control backup - > backup-$(date +%F).tar.gz`. See [docs/backup.md](docs/backup.md) for restore.
-- **Upgrade:** back up, then `docker compose pull && docker compose up -d`. Migrations run automatically; downgrades are not supported.
+- **Upgrade:** from `dropsite/deploy`, back up, run `git pull --ff-only`, then `docker compose up -d --build --wait`. Your `.env` and data in Docker volumes are preserved. Migrations run automatically; downgrades are not supported. See [upgrade steps](docs/backup.md#upgrade).
 - **Logs:** JSON on stdout of both containers: `docker compose logs -f`. Caddy also writes the sites access log to the `logs` volume for statistics (rotated at 50 MB, 5 old files kept).
 - **Health:** `docker compose ps` shows the `control` health check.
 

@@ -1,8 +1,9 @@
 # dropsite: self-hosted publishing of static sites.
 #
-# Install: copy this file, Caddyfile and .env.example (as .env) into one
-# directory, fill in the four required variables and run:
-#   docker compose up -d
+# Install: clone the repository, cd deploy, copy .env.example to .env,
+# fill in the four required variables and run:
+#   docker compose up -d --build --wait
+# control is built locally from the repository; no dropsite registry is used.
 #
 # Containers: caddy (serving and TLS), control (API, UI, deploys) and the
 # one-shot caddy-init. Volumes: sites, state, caddy_data, logs.
@@ -86,7 +87,6 @@ services:
       dockerfile: deploy/Dockerfile
       args:
         VERSION: ${DROPSITE_VERSION:-dev}
-    image: ghcr.io/b0balyson/dropsite-control:${DROPSITE_VERSION:-latest}
     restart: unless-stopped
     user: "65532:65532"
     read_only: true

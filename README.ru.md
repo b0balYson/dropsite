@@ -4,7 +4,7 @@
 
 Self-hosted публикация статических сайтов. Маркетолог собирает лендинг с ИИ-ассистентом, говорит «опубликуй» или перетаскивает zip в веб-интерфейс и через несколько секунд получает HTTPS-ссылку на поддомене вашего домена. Без отдельного VPS, git и DevOps.
 
-- Один сервер, одна команда: `docker compose up -d`.
+- Один сервер. Сборка из исходников и запуск: `docker compose up -d --build --wait`.
 - На входе архив, на выходе HTTPS-ссылка. Каждый сайт получает случайный адрес вида `k3f9x2m7qa.example.site` и по желанию читаемый, например `promo-may.example.site`.
 - Каждая публикация — неизменяемый релиз: переключение и откат мгновенные, без единого неудачного запроса.
 - Пользователь видит и меняет только свои сайты. Администратор управляет пользователями, всеми сайтами, лимитами и журналом.
@@ -17,9 +17,9 @@ dropsite раздаёт только готовую статику (HTML, CSS, J
 
 Два контейнера. **Caddy** раздаёт файлы по имени хоста и выпускает TLS-сертификаты по требованию; его конфигурация статическая и никогда не перезагружается. **control** (один бинарник на Go) хранит базу, учётные записи, API и веб-интерфейс и публикует релизы, атомарно переключая симлинки на общем томе, который читает Caddy.
 
-## Установка за 5 минут
+## Установка из репозитория
 
-Нужно: Linux-сервер с Docker и плагином Compose, открытые порты 80 и 443, домен.
+Нужно: Linux-сервер (amd64 или arm64), Git, Docker Engine 24+ и Compose 2.24.4+, открытые порты 80 и 443, домен. На сервере с 1 CPU и 1 ГБ RAM рекомендуем добавить 2 ГБ swap (подкачки на диск) для сборки; диагностика — в [docs/install.md](docs/install.md#build-memory). Go устанавливать на сервер не нужно: Docker скачивает инструменты и собирает приложение внутри контейнера. Нужен доступ к интернету для базовых образов и зависимостей. Первая сборка может занять несколько минут.
 
 ### 1. Выберите отдельный базовый домен
 
@@ -32,17 +32,25 @@ dropsite раздаёт только готовую статику (HTML, CSS, J
 | A (и AAAA, если есть IPv6) | `example.site` | IP сервера |
 | A (и AAAA) | `*.example.site` | IP сервера |
 
+Запись `*` покрывает и `api.example.site`, если отдельная запись для `api` не перекрывает её. Если используете Cloudflare, домен должен иметь статус **Active**, а у регистратора должны быть указаны NS-серверы Cloudflare.
+
+Проверьте `dig +short example.site` и `dig +short api.example.site`: оба имени должны возвращать IP сервера. `NXDOMAIN` означает, что DNS-записи нет. Пока DNS не работает, Caddy не выпустит сертификат, а ChatGPT не сможет определить настройки OAuth. В Cloudflare на время настройки используйте **DNS only**.
+
 ### 3. Настройте и запустите
 
 ```bash
-mkdir dropsite && cd dropsite
-base=https://raw.githubusercontent.com/b0balYson/dropsite/main/deploy
-curl -fsSLO "$base/docker-compose.yml" -fsSLO "$base/Caddyfile"
-curl -fsSL "$base/.env.example" -o .env
+git clone https://github.com/b0balYson/dropsite.git
+cd dropsite/deploy
+cp .env.example .env
+chmod 600 .env
 # Заполните BASE_DOMAIN, ACME_EMAIL, ADMIN_EMAIL, ADMIN_PASSWORD
 nano .env
-docker compose up -d
+docker compose config --quiet
+docker compose up -d --build --wait
+docker compose ps
 ```
+
+Выполняйте команды `docker compose` из каталога `dropsite/deploy`. Docker собирает `control` из этого репозитория. Готовые образы dropsite не нужны. Сохраняйте весь репозиторий: он нужен для следующих сборок. В `docker compose ps` сервис `control` должен иметь статус `healthy`, а `caddy` — `running`. Если запуск завершился ошибкой, выполните `docker compose logs --tail=100 control caddy`.
 
 ### 4. Откройте веб-интерфейс
 
@@ -76,6 +84,8 @@ $env:DROPSITE_SERVER='https://api.example.com'; $env:DROPSITE_CODE='ABCD-EFGH-JK
 ```
 
 Без `--server` и `--code` установщики только ставят CLI. `dropsite setup --remove` убирает интеграции.
+
+Установщики CLI скачивают бинарник из GitHub Releases. Если релиза ещё нет, соберите CLI из исходников на своём компьютере: [инструкция](docs/install.md#cli-from-source). Для запуска сервера и публикации через веб-интерфейс CLI не нужен.
 
 ### Свои домены
 
@@ -141,7 +151,7 @@ Let's Encrypt выдаёт **50 новых сертификатов на зар�
 
 ```sh
 # .env: CF_API_TOKEN=<токен>
-docker compose -f docker-compose.yml -f compose.wildcard.yml up -d
+docker compose -f docker-compose.yml -f compose.wildcard.yml up -d --build --wait
 ```
 
 В этом режиме у каждого релиза есть ещё и свой превью-адрес `https://p-<релиз>-<сайт>.<BASE_DOMAIN>/` (поисковики его не индексируют), он показан в истории релизов. Переход по шагам и откат: [docs/tls.md](docs/tls.md).
@@ -172,7 +182,7 @@ docker compose -f docker-compose.yml -f compose.wildcard.yml up -d
 ## Эксплуатация
 
 - **Бэкап:** `docker compose exec -T control /control backup - > backup-$(date +%F).tar.gz`. Восстановление — в [docs/backup.md](docs/backup.md).
-- **Обновление:** сделайте бэкап, затем `docker compose pull && docker compose up -d`. Миграции применяются автоматически, откат схемы не поддерживается.
+- **Обновление:** из `dropsite/deploy` сделайте бэкап, выполните `git pull --ff-only`, затем `docker compose up -d --build --wait`. Настройки в `.env` и данные в Docker-томах сохраняются. Миграции применяются автоматически, откат схемы не поддерживается. Порядок действий — в [docs/backup.md](docs/backup.md#upgrade).
 - **Логи:** JSON в stdout обоих контейнеров: `docker compose logs -f`. Кроме того, Caddy пишет access-лог сайтов на том `logs` для статистики (ротация по 50 МБ, хранятся 5 старых файлов).
 - **Здоровье:** `docker compose ps` показывает проверку здоровья `control`.
 

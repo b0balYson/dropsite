@@ -15,7 +15,7 @@ The database is captured first, then the files. A publish that finishes in betwe
 Schedule it with cron and copy the file off the server, for example:
 
 ```cron
-15 3 * * * cd /opt/dropsite && docker compose exec -T control /control backup - > /var/backups/dropsite-$(date +\%F).tar.gz
+15 3 * * * cd /opt/dropsite/deploy && docker compose exec -T control /control backup - > /var/backups/dropsite-$(date +\%F).tar.gz
 ```
 
 ## Restore
@@ -47,9 +47,13 @@ Restored without the key, everything else works, but the settings screen reports
 
 ## Upgrade
 
+Run these commands from `dropsite/deploy`. With wildcard TLS, keep `COMPOSE_FILE=docker-compose.yml:compose.wildcard.yml` in `.env` so the same mode is used for every command.
+
 ```bash
 docker compose exec -T control /control backup - > before-upgrade.tar.gz
-docker compose pull && docker compose up -d
+git pull --ff-only
+docker compose up -d --build --wait
+docker compose ps
 ```
 
-Migrations run on start. Downgrading is not supported: to go back, run the older image and restore the backup taken before the upgrade.
+Migrations run on start. Downgrading is not supported: to go back, check out the previous Git revision, rebuild it, and restore the backup taken before the upgrade. Keep the same checkout path and Compose project name so Docker reuses the existing volumes. Do not run `docker compose down -v`: it deletes the data volumes.

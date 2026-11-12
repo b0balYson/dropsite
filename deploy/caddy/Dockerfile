@@ -3,7 +3,7 @@
 # Caddy with DNS provider plugins, needed only for TLS_MODE=wildcard (the
 # wildcard certificate requires the DNS-01 challenge). Build context is this
 # directory:
-#   docker build -t ghcr.io/b0balyson/dropsite-caddy:2.11.9 deploy/caddy
+#   docker build -t dropsite-caddy:local deploy/caddy
 #
 # Adding a DNS provider: append another "--with github.com/caddy-dns/<name>@<version>"
 # to the xcaddy command below (pin the version) and a "(dns_<name>)" snippet to
@@ -22,9 +22,11 @@ ARG CADDY_VERSION
 ARG TARGETOS
 ARG TARGETARCH
 ARG CLOUDFLARE_VERSION=v0.2.4
+# Keep the plugin build usable on small hosts, as in deploy/Dockerfile.
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 \
+    GOMAXPROCS=1 GOGC=20 GOMEMLIMIT=256MiB GOFLAGS=-p=1 \
     xcaddy build v${CADDY_VERSION} \
       --output /out/caddy \
       --with github.com/caddy-dns/cloudflare@${CLOUDFLARE_VERSION}
