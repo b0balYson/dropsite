@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/b0balYson/dropsite/internal/service"
+	"github.com/b0balYson/dropsite/internal/siteauth"
 )
 
 // Prefix is the base path of API v1.
@@ -41,6 +42,14 @@ func New(svc *service.Service, log *slog.Logger) http.Handler {
 	a := &api{svc: svc, log: log}
 	mux := http.NewServeMux()
 	a.register(mux, a.routes())
+	// The visitor login page of protected sites: Caddy proxies /_dropsite/*
+	// on site hosts here. On the API host it answers 404 (no such site).
+	mux.Handle(siteauth.Prefix, siteauth.Login(svc, log, func(r *http.Request) string {
+		if info := infoFrom(r.Context()); info != nil {
+			return info.ip
+		}
+		return r.RemoteAddr
+	}))
 	return a.middleware(mux)
 }
 

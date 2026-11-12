@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>{{index .T "page.title"}} · {{.Title}}</title>
+<link rel="stylesheet" href="{{.CSSPath}}">
+</head>
+<body>
+<main class="gate" aria-labelledby="site-title">
+  <svg class="gate__icon" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false">
+    <rect x="4.5" y="10.5" width="15" height="10" rx="2"></rect>
+    <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path>
+  </svg>
+  <p class="gate__eyebrow">{{index .T "page.eyebrow"}}</p>
+  <h1 class="gate__title" id="site-title">{{.Title}}</h1>
+  <p class="gate__lead">{{index .T "page.lead"}}</p>
+  <form class="gate__form" method="post" action="{{.Action}}">
+    <input type="hidden" name="_csrf" value="{{.CSRF}}">
+    <input type="hidden" name="next" value="{{.Next}}">
+    {{with .Error}}<p class="gate__error" role="alert" id="gate-error">{{.}}</p>{{end}}
+    <label class="gate__label" for="password">{{index .T "field.pass"}}</label>
+    <input class="gate__input" id="password" name="password" type="password" required autofocus
+      autocomplete="current-password" maxlength="256"{{if .Error}} aria-invalid="true" aria-describedby="gate-error"{{end}}>
+    <button class="gate__submit" type="submit">{{index .T "submit"}}</button>
+  </form>
+  <p class="gate__note">{{index .T "note"}}</p>
+</main>
+</body>
+</html>

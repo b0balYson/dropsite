@@ -1,0 +1,293 @@
+package siteauth
+
+import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"regexp"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/b0balYson/dropsite/internal/service"
+	"github.com/b0balYson/dropsite/internal/testenv"
+)
+
+const sitePass = "visitor-pass-1"
+
+type harness struct {
+	t     *testing.T
+	env   *testenv.Env
+	check http.Handler
+	login http.Handler
+	host  string // slug host of a protected site
+	open  string // default host of an open site
+}
+
+func newHarness(t *testing.T) *harness {
+	t.Helper()
+	e := testenv.New(t)
+	ctx := context.Background()
+	owner := e.User("owner@pp.test")
+	v, err := e.Svc.CreateSite(ctx, owner, `Docs <b>"quoted"</b>`, "docs")
+	if err != nil {
+		t.Fatal(err)
+	}
+	pass := sitePass
+	if _, err := e.Svc.UpdateSite(ctx, owner, v.Site.ID, service.SiteUpdate{Password: &pass}); err != nil {
+		t.Fatal(err)
+	}
+	open, err := e.Svc.CreateSite(ctx, owner, "Open", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &harness{
+		t: t, env: e, check: AuthCheck(e.Svc, nil),
+		login: Login(e.Svc, nil, func(*http.Request) string { return "203.0.113.7" }),
+		host:  "docs." + testenv.BaseDomain, open: open.Site.ID + "." + testenv.BaseDomain,
+	}
+}
+
+func (h *harness) authCheck(host, uri string, cookies ...*http.Cookie) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodGet, "http://control:8081/internal/auth-check", nil)
+	req.Host = host
+	req.Header.Set("X-Forwarded-Uri", uri)
+	for _, c := range cookies {
+		req.AddCookie(c)
+	}
+	rec := httptest.NewRecorder()
+	h.check.ServeHTTP(rec, req)
+	return rec
+}
+
+var csrfRe = regexp.MustCompile(`name="_csrf" value="([^"]+)"`)
+
+// getForm loads the login page and returns the CSRF token and nonce cookie.
+func (h *harness) getForm(host string) (string, *http.Cookie) {
+	h.t.Helper()
+	rec := h.serve(http.MethodGet, host, LoginPath+"?next=/docs/", nil)
+	if rec.Code != http.StatusOK {
+		h.t.Fatalf("login page: %d %s", rec.Code, rec.Body)
+	}
+	m := csrfRe.FindStringSubmatch(rec.Body.String())
+	if m == nil {
+		h.t.Fatal("no csrf token")
+	}
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == nonceCookie {
+			return m[1], c
+		}
+	}
+	h.t.Fatal("no nonce cookie")
+	return "", nil
+}
+
+func (h *harness) serve(method, host, target string, form url.Values, mods ...func(*http.Request)) *httptest.ResponseRecorder {
+	var req *http.Request
+	if form != nil {
+		req = httptest.NewRequest(method, "https://"+host+target, strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	} else {
+		req = httptest.NewRequest(method, "https://"+host+target, nil)
+	}
+	for _, m := range mods {
+		m(req)
+	}
+	rec := httptest.NewRecorder()
+	h.login.ServeHTTP(rec, req)
+	return rec
+}
+
+func withCookie(c *http.Cookie) func(*http.Request) {
+	return func(r *http.Request) { r.AddCookie(c) }
+}
+
+func withHeader(k, v string) func(*http.Request) {
+	return func(r *http.Request) { r.Header.Set(k, v) }
+}
+
+func accessCookie(rec *httptest.ResponseRecorder) *http.Cookie {
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == service.VisitorCookieName {
+			return c
+		}
+	}
+	return nil
+}
+
+func TestAuthCheckDecisions(t *testing.T) {
+	h := newHarness(t)
+	rec := h.authCheck(h.host+":443", "/docs/page?x=1")
+	if rec.Code != http.StatusFound {
+		t.Fatalf("no cookie: %d", rec.Code)
+	}
+	loc, _ := url.Parse(rec.Header().Get("Location"))
+	if loc.Path != LoginPath || loc.Query().Get("next") != "/docs/page?x=1" || loc.Host != "" {
+		t.Fatalf("location %q", rec.Header().Get("Location"))
+	}
+	if rec := h.authCheck(h.open, "/"); rec.Code != http.StatusOK {
+		t.Fatalf("open site: %d", rec.Code)
+	}
+	for _, host := range []string{"unknown.pp.test", "..", "", "DOCS.pp.test"} {
+		if rec := h.authCheck(host, "/"); rec.Code != http.StatusNotFound {
+			t.Fatalf("%q: %d", host, rec.Code)
+		}
+	}
+	// An unsafe original URI is never echoed into the redirect.
+	rec = h.authCheck(h.host, "//evil.example/x")
+	if got := rec.Header().Get("Location"); got != LoginPath+"?next=%2F" {
+		t.Fatalf("location %q", got)
+	}
+	if rec := h.authCheck(h.host, "/", &http.Cookie{Name: service.VisitorCookieName, Value: "forged.1.2.3"}); rec.Code != http.StatusFound {
+		t.Fatalf("forged cookie: %d", rec.Code)
+	}
+}
+
+func TestLoginFlow(t *testing.T) {
+	h := newHarness(t)
+	page := h.serve(http.MethodGet, h.host, LoginPath+"?next=/docs/", nil, withHeader("Accept-Language", "ru-RU,ru;q=0.9,en;q=0.8"))
+	body := page.Body.String()
+	for _, want := range []string{`lang="ru"`, "Открыть сайт", `Docs &lt;b&gt;&#34;quoted&#34;&lt;/b&gt;`, `name="next" value="/docs/"`} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("page lacks %q:\n%s", want, body)
+		}
+	}
+	// Apart from the reserved paths, the page never names the platform.
+	if strings.Contains(strings.ToLower(strings.ReplaceAll(body, Prefix, "")), "dropsite") {
+		t.Fatal("login page mentions the platform")
+	}
+	for k, want := range map[string]string{
+		"X-Robots-Tag": "noindex, nofollow", "Cache-Control": "no-store", "X-Frame-Options": "DENY",
+	} {
+		if got := page.Header().Get(k); got != want {
+			t.Fatalf("%s = %q", k, got)
+		}
+	}
+	if csp := page.Header().Get("Content-Security-Policy"); !strings.Contains(csp, "default-src 'none'") {
+		t.Fatalf("csp %q", csp)
+	}
+
+	token, nonce := h.getForm(h.host)
+	if !nonce.HttpOnly || !nonce.Secure || nonce.SameSite != http.SameSiteStrictMode || nonce.Path != Prefix {
+		t.Fatalf("nonce cookie %+v", nonce)
+	}
+	// Wrong password: 401, form again, no access cookie.
+	rec := h.serve(http.MethodPost, h.host, LoginPath, url.Values{"_csrf": {token}, "password": {"wrong-pass-123"}, "next": {"/docs/"}}, withCookie(nonce))
+	if rec.Code != http.StatusUnauthorized || accessCookie(rec) != nil || !strings.Contains(rec.Body.String(), `role="alert"`) {
+		t.Fatalf("wrong password: %d", rec.Code)
+	}
+	// Right password with a hostile next: cookie set, redirect stays local.
+	rec = h.serve(http.MethodPost, h.host, LoginPath,
+		url.Values{"_csrf": {token}, "password": {sitePass}, "next": {"https://evil.example/"}},
+		withCookie(nonce), withHeader("Origin", "https://"+h.host), withHeader("Sec-Fetch-Site", "same-origin"))
+	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/" {
+		t.Fatalf("login: %d %q", rec.Code, rec.Header().Get("Location"))
+	}
+	c := accessCookie(rec)
+	if c == nil || !c.HttpOnly || !c.Secure || c.SameSite != http.SameSiteLaxMode || c.Path != "/" || c.Domain != "" {
+		t.Fatalf("access cookie %+v", c)
+	}
+	if c.MaxAge < int((service.VisitorCookieTTL-time.Minute)/time.Second) {
+		t.Fatalf("max age %d", c.MaxAge)
+	}
+	if rec := h.authCheck(h.host, "/docs/", c); rec.Code != http.StatusOK {
+		t.Fatalf("auth with cookie: %d", rec.Code)
+	}
+	// Next is kept when it is a local path.
+	rec = h.serve(http.MethodPost, h.host, LoginPath,
+		url.Values{"_csrf": {token}, "password": {sitePass}, "next": {"/docs/?q=1"}}, withCookie(nonce))
+	if rec.Header().Get("Location") != "/docs/?q=1" {
+		t.Fatalf("next %q", rec.Header().Get("Location"))
+	}
+}
+
+func TestLoginCSRF(t *testing.T) {
+	h := newHarness(t)
+	token, nonce := h.getForm(h.host)
+	good := url.Values{"_csrf": {token}, "password": {sitePass}}
+	cases := map[string]*httptest.ResponseRecorder{
+		"no token":       h.serve(http.MethodPost, h.host, LoginPath, url.Values{"password": {sitePass}}, withCookie(nonce)),
+		"no nonce":       h.serve(http.MethodPost, h.host, LoginPath, good),
+		"cross site":     h.serve(http.MethodPost, h.host, LoginPath, good, withCookie(nonce), withHeader("Sec-Fetch-Site", "cross-site")),
+		"foreign origin": h.serve(http.MethodPost, h.host, LoginPath, good, withCookie(nonce), withHeader("Origin", "https://evil.example")),
+		"other nonce": h.serve(http.MethodPost, h.host, LoginPath, good,
+			withCookie(&http.Cookie{Name: nonceCookie, Value: strings.Repeat("A", 24)})),
+	}
+	for name, rec := range cases {
+		if rec.Code != http.StatusForbidden || accessCookie(rec) != nil {
+			t.Fatalf("%s: %d", name, rec.Code)
+		}
+	}
+	// A token for one host does not work on another address.
+	open := h.serve(http.MethodPost, h.open, LoginPath, good, withCookie(nonce))
+	if open.Code != http.StatusNotFound && open.Code != http.StatusForbidden {
+		t.Fatalf("other host: %d", open.Code)
+	}
+}
+
+func TestLoginRateLimited(t *testing.T) {
+	h := newHarness(t)
+	token, nonce := h.getForm(h.host)
+	for range service.VisitorFailuresPerIP {
+		h.serve(http.MethodPost, h.host, LoginPath, url.Values{"_csrf": {token}, "password": {"wrong-pass-123"}}, withCookie(nonce))
+	}
+	rec := h.serve(http.MethodPost, h.host, LoginPath, url.Values{"_csrf": {token}, "password": {sitePass}}, withCookie(nonce))
+	if rec.Code != http.StatusTooManyRequests || rec.Header().Get("Retry-After") == "" || accessCookie(rec) != nil {
+		t.Fatalf("rate limit: %d %q", rec.Code, rec.Header().Get("Retry-After"))
+	}
+	if !strings.Contains(rec.Body.String(), "15 min") {
+		t.Fatalf("message:\n%s", rec.Body)
+	}
+}
+
+func TestLoginOtherPaths(t *testing.T) {
+	h := newHarness(t)
+	for _, tc := range []struct {
+		host, path string
+		want       int
+	}{
+		{h.open, LoginPath, http.StatusNotFound},
+		{"api.pp.test", LoginPath, http.StatusNotFound},
+		{h.host, Prefix + "other", http.StatusNotFound},
+		{h.host, cssPath, http.StatusOK},
+	} {
+		rec := h.serve(http.MethodGet, tc.host, tc.path, nil)
+		if rec.Code != tc.want {
+			t.Fatalf("%s%s: %d", tc.host, tc.path, rec.Code)
+		}
+		if rec.Header().Get("X-Robots-Tag") == "" {
+			t.Fatalf("%s%s: no X-Robots-Tag", tc.host, tc.path)
+		}
+	}
+}
+
+func TestSafeNext(t *testing.T) {
+	for in, want := range map[string]string{
+		"":                                 "/",
+		"/":                                "/",
+		"/a/b?c=1#d":                       "/a/b?c=1#d",
+		"//evil.example":                   "/",
+		"/\\evil.example":                  "/",
+		"https://evil.example":             "/",
+		"javascript:alert(1)":              "/",
+		"/x\r\nSet-Cookie: a":              "/",
+		"/_dropsite/login":                 "/",
+		"/_dropsite":                       "/",
+		"/" + strings.Repeat("a", maxNext): "/",
+	} {
+		if got := safeNext(in); got != want {
+			t.Errorf("safeNext(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestPickLang(t *testing.T) {
+	for in, want := range map[string]string{
+		"": "en", "ru": "ru", "ru-RU,en;q=0.5": "ru", "de-DE,en-US;q=0.8,ru;q=0.5": "en", "fr": "en",
+	} {
+		if got := pickLang(in); got != want {
+			t.Errorf("pickLang(%q) = %q", in, got)
+		}
+	}
+}

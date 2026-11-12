@@ -1,5 +1,5 @@
 // Package archtest enforces package boundaries that keep access control in a
-// single layer: adapters (api, ui) must go through internal/service.
+// single layer: adapters (api, ui, siteauth) must go through internal/service.
 package archtest
 
 import (
@@ -18,8 +18,9 @@ const module = "github.com/b0balYson/dropsite/internal/"
 // store for plain types (filters, pages) is allowed only via service aliases,
 // so the whole package is off limits.
 var forbidden = map[string][]string{
-	"api": {"store", "storage", "archive"},
-	"ui":  {"store", "storage", "archive"},
+	"api":      {"store", "storage", "archive"},
+	"ui":       {"store", "storage", "archive"},
+	"siteauth": {"store", "storage", "archive"},
 }
 
 func TestAdaptersDoNotBypassService(t *testing.T) {
