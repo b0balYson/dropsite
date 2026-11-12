@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/url"
 	"path/filepath"
@@ -185,8 +184,6 @@ func sameOrigin(origin, rawHost string) bool {
 	return strings.EqualFold(strings.TrimSuffix(u.Host, "."), strings.TrimSuffix(rawHost, "."))
 }
 
-func escalationKey(ip, siteID string) string { return ip + "|" + siteID }
-
 // SubmitForm stores a visitor submission and queues its deliveries.
 func (s *Service) SubmitForm(ctx context.Context, p FormPost) (FormPostResult, error) {
 	site, host, err := s.siteForHost(ctx, p.Host)
@@ -206,13 +203,12 @@ func (s *Service) SubmitForm(ctx context.Context, p FormPost) (FormPostResult, e
 	if ok, retry := s.postSiteLimit.Allow(site.ID); !ok {
 		return FormPostResult{}, domain.ErrRateLimited.WithRetryAfter(retry)
 	}
-	key := escalationKey(p.IP, site.ID)
 	if p.Data.Honeypot || forms.TooFast(p.Data.RenderedAt, s.now()) {
-		s.escalator.Penalize(key)
+		s.penalizeAltcha(forms.PurposeForm, p.IP, site.ID)
 		return FormPostResult{}, nil
 	}
 	if err := s.checkAltcha(ctx, site.ID, host, p.Data.Altcha); err != nil {
-		s.escalator.Penalize(key)
+		s.penalizeAltcha(forms.PurposeForm, p.IP, site.ID)
 		return FormPostResult{}, err
 	}
 	id, err := s.repo.InsertFormSubmission(ctx, domain.FormSubmission{
@@ -233,11 +229,7 @@ func (s *Service) checkAltcha(ctx context.Context, siteID, host, payload string)
 	if !st.RequireAltcha {
 		return nil
 	}
-	v, err := s.altcha.Verify(payload, host)
-	if err != nil {
-		return errFormCaptcha
-	}
-	fresh, err := s.repo.UseAltchaSolution(ctx, v.Signature, v.ExpiresAt)
+	fresh, err := s.spendAltcha(ctx, forms.PurposeForm, host, payload)
 	if err != nil {
 		return err
 	}
@@ -247,27 +239,14 @@ func (s *Service) checkAltcha(ctx context.Context, siteID, host, payload string)
 	return nil
 }
 
-// AltchaChallenge issues a proof-of-work challenge for a site host. Every
-// challenge from the same IP and site within the escalation window is four
-// times harder than the previous one, up to a ceiling.
+// AltchaChallenge issues a proof-of-work challenge for the forms of a site
+// host (see issueAltcha for escalation).
 func (s *Service) AltchaChallenge(ctx context.Context, rawHost, ip string) (altcha.Challenge, error) {
 	site, host, err := s.siteForHost(ctx, rawHost)
 	if err != nil {
 		return altcha.Challenge{}, err
 	}
-	if ok, retry := s.challengeIP.Allow("ip:" + ip); !ok {
-		return altcha.Challenge{}, domain.ErrRateLimited.WithRetryAfter(retry)
-	}
-	cfg, err := s.formConfig(ctx)
-	if err != nil {
-		return altcha.Challenge{}, err
-	}
-	level := s.escalator.Next(escalationKey(ip, site.ID))
-	ch, err := s.altcha.Challenge(host, forms.Difficulty(cfg.altchaMax, level), time.Now())
-	if err != nil {
-		return altcha.Challenge{}, fmt.Errorf("create altcha challenge: %w", err)
-	}
-	return ch, nil
+	return s.issueAltcha(ctx, forms.PurposeForm, site.ID, host, ip, 0)
 }
 
 func (s *Service) wakeDelivery() {

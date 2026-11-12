@@ -38,7 +38,7 @@ func TestCaddyfileMatchesPaths(t *testing.T) {
 	if i, j := strings.Index(cf, "forward_auth @protected"), strings.Index(cf, "error @hidden 404"); i < 0 || j < 0 || i > j {
 		t.Error("forward_auth must precede the error and file_server rules")
 	}
-	if service.VisitorCookieName != "dropsite_access" {
+	if service.VisitorCookieName != "__Host-dropsite_access" {
 		t.Errorf("cookie name changed to %q: update docs", service.VisitorCookieName)
 	}
 }

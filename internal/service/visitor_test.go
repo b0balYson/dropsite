@@ -2,11 +2,13 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/b0balYson/dropsite/internal/domain"
+	"github.com/b0balYson/dropsite/internal/forms"
 )
 
 func (e *env) protectedSite(owner Actor, title, slug, password string) SiteView {
@@ -58,9 +60,9 @@ func TestVisitorAccessFlow(t *testing.T) {
 	_, err = e.svc.VisitorSite(ctx, open.Site.ID+"."+testBase)
 	wantNotFound(t, err)
 
-	_, err = e.svc.VisitorLogin(ctx, host, "wrong-password", "1.2.3.4")
+	_, err = e.visitorLogin(host, "wrong-password", "1.2.3.4")
 	wantCode(t, err, domain.CodeBadCredentials)
-	c, err := e.svc.VisitorLogin(ctx, host, "visitor-pass-1", "1.2.3.4")
+	c, err := e.visitorLogin(host, "visitor-pass-1", "1.2.3.4")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +110,7 @@ func TestPasswordChangeRevokesCookies(t *testing.T) {
 	alice := e.user("alice@pp.test")
 	v := e.protectedSite(alice, "Docs", "", "visitor-pass-1")
 	host := v.Site.ID + "." + testBase
-	c, err := e.svc.VisitorLogin(ctx, host, "visitor-pass-1", "1.2.3.4")
+	c, err := e.visitorLogin(host, "visitor-pass-1", "1.2.3.4")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +121,7 @@ func TestPasswordChangeRevokesCookies(t *testing.T) {
 		t.Fatalf("old cookie after change: %v", d)
 	}
 	// Unprotect and protect again with the same password: still revoked.
-	c2, err := e.svc.VisitorLogin(ctx, host, "visitor-pass-2", "1.2.3.4")
+	c2, err := e.visitorLogin(host, "visitor-pass-2", "1.2.3.4")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +131,7 @@ func TestPasswordChangeRevokesCookies(t *testing.T) {
 	if d := e.decide(host, c2.Value); d != AccessAllow {
 		t.Fatalf("open site: %v", d)
 	}
-	_, err = e.svc.VisitorLogin(ctx, host, "visitor-pass-2", "1.2.3.4")
+	_, err = e.visitorLogin(host, "visitor-pass-2", "1.2.3.4")
 	wantNotFound(t, err)
 	if _, err := e.svc.UpdateSite(ctx, alice, v.Site.ID, SiteUpdate{Password: sptr("visitor-pass-2")}); err != nil {
 		t.Fatal(err)
@@ -140,40 +142,87 @@ func TestPasswordChangeRevokesCookies(t *testing.T) {
 }
 
 func TestVisitorBruteForce(t *testing.T) {
-	ctx := context.Background()
 	e := newEnv(t)
 	alice := e.user("alice@pp.test")
 	v := e.protectedSite(alice, "Docs", "", "visitor-pass-1")
 	host := v.Site.ID + "." + testBase
 
 	for range VisitorFailuresPerIP {
-		_, err := e.svc.VisitorLogin(ctx, host, "nope-nope-nope", "1.1.1.1")
+		_, err := e.visitorLogin(host, "nope-nope-nope", "1.1.1.1")
 		wantCode(t, err, domain.CodeBadCredentials)
 	}
 	// Even the right password is refused now, from that IP.
-	_, err := e.svc.VisitorLogin(ctx, host, "visitor-pass-1", "1.1.1.1")
+	_, err := e.visitorLogin(host, "visitor-pass-1", "1.1.1.1")
 	wantCode(t, err, domain.CodeRateLimited)
 	if de := domain.AsError(err); de.RetryAfter <= 0 {
 		t.Fatal("no retry hint")
 	}
 	// Another IP is not affected; a success does not count as a failure.
 	for range 3 {
-		if _, err := e.svc.VisitorLogin(ctx, host, "visitor-pass-1", "2.2.2.2"); err != nil {
+		if _, err := e.visitorLogin(host, "visitor-pass-1", "2.2.2.2"); err != nil {
 			t.Fatal(err)
 		}
 	}
-	// The per-site cap holds across IPs.
-	for i := range VisitorFailuresPerSite - VisitorFailuresPerIP {
-		ip := "3.3." + string(rune('0'+i/VisitorFailuresPerIP)) + ".1"
-		_, err := e.svc.VisitorLogin(ctx, host, "nope-nope-nope", ip)
-		wantCode(t, err, domain.CodeBadCredentials)
-	}
-	_, err = e.svc.VisitorLogin(ctx, host, "visitor-pass-1", "4.4.4.4")
-	wantCode(t, err, domain.CodeRateLimited)
 	// The window passes.
 	e.clock.Advance(VisitorFailuresWindow + time.Second)
-	if _, err := e.svc.VisitorLogin(ctx, host, "visitor-pass-1", "1.1.1.1"); err != nil {
+	if _, err := e.visitorLogin(host, "visitor-pass-1", "1.1.1.1"); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// IPv6 addresses of one /64 share the per-source limit.
+func TestVisitorBruteForceIPv6Prefix(t *testing.T) {
+	e := newEnv(t)
+	alice := e.user("alice@pp.test")
+	v := e.protectedSite(alice, "Docs", "", "visitor-pass-1")
+	host := v.Site.ID + "." + testBase
+	for i := range VisitorFailuresPerIP {
+		_, err := e.visitorLogin(host, "nope-nope-nope", fmt.Sprintf("2001:db8:0:1::%x", i+1))
+		wantCode(t, err, domain.CodeBadCredentials)
+	}
+	_, err := e.visitorLogin(host, "visitor-pass-1", "2001:db8:0:1:ffff::1")
+	wantCode(t, err, domain.CodeRateLimited)
+	if _, err := e.visitorLogin(host, "visitor-pass-1", "2001:db8:0:2::1"); err != nil {
+		t.Fatalf("other /64: %v", err)
+	}
+	for in, want := range map[string]string{
+		"2001:db8:0:1::5": "2001:db8:0:1::/64", "::ffff:192.0.2.1": "192.0.2.1", "192.0.2.1": "192.0.2.1", "bogus": "bogus",
+	} {
+		if got := visitorSource(in); got != want {
+			t.Errorf("visitorSource(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// Failures spread over many sources never lock the site: past the per-site
+// threshold the right password still works, but every login challenge is
+// harder.
+func TestVisitorSiteThresholdRaisesDifficulty(t *testing.T) {
+	ctx := context.Background()
+	e := newEnv(t)
+	alice := e.user("alice@pp.test")
+	v := e.protectedSite(alice, "Docs", "", "visitor-pass-1")
+	host := v.Site.ID + "." + testBase
+	e.minAltcha()
+	for i := range VisitorFailuresPerSite {
+		ip := fmt.Sprintf("2001:db8:%x::1", i/VisitorFailuresPerIP)
+		_, err := e.visitorLogin(host, "nope-nope-nope", ip)
+		wantCode(t, err, domain.CodeBadCredentials)
+	}
+	if _, err := e.visitorLogin(host, "visitor-pass-1", "198.51.100.9"); err != nil {
+		t.Fatalf("site locked for a visitor with the right password: %v", err)
+	}
+	ch, err := e.svc.VisitorAltchaChallenge(ctx, host, "198.51.100.10")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c := counterOf(t, ch); c < forms.Difficulty(forms.MinAltchaMaxNumber, VisitorSiteAltchaLevel)/2 {
+		t.Fatalf("challenge not raised for the site under attack: counter %d", c)
+	}
+	e.clock.Advance(VisitorFailuresWindow + time.Second)
+	ch, _ = e.svc.VisitorAltchaChallenge(ctx, host, "198.51.100.11")
+	if c := counterOf(t, ch); c >= forms.MinAltchaMaxNumber {
+		t.Fatalf("site level did not decay: counter %d", c)
 	}
 }
 
@@ -211,7 +260,7 @@ func TestVisitorSecretSurvivesRestart(t *testing.T) {
 	alice := e.user("alice@pp.test")
 	v := e.protectedSite(alice, "Docs", "", "visitor-pass-1")
 	host := v.Site.ID + "." + testBase
-	c, err := e.svc.VisitorLogin(ctx, host, "visitor-pass-1", "1.2.3.4")
+	c, err := e.visitorLogin(host, "visitor-pass-1", "1.2.3.4")
 	if err != nil {
 		t.Fatal(err)
 	}

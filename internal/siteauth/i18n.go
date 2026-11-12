@@ -15,6 +15,8 @@ var catalog = map[string]map[string]string{
 		"err.password": "Неверный пароль. Проверьте раскладку клавиатуры и попробуйте ещё раз.",
 		"err.rate":     "Слишком много попыток. Попробуйте снова через {minutes} мин.",
 		"err.csrf":     "Страница устарела. Введите пароль ещё раз.",
+		"err.altcha":   "Не удалось завершить проверку браузера. Дождитесь отметки «Проверено» и попробуйте ещё раз.",
+		"noscript":     "Для входа на сайт включите JavaScript: он нужен для автоматической проверки браузера.",
 	},
 	"en": { //nolint:gosec // UI strings, not credentials
 		"page.title":   "Sign in to the site",
@@ -26,6 +28,8 @@ var catalog = map[string]map[string]string{
 		"err.password": "Wrong password. Check the keyboard layout and try again.",
 		"err.rate":     "Too many attempts. Try again in {minutes} min.",
 		"err.csrf":     "The page has expired. Enter the password again.",
+		"err.altcha":   "The browser check did not complete. Wait until it shows \"Verified\" and try again.",
+		"noscript":     "Turn on JavaScript to sign in: it runs an automatic browser check.",
 	},
 }
 

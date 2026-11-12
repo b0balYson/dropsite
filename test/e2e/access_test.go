@@ -3,6 +3,8 @@
 package e2e
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -12,6 +14,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	altcha "github.com/altcha-org/altcha-lib-go/v2"
 )
 
 var loginCSRFRe = regexp.MustCompile(`name="_csrf" value="([^"]+)"`)
@@ -146,26 +150,33 @@ func visitorLogin(t *testing.T, s *stack, host, password string) string {
 	}
 	var nonce string
 	for _, c := range resp.Cookies() {
-		if c.Name == "dropsite_login_nonce" {
+		if c.Name == "__Host-dropsite_login_nonce" {
 			nonce = c.Name + "=" + c.Value
 		}
 	}
-	form := url.Values{"_csrf": {m[1]}, "password": {password}, "next": {"/"}}
-	req, _ := http.NewRequestWithContext(s.ctx, http.MethodPost, "https://"+host+":"+httpsPort+"/_dropsite/login",
-		strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Origin", "https://"+host+":"+httpsPort)
-	req.Header.Set("Cookie", nonce)
-	res, err := s.client.Do(req)
-	if err != nil {
-		t.Fatal(err)
+	post := func(form url.Values) *http.Response {
+		req, _ := http.NewRequestWithContext(s.ctx, http.MethodPost, "https://"+host+":"+httpsPort+"/_dropsite/login",
+			strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Origin", "https://"+host+":"+httpsPort)
+		req.Header.Set("Cookie", nonce)
+		res, err := s.client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		return res
 	}
-	res.Body.Close()
+	res := post(url.Values{"_csrf": {m[1]}, "password": {password}, "next": {"/"}, "altcha": {loginAltcha(t, s, host)}}) //nolint:bodyclose // post closes it
 	if res.StatusCode != http.StatusSeeOther {
 		t.Fatalf("login: %d", res.StatusCode)
 	}
+	// Without an Altcha solution the password is not even checked.
+	if res := post(url.Values{"_csrf": {m[1]}, "password": {password}}); res.StatusCode != http.StatusBadRequest { //nolint:bodyclose // post closes it
+		t.Fatalf("login without altcha: %d", res.StatusCode)
+	}
 	for _, c := range res.Cookies() {
-		if c.Name == "dropsite_access" {
+		if c.Name == "__Host-dropsite_access" {
 			return c.Name + "=" + c.Value
 		}
 	}
@@ -187,4 +198,24 @@ func TestCaddyfileValidates(t *testing.T) {
 			t.Fatalf("%s: %v\n%s", mode, err, out)
 		}
 	}
+}
+
+// loginAltcha fetches the login challenge through Caddy without any cookie
+// (the path is proxied before forward_auth) and solves it like the widget.
+func loginAltcha(t *testing.T, s *stack, host string) string {
+	t.Helper()
+	resp, body, err := s.get(host, "/_dropsite/login/challenge") //nolint:bodyclose // s.get closes it
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("login challenge: %v %v %.200s", statusOf(resp), err, body)
+	}
+	var ch altcha.Challenge
+	if err := json.Unmarshal([]byte(body), &ch); err != nil {
+		t.Fatalf("login challenge: %v", err)
+	}
+	sol, err := altcha.SolveChallenge(altcha.SolveChallengeOptions{Challenge: ch, DeriveKey: altcha.DeriveKeyPBKDF2(), Timeout: 2 * time.Minute})
+	if err != nil || sol == nil {
+		t.Fatalf("solve login challenge: %v", err)
+	}
+	b, _ := json.Marshal(altcha.Payload{Challenge: ch, Solution: *sol})
+	return base64.StdEncoding.EncodeToString(b)
 }

@@ -6,7 +6,9 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="same-origin">
 <title>{{index .T "page.title"}} · {{.Title}}</title>
+<meta name="csp-nonce" content="{{.StyleNonce}}">
 <link rel="stylesheet" href="{{.CSSPath}}">
+<script async src="{{.WidgetPath}}" type="module"></script>
 </head>
 <body>
 <main class="gate" aria-labelledby="site-title">
@@ -24,6 +26,9 @@
     <label class="gate__label" for="password">{{index .T "field.pass"}}</label>
     <input class="gate__input" id="password" name="password" type="password" required autofocus
       autocomplete="current-password" maxlength="256"{{if .Error}} aria-invalid="true" aria-describedby="gate-error"{{end}}>
+    <altcha-widget challenge="{{.ChallengePath}}" auto="onload" name="altcha"
+      configuration='{"hideFooter":true,"hideLogo":true}'></altcha-widget>
+    <noscript><p class="gate__error">{{index .T "noscript"}}</p></noscript>
     <button class="gate__submit" type="submit">{{index .T "submit"}}</button>
   </form>
   <p class="gate__note">{{index .T "note"}}</p>

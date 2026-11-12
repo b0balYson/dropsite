@@ -48,7 +48,7 @@ func TestPreviewsCarrySiteFlags(t *testing.T) {
 	if err != nil || d != AccessLogin {
 		t.Fatalf("preview without cookie: %v %v", d, err)
 	}
-	c, err := e.svc.VisitorLogin(ctx, p2, "visitor-pass-1", "1.2.3.4")
+	c, err := e.visitorLogin(p2, "visitor-pass-1", "1.2.3.4")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -8,24 +8,36 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/netip"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
+	altcha "github.com/altcha-org/altcha-lib-go/v2"
+
 	"github.com/b0balYson/dropsite/internal/brand"
 	"github.com/b0balYson/dropsite/internal/domain"
-	"github.com/b0balYson/dropsite/internal/ratelimit"
+	"github.com/b0balYson/dropsite/internal/forms"
 )
 
 // Visitor access to password-protected sites.
 const (
 	// VisitorCookieName is the host-only cookie that grants access to a site.
-	VisitorCookieName = brand.Name + "_access"
+	// The __Host- prefix makes browsers refuse it unless it is Secure, has
+	// Path=/ and no Domain, so a neighbouring site under the same base domain
+	// cannot plant a cookie of this name (cookie tossing).
+	VisitorCookieName = "__Host-" + brand.Name + "_access"
 	VisitorCookieTTL  = 7 * 24 * time.Hour
-	// Failed visitor logins: per (IP, site) and per site from all IPs.
-	VisitorFailuresPerIP   = 10
+	// Failed visitor logins per (IP, site): past the limit the source is
+	// refused. IPv6 sources are counted per /64.
+	VisitorFailuresPerIP  = 10
+	VisitorFailuresWindow = 15 * time.Minute
+	// VisitorFailuresPerSite failures on one site from all sources within
+	// the window put the site under attack: logins are not refused, but every
+	// login challenge is at least VisitorSiteAltchaLevel (base × 16).
 	VisitorFailuresPerSite = 100
-	VisitorFailuresWindow  = 15 * time.Minute
+	VisitorSiteAltchaLevel = 2
 	// VisitorCSRFTTL bounds how long a rendered login form stays valid.
 	VisitorCSRFTTL = time.Hour
 
@@ -128,9 +140,15 @@ func (s *Service) siteByHost(ctx context.Context, host string) (domain.Site, err
 	return site, err
 }
 
+// maxVisitorCookies bounds how many access cookie values one request may
+// have checked.
+const maxVisitorCookies = 8
+
 // CheckVisitorAccess decides whether a request to host carrying the given
-// access cookie value may be served. Errors must be treated as a refusal.
-func (s *Service) CheckVisitorAccess(ctx context.Context, host, cookie string) (AccessDecision, error) {
+// access cookie values may be served: any valid one grants access, so a
+// planted invalid cookie of the same name cannot shadow the real one.
+// Errors must be treated as a refusal.
+func (s *Service) CheckVisitorAccess(ctx context.Context, host string, cookies ...string) (AccessDecision, error) {
 	site, err := s.siteByHost(ctx, host)
 	if errors.Is(err, domain.ErrNotFound) {
 		return AccessUnknown, nil
@@ -141,9 +159,11 @@ func (s *Service) CheckVisitorAccess(ctx context.Context, host, cookie string) (
 	if !site.Protected {
 		return AccessAllow, nil
 	}
-	if cookie == "" {
+	cookies = slices.DeleteFunc(slices.Clone(cookies), func(c string) bool { return c == "" })
+	if len(cookies) == 0 {
 		return AccessLogin, nil
 	}
+	cookies = cookies[:min(len(cookies), maxVisitorCookies)]
 	keys, err := s.visitorKeys(ctx)
 	if err != nil {
 		return AccessUnknown, err
@@ -152,8 +172,13 @@ func (s *Service) CheckVisitorAccess(ctx context.Context, host, cookie string) (
 	if err != nil {
 		return AccessUnknown, err
 	}
-	if acc.PasswordHash != "" && verifyCookie(keys.cookie, cookie, site.ID, acc.Version, s.now()) {
-		return AccessAllow, nil
+	if acc.PasswordHash == "" {
+		return AccessLogin, nil
+	}
+	for _, c := range cookies {
+		if verifyCookie(keys.cookie, c, site.ID, acc.Version, s.now()) {
+			return AccessAllow, nil
+		}
 	}
 	return AccessLogin, nil
 }
@@ -161,12 +186,9 @@ func (s *Service) CheckVisitorAccess(ctx context.Context, host, cookie string) (
 // VisitorSite returns the title of the protected site at host, for the login
 // page. Unknown hosts and open sites are "not found".
 func (s *Service) VisitorSite(ctx context.Context, host string) (string, error) {
-	site, err := s.siteByHost(ctx, host)
+	site, err := s.protectedSiteByHost(ctx, host)
 	if err != nil {
 		return "", err
-	}
-	if !site.Protected {
-		return "", domain.ErrNotFound
 	}
 	return site.Title, nil
 }
@@ -179,12 +201,36 @@ type VisitorCookie struct {
 
 var errVisitorPassword = domain.E(domain.KindUnauthorized, domain.CodeBadCredentials, "wrong password")
 
-func visitorIPKey(ip, siteID string) string { return "visitor:" + siteID + ":" + ip }
+// ErrVisitorAltcha rejects a login without a valid unused Altcha solution.
+// It reuses the anti-robot code of site forms: the meaning is the same.
+var ErrVisitorAltcha = domain.E(domain.KindInvalid, domain.CodeFormCaptcha,
+	"the browser check failed or expired; wait for it to finish and try again")
 
-// beginVisitorLogin reserves one failure against both limits before the slow
-// password check; the caller cancels the reservations on success.
+// visitorSource is the address a visitor's attempts are counted under: the
+// full IPv4 address, or the /64 prefix of an IPv6 address (one subscriber
+// usually holds a whole /64, so per-address keys would be free to rotate).
+func visitorSource(ip string) string {
+	addr, err := netip.ParseAddr(ip)
+	if err != nil {
+		return ip
+	}
+	addr = addr.Unmap()
+	if addr.Is4() {
+		return addr.String()
+	}
+	p, err := addr.Prefix(64)
+	if err != nil {
+		return ip
+	}
+	return p.String()
+}
+
+func visitorIPKey(ip, siteID string) string { return "visitor:" + siteID + ":" + visitorSource(ip) }
+
+// beginVisitorLogin reserves one failure against the per-(IP, site) limit
+// before the slow password check; the caller cancels it on success.
 func (s *Service) beginVisitorLogin(siteID, ip string) (func(), func(), error) {
-	release, ok := s.loginBusy.tryAcquire("visitor:" + ip)
+	release, ok := s.loginBusy.tryAcquire("visitor:" + visitorSource(ip))
 	if !ok {
 		return nil, nil, domain.ErrRateLimited.WithRetryAfter(LoginBusyRetryAfter)
 	}
@@ -193,30 +239,87 @@ func (s *Service) beginVisitorLogin(siteID, ip string) (func(), func(), error) {
 		release()
 		return nil, nil, domain.ErrRateLimited.WithRetryAfter(retry)
 	}
-	siteRes, ok, retry := s.visitorSiteLimit.Reserve(siteID)
-	if !ok {
-		ipRes.Cancel()
-		release()
-		return nil, nil, domain.ErrRateLimited.WithRetryAfter(retry)
-	}
-	refund := func() {
-		for _, r := range []ratelimit.Reservation{ipRes, siteRes} {
-			r.Cancel()
-		}
-	}
-	return release, refund, nil
+	return release, ipRes.Cancel, nil
 }
 
-// VisitorLogin checks the site password and returns an access cookie.
-// Failures are rate limited per (IP, site) and per site.
-func (s *Service) VisitorLogin(ctx context.Context, host, password, ip string) (VisitorCookie, error) {
+// protectedSiteByHost resolves host to a protected site; anything else is
+// "not found".
+func (s *Service) protectedSiteByHost(ctx context.Context, host string) (domain.Site, error) {
 	site, err := s.siteByHost(ctx, host)
+	if err != nil {
+		return domain.Site{}, err
+	}
+	if !site.Protected {
+		return domain.Site{}, domain.ErrNotFound
+	}
+	return site, nil
+}
+
+// VisitorAltchaChallenge issues the proof-of-work challenge of the login page
+// of the protected site at host. It is signed for the login purpose, so it
+// cannot be spent on the site's forms and a form challenge cannot be spent
+// here. Difficulty escalates per (IP, site) with every challenge and every
+// failed login (see issueAltcha); while the site is under attack (the
+// per-site failure threshold is reached) every visitor gets at least
+// VisitorSiteAltchaLevel.
+func (s *Service) VisitorAltchaChallenge(ctx context.Context, host, ip string) (altcha.Challenge, error) {
+	site, err := s.protectedSiteByHost(ctx, host)
+	if err != nil {
+		return altcha.Challenge{}, err
+	}
+	floor := 0
+	if ok, _ := s.visitorSiteLimit.Check(site.ID); !ok {
+		floor = VisitorSiteAltchaLevel
+	}
+	return s.issueAltcha(ctx, forms.PurposeLogin, site.ID, host, visitorSource(ip), floor)
+}
+
+// VisitorLoginInput is a submitted login form.
+type VisitorLoginInput struct {
+	Host     string // request host without port
+	Password string
+	Altcha   string // the widget payload (base64 JSON)
+	IP       string
+}
+
+// VisitorLogin checks the Altcha solution, then the site password, and
+// returns an access cookie.
+//
+//   - An exhausted per-(IP, site) limit refuses at once (429), before any
+//     proof of work is spent; the password is not checked.
+//   - Without a valid unused solution the password is not checked and
+//     nothing counts toward the failure limits.
+//   - The per-site failure count never refuses a login: past its threshold
+//     it raises the Altcha difficulty for the whole site instead, so nobody
+//     can lock the owner's visitors out.
+//
+// Failures raise the Altcha difficulty for the source.
+func (s *Service) VisitorLogin(ctx context.Context, in VisitorLoginInput) (VisitorCookie, error) {
+	site, err := s.protectedSiteByHost(ctx, in.Host)
 	if err != nil {
 		return VisitorCookie{}, err
 	}
-	if !site.Protected {
-		return VisitorCookie{}, domain.ErrNotFound
+	src := visitorSource(in.IP)
+	if ok, retry := s.visitorIPLimit.Check(visitorIPKey(src, site.ID)); !ok {
+		return VisitorCookie{}, domain.ErrRateLimited.WithRetryAfter(retry)
 	}
+	fresh, err := s.spendAltcha(ctx, forms.PurposeLogin, in.Host, in.Altcha)
+	if err != nil {
+		return VisitorCookie{}, err
+	}
+	if !fresh {
+		s.penalizeAltcha(forms.PurposeLogin, src, site.ID)
+		return VisitorCookie{}, ErrVisitorAltcha
+	}
+	c, err := s.checkVisitorPassword(ctx, site, in.Password, src)
+	if errors.Is(err, errVisitorPassword) {
+		s.penalizeAltcha(forms.PurposeLogin, src, site.ID)
+		s.visitorSiteLimit.Record(site.ID)
+	}
+	return c, err
+}
+
+func (s *Service) checkVisitorPassword(ctx context.Context, site domain.Site, password, ip string) (VisitorCookie, error) {
 	release, refund, err := s.beginVisitorLogin(site.ID, ip)
 	if err != nil {
 		return VisitorCookie{}, err

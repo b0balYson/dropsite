@@ -67,6 +67,14 @@ const (
 	maxAltchaPayload       = 8 << 10
 )
 
+// Purposes a challenge can be issued for. The purpose is part of the signed
+// data, so a solution for a site form cannot be spent on the visitor login
+// page of the same host, and vice versa.
+const (
+	PurposeForm  = "form"
+	PurposeLogin = "login"
+)
+
 // Altcha issues and verifies challenges. Challenges are deterministic: the
 // server picks the counter and signs the derived key, so verification is a
 // single HMAC (no key derivation per submission).
@@ -79,10 +87,10 @@ type Altcha struct {
 // foreign solution.
 var ErrAltcha = errors.New("altcha solution is invalid")
 
-// Challenge creates a challenge bound to host whose secret counter lies in
-// [maxN/2, maxN). The difficulty is part of the signed parameters, so a
-// client cannot lower it.
-func (a Altcha) Challenge(host string, maxN int, now time.Time) (altcha.Challenge, error) {
+// Challenge creates a challenge bound to host and purpose whose secret
+// counter lies in [maxN/2, maxN). The difficulty is part of the signed
+// parameters, so a client cannot lower it.
+func (a Altcha) Challenge(host, purpose string, maxN int, now time.Time) (altcha.Challenge, error) {
 	if maxN < MinAltchaMaxNumber {
 		maxN = MinAltchaMaxNumber
 	}
@@ -99,7 +107,7 @@ func (a Altcha) Challenge(host string, maxN int, now time.Time) (altcha.Challeng
 		Counter:                &counter,
 		DeriveKey:              altcha.DeriveKeyPBKDF2(),
 		ExpiresAt:              &expires,
-		Data:                   map[string]any{"host": host},
+		Data:                   map[string]any{"host": host, "purpose": purpose},
 		HMACSignatureSecret:    a.SignatureSecret,
 		HMACKeySignatureSecret: a.KeySecret,
 	})
@@ -111,9 +119,9 @@ type Verified struct {
 	ExpiresAt time.Time
 }
 
-// Verify checks a widget payload (base64 JSON) for host. Expiry is checked
-// by the library against the real clock.
-func (a Altcha) Verify(payload, host string) (Verified, error) {
+// Verify checks a widget payload (base64 JSON) for host and purpose. Expiry
+// is checked by the library against the real clock.
+func (a Altcha) Verify(payload, host, purpose string) (Verified, error) {
 	if payload == "" || len(payload) > maxAltchaPayload {
 		return Verified{}, ErrAltcha
 	}
@@ -126,6 +134,9 @@ func (a Altcha) Verify(payload, host string) (Verified, error) {
 		return Verified{}, ErrAltcha
 	}
 	if h, _ := p.Challenge.Parameters.Data["host"].(string); h != host {
+		return Verified{}, ErrAltcha
+	}
+	if challengePurpose(p.Challenge.Parameters.Data) != purpose {
 		return Verified{}, ErrAltcha
 	}
 	res, err := altcha.VerifySolution(altcha.VerifySolutionOptions{
@@ -142,4 +153,16 @@ func (a Altcha) Verify(payload, host string) (Verified, error) {
 		Signature: p.Challenge.Signature,
 		ExpiresAt: time.Unix(p.Challenge.Parameters.ExpiresAt, 0).UTC(),
 	}, nil
+}
+
+// challengePurpose reads the signed purpose. Challenges issued before
+// purposes existed carry none and were only ever issued for forms; they
+// expire within AltchaTTL of an upgrade.
+func challengePurpose(data map[string]any) string {
+	v, ok := data["purpose"]
+	if !ok {
+		return PurposeForm
+	}
+	s, _ := v.(string)
+	return s
 }

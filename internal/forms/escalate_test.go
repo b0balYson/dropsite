@@ -51,7 +51,7 @@ func TestDifficulty(t *testing.T) {
 
 func TestAltchaDifficultyCannotBeForged(t *testing.T) {
 	a := testAltcha()
-	ch, err := a.Challenge("promo.test", Difficulty(MinAltchaMaxNumber, 1), time.Now())
+	ch, err := a.Challenge("promo.test", PurposeForm, Difficulty(MinAltchaMaxNumber, 1), time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,12 +61,13 @@ func TestAltchaDifficultyCannotBeForged(t *testing.T) {
 		func(p *altcha.Payload) { p.Challenge.Parameters.Cost = 1 },
 		func(p *altcha.Payload) { p.Challenge.Parameters.KeyPrefix = "00" },
 		func(p *altcha.Payload) { p.Challenge.Parameters.ExpiresAt += 3600 },
+		func(p *altcha.Payload) { p.Challenge.Parameters.Data["purpose"] = PurposeLogin },
 	} {
 		var p altcha.Payload
 		_ = json.Unmarshal(raw, &p)
 		tamper(&p)
 		b, _ := json.Marshal(p)
-		if _, err := a.Verify(base64.StdEncoding.EncodeToString(b), "promo.test"); !errors.Is(err, ErrAltcha) {
+		if _, err := a.Verify(base64.StdEncoding.EncodeToString(b), "promo.test", PurposeForm); !errors.Is(err, ErrAltcha) {
 			t.Fatal("tampered parameters accepted")
 		}
 	}

@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"embed"
 	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"html/template"
 	"log/slog"
@@ -24,17 +27,39 @@ import (
 var assets embed.FS
 
 const (
-	nonceCookie  = brand.Name + "_login_nonce"
+	// nonceCookie carries the CSRF nonce. The __Host- prefix (Secure,
+	// Path=/, no Domain) keeps neighbouring sites under the same base domain
+	// from planting one; the check also accepts any of several values.
+	nonceCookie  = "__Host-" + brand.Name + "_login_nonce"
 	nonceBytes   = 18
+	maxNonces    = 8
 	maxFormBytes = 8 << 10
-	// The page uses no scripts, inline styles or external resources.
-	pageCSP = "default-src 'none'; style-src 'self'; img-src 'self'; form-action 'self'; " +
+	// baseCSP covers every response of this handler: no scripts, inline
+	// styles or external resources.
+	baseCSP = "default-src 'none'; style-src 'self'; img-src 'self'; form-action 'self'; " +
 		"frame-ancestors 'none'; base-uri 'none'"
 )
+
+// pageCSP is the policy of the login page itself. On top of baseCSP the
+// Altcha widget needs: its script (self), the challenge fetch (connect-src
+// self), its proof-of-work workers, which it starts from blob: URLs, and the
+// one <style> element it injects, allowed by a per-response nonce that the
+// widget reads from <meta name="csp-nonce">.
+func pageCSP(styleNonce string) string {
+	return "default-src 'none'; script-src 'self'; worker-src blob:; connect-src 'self'; " +
+		"style-src 'self' 'nonce-" + styleNonce + "'; img-src 'self'; form-action 'self'; " +
+		"frame-ancestors 'none'; base-uri 'none'"
+}
 
 var (
 	pageTmpl = template.Must(template.ParseFS(assets, "assets/login.html"))
 	cssBody  = mustRead("assets/login.css")
+	// cssHref carries a content hash, so the hour-long cache of the
+	// stylesheet never outlives an upgrade.
+	cssHref = func() string {
+		sum := sha256.Sum256(cssBody)
+		return cssPath + "?v=" + hex.EncodeToString(sum[:6])
+	}()
 )
 
 func mustRead(name string) []byte {
@@ -61,6 +86,7 @@ func Login(svc *service.Service, log *slog.Logger, clientIP func(*http.Request) 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET "+LoginPath, l.page)
 	mux.HandleFunc("POST "+LoginPath, l.submit)
+	mux.HandleFunc("GET "+ChallengePath, l.challenge)
 	mux.HandleFunc("GET "+cssPath, serveCSS)
 	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "not found", http.StatusNotFound)
@@ -72,7 +98,7 @@ func headers(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
 		h.Set("X-Robots-Tag", "noindex, nofollow")
-		h.Set("Content-Security-Policy", pageCSP)
+		h.Set("Content-Security-Policy", baseCSP)
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("Referrer-Policy", "same-origin") // keeps Origin on the login POST
 		h.Set("X-Content-Type-Options", "nosniff")
@@ -88,14 +114,17 @@ func serveCSS(w http.ResponseWriter, _ *http.Request) {
 }
 
 type pageData struct {
-	Lang    string
-	T       map[string]string
-	Title   string
-	Next    string
-	CSRF    string
-	Error   string
-	CSSPath string
-	Action  string
+	Lang          string
+	T             map[string]string
+	Title         string
+	Next          string
+	CSRF          string
+	Error         string
+	CSSPath       string
+	Action        string
+	StyleNonce    string
+	ChallengePath string
+	WidgetPath    string
 }
 
 // page renders the password form for a protected site's host.
@@ -110,38 +139,67 @@ func (l *login) render(w http.ResponseWriter, r *http.Request, status int, next,
 		l.fail(w, err)
 		return
 	}
-	nonce := currentNonce(r)
-	if nonce == "" {
-		if nonce, err = newNonce(); err != nil {
-			l.fail(w, err)
-			return
-		}
+	nonce := ""
+	if ns := currentNonces(r); len(ns) > 0 {
+		nonce = ns[0]
+	} else if nonce, err = newNonce(); err != nil {
+		l.fail(w, err)
+		return
 	}
 	token, err := l.svc.VisitorCSRFToken(r.Context(), host, nonce)
 	if err != nil {
 		l.fail(w, err)
 		return
 	}
+	styleNonce, err := newNonce()
+	if err != nil {
+		l.fail(w, err)
+		return
+	}
 	http.SetCookie(w, &http.Cookie{
-		Name: nonceCookie, Value: nonce, Path: Prefix, MaxAge: int(service.VisitorCSRFTTL / time.Second),
+		Name: nonceCookie, Value: nonce, Path: "/", MaxAge: int(service.VisitorCSRFTTL / time.Second),
 		HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode,
 	})
 	lang := pickLang(r.Header.Get("Accept-Language"))
 	data := pageData{
 		Lang: lang, T: catalog[lang], Title: title, Next: next, CSRF: token, Error: errMsg,
-		CSSPath: cssPath, Action: LoginPath,
+		CSSPath: cssHref, Action: LoginPath, StyleNonce: styleNonce,
+		ChallengePath: ChallengePath, WidgetPath: widgetPath,
 	}
 	var buf bytes.Buffer
 	if err := pageTmpl.Execute(&buf, data); err != nil {
 		l.fail(w, err)
 		return
 	}
+	w.Header().Set("Content-Security-Policy", pageCSP(styleNonce))
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
 	_, _ = w.Write(buf.Bytes())
 }
 
-// submit checks CSRF and the password, then sets the access cookie.
+// challenge issues the Altcha challenge of the login page as JSON.
+func (l *login) challenge(w http.ResponseWriter, r *http.Request) {
+	ch, err := l.svc.VisitorAltchaChallenge(r.Context(), requestHost(r), l.clientIP(r))
+	if err != nil {
+		if de := domain.AsError(err); de.Kind == domain.KindRateLimited {
+			w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(de.RetryAfter.Seconds()))))
+			http.Error(w, "too many requests", http.StatusTooManyRequests)
+			return
+		}
+		l.fail(w, err)
+		return
+	}
+	body, err := json.Marshal(ch)
+	if err != nil {
+		l.fail(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_, _ = w.Write(body)
+}
+
+// submit checks CSRF, then lets the service check the Altcha solution and
+// the password, and sets the access cookie.
 func (l *login) submit(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxFormBytes)
 	if err := r.ParseForm(); err != nil {
@@ -155,7 +213,9 @@ func (l *login) submit(w http.ResponseWriter, r *http.Request) {
 		l.render(w, r, http.StatusForbidden, next, t["err.csrf"])
 		return
 	}
-	c, err := l.svc.VisitorLogin(r.Context(), host, r.PostFormValue("password"), l.clientIP(r))
+	c, err := l.svc.VisitorLogin(r.Context(), service.VisitorLoginInput{
+		Host: host, Password: r.PostFormValue("password"), Altcha: r.PostFormValue("altcha"), IP: l.clientIP(r),
+	})
 	if err != nil {
 		l.loginFailed(w, r, next, t, err)
 		return
@@ -169,10 +229,12 @@ func (l *login) submit(w http.ResponseWriter, r *http.Request) {
 
 func (l *login) loginFailed(w http.ResponseWriter, r *http.Request, next string, t map[string]string, err error) {
 	de := domain.AsError(err)
-	switch de.Kind {
-	case domain.KindUnauthorized:
+	switch {
+	case de.Code == domain.CodeFormCaptcha:
+		l.render(w, r, http.StatusBadRequest, next, t["err.altcha"])
+	case de.Kind == domain.KindUnauthorized:
 		l.render(w, r, http.StatusUnauthorized, next, t["err.password"])
-	case domain.KindRateLimited:
+	case de.Kind == domain.KindRateLimited:
 		minutes := int(math.Ceil(de.RetryAfter.Minutes()))
 		w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(de.RetryAfter.Seconds()))))
 		l.render(w, r, http.StatusTooManyRequests, next, strings.ReplaceAll(t["err.rate"], "{minutes}", strconv.Itoa(max(minutes, 1))))
@@ -182,7 +244,7 @@ func (l *login) loginFailed(w http.ResponseWriter, r *http.Request, next string,
 }
 
 // checkCSRF requires a same-origin request (when the browser says so) and a
-// token bound to the nonce cookie and the host.
+// token bound to one of the nonce cookies and the host.
 func (l *login) checkCSRF(ctx context.Context, r *http.Request, host string) error {
 	if site := r.Header.Get("Sec-Fetch-Site"); site != "" && site != "same-origin" {
 		return errCSRF
@@ -194,10 +256,13 @@ func (l *login) checkCSRF(ctx context.Context, r *http.Request, host string) err
 	if origin != "" && origin != "https://"+r.Host && !sameOriginNull {
 		return errCSRF
 	}
-	if !l.svc.CheckVisitorCSRF(ctx, host, currentNonce(r), r.PostFormValue("_csrf")) {
-		return errCSRF
+	token := r.PostFormValue("_csrf")
+	for _, nonce := range currentNonces(r) {
+		if l.svc.CheckVisitorCSRF(ctx, host, nonce, token) {
+			return nil
+		}
 	}
-	return nil
+	return errCSRF
 }
 
 func (l *login) fail(w http.ResponseWriter, err error) {
@@ -209,15 +274,24 @@ func (l *login) fail(w http.ResponseWriter, err error) {
 	http.Error(w, "service temporarily unavailable", http.StatusServiceUnavailable)
 }
 
-func currentNonce(r *http.Request) string {
-	c, err := r.Cookie(nonceCookie)
-	if err != nil || len(c.Value) != base64.RawURLEncoding.EncodedLen(nonceBytes) {
-		return ""
+// currentNonces returns the well-formed nonce cookie values of the request
+// (at most maxNonces). Several may arrive if someone planted an extra one;
+// none of them is trusted on its own, the CSRF token must match.
+func currentNonces(r *http.Request) []string {
+	var out []string
+	for _, c := range r.CookiesNamed(nonceCookie) {
+		if len(out) == maxNonces {
+			break
+		}
+		if len(c.Value) != base64.RawURLEncoding.EncodedLen(nonceBytes) {
+			continue
+		}
+		if _, err := base64.RawURLEncoding.DecodeString(c.Value); err != nil {
+			continue
+		}
+		out = append(out, c.Value)
 	}
-	if _, err := base64.RawURLEncoding.DecodeString(c.Value); err != nil {
-		return ""
-	}
-	return c.Value
+	return out
 }
 
 func newNonce() (string, error) {
