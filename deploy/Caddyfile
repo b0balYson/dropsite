@@ -134,6 +134,25 @@ http:// {
 		route {
 			# STAGE2-FLAGS
 
+			# Site forms: control answers POST /_form/<name>, the Altcha
+			# challenge and the widget script. Every other /_form and
+			# /_dropsite request stays 404 below. Form bodies are capped here
+			# too (control enforces the same 64 KiB). Kept after the flags so
+			# that a protected site also protects its forms.
+			@formPost {
+				method POST
+				path /_form/*
+			}
+			@formAssets {
+				method GET HEAD
+				path /_form/challenge /_dropsite/altcha.js
+			}
+			request_body @formPost {
+				max_size 64KiB
+			}
+			reverse_proxy @formPost control:8080
+			reverse_proxy @formAssets control:8080
+
 			error @hidden 404
 			error @reserved 404
 
