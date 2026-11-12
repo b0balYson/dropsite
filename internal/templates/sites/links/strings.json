@@ -1,0 +1,24 @@
+{
+  "ru": {
+    "description": "Все ссылки в одном месте: соцсети, мессенджеры, магазин и контакты.",
+    "bio": "Фотограф и автор курсов. Все ссылки — здесь.",
+    "links_title": "Ссылки",
+    "l1": "Telegram-канал",
+    "l2": "Instagram",
+    "l3": "Магазин принтов",
+    "l4": "Записаться на съёмку",
+    "l5": "Написать на почту",
+    "footer": "Сайт опубликован с dropsite"
+  },
+  "en": {
+    "description": "Every link in one place: social networks, messengers, shop and contacts.",
+    "bio": "Photographer and course author. All my links are here.",
+    "links_title": "Links",
+    "l1": "Telegram channel",
+    "l2": "Instagram",
+    "l3": "Print shop",
+    "l4": "Book a photo session",
+    "l5": "Send an e-mail",
+    "footer": "Published with dropsite"
+  }
+}

@@ -1,0 +1,21 @@
+:root {
+  --paper: #fdfbff; --ink: #1d1238; --muted: #5a4d78; --card: #f1ecfb; --line: #ddd3f2;
+  --accent: #6a2cd8; --accent-ink: #5a22bb; --on-accent: #fff; --focus: #e0458b;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --paper: #120b24; --ink: #f3eefe; --muted: #bdb0dc; --card: #1e1438; --line: #33275a; --accent: #b393ff; --accent-ink: #c9b2ff; --on-accent: #120b24; }
+}
+.hero {
+  padding-block: clamp(3.5rem, 2rem + 9vw, 9rem);
+  background:
+    radial-gradient(circle at 85% 20%, color-mix(in srgb, var(--focus) 35%, transparent) 0 18%, transparent 19%),
+    radial-gradient(circle at 10% 90%, color-mix(in srgb, var(--accent) 30%, transparent) 0 24%, transparent 25%),
+    var(--card);
+}
+.when { display: flex; flex-wrap: wrap; gap: .5rem; font-weight: 800; }
+.when span { padding: .3rem .8rem; border-radius: 999px; background: var(--ink); color: var(--paper); }
+.place { font-weight: 600; }
+.section--alt { background: var(--card); }
+.timeline { list-style: none; padding: 0; margin: 0; max-width: 44rem; border-left: 3px solid var(--accent); }
+.timeline li { display: grid; grid-template-columns: 4.5rem 1fr; gap: 1rem; padding: .8rem 0 .8rem 1rem; }
+.timeline time { font-weight: 800; color: var(--accent-ink); font-variant-numeric: tabular-nums; }

@@ -1,0 +1,36 @@
+{
+  "ru": {
+    "description": "Дизайнер интерфейсов и айдентики. Избранные работы и контакты.",
+    "role": "Дизайн интерфейсов и айдентики",
+    "hero_text": "Помогаю небольшим компаниям выглядеть уверенно: логотипы, сайты и приложения.",
+    "cta_work": "Работы",
+    "cta_contact": "Связаться",
+    "work_title": "Избранные работы",
+    "w1": "Айдентика пекарни", "w1t": "Логотип, упаковка, вывеска",
+    "w2": "Сайт студии йоги", "w2t": "Структура, дизайн, запуск",
+    "w3": "Приложение доставки", "w3t": "Интерфейс и прототип",
+    "w4": "Афиша фестиваля", "w4t": "Плакаты и соцсети",
+    "about_title": "Обо мне",
+    "about_text": "Десять лет в дизайне. Работаю напрямую с заказчиком, без посредников, и всегда показываю промежуточный результат.",
+    "contact_title": "Контакты",
+    "contact_text": "Расскажите о задаче — отвечу в течение дня.",
+    "footer": "Сайт опубликован с dropsite"
+  },
+  "en": {
+    "description": "Interface and brand designer. Selected work and contacts.",
+    "role": "Interface and brand design",
+    "hero_text": "I help small companies look confident: logos, websites and apps.",
+    "cta_work": "Work",
+    "cta_contact": "Get in touch",
+    "work_title": "Selected work",
+    "w1": "Bakery identity", "w1t": "Logo, packaging, signage",
+    "w2": "Yoga studio website", "w2t": "Structure, design, launch",
+    "w3": "Delivery app", "w3t": "Interface and prototype",
+    "w4": "Festival posters", "w4t": "Posters and social media",
+    "about_title": "About",
+    "about_text": "Ten years in design. I work directly with clients, without middlemen, and always show work in progress.",
+    "contact_title": "Contact",
+    "contact_text": "Tell me about your project: I reply within a day.",
+    "footer": "Published with dropsite"
+  }
+}

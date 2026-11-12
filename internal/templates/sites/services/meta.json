@@ -1,0 +1,6 @@
+{
+  "order": 2,
+  "theme": "#0f2a3d",
+  "ru": {"title": "Услуги и лендинг", "description": "Одна страница о вашем деле: услуги, этапы работы, цены и контакты.", "site_title": "Ремонт под ключ"},
+  "en": {"title": "Services landing page", "description": "One page about your business: services, how you work, prices and contacts.", "site_title": "Bright Renovations"}
+}

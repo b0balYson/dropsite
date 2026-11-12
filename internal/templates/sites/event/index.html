@@ -1,0 +1,41 @@
+{{template "head" .}}
+<header class="hero">
+  <div class="wrap">
+    <p class="when"><span>{{.T.date}}</span> <span>{{.T.time}}</span></p>
+    <h1>{{.Title}}</h1>
+    <p class="lead">{{.T.hero_text}}</p>
+    <p class="place">{{.T.place}}</p>
+    <p class="actions">
+      <a class="btn" href="#signup">{{.T.cta_signup}}</a>
+      <a class="btn btn--ghost" href="#program">{{.T.cta_program}}</a>
+    </p>
+  </div>
+</header>
+<main id="main">
+  <section class="section" id="program" aria-labelledby="program-h">
+    <div class="wrap">
+      <h2 id="program-h">{{.T.program_title}}</h2>
+      <ol class="timeline">
+        <li><time>{{.T.t1}}</time><span>{{.T.e1}}</span></li>
+        <li><time>{{.T.t2}}</time><span>{{.T.e2}}</span></li>
+        <li><time>{{.T.t3}}</time><span>{{.T.e3}}</span></li>
+        <li><time>{{.T.t4}}</time><span>{{.T.e4}}</span></li>
+      </ol>
+    </div>
+  </section>
+  <section class="section section--alt" aria-labelledby="where-h">
+    <div class="wrap">
+      <h2 id="where-h">{{.T.where_title}}</h2>
+      <p>{{.T.where_text}}</p>
+      <p><a href="https://maps.google.com/?q=City+Park">{{.T.map_link}}</a></p>
+    </div>
+  </section>
+  <section class="section" id="signup" aria-labelledby="signup-h">
+    <div class="wrap">
+      <h2 id="signup-h">{{.T.signup_title}}</h2>
+      <p class="lead">{{.T.signup_text}}</p>
+      <p class="actions"><a class="btn" href="mailto:hello@example.com">hello@example.com</a></p>
+    </div>
+  </section>
+</main>
+{{template "foot" .}}

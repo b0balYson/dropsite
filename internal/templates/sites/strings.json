@@ -1,0 +1,14 @@
+{
+  "ru": {
+    "skip": "Перейти к содержанию",
+    "notfound_title": "Страница не найдена",
+    "notfound_text": "Такой страницы здесь нет. Возможно, адрес изменился.",
+    "notfound_home": "На главную"
+  },
+  "en": {
+    "skip": "Skip to content",
+    "notfound_title": "Page not found",
+    "notfound_text": "There is no such page here. The address may have changed.",
+    "notfound_home": "Back to the home page"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "ru": {
+    "description": "Один день музыки, лекций и мастер-классов. Дата, программа и запись.",
+    "date": "21 июня, суббота",
+    "time": "12:00–22:00",
+    "place": "Городской парк, главная сцена",
+    "hero_text": "Один день музыки, лекций и мастер-классов для всей семьи.",
+    "cta_signup": "Записаться",
+    "cta_program": "Программа",
+    "program_title": "Программа",
+    "t1": "12:00", "e1": "Открытие и приветствие",
+    "t2": "13:30", "e2": "Мастер-классы для детей и взрослых",
+    "t3": "16:00", "e3": "Лекции и разговоры",
+    "t4": "19:00", "e4": "Концерт на главной сцене",
+    "where_title": "Как добраться",
+    "where_text": "Вход с главной аллеи. Ближайшая остановка — «Парк», 5 минут пешком.",
+    "map_link": "Открыть на карте",
+    "signup_title": "Запись",
+    "signup_text": "Вход свободный, но мест на мастер-классах мало. Напишите нам, чтобы занять место.",
+    "footer": "Сайт опубликован с dropsite"
+  },
+  "en": {
+    "description": "A day of music, talks and workshops. Date, programme and sign-up.",
+    "date": "Saturday, 21 June",
+    "time": "12 pm – 10 pm",
+    "place": "City Park, main stage",
+    "hero_text": "A day of music, talks and workshops for the whole family.",
+    "cta_signup": "Sign up",
+    "cta_program": "Programme",
+    "program_title": "Programme",
+    "t1": "12:00", "e1": "Opening and welcome",
+    "t2": "13:30", "e2": "Workshops for kids and adults",
+    "t3": "16:00", "e3": "Talks and conversations",
+    "t4": "19:00", "e4": "Concert on the main stage",
+    "where_title": "Getting there",
+    "where_text": "Enter from the main alley. The nearest stop is Park, a 5-minute walk.",
+    "map_link": "Open in maps",
+    "signup_title": "Sign up",
+    "signup_text": "Entry is free, but workshop seats are limited. Write to us to save a seat.",
+    "footer": "Published with dropsite"
+  }
+}

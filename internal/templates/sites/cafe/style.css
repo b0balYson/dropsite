@@ -1,0 +1,17 @@
+:root {
+  --paper: #fbf6ef; --ink: #2b1d14; --muted: #6b5546; --card: #f3e7d8; --line: #e2d2bf;
+  --accent: #9a3f1c; --accent-ink: #8a3517; --on-accent: #fff;
+  --display: Georgia, "Times New Roman", serif; --radius: 999px;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --paper: #1c1410; --ink: #f6ece2; --muted: #c9b3a0; --card: #2a1f18; --line: #3d2e24; --accent: #e07a4f; --accent-ink: #f0a07c; --on-accent: #1c1410; }
+}
+.hero { padding-block: clamp(3rem, 2rem + 6vw, 7rem); }
+.hero__grid { display: grid; gap: 2rem; align-items: center; }
+.hero__art { width: min(100%, 320px); margin-inline: auto; }
+@media (min-width: 48rem) { .hero__grid { grid-template-columns: 1.3fr 1fr; } }
+.section--alt { background: var(--card); }
+.menu { margin: 0; }
+.menu div { display: flex; justify-content: space-between; gap: 1rem; padding-block: .6rem; border-bottom: 1px dashed var(--line); }
+.menu dt { font-weight: 600; }
+.menu dd { margin: 0; font-variant-numeric: tabular-nums; }
