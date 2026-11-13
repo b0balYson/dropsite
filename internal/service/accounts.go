@@ -185,6 +185,40 @@ func (s *Service) RedeemInvite(ctx context.Context, secret, password, ip string)
 	return u, nil
 }
 
+// ResetPassword sets a new password for the user with the given email. It is
+// an operator action run from the server shell (control reset-password) and
+// is not reachable through the API or the web interface: whoever can run it
+// already has the database. An invited user becomes active; a blocked user
+// stays blocked. Every session of the user ends.
+func (s *Service) ResetPassword(ctx context.Context, email, password string) (domain.User, error) {
+	if err := domain.ValidatePassword(password); err != nil {
+		return domain.User{}, err
+	}
+	u, err := s.repo.GetUserByEmail(ctx, strings.TrimSpace(email))
+	if err != nil {
+		return domain.User{}, err
+	}
+	hash, err := s.hasher.hash(ctx, password)
+	if err != nil {
+		return domain.User{}, err
+	}
+	now := s.now()
+	if err := s.repo.SetUserPassword(ctx, u.ID, hash, now); err != nil {
+		return domain.User{}, err
+	}
+	if u.Status == domain.UserInvited {
+		if err := s.repo.SetUserStatus(ctx, u.ID, domain.UserActive, now); err != nil {
+			return domain.User{}, err
+		}
+	}
+	if err := s.repo.DeleteUserSessions(ctx, u.ID); err != nil {
+		return domain.User{}, fmt.Errorf("end sessions: %w", err)
+	}
+	s.audit(ctx, Actor{}, "user.password_reset", userTarget(u.ID),
+		map[string]any{"email": u.Email, "source": string(domain.SourceCLI)})
+	return s.repo.GetUser(ctx, u.ID)
+}
+
 // SetUserBlocked blocks or unblocks a user (admin only). Blocking ends all
 // sessions at once; tokens stop working because authentication checks status.
 func (s *Service) SetUserBlocked(ctx context.Context, a Actor, userID int64, blocked bool) (domain.User, error) {

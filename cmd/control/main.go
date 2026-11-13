@@ -6,6 +6,7 @@
 //	control healthcheck       probe /healthz on the internal listener (container health)
 //	control backup <path|->   write a consistent backup archive
 //	control restore <path|-> [--force]  restore from a backup archive
+//	control reset-password [email]  set a new random password, print it (default ADMIN_EMAIL)
 //	control version           print the build version
 package main
 
@@ -30,7 +31,7 @@ func main() {
 	}
 }
 
-var errUsage = errors.New("usage: control [serve|healthcheck|backup <path|->|restore <path|-> [--force]|version]")
+var errUsage = errors.New("usage: control [serve|healthcheck|backup <path|->|restore <path|-> [--force]|reset-password [email]|version]")
 
 func run(ctx context.Context, args []string) error {
 	cmd := "serve"
@@ -46,6 +47,8 @@ func run(ctx context.Context, args []string) error {
 		return backupCmd(ctx, args)
 	case "restore":
 		return restoreCmd(ctx, args)
+	case "reset-password":
+		return resetPasswordCmd(ctx, args, os.Stdout)
 	case "version", "--version", "-v":
 		fmt.Println(brand.Name, "control", brand.Version)
 		return nil
