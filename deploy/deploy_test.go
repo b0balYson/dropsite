@@ -15,7 +15,12 @@ import (
 	"time"
 )
 
-const caddyImage = "caddy:2.11.9"
+const (
+	caddyImage = "caddy:2.11.9"
+	// Release images; DROPSITE_VERSION defaults to latest.
+	controlImage  = "ghcr.io/b0balyson/dropsite-control:latest"
+	wildcardImage = "ghcr.io/b0balyson/dropsite-caddy:latest"
+)
 
 func requireDocker(t *testing.T) {
 	t.Helper()
@@ -55,6 +60,7 @@ type composeVolume struct {
 
 type composeService struct {
 	Image       string          `json:"image"`
+	PullPolicy  string          `json:"pull_policy"`
 	Build       *composeBuild   `json:"build"`
 	User        string          `json:"user"`
 	ReadOnly    bool            `json:"read_only"`
@@ -97,28 +103,44 @@ func TestComposeConfig(t *testing.T) {
 			args := append(append([]string{"compose"}, files...), "--env-file", env, "config", "--format", "json")
 			out := run(t, "docker", args...)
 			checkCompose(t, out)
-			checkSourceBuild(t, out, name == "wildcard")
+			checkImages(t, out, name == "wildcard")
 		})
 	}
+	t.Run("pinned version", func(t *testing.T) {
+		cmd := exec.Command("docker", "compose", "-f", "docker-compose.yml", "-f", "compose.wildcard.yml",
+			"--env-file", env, "config", "--images")
+		cmd.Env = append(os.Environ(), "DROPSITE_VERSION=1.4.2")
+		out, err := cmd.Output()
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, want := range []string{"ghcr.io/b0balyson/dropsite-control:1.4.2", "ghcr.io/b0balyson/dropsite-caddy:1.4.2"} {
+			if !slices.Contains(strings.Fields(string(out)), want) {
+				t.Errorf("images %q lack %s", out, want)
+			}
+		}
+	})
 }
 
-// Verify the resolved configuration: wildcard must clear the stock Caddy
-// image, or Compose can start it instead of the build with the DNS plugin.
-func checkSourceBuild(t *testing.T, out []byte, wildcard bool) {
+// Verify the resolved configuration: control (and Caddy in wildcard mode)
+// run the published release image, keep a build section for source builds,
+// and are only pulled when missing, so "up" never replaces a pulled image
+// with a build unless asked to.
+func checkImages(t *testing.T, out []byte, wildcard bool) {
 	t.Helper()
 	var cf composeFile
 	if err := json.Unmarshal(out, &cf); err != nil {
 		t.Fatal(err)
 	}
 	control := cf.Services["control"]
-	if control.Image != "" {
-		t.Errorf("control must build locally without a registry image, got %q", control.Image)
+	if control.Image != controlImage || control.PullPolicy != "missing" {
+		t.Errorf("control: image=%q pull_policy=%q, want %q and missing", control.Image, control.PullPolicy, controlImage)
 	}
 	checkBuildContext(t, control.Build, "..", "deploy/Dockerfile")
 	caddy := cf.Services["caddy"]
 	if wildcard {
-		if caddy.Image != "" {
-			t.Errorf("wildcard Caddy must replace the stock image with a local build, got %q", caddy.Image)
+		if caddy.Image != wildcardImage || caddy.PullPolicy != "missing" {
+			t.Errorf("wildcard Caddy: image=%q pull_policy=%q, want %q and missing", caddy.Image, caddy.PullPolicy, wildcardImage)
 		}
 		checkBuildContext(t, caddy.Build, "caddy", "Dockerfile")
 	} else if caddy.Image != caddyImage || caddy.Build != nil {

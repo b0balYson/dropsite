@@ -14,6 +14,13 @@
 # dropsite-update, dropsite-rollback, dropsite-backup, dropsite-admin-password
 # and dropsite-info.
 #
+# Releases: DROPSITE_VERSION in deploy/.env selects a published release
+# ("latest", the default, or an exact version such as 1.4.2). The checkout is
+# switched to its tag vX.Y.Z, so the compose file and the Caddyfile match the
+# prebuilt images, which are then downloaded from ghcr.io instead of being
+# compiled on the server. Before the first release, or with DROPSITE_BUILD=1,
+# control is built from the checked-out branch.
+#
 # Modes:
 #   (none)              full installation
 #   --up                only start the stack (used by dropsite-update)
@@ -27,8 +34,10 @@
 #   DROPSITE_REPO_URL     repository to clone (default: the public GitHub repository)
 #   DROPSITE_REF          branch to clone (default: main)
 #   DROPSITE_DIR          checkout directory (default: /opt/dropsite)
-#   DROPSITE_BUILD=1      always build control from source, even when
-#                         published images exist
+#   DROPSITE_VERSION      release to run (default: DROPSITE_VERSION of .env,
+#                         else latest)
+#   DROPSITE_BUILD=1      build the source of the branch instead of
+#                         downloading the images of a release
 #   DROPSITE_SKIP_SWAP=1      never create swap (test containers)
 #   DROPSITE_SKIP_FIREWALL=1  never touch the firewall (test containers)
 #
@@ -47,6 +56,9 @@ BIN_DIR=/usr/local/bin
 CRON_FILE=/etc/cron.d/dropsite-backup
 COMPOSE_MIN=2.24.4
 SWAP_TARGET_MB=3072 # RAM + swap of at least 3 GB: enough to compile control
+STATE_DIR=/var/lib/dropsite
+# A release version: X.Y.Z with an optional pre-release suffix.
+RELEASE_RE='^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
 WAIT_TIMEOUT=900
 
 export DEBIAN_FRONTEND=noninteractive
@@ -208,6 +220,10 @@ configure_firewall() {
 checkout() {
 	if [ -d "$APP_DIR/.git" ]; then
 		step "Updating the dropsite source in $APP_DIR"
+		# A release checkout is detached at its tag: back to the branch first.
+		if ! git -C "$APP_DIR" symbolic-ref -q HEAD >/dev/null; then
+			git -C "$APP_DIR" checkout -q "$(cat "$STATE_DIR/branch" 2>/dev/null || echo "$REF")" >>"$LOG" 2>&1 </dev/null || true
+		fi
 		if ! git -C "$APP_DIR" pull --ff-only >>"$LOG" 2>&1 </dev/null; then
 			warn "could not update $APP_DIR with 'git pull --ff-only'; continuing with the current version"
 		fi
@@ -217,10 +233,10 @@ checkout() {
 			die "$APP_DIR exists and is not a git checkout; move it away and run again"
 		run git clone --branch "$REF" "$REPO_URL" "$APP_DIR"
 	fi
-	# dropsite-update returns to this branch after a rollback.
-	mkdir -p /var/lib/dropsite
-	git -C "$APP_DIR" symbolic-ref -q --short HEAD >/var/lib/dropsite/branch 2>/dev/null ||
-		printf '%s\n' "$REF" >/var/lib/dropsite/branch
+	# dropsite-update returns to this branch before selecting a release.
+	mkdir -p "$STATE_DIR"
+	git -C "$APP_DIR" symbolic-ref -q --short HEAD >"$STATE_DIR/branch" 2>/dev/null ||
+		printf '%s\n' "$REF" >"$STATE_DIR/branch"
 }
 
 env_file() { printf '%s/deploy/.env' "$APP_DIR"; }
@@ -280,10 +296,9 @@ write_env() {
 		(umask 077 && cp "$APP_DIR/deploy/.env.example" "$f")
 		set_env ADMIN_EMAIL "$email"
 		set_env ADMIN_PASSWORD "$(generate_password)"
-		# Release channel for prebuilt images, once .env.example knows it.
-		if grep -q '^DROPSITE_VERSION=' "$f"; then
-			set_env DROPSITE_VERSION latest
-		fi
+		# The newest release unless the caller pins one.
+		v=${DROPSITE_VERSION:-latest}
+		set_env DROPSITE_VERSION "${v#v}"
 		ADMIN_PASSWORD_NEW=1
 	else
 		step "Keeping the existing $f"
@@ -311,14 +326,68 @@ write_env() {
 
 compose() { (cd "$APP_DIR/deploy" && docker compose "$@"); }
 
-# prebuilt_images: true once docker-compose.yml names a published image for
-# control (planned release pipeline). Today control is built from source.
-prebuilt_images() {
-	compose config 2>/dev/null | awk '
-		/^  control:/ { c = 1; next }
-		/^  [a-z]/ { c = 0 }
-		c && /^    image: ghcr\.io\// { f = 1 }
-		END { exit !f }'
+# published_images: the ghcr.io images the resolved compose file names.
+published_images() {
+	compose config --images 2>/dev/null | grep '^ghcr\.io/' || true
+}
+
+# images_present: every published image is in the local image store. It is
+# checked separately because "docker compose pull" exits 0 even when the
+# image of a service that has a build section cannot be downloaded.
+images_present() {
+	imgs=$(published_images)
+	[ -n "$imgs" ] || return 1
+	for i in $imgs; do
+		docker image inspect "$i" >/dev/null 2>&1 || return 1
+	done
+}
+
+# release_tag WANT: the Git tag of release WANT ("latest": the newest tag
+# vX.Y.Z without a pre-release suffix); empty when there is none.
+release_tag() {
+	if [ "$1" = latest ]; then
+		git -C "$APP_DIR" tag -l 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true
+	elif git -C "$APP_DIR" rev-parse -q --verify "refs/tags/v${1#v}^{commit}" >/dev/null; then
+		printf 'v%s\n' "${1#v}"
+	fi
+}
+
+# select_release checks out the tag of the release DROPSITE_VERSION names
+# and exports its exact version for compose, so the compose file, the
+# Caddyfile and the images all belong to one release. It fails, meaning
+# "build the current checkout", with DROPSITE_BUILD=1, before the first
+# release exists, or when that release's compose file names no published image.
+select_release() {
+	[ "${DROPSITE_BUILD:-}" != 1 ] || return 1
+	want=${DROPSITE_VERSION:-$(get_env DROPSITE_VERSION)}
+	want=${want:-latest}
+	if [ "$want" != latest ] && ! printf '%s\n' "${want#v}" | grep -Eq "$RELEASE_RE"; then
+		die "DROPSITE_VERSION must be latest or a release such as 1.4.2, got: $want"
+	fi
+	if ! git -C "$APP_DIR" fetch -q --tags --force origin >>"$LOG" 2>&1 </dev/null; then
+		warn "could not fetch release tags; using the tags already known"
+	fi
+	tag=$(release_tag "$want")
+	if [ -z "$tag" ]; then
+		[ "$want" = latest ] || die "release $want does not exist (no tag v${want#v} in $REPO_URL)"
+		note "no published release yet: building from source"
+		return 1
+	fi
+	run git -C "$APP_DIR" -c advice.detachedHead=false checkout -q --detach "$tag"
+	export DROPSITE_VERSION="${tag#v}"
+	[ -n "$(published_images)" ]
+}
+
+# tag_latest: on the default channel, also tag the downloaded images :latest,
+# so a manual "docker compose up" with .env's latest starts the same images.
+tag_latest() {
+	case "$(get_env DROPSITE_VERSION)" in
+	"" | latest) ;;
+	*) return 0 ;;
+	esac
+	for i in $(published_images); do
+		docker tag "$i" "${i%:*}:latest" >>"$LOG" 2>&1 || true
+	done
 }
 
 # compose_quiet ARGS...: docker compose into the log.
@@ -328,18 +397,25 @@ compose_quiet() {
 }
 
 # stack_up is the single "start the stack" step, shared with dropsite-update
-# (server-bootstrap.sh --up). With published images it pulls the images of
-# DROPSITE_VERSION and falls back to a source build when the pull fails or
-# DROPSITE_BUILD=1; without them it builds from the checkout.
+# (server-bootstrap.sh --up). It runs the prebuilt images of the selected
+# release; when they cannot be downloaded it builds that same release from
+# source. Without a release (DROPSITE_BUILD=1 or no tag yet) it builds the
+# checked-out branch, with images tagged "dev".
 stack_up() {
-	if [ "${DROPSITE_BUILD:-}" != 1 ] && prebuilt_images; then
-		step "Downloading dropsite ${DROPSITE_VERSION:-$(get_env DROPSITE_VERSION)} images"
-		if compose_quiet pull && compose_quiet up -d --no-build --wait --wait-timeout "$WAIT_TIMEOUT"; then
+	if select_release; then
+		step "Downloading the dropsite $DROPSITE_VERSION images"
+		if compose_quiet pull && images_present &&
+			compose_quiet up -d --no-build --wait --wait-timeout "$WAIT_TIMEOUT"; then
+			tag_latest
 			return 0
 		fi
-		warn "could not start the published images; building from source instead"
+		warn "could not start the published images of $DROPSITE_VERSION; building that release from source instead"
+	else
+		export DROPSITE_VERSION=dev
 	fi
-	step "Building and starting dropsite from source (the first build takes several minutes)"
+	DROPSITE_BUILD_VERSION=$(sh "$APP_DIR/scripts/version.sh" 2>/dev/null || echo dev)
+	export DROPSITE_BUILD_VERSION
+	step "Building and starting dropsite $DROPSITE_BUILD_VERSION from source (the first build takes several minutes)"
 	compose_quiet up -d --build --wait --wait-timeout "$WAIT_TIMEOUT"
 }
 
@@ -429,8 +505,12 @@ backup=$(dropsite-backup)
 echo "    $backup"
 control=$(cd deploy && docker compose ps -q control)
 image=""
-[ -z "$control" ] || image=$(docker inspect -f '{{.Image}}' "$control")
-version=$(sed -n 's/^DROPSITE_VERSION=//p' deploy/.env | tail -n 1)
+version=""
+if [ -n "$control" ]; then
+	image=$(docker inspect -f '{{.Image}}' "$control")
+	# The version the running binary reports: X.Y.Z or dev+<commit>.
+	version=$(docker exec "$control" /control version 2>/dev/null | awk '{print $NF}') || version=""
+fi
 mkdir -p "$STATE_DIR"
 {
 	printf 'PREV_COMMIT=%q\n' "$(git rev-parse HEAD)"
@@ -464,9 +544,10 @@ EOF
 		printf '%s\n' "$header"
 		cat <<'EOF'
 # Go back to the version that ran before the last dropsite-update: check out
-# that commit, rebuild it, restore the backup taken right before the update
-# (the database of a newer version cannot be used by an older one) and start.
-# Data written since that update is lost.
+# that commit, download that release's images (or rebuild it when it was a
+# source build or the images are gone), restore the backup taken right before
+# the update (the database of a newer version cannot be used by an older one)
+# and start. Data written since that update is lost.
 STATE=/var/lib/dropsite/previous-release
 [ -f "$STATE" ] || { echo "nothing to roll back: run dropsite-update first" >&2; exit 1; }
 # shellcheck disable=SC1090
@@ -482,13 +563,31 @@ cd "$APP_DIR"
 before=$(sha256sum deploy/Caddyfile | cut -d' ' -f1)
 git checkout -q --detach "$PREV_COMMIT"
 cd deploy
-echo "==> Building the previous version"
-docker compose build control
+published() { docker compose config --images | grep '^ghcr\.io/' || true; }
+need_build=1
+if [ "${DROPSITE_BUILD:-}" != 1 ] && [ -n "$(published)" ] &&
+	printf '%s\n' "${PREV_VERSION:-}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+	export DROPSITE_VERSION="$PREV_VERSION"
+	echo "==> Downloading the images of $PREV_VERSION"
+	docker compose pull -q || true
+	need_build=0
+	for i in $(published); do
+		docker image inspect "$i" >/dev/null 2>&1 || need_build=1
+	done
+else
+	export DROPSITE_VERSION=dev
+fi
+if [ "$need_build" = 1 ]; then
+	echo "==> Building the previous version"
+	DROPSITE_BUILD_VERSION=$(sh ../scripts/version.sh 2>/dev/null || echo dev)
+	export DROPSITE_BUILD_VERSION
+	docker compose build
+fi
 echo "==> Restoring the backup"
 docker compose stop control
 docker compose run --rm -T control restore - --force <"$PREV_BACKUP"
 echo "==> Starting"
-docker compose up -d --wait --wait-timeout 900
+docker compose up -d --no-build --wait --wait-timeout 900
 if [ "$(sha256sum Caddyfile | cut -d' ' -f1)" != "$before" ]; then
 	docker compose restart caddy
 fi
@@ -544,6 +643,10 @@ print_info() {
 }
 
 validate_inputs() {
+	if [ -n "${DROPSITE_VERSION:-}" ] && [ "$DROPSITE_VERSION" != latest ] &&
+		! printf '%s\n' "${DROPSITE_VERSION#v}" | grep -Eq "$RELEASE_RE"; then
+		die "invalid DROPSITE_VERSION: $DROPSITE_VERSION (latest or a release such as 1.4.2)"
+	fi
 	if [ -n "${DROPSITE_DOMAIN:-}" ] && ! printf '%s' "$DROPSITE_DOMAIN" | grep -Eq "$DOMAIN_RE"; then
 		die "invalid domain: $DROPSITE_DOMAIN"
 	fi
@@ -600,4 +703,6 @@ main() {
 	printf 'DROPSITE_RESULT admin_password_new=%s\n' "$ADMIN_PASSWORD_NEW"
 }
 
-main "$@"
+# One line: bash has parsed it completely before main runs, so a checkout
+# that replaces this file meanwhile (select_release) cannot be read on.
+main "$@"; exit

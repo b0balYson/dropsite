@@ -14,7 +14,7 @@
 #   --code CODE             DROPSITE_CODE: one-time connect code
 #
 # Environment:
-#   DROPSITE_VERSION        release tag to install (default: latest)
+#   DROPSITE_VERSION        release to install, e.g. 1.4.2 or v1.4.2 (default: latest)
 #   DROPSITE_INSTALL_DIR    target directory (default: $HOME/.local/bin)
 #   DROPSITE_DOWNLOAD_BASE  where binaries and SHA256SUMS live (overrides the
 #                           GitHub URL; file:// and http:// work, for testing)
@@ -47,7 +47,7 @@ download_base() {
 	if [ -n "${DROPSITE_DOWNLOAD_BASE:-}" ]; then
 		echo "${DROPSITE_DOWNLOAD_BASE%/}"
 	elif [ -n "${DROPSITE_VERSION:-}" ] && [ "$DROPSITE_VERSION" != latest ]; then
-		echo "https://github.com/$REPO/releases/download/$DROPSITE_VERSION"
+		echo "https://github.com/$REPO/releases/download/v${DROPSITE_VERSION#v}"
 	else
 		echo "https://github.com/$REPO/releases/latest/download"
 	fi

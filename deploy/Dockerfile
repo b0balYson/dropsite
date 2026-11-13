@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
 #
 # Image of the control server. Build context is the repository root:
-#   docker build -f deploy/Dockerfile --build-arg VERSION=v1.0.0 .
+#   docker build -f deploy/Dockerfile --build-arg VERSION="$(scripts/version.sh)" .
+# Releases are built by .github/workflows/release.yml (docs/releasing.md).
 
 # Go 1.27.4 on Alpine 3.24 (go.mod requires go 1.27.0).
 ARG GO_IMAGE=golang:1.27.4-alpine3.24@sha256:0a5f7fe796599ff487605987432e7619ae45beeb2fba4c2ce0b907879932aebf
@@ -39,6 +40,10 @@ RUN mkdir -p /out/volumes/data /out/volumes/state \
  && chmod 0700 /out/volumes/state
 
 FROM ${RUNTIME_IMAGE}
+LABEL org.opencontainers.image.title="dropsite-control" \
+      org.opencontainers.image.description="dropsite control server: API, web interface and publishing" \
+      org.opencontainers.image.source="https://github.com/b0balYson/dropsite" \
+      org.opencontainers.image.licenses="Apache-2.0"
 COPY --from=build --chown=65532:65532 /out/volumes/ /
 COPY --from=build /out/control /control
 USER 65532:65532

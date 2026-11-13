@@ -11,7 +11,7 @@
 # Environment:
 #   DROPSITE_SERVER         server to sign in to (with DROPSITE_CODE)
 #   DROPSITE_CODE           one-time connect code
-#   DROPSITE_VERSION        release tag to install (default: latest)
+#   DROPSITE_VERSION        release to install, e.g. 1.4.2 or v1.4.2 (default: latest)
 #   DROPSITE_INSTALL_DIR    target directory (default: %LOCALAPPDATA%\Programs\dropsite)
 #   DROPSITE_DOWNLOAD_BASE  where binaries and SHA256SUMS live (overrides the GitHub URL)
 
@@ -36,7 +36,7 @@ function Get-Arch {
 function Get-DownloadBase {
     if ($env:DROPSITE_DOWNLOAD_BASE) { return $env:DROPSITE_DOWNLOAD_BASE.TrimEnd('/') }
     if ($env:DROPSITE_VERSION -and $env:DROPSITE_VERSION -ne 'latest') {
-        return "https://github.com/$Repo/releases/download/$($env:DROPSITE_VERSION)"
+        return "https://github.com/$Repo/releases/download/v$($env:DROPSITE_VERSION.TrimStart('v'))"
     }
     return "https://github.com/$Repo/releases/latest/download"
 }

@@ -1,9 +1,12 @@
 # dropsite: self-hosted publishing of static sites.
 #
-# Install: clone the repository, cd deploy, copy .env.example to .env,
-# fill in the four required variables and run:
+# Install: clone the repository, check out the release you run (git checkout
+# vX.Y.Z), cd deploy, copy .env.example to .env, fill in the four required
+# variables and run:
+#   docker compose pull && docker compose up -d --wait
+# control comes as a prebuilt multi-arch image of the release DROPSITE_VERSION
+# (.env, default latest) from ghcr.io. To build it from this checkout instead:
 #   docker compose up -d --build --wait
-# control is built locally from the repository; no dropsite registry is used.
 #
 # Containers: caddy (serving and TLS), control (API, UI, deploys) and the
 # one-shot caddy-init. Volumes: sites, state, caddy_data, logs.
@@ -82,11 +85,17 @@ services:
     logging: *logging
 
   control:
+    # "docker compose pull" downloads the image; "up" starts it as it is and
+    # builds only when it is missing locally or with --build.
+    image: ghcr.io/b0balyson/dropsite-control:${DROPSITE_VERSION:-latest}
+    pull_policy: missing
     build:
       context: ..
       dockerfile: deploy/Dockerfile
       args:
-        VERSION: ${DROPSITE_VERSION:-dev}
+        # Version a source build reports (make and the installer set
+        # dev+<commit>); release images get X.Y.Z from CI.
+        VERSION: ${DROPSITE_BUILD_VERSION:-dev}
     restart: unless-stopped
     user: "65532:65532"
     read_only: true

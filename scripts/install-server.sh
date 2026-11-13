@@ -29,6 +29,9 @@
 #   DROPSITE_LANG         en, ru or zh (default: from LC_ALL / LC_MESSAGES / LANG)
 #   DROPSITE_REF          branch of the repository to install (default: main)
 #   DROPSITE_REPO_URL     repository the server clones (default: GitHub)
+#   DROPSITE_VERSION      release the server runs (default: latest; e.g. 1.4.2)
+#   DROPSITE_BUILD=1      build from source on the server instead of
+#                         downloading the release images
 #   DROPSITE_BOOTSTRAP    local path of server-bootstrap.sh to upload
 #   DROPSITE_DNS_TIMEOUT  seconds to wait for DNS and HTTPS (default 1800)
 #   DROPSITE_SKIP_SWAP, DROPSITE_SKIP_FIREWALL  passed to the server (tests)
@@ -754,7 +757,7 @@ run_bootstrap() {
 	kssh 'umask 077 && cat >/root/dropsite-bootstrap.sh' <"$script" ||
 		die "$M_download_failed" "server-bootstrap.sh"
 	envs="DROPSITE_DOMAIN=$(q "$DOMAIN") DROPSITE_EMAIL=$(q "$EMAIL") DROPSITE_LOCAL_PORT=$(q "$LOCAL_PORT")"
-	for v in DROPSITE_REPO_URL DROPSITE_REF DROPSITE_SKIP_SWAP DROPSITE_SKIP_FIREWALL; do
+	for v in DROPSITE_REPO_URL DROPSITE_REF DROPSITE_VERSION DROPSITE_BUILD DROPSITE_SKIP_SWAP DROPSITE_SKIP_FIREWALL; do
 		eval "val=\${$v:-}"
 		# shellcheck disable=SC2154 # set by eval
 		[ -z "$val" ] || envs="$envs $v=$(q "$val")"
