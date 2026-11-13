@@ -14,9 +14,34 @@ dropsite 只托管已经做好的静态网站（HTML、CSS、JavaScript、图片
 
 ## 准备工作
 
-- **一台租用的服务器（VPS）**：Ubuntu 22.04 及以上或 Debian 12 及以上，内存 1 GB 及以上。服务商会提供服务器的 IP 地址和 root 密码（或允许您添加 SSH 密钥）。
+- **一台租用的服务器（VPS）**：1 GB 内存、1 个 CPU 即可，系统为 Ubuntu 22.04 及以上或 Debian 12 及以上。服务商会提供服务器的 IP 地址和 root 密码（或允许您添加 SSH 密钥）。
 - **一个域名**，且不用于其他任何服务，例如 `sites.example.com`。
 - **ChatGPT 或 Claude**，用对话来制作网站。不使用对话时，也可以在网页管理界面中上传网站。
+
+## 去哪里获取服务器和域名
+
+**服务器。** 任何 1 GB 内存、1 个 CPU 的 VPS 都可以，通常就是最便宜的套餐：
+
+- [Hetzner Cloud](https://www.hetzner.com/cloud/)
+- [Vultr](https://www.vultr.com/)
+- [DigitalOcean](https://www.digitalocean.com/)
+
+创建服务器时，选择 **Ubuntu 24.04**、离访客较近的地区，并使用 root 密码登录（或添加您的 SSH 密钥）。创建完成后，服务商控制面板会显示服务器的 **IP 地址**，安装程序需要用到它。
+
+**域名。** 从域名注册商购买域名，例如 [Cloudflare](https://www.cloudflare.com/products/registrar/)、[GoDaddy](https://www.godaddy.com/) 或 [Namecheap](https://www.namecheap.com/)。已有的域名只要上面没有运行任何服务也可以使用，也可以使用它的子域名，例如 `sites.example.com`。
+
+**DNS 记录。** 安装程序会告诉您具体要创建什么，但始终是两条指向服务器 IP 地址的 `A` 记录：
+
+| 类型 | 名称 | 值 |
+| --- | --- | --- |
+| `A` | `@` | 服务器 IP 地址 |
+| `A` | `*` | 服务器 IP 地址 |
+
+- **Cloudflare：** 打开域名 → **DNS** → **Records** → **Add record**。Type 选 `A`，Name 填 `@`，IPv4 address 填服务器 IP，**Proxy status 选 DNS only**（灰色云朵），点 **Save**。再用 Name `*` 重复一次。
+- **GoDaddy：** **My Products** → 域名旁的 **DNS** 按钮。在已有的名称为 `@` 的 `A` 记录上点击铅笔图标，把值改为服务器 IP（如果没有这条记录，点 **Add New Record**）。然后点 **Add New Record**：Type 选 `A`，Name 填 `*`，Value 填服务器 IP，点 **Save**。
+- **其他注册商：** 在域名的 DNS 设置中创建同样的两条 `A` 记录。
+
+如果使用子域名，例如 `sites.example.com`，请用 `sites` 和 `*.sites` 代替 `@` 和 `*`。记录通常几分钟内生效，有时需要一小时。
 
 ## 一条命令完成安装
 
@@ -86,7 +111,7 @@ curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/ins
 - **操作日志。** 管理员可以看到登录、发布、回滚，以及用户、域名、表单和设置的变更。
 - **三种界面语言：** 简体中文、英文和俄文。
 - **预构建镜像和带版本号的发布**，支持 amd64 和 arm64，并附有签名的构建来源证明；服务器上无需编译（[docs/releasing.md](docs/releasing.md)）。
-- **备份，一条命令更新和回滚：** 每日备份、`dropsite-update`、`dropsite-rollback`。
+- **一键更新。** 管理面板会自动发现新版本，显示更新内容，并可在“设置”中一键更新（更新前先备份）；对话中的助手也会告知管理员有新版本。每日备份、`dropsite-update` 和 `dropsite-rollback` 仍可在命令行中使用。
 - **网站持续可用**，即使管理服务已停止或正在更新。
 
 ## 详细说明

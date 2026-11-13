@@ -14,9 +14,34 @@ dropsite serves finished static sites (HTML, CSS, JavaScript, images). It does n
 
 ## What you need
 
-- **A rented server (VPS)** with Ubuntu 22.04 or newer, or Debian 12 or newer, and 1 GB of memory or more. The hosting provider gives you its IP address and the root password (or lets you add an SSH key).
+- **A rented server (VPS)**: 1 GB of memory and 1 CPU are enough, with Ubuntu 22.04 or newer, or Debian 12 or newer. The hosting provider gives you its IP address and the root password (or lets you add an SSH key).
 - **A domain** that hosts nothing else, for example `sites.example.com`.
 - **ChatGPT or Claude** to make sites by asking. Without a chat you can still upload sites in the web interface.
+
+## Where to get a server and a domain
+
+**Server.** Any VPS with 1 GB of memory and 1 CPU works; that is usually the cheapest plan:
+
+- [Hetzner Cloud](https://www.hetzner.com/cloud/)
+- [Vultr](https://www.vultr.com/)
+- [DigitalOcean](https://www.digitalocean.com/)
+
+When you create the server, choose **Ubuntu 24.04**, a region close to your visitors and sign-in with the root password (or add your SSH key). Once it is created, the provider's panel shows its **IP address**: the installer asks for it.
+
+**Domain.** Buy a domain from a registrar such as [Cloudflare](https://www.cloudflare.com/products/registrar/), [GoDaddy](https://www.godaddy.com/) or [Namecheap](https://www.namecheap.com/). A domain you already own works too if nothing runs on it, or a subdomain of it such as `sites.example.com`.
+
+**DNS records.** The installer shows exactly what to create, but it is always two `A` records with the server's IP address:
+
+| Type | Name | Value |
+| --- | --- | --- |
+| `A` | `@` | the server's IP address |
+| `A` | `*` | the server's IP address |
+
+- **Cloudflare:** open the domain → **DNS** → **Records** → **Add record**. Type `A`, Name `@`, IPv4 address: the server's IP, **Proxy status: DNS only** (grey cloud), **Save**. Repeat with Name `*`.
+- **GoDaddy:** **My Products** → the **DNS** button of the domain. On the existing `A` record named `@`, click the pencil and change the value to the server's IP (if there is none, **Add New Record**). Then **Add New Record**: Type `A`, Name `*`, Value: the server's IP, **Save**.
+- **Any other registrar:** create the same two `A` records in the domain's DNS settings.
+
+For a subdomain such as `sites.example.com`, use `sites` and `*.sites` instead of `@` and `*`. Records start working within minutes, sometimes an hour.
 
 ## Install in one command
 
@@ -86,7 +111,7 @@ You only see a check mark per step. The details are in `~/.dropsite/install-<nam
 - **Audit log.** Administrators see sign-ins, publications, rollbacks, user, domain, form and settings changes.
 - **Three interface languages:** English, Russian and Simplified Chinese.
 - **Prebuilt images and versioned releases** for amd64 and arm64 with signed build provenance; nothing is compiled on the server ([docs/releasing.md](docs/releasing.md)).
-- **Backups and one-command update and rollback:** a daily backup, `dropsite-update`, `dropsite-rollback`.
+- **Update with one button.** The panel notices a new release, shows what changed and updates from Settings with a backup first; the chat assistant also tells the administrator about it. The daily backup, `dropsite-update` and `dropsite-rollback` still work from the command line.
 - **Sites keep working** while the management service is stopped or being updated.
 
 ## Details
