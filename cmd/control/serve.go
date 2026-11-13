@@ -181,6 +181,10 @@ func (a *app) run(ctx context.Context) error {
 		return nil
 	})
 	g.Go(func() error {
+		a.svc.RunSheetSync(gctx, service.SheetSyncCheckInterval)
+		return nil
+	})
+	g.Go(func() error {
 		<-gctx.Done()
 		a.log.Info("shutting down")
 		sctx, cancel := context.WithTimeout(context.WithoutCancel(gctx), shutdownTimeout)

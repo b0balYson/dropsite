@@ -27,8 +27,9 @@ Call get_guide with one of these topics when you need details:
 - `update`: change an existing site, also from a new chat.
 - `large_sites`: sites over 16 MB (many photos, several pages).
 - `assets`: self-contained, fast, mobile-friendly, accessible sites (read before building any site).
-- `forms`: forms on the site, where requests go (Telegram, e-mail, webhook), reading and exporting requests.
+- `forms`: forms on the site, where requests go (Telegram, e-mail, webhook, Google Sheet), reading and exporting requests.
 - `data`: content that changes without a new release (prices, menus, schedules) and visitor reviews with approval.
+- `sheets`: Google Sheets: form submissions as rows of a sheet, and site data (prices, menus, schedules) taken from a sheet the user edits.
 - `proxy`: API keys for OpenAI, a CRM, a Telegram bot and other services a page calls; the user pastes the key in the web interface.
 - `stats`: visits and analytics counters.
 - `addresses`: the memorable address, own domains and the DNS steps the user does, the root domain (administrators).

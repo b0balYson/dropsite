@@ -93,8 +93,8 @@ type SubmissionsExport struct {
 // Channel is a delivery channel of a site, without secrets.
 type Channel struct {
 	ID       string `json:"id"`
-	Kind     string `json:"kind" jsonschema:"telegram, email or webhook"`
-	Target   string `json:"target" jsonschema:"chat ID, e-mail address or webhook URL; empty while a Telegram link is not pressed"`
+	Kind     string `json:"kind" jsonschema:"telegram, email, webhook or sheets"`
+	Target   string `json:"target" jsonschema:"chat ID, e-mail address, webhook URL or Google Sheets link; empty while a Telegram link is not pressed"`
 	State    string `json:"state" jsonschema:"waiting_for_confirmation, active, off or paused"`
 	Enabled  bool   `json:"enabled"`
 	Summary  string `json:"summary" jsonschema:"the state in plain words, ready to tell the user"`

@@ -174,6 +174,10 @@ Every submission is stored first and then delivered in the background, with retr
 
 A page can call a third-party API with a key (OpenAI, a CRM, a Telegram bot) through `/_dropsite/proxy/<name>/<path>` on its own address: the server adds the key and forwards the request, the key never reaches the page. The owner pastes the key on the **API keys** screen of the site; the API and the chat never accept or show it. Allowed hosts, methods and paths, size and rate limits and private-network blocking apply; protected sites keep the proxy behind their password. Details: [docs/proxy.md](docs/proxy.md).
 
+### Google Sheets
+
+With a Google service account key pasted by an administrator in Settings, a site owner can send form submissions to a Google Sheet (one row per submission, new fields add columns) and fill a data collection from a sheet (manual or periodic synchronization, values typed by the collection schema, bad rows reported without changing data). Users share their spreadsheets with the service account address; the key is never shown by the API or the chat. Details: [docs/sheets.md](docs/sheets.md).
+
 From ChatGPT or claude.ai the owner manages the same in plain words ("show the latest submissions", "send submissions to Telegram", "export this week's submissions"): the MCP servers (the remote one and the local `dropsite mcp` of Claude Desktop) have tools for form settings, submissions with filters, a capped CSV export and delivery channels; confirmation codes and the Telegram link still go through the user.
 
 ## Site data

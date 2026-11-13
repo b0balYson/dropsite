@@ -80,7 +80,7 @@ func (s *Service) AddFormChannel(ctx context.Context, a Actor, ref string, kind 
 		return ChannelResult{}, err
 	}
 	if !kind.Valid() {
-		return ChannelResult{}, channelErr(domain.CodeChannelInvalid, "kind must be telegram, email or webhook")
+		return ChannelResult{}, channelErr(domain.CodeChannelInvalid, "kind must be telegram, email, webhook or sheets")
 	}
 	n, err := s.repo.CountFormChannels(ctx, site.ID)
 	if err != nil {
@@ -103,6 +103,8 @@ func (s *Service) AddFormChannel(ctx context.Context, a Actor, ref string, kind 
 		err = s.prepareEmail(ctx, site, &ch, target)
 	case domain.ChannelWebhook:
 		res.Secret, err = s.prepareWebhook(&ch, target)
+	case domain.ChannelSheets:
+		err = s.prepareSheets(ctx, a, &ch, target)
 	}
 	if err != nil {
 		return ChannelResult{}, err

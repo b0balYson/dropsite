@@ -118,6 +118,9 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /sites/{ref}/data/{name}/documents", s.user(s.saveDocument))
 	mux.HandleFunc("POST /sites/{ref}/data/{name}/documents/delete", s.user(s.deleteDocument))
 	mux.HandleFunc("POST /sites/{ref}/data/{name}/moderate", s.user(s.moderateDocuments))
+	mux.HandleFunc("POST /sites/{ref}/data/{name}/sheet", s.user(s.linkSheet))
+	mux.HandleFunc("POST /sites/{ref}/data/{name}/sheet/sync", s.user(s.syncSheet))
+	mux.HandleFunc("POST /sites/{ref}/data/{name}/sheet/delete", s.user(s.unlinkSheet))
 	mux.HandleFunc("GET /sites/{ref}/proxy", s.user(s.proxyPage))
 	mux.HandleFunc("POST /sites/{ref}/proxy", s.user(s.saveProxy))
 	mux.HandleFunc("GET /sites/{ref}/proxy/{name}/edit", s.user(s.editProxy))
@@ -151,6 +154,7 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("GET /admin/settings", s.admin(s.settingsPage))
 	mux.HandleFunc("POST /admin/settings", s.admin(s.saveSettings))
 	mux.HandleFunc("POST /admin/settings/forms", s.admin(s.saveFormSettings))
+	mux.HandleFunc("POST /admin/settings/sheets", s.admin(s.saveSheetsKey))
 
 	mux.HandleFunc("/", s.user(s.notFound))
 	return mux

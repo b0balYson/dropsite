@@ -9,12 +9,15 @@ const (
 	ChannelTelegram ChannelKind = "telegram"
 	ChannelEmail    ChannelKind = "email"
 	ChannelWebhook  ChannelKind = "webhook"
+	// ChannelSheets appends submissions as rows of a Google Sheet; Target
+	// is the canonical spreadsheet link.
+	ChannelSheets ChannelKind = "sheets"
 )
 
 // Valid reports whether k is a known channel kind.
 func (k ChannelKind) Valid() bool {
 	switch k {
-	case ChannelTelegram, ChannelEmail, ChannelWebhook:
+	case ChannelTelegram, ChannelEmail, ChannelWebhook, ChannelSheets:
 		return true
 	}
 	return false

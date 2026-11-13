@@ -71,8 +71,8 @@ func TestDemoteSkipsCodeFences(t *testing.T) {
 }
 
 func TestGuideTopics(t *testing.T) {
-	want := []string{"overview", "create", "references", "update", "large_sites", "assets", "forms", "data", "proxy",
-		"stats", "addresses", "protection", "publishing", "drafts", "rollback", "workflow", "account", "errors",
+	want := []string{"overview", "create", "references", "update", "large_sites", "assets", "forms", "data", "sheets",
+		"proxy", "stats", "addresses", "protection", "publishing", "drafts", "rollback", "workflow", "account", "errors",
 		"external_backend",
 		"payments", "booking", "legal", "seo", "multilingual", "quiz", "embeds"}
 	if got := strings.Join(Topics(), ","); got != strings.Join(want, ",") {
@@ -118,6 +118,7 @@ func TestGuideNamesTheFixedTools(t *testing.T) {
 		"delete_documents", "moderate_documents", "/_dropsite/data/",
 		"set_channel_enabled", "delete_channel", "rotate_channel_secret", "confirm", "list_proxy_endpoints",
 		"set_proxy_endpoint", "delete_proxy_endpoint", "secret_url",
+		"get_sheets_setup", "link_sheet", "sync_sheet", "unlink_sheet", "get_sheet_link",
 		"get_publish_settings", "set_publish_settings", "get_quality_report",
 		"list_templates", "create_site_from_template", "clone_site", "schedule_publish", "list_scheduled_publishes",
 		"cancel_scheduled_publish", "screenshot_site", "compare_versions", "inspect_reference",

@@ -67,6 +67,8 @@ type Deps struct {
 	Renderer Screenshotter
 	// PageFetcher downloads reference pages; nil means sitefetch defaults.
 	PageFetcher PageFetcher
+	// SheetsTransport replaces the guarded transport to Google (tests).
+	SheetsTransport http.RoundTripper
 }
 
 // Service implements the use cases.
@@ -107,6 +109,7 @@ type Service struct {
 	proxyState
 	shotState
 	referenceState
+	sheetsState
 }
 
 // New builds a Service.
@@ -150,6 +153,7 @@ func New(d Deps) *Service {
 		proxyState:       newProxyState(d, now),
 		shotState:        newShotState(d, now),
 		referenceState:   newReferenceState(d, now),
+		sheetsState:      newSheetsState(d, now),
 	}
 }
 

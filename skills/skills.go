@@ -46,6 +46,7 @@ var topics = []struct {
 	{"assets", []string{"assets.md"}},
 	{"forms", []string{"form_html.md", "forms.md"}},
 	{"data", []string{"data.md"}},
+	{"sheets", []string{"sheets.md"}},
 	{"proxy", []string{"proxy.md"}},
 	{"stats", []string{"stats.md"}},
 	{"addresses", []string{"addresses.md"}},

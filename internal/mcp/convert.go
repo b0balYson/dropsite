@@ -171,6 +171,8 @@ func ChannelWords(kind, target string) string {
 		return "Telegram chat " + target
 	case "email":
 		return "e-mail " + target
+	case "sheets":
+		return "Google Sheet " + target
 	}
 	return "webhook " + target
 }
@@ -230,6 +232,10 @@ func NewChannelAdded(c Channel, link, secret string) ChannelAdded {
 		out.NextStep = "The webhook is active. Give the user the signing secret now: it is shown only this once. " +
 			"The receiving system checks the X-Dropsite-Signature header (sha256=HMAC-SHA256 of the body with " +
 			"this secret). If the secret is lost, rotate_channel_secret issues a new one."
+	case c.Kind == "sheets":
+		out.NextStep = "The Google Sheet is connected: the header row was written and every new submission is " +
+			"added as a row; new form fields get new columns on the right. Tell the user to keep the sheet shared " +
+			"with the service account as Editor."
 	case c.Kind == "email":
 		out.NextStep = "A 6-digit code was sent to " + c.Target + ". Ask the user for it (it may be in the " +
 			"spam folder) and call verify_channel with channel_id " + id + ". The code works 30 minutes."
