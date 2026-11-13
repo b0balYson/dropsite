@@ -133,6 +133,8 @@ type view struct {
 	placed *flashPlacement
 	// Altcha loads the anti-robot widget (sign-in and invitation pages).
 	Altcha *altchaView
+	// Update is the newer release shown to administrators in the sidebar.
+	Update *updateBanner
 	D      any
 }
 
@@ -172,6 +174,7 @@ func (s *server) newView(r *http.Request, rc *reqCtx, nav, title string, data an
 		u := rc.actor.User
 		v.Me, v.IsAdmin = &u, u.IsAdmin()
 		v.ShowStart = v.IsAdmin && !s.svc.SetupHidden(r.Context())
+		v.Update = s.updateBannerFor(r, rc)
 	}
 	return v
 }

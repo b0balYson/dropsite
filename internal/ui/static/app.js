@@ -424,6 +424,40 @@
     document.querySelectorAll('[data-flash="toast"]').forEach(initToast);
   }
 
+  // ---- update progress -----------------------------------------------------
+  // While the server helper installs an update, the status is polled. control
+  // restarts on the way: failed polls show "restarting", and the page reloads
+  // once the panel answers again or the update has finished.
+
+  var UPDATE_POLL_MS = 4000;
+
+  function initUpdatePoll() {
+    var box = document.querySelector('[data-update-poll]');
+    if (!box || !window.fetch) { return; }
+    var url = box.getAttribute('data-update-poll');
+    var offline = box.querySelector('[data-update-offline]');
+    var wasOffline = false;
+    var down = function () {
+      wasOffline = true;
+      if (offline) { offline.hidden = false; }
+    };
+    var tick = function () {
+      window.fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin', cache: 'no-store' })
+        .then(function (resp) {
+          if (resp.redirected) { window.location.reload(); return null; }
+          if (!resp.ok) { down(); return null; }
+          return resp.json();
+        })
+        .then(function (st) {
+          if (!st) { return; }
+          if (wasOffline || !st.active) { window.location.reload(); }
+        })
+        .catch(down)
+        .then(function () { window.setTimeout(tick, UPDATE_POLL_MS); });
+    };
+    window.setTimeout(tick, UPDATE_POLL_MS);
+  }
+
   // ---- wiring --------------------------------------------------------------
 
   function focusIssued(root) {
@@ -441,6 +475,7 @@
     initCopy(document);
     initCountdown(document);
     initResults();
+    initUpdatePoll();
     document.querySelectorAll('[data-upload]').forEach(function (form) {
       new Uploader(form).bind();
     });

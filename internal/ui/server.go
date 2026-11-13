@@ -173,6 +173,9 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /admin/settings/forms", s.admin(s.saveFormSettings))
 	mux.HandleFunc("POST /admin/settings/sheets", s.admin(s.saveSheetsKey))
 	mux.HandleFunc("POST /admin/settings/public-admin", s.admin(s.savePublicAdmin))
+	mux.HandleFunc("POST /admin/settings/update", s.admin(s.requestUpdate))
+	mux.HandleFunc("POST /admin/settings/update/check", s.admin(s.checkUpdates))
+	mux.HandleFunc("GET /admin/settings/update/status", s.admin(s.updateStatus))
 
 	mux.HandleFunc("/", s.user(s.notFound))
 	return mux

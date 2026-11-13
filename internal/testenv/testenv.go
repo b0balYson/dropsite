@@ -107,6 +107,14 @@ type options struct {
 	pages  service.PageFetcher
 	sheets http.RoundTripper
 	setup  http.RoundTripper
+	update http.RoundTripper
+	ver    string
+}
+
+// WithRelease makes the service report version (instead of "dev") and
+// answer the release check through tr: tests of updates.
+func WithRelease(version string, tr http.RoundTripper) Option {
+	return func(o *options) { o.ver, o.update = version, tr }
 }
 
 // WithRenderer sets the screenshot renderer (none by default).
@@ -225,6 +233,8 @@ func start(t testing.TB, cfg *config.Config, o *options) *Env {
 		PageFetcher:     o.pages,
 		SheetsTransport: o.sheets,
 		SetupTransport:  setupTransport(o.setup),
+		UpdateTransport: setupTransport(o.update),
+		Version:         o.ver,
 	})
 	if err := svc.Start(ctx); err != nil {
 		t.Fatalf("testenv: start service: %v", err)

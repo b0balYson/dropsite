@@ -100,7 +100,17 @@ type Config struct {
 	PublishOptimize bool
 	// Renderer is the optional screenshot renderer.
 	Renderer Renderer
+	// UpdateCheck turns on the periodic check for a new release on GitHub
+	// (UPDATE_CHECK, on by default; docs/install.md, "Updating").
+	UpdateCheck bool
+	// UpdateCheckURL is the release endpoint the check asks; it is changed
+	// only by tests (UPDATE_CHECK_URL).
+	UpdateCheckURL string
 }
+
+// DefaultUpdateCheckURL is the newest published release of dropsite; GitHub
+// never answers a draft or a pre-release here.
+const DefaultUpdateCheckURL = "https://api.github.com/repos/b0balYson/dropsite/releases/latest"
 
 // maxDomainsPerSiteLimit bounds MAX_DOMAINS_PER_SITE.
 const maxDomainsPerSiteLimit = 100
@@ -202,6 +212,8 @@ func Load(get Getenv) (*Config, error) {
 	c.AdminBindIP = r.ipAddr("ADMIN_BIND_IP")
 	c.AllowPublicAdmin = r.onOff("ALLOW_PUBLIC_ADMIN", false)
 	c.Renderer = r.renderer()
+	c.UpdateCheck = r.onOff("UPDATE_CHECK", true)
+	c.UpdateCheckURL = r.httpURL("UPDATE_CHECK_URL", DefaultUpdateCheckURL)
 
 	// The DNS provider token is deliberately not read here: only Caddy needs
 	// it, and compose refuses to start the wildcard override without it.

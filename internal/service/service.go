@@ -75,6 +75,10 @@ type Deps struct {
 	SheetsTransport http.RoundTripper
 	// SetupTransport replaces the transport of the first-run HTTPS check (tests).
 	SetupTransport http.RoundTripper
+	// UpdateTransport replaces the guarded transport of the release check
+	// (tests); Version replaces brand.Version (tests).
+	UpdateTransport http.RoundTripper
+	Version         string
 }
 
 // Service implements the use cases.
@@ -119,6 +123,7 @@ type Service struct {
 	shotState
 	referenceState
 	sheetsState
+	updateState
 }
 
 // New builds a Service.
@@ -165,6 +170,7 @@ func New(d Deps) *Service {
 		shotState:        newShotState(d, now),
 		referenceState:   newReferenceState(d, now),
 		sheetsState:      newSheetsState(d, now),
+		updateState:      newUpdateState(d, now),
 	}
 }
 

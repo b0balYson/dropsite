@@ -29,9 +29,9 @@ type publicHarness struct {
 	loop *harness
 }
 
-func newPublicHarness(t *testing.T) *publicHarness {
+func newPublicHarness(t *testing.T, opts ...testenv.Option) *publicHarness {
 	t.Helper()
-	h := newHarness(t)
+	h := newHarness(t, opts...)
 	pub := httptest.NewServer(NewPublic(h.env.Svc, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(pub.Close)
 	p := &publicHarness{harness: newHarnessSharing(t, h), host: publicHost, xff: "203.0.113.10", loop: h}

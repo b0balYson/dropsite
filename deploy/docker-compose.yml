@@ -148,6 +148,9 @@ services:
       FORM_WEBHOOK_ALLOW_CIDRS: ${FORM_WEBHOOK_ALLOW_CIDRS:-}
       # Publish-time optimization (docs/publishing.md): on (default) or off.
       PUBLISH_OPTIMIZE: ${PUBLISH_OPTIMIZE:-}
+      # Release check (docs/install.md, "Updating"): 0 or off stops the
+      # request to the GitHub API. Empty means on.
+      UPDATE_CHECK: ${UPDATE_CHECK:-}
       # Screenshots (docs/screenshots.md): set RENDERER_URL=http://renderer:3000
       # and COMPOSE_PROFILES=renderer. Empty disables screenshots.
       RENDERER_URL: ${RENDERER_URL:-}

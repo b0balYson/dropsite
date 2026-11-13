@@ -1,0 +1,94 @@
+{{/* Updates: the release check and the update button (administrators). */}}
+
+{{define "update_banner"}}{{with .Update}}
+<div class="update-banner" role="note">
+  <p class="update-banner__text"><span class="update-banner__dot" aria-hidden="true"></span>{{$.L.T "updates.banner" "version" .Version}}</p>
+  <p class="update-banner__links">
+    <a href="{{.URL}}" target="_blank" rel="noopener noreferrer">{{$.L.T "updates.whatsnew"}} →</a>
+    <a href="/admin/settings#updates-h">{{$.L.T "updates.banner.open"}}</a>
+  </p>
+</div>
+{{end}}{{end}}
+
+{{define "admin_updates"}}{{$u := .D.Updates}}
+<section class="section updates" aria-labelledby="updates-h">
+  <h2 class="section-title" id="updates-h">{{.L.T "updates.title"}}</h2>
+  {{template "section_flash" (bundle $ "updates-h")}}
+  <dl class="updates__facts">
+    <div class="kv"><dt>{{.L.T "updates.current"}}</dt><dd class="mono">{{$u.Current}}{{if $u.Dev}} <span class="badge badge--muted">{{.L.T "updates.dev"}}</span>{{end}}</dd></div>
+    <div class="kv"><dt>{{.L.T "updates.latest"}}</dt><dd>{{if $u.Latest}}<span class="mono">{{$u.Latest}}</span>
+      {{if $u.Available}}<span class="badge badge--info">{{.L.T "updates.badge.new"}}</span>{{else if not $u.Dev}}<span class="badge badge--ok">{{.L.T "updates.badge.current"}}</span>{{end}}
+      <a class="updates__notes" href="{{$u.ReleaseURL}}" target="_blank" rel="noopener noreferrer">{{.L.T "updates.whatsnew"}} →</a>{{else}}<span class="muted">—</span>{{end}}</dd></div>
+    <div class="kv"><dt>{{.L.T "updates.checked"}}</dt><dd>{{if $u.CheckedAt.IsZero}}<span class="muted">{{.L.T "updates.never"}}</span>{{else}}{{.L.Date $u.CheckedAt}}{{end}}
+      {{if $u.CheckFailed}}<span class="badge badge--warn">{{.L.T "updates.check.failed"}}</span>{{end}}</dd></div>
+  </dl>
+  {{if not $u.Enabled}}<p class="hint updates__off">{{.L.T "updates.off"}}</p>
+  {{else if $u.Dev}}<p class="hint updates__off">{{.L.T "updates.dev.hint"}}</p>
+  {{else}}
+  <form class="updates__check" method="post" action="/admin/settings/update/check">
+    {{template "csrf" .}}{{template "section_field" "updates-h"}}
+    <button class="btn btn--small btn--ghost" type="submit">{{.L.T "updates.check"}}</button>
+  </form>
+  {{end}}
+  {{template "update_status" .}}
+</section>
+{{end}}
+
+{{define "update_status"}}{{$u := .D.Updates}}
+<div class="updates__status" id="update-status">
+{{if $u.Active}}
+  <div class="notice notice--info update-progress" role="status" data-update-poll="/admin/settings/update/status">
+    <p class="notice__title"><span class="update-progress__spin" aria-hidden="true"></span>{{.L.T "updates.running" "version" $u.Target}}</p>
+    <p>{{.L.T "updates.running.text"}}</p>
+    <p class="update-progress__offline" data-update-offline hidden><strong>{{.L.T "updates.restarting"}}</strong></p>
+    <p class="hint"><a href="/admin/settings#updates-h">{{.L.T "updates.reload"}}</a></p>
+  </div>
+{{else}}
+  {{if $u.JustUpdated}}
+  <div class="notice notice--ok" role="status">
+    <p class="notice__title">{{.L.T "updates.done" "version" $u.Current}}</p>
+    <p>{{.L.T "updates.done.rollback"}} <code class="mono">dropsite-rollback</code></p>
+  </div>
+  {{end}}
+  {{with $u.Failed}}
+  <div class="notice notice--error" role="status">
+    <p class="notice__title">{{$.L.T "updates.failed" "version" .To}}</p>
+    {{with .Message}}<p>{{.}}</p>{{end}}
+    <p>{{$.L.T "updates.failed.hint"}}</p>
+    {{with .Log}}<details class="howto"><summary>{{$.L.T "updates.log"}}</summary><pre class="code update-log"><code>{{range .}}{{.}}
+{{end}}</code></pre></details>{{end}}
+  </div>
+  {{end}}
+  {{if $u.Available}}
+    {{if $u.HelperPresent}}
+  <details class="update-confirm">
+    <summary class="btn btn--primary">{{.L.T "updates.button" "version" $u.Latest}}</summary>
+    <form class="update-confirm__body stack" method="post" action="/admin/settings/update">
+      {{template "csrf" .}}{{template "section_field" "updates-h"}}
+      <input type="hidden" name="version" value="{{$u.Latest}}">
+      <p class="notice__title">{{.L.T "updates.confirm.title" "version" $u.Latest}}</p>
+      <ul class="update-confirm__list">
+        <li>{{.L.T "updates.confirm.backup"}}</li>
+        <li>{{.L.T "updates.confirm.restart"}}</li>
+        <li>{{.L.T "updates.confirm.sites"}}</li>
+        <li>{{.L.T "updates.confirm.rollback"}} <code class="mono">dropsite-rollback</code></li>
+      </ul>
+      <label class="check"><input type="checkbox" name="confirm" value="1" required> {{.L.T "updates.confirm.check"}}</label>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit">{{.L.T "updates.confirm.submit"}}</button>
+      </div>
+    </form>
+  </details>
+    {{else}}
+  <div class="update-manual">
+    <p class="hint">{{.L.T "updates.manual"}}</p>
+    <div class="codeblock">
+      <pre class="code" id="update-cmd"><code>ssh &lt;server&gt; dropsite-update</code></pre>
+      <button class="btn btn--small" type="button" data-copy="#update-cmd" data-copied="{{.L.T "copy.done"}}">{{.L.T "copy.button"}}</button>
+    </div>
+  </div>
+    {{end}}
+  {{end}}
+{{end}}
+</div>
+{{end}}

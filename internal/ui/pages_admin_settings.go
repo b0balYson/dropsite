@@ -52,6 +52,8 @@ type settingsData struct {
 	Sheets    service.SheetsStatus
 	// PublicAdmin is public access to the admin interface.
 	PublicAdmin service.PublicAdminStatus
+	// Updates is the release check and the update button.
+	Updates updatesView
 }
 
 func formatSetting(l *locale, bytes bool, v int64) string {
@@ -82,9 +84,15 @@ func (s *server) settingsPage(w http.ResponseWriter, r *http.Request, rc *reqCtx
 		s.failPage(w, r, rc, err)
 		return
 	}
+	upd, err := s.svc.GetUpdateInfo(r.Context(), rc.actor)
+	if err != nil {
+		s.failPage(w, r, rc, err)
+		return
+	}
 	defaults := s.svc.Config().Limits
 	data := settingsData{
-		Extra: strings.Join(st.ExtraReserved, "\n"), ExtraOver: st.Overridden[service.SettingReservedSlugs],
+		Updates: newUpdatesView(upd),
+		Extra:   strings.Join(st.ExtraReserved, "\n"), ExtraOver: st.Overridden[service.SettingReservedSlugs],
 		Builtin: st.Builtin, EnvSlugs: st.EnvReserved, Counters: st.Counters, Forms: forms, Sheets: sheets,
 		PublicAdmin: public,
 	}
