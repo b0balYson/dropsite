@@ -10,6 +10,11 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+### Changed
+
+- The release workflow no longer repeats formatting, lint and tests: it
+  requires the `ci` run on the tagged commit to have passed.
+
 ## [0.4.0] - 2026-11-13
 
 ### Added

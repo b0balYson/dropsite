@@ -25,6 +25,9 @@ env:
 jobs:
   verify:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
     outputs:
       version: ${{ steps.version.outputs.version }}
       prerelease: ${{ steps.version.outputs.prerelease }}
@@ -44,18 +47,30 @@ jobs:
           echo "prerelease=$pre" >> "$GITHUB_OUTPUT"
       - name: Release consistency
         run: sh scripts/release-check.sh "$GITHUB_REF_NAME"
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-      - name: gofmt
+      # The tag points at a commit that already went through the ci workflow
+      # on main (formatting, lint, tests, installer checks, image builds), so
+      # they are not repeated here: the release waits for that run instead.
+      - name: ci passed on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          out=$(gofmt -l cmd internal test deploy)
-          if [ -n "$out" ]; then echo "::error::not gofmt-formatted:"; echo "$out"; exit 1; fi
-      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
-        with:
-          version: v2.15.0
-      - name: Tests
-        run: go test -race -count=1 ./...
+          for _ in $(seq 1 60); do
+            run=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci --commit "$GITHUB_SHA" \
+              --event push --limit 1 --json status,conclusion,url \
+              --jq '.[0] // empty | "\(.status) \(.conclusion) \(.url)"')
+            if [ -z "$run" ]; then
+              echo "::error::no ci run for $GITHUB_SHA: push the commit to main, wait for ci, then tag it"; exit 1
+            fi
+            read -r ci_status ci_conclusion ci_url <<EOF
+          $run
+          EOF
+            if [ "$ci_status" = completed ]; then
+              [ "$ci_conclusion" = success ] && { echo "ci passed: $ci_url"; exit 0; }
+              echo "::error::ci did not pass on $GITHUB_SHA ($ci_conclusion): $ci_url"; exit 1
+            fi
+            echo "ci is still running ($ci_url), waiting"; sleep 30
+          done
+          echo "::error::ci did not finish within 30 minutes"; exit 1
       - name: Release scripts
         run: sh test/release/unit.sh
 

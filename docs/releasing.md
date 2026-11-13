@@ -48,7 +48,7 @@ A pre-release works the same way with `V=X.Y.Z-rc.1` and the tag `vX.Y.Z-rc.1`: 
 
 [`.github/workflows/release.yml`](../.github/workflows/release.yml), every action pinned by commit:
 
-1. **verify**: the tag format, `scripts/release-check.sh vX.Y.Z`, gofmt, golangci-lint, `go test -race`, the release script tests.
+1. **verify**: the tag format, `scripts/release-check.sh vX.Y.Z`, the release script tests, and a check that the `ci` workflow passed on the tagged commit (it waits up to 30 minutes while that run is still going). Formatting, lint and tests are not repeated: they already ran in `ci` on the same commit. Push the commit to `main`, wait for `ci`, then tag it.
 2. **images** (after verify): `docker buildx` builds `control` and `caddy` for linux/amd64 and linux/arm64 (cross-compiled, no emulation) with `VERSION=X.Y.Z`, OCI labels and annotations (`source`, `version`, `revision`, `created`, `title`, `description`, `licenses`), an SBOM and `mode=max` provenance, pushes them to ghcr.io, and adds a signed build provenance attestation (`actions/attest-build-provenance`, Sigstore) to the registry.
 3. **cli** (after verify): `make cli-release VERSION=X.Y.Z` for linux, macOS and Windows on amd64 and arm64, checks the embedded version, attests every binary.
 4. **release** (after images and cli): verifies `SHA256SUMS` and creates the GitHub Release with the binaries, `SHA256SUMS` and the `CHANGELOG.md` section plus install and verify instructions as notes.
