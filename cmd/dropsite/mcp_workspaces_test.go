@@ -3,11 +3,42 @@ package main
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/b0balYson/dropsite/internal/domain"
+	"github.com/b0balYson/dropsite/internal/service"
 	"github.com/b0balYson/dropsite/internal/testenv"
 )
+
+// Both MCP servers give one answer for unknown and blocked addresses and
+// pass on the per-user limit on member additions.
+func TestStdioWorkspaceMemberProbing(t *testing.T) {
+	r := newParityRig(t)
+	ctx := context.Background()
+	ann := r.env.User("ann@pp.test")
+	blocked := r.env.User("blocked@pp.test")
+	if _, err := r.env.Svc.SetUserBlocked(ctx, r.env.Admin, blocked.User.ID, true); err != nil {
+		t.Fatal(err)
+	}
+	tok := r.env.Token(ann, "cli")
+	local, web := r.stdio(tok), r.web(tok)
+	ws := mustTool(t, local, "create_workspace", map[string]any{"name": "Team"})
+	id, _ := ws["workspace_id"].(string)
+
+	_, unknown := outputs(t, local, "add_workspace_member", map[string]any{"workspace": id, "email": "nobody@pp.test"})
+	_, blockedMsg := outputs(t, web, "add_workspace_member", map[string]any{"workspace": id, "email": "blocked@pp.test"})
+	if unknown == "" || unknown != blockedMsg || !strings.Contains(unknown, domain.CodeWorkspaceUserNotFound) {
+		t.Fatalf("answers differ or wrong:\nunknown %q\nblocked %q", unknown, blockedMsg)
+	}
+	// Both servers act as ann and share her budget of attempts.
+	for i := 2; i < service.WorkspaceMemberAddsPerHour; i++ {
+		outputs(t, local, "add_workspace_member", map[string]any{"workspace": id, "email": fmt.Sprintf("guess%d@pp.test", i)})
+	}
+	same(t, local, web, "add_workspace_member", map[string]any{"workspace": id, "email": "guess@pp.test"})
+	wantToolErr(t, web, "add_workspace_member", map[string]any{"workspace": id, "email": "guess@pp.test"}, "too many requests")
+}
 
 func TestStdioWorkspaceTools(t *testing.T) {
 	r := newParityRig(t)

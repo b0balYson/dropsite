@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/b0balYson/dropsite/internal/domain"
 )
@@ -49,15 +51,11 @@ func TestWorkspaceLifecycle(t *testing.T) {
 	// Validation and membership errors.
 	_, err = e.svc.CreateWorkspace(ctx, ann, " ")
 	wantCode(t, err, domain.CodeWorkspaceNameInvalid)
-	_, err = e.svc.AddWorkspaceMember(ctx, bob, ws.ID, "nobody@pp.test")
-	wantCode(t, err, domain.CodeWorkspaceUserNotFound)
 	_, err = e.svc.AddWorkspaceMember(ctx, bob, ws.ID, "ann@pp.test")
 	wantCode(t, err, domain.CodeWorkspaceMemberExists)
 	if _, err := e.svc.SetUserBlocked(ctx, e.admin, eve.User.ID, true); err != nil {
 		t.Fatal(err)
 	}
-	_, err = e.svc.AddWorkspaceMember(ctx, bob, ws.ID, "eve@pp.test")
-	wantCode(t, err, domain.CodeWorkspaceUserNotFound)
 
 	// Equal members: bob renames and removes ann.
 	if ws, err = e.svc.RenameWorkspace(ctx, bob, ws.ID, "Sales"); err != nil || ws.Name != "Sales" {
@@ -91,6 +89,80 @@ func TestWorkspaceLifecycle(t *testing.T) {
 		if len(e.auditMeta(action)) == 0 {
 			t.Errorf("no audit %s", action)
 		}
+	}
+}
+
+// Unknown, blocked and not yet activated addresses get one answer, so a
+// member cannot tell which addresses have accounts; the reason is audited.
+func TestAddWorkspaceMemberDoesNotRevealAccounts(t *testing.T) {
+	e := newEnv(t)
+	ctx := context.Background()
+	ann := e.user("ann@pp.test")
+	blocked := e.user("blocked@pp.test")
+	if _, err := e.svc.SetUserBlocked(ctx, e.admin, blocked.User.ID, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.CreateUser(ctx, e.admin, "invited@pp.test", domain.RoleUser); err != nil {
+		t.Fatal(err)
+	}
+	ws, err := e.svc.CreateWorkspace(ctx, ann, "Team")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var answers []*domain.Error
+	for _, email := range []string{"nobody@pp.test", "blocked@pp.test", "invited@pp.test"} {
+		_, err := e.svc.AddWorkspaceMember(ctx, ann, ws.ID, email)
+		wantCode(t, err, domain.CodeWorkspaceUserNotFound)
+		answers = append(answers, domain.AsError(err))
+	}
+	for _, a := range answers[1:] {
+		if a.Kind != answers[0].Kind || a.Message != answers[0].Message || len(a.Params) != len(answers[0].Params) {
+			t.Fatalf("answers differ: %+v vs %+v", a, answers[0])
+		}
+	}
+	reasons := map[string]bool{}
+	for _, m := range e.auditMeta("workspace.member.refused") {
+		reasons[m["reason"].(string)] = true
+	}
+	for _, want := range []string{"no_account", "status_blocked", "status_invited"} {
+		if !reasons[want] {
+			t.Errorf("reason %q not audited: %v", want, reasons)
+		}
+	}
+}
+
+// Probing addresses is limited per user: the 21st attempt within an hour is
+// refused with a retry hint, also for an address that would succeed.
+func TestAddWorkspaceMemberIsRateLimited(t *testing.T) {
+	e := newEnv(t)
+	ctx := context.Background()
+	ann := e.user("ann@pp.test")
+	e.user("bob@pp.test")
+	ws, err := e.svc.CreateWorkspace(ctx, ann, "Team")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range WorkspaceMemberAddsPerHour {
+		_, err := e.svc.AddWorkspaceMember(ctx, ann, ws.ID, fmt.Sprintf("guess%d@pp.test", i))
+		wantCode(t, err, domain.CodeWorkspaceUserNotFound)
+	}
+	_, err = e.svc.AddWorkspaceMember(ctx, ann, ws.ID, "bob@pp.test")
+	wantCode(t, err, domain.CodeRateLimited)
+	if domain.AsError(err).RetryAfter <= 0 {
+		t.Fatalf("no retry hint: %+v", domain.AsError(err))
+	}
+	// Another user keeps a separate budget; the limit passes with time.
+	other := e.user("cat@pp.test")
+	ws2, err := e.svc.CreateWorkspace(ctx, other, "Other")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.AddWorkspaceMember(ctx, other, ws2.ID, "bob@pp.test"); err != nil {
+		t.Fatal(err)
+	}
+	e.clock.Advance(time.Hour + time.Minute)
+	if _, err := e.svc.AddWorkspaceMember(ctx, ann, ws.ID, "bob@pp.test"); err != nil {
+		t.Fatal(err)
 	}
 }
 

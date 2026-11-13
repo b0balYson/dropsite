@@ -21,9 +21,12 @@ type WorkspaceView struct {
 
 func workspaceTarget(id int64) string { return fmt.Sprintf("workspace:%d", id) }
 
-// errWorkspaceUserNotFound answers an e-mail without an active user.
+// errWorkspaceUserNotFound is the one answer for every e-mail that does not
+// belong to an active user (unknown, blocked or not yet activated): the
+// caller must not learn which addresses have accounts. The reason goes to
+// the audit log only.
 var errWorkspaceUserNotFound = domain.E(domain.KindInvalid, domain.CodeWorkspaceUserNotFound,
-	"there is no active user with this e-mail on this server; an administrator creates new users")
+	"this person could not be added; check the e-mail, and if it is right, ask an administrator to create the account")
 
 // resolveWorkspace loads a workspace the actor belongs to (any workspace
 // for an administrator acting directly).
@@ -128,21 +131,30 @@ func (s *Service) DeleteWorkspace(ctx context.Context, a Actor, id int64) error 
 	return nil
 }
 
-// AddWorkspaceMember adds an existing active user by e-mail.
+// AddWorkspaceMember adds an existing active user by e-mail. Attempts are
+// limited per user, and every e-mail without an active user gets the same
+// answer.
 func (s *Service) AddWorkspaceMember(ctx context.Context, a Actor, id int64, email string) (WorkspaceView, error) {
 	if _, err := s.resolveWorkspace(ctx, a, id); err != nil {
 		return WorkspaceView{}, err
+	}
+	if ok, retry := s.memberLimit.Allow(userKey(a.User.ID)); !ok {
+		return WorkspaceView{}, domain.ErrRateLimited.WithRetryAfter(retry).
+			WithParams(map[string]any{"limit": WorkspaceMemberAddsPerHour})
 	}
 	norm, err := domain.NormalizeEmail(strings.TrimSpace(email))
 	if err != nil {
 		return WorkspaceView{}, err
 	}
 	u, err := s.repo.GetUserByEmail(ctx, norm)
-	if errors.Is(err, domain.ErrNotFound) || (err == nil && u.Status != domain.UserActive) {
-		return WorkspaceView{}, errWorkspaceUserNotFound
+	if errors.Is(err, domain.ErrNotFound) {
+		return WorkspaceView{}, s.refuseMember(ctx, a, id, norm, "no_account")
 	}
 	if err != nil {
 		return WorkspaceView{}, err
+	}
+	if u.Status != domain.UserActive {
+		return WorkspaceView{}, s.refuseMember(ctx, a, id, norm, "status_"+string(u.Status))
 	}
 	if err := s.repo.AddWorkspaceMember(ctx, id, u.ID, a.User.ID, domain.MaxWorkspaceMembers,
 		domain.MaxWorkspacesPerUser, s.now()); err != nil {
@@ -150,6 +162,13 @@ func (s *Service) AddWorkspaceMember(ctx context.Context, a Actor, id int64, ema
 	}
 	s.audit(ctx, a, "workspace.member.add", workspaceTarget(id), map[string]any{"user": u.ID, "email": u.Email})
 	return s.GetWorkspace(ctx, a, id)
+}
+
+// refuseMember records why an e-mail could not be added and returns the
+// neutral answer.
+func (s *Service) refuseMember(ctx context.Context, a Actor, id int64, email, reason string) error {
+	s.audit(ctx, a, "workspace.member.refused", workspaceTarget(id), map[string]any{"email": email, "reason": reason})
+	return errWorkspaceUserNotFound
 }
 
 // RemoveWorkspaceMember removes a member, or the actor itself (leaving).

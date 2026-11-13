@@ -933,7 +933,7 @@
       "post": {
         "operationId": "addWorkspaceMember",
         "summary": "Add an existing user by e-mail",
-        "description": "Fails with workspace_user_not_found when no active user has the e-mail, workspace_member_exists for a member.",
+        "description": "Fails with workspace_user_not_found for every e-mail without an active user (unknown, blocked or not yet activated: one answer, so accounts cannot be probed), workspace_member_exists for a member. Attempts are limited to 20 per hour per user (429 rate_limited with Retry-After).",
         "requestBody": {
           "required": true,
           "content": {
@@ -969,6 +969,9 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           },
           "500": {
             "$ref": "#/components/responses/Internal"

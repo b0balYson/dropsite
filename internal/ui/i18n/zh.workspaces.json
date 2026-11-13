@@ -54,7 +54,7 @@
   "err.workspace_name_invalid": "工作区名称必须为一行，长度为 1 到 {max} 个字符。",
   "err.workspace_limit_reached": "工作区数量已达上限（{limit} 个）。",
   "err.workspace_member_exists": "此人已是成员。",
-  "err.workspace_user_not_found": "本服务器上没有使用此邮箱的正常用户。请管理员创建账号。",
+  "err.workspace_user_not_found": "无法添加此人。请检查邮箱；如果邮箱无误，请让管理员创建账号。",
   "err.workspace_last_member": "工作区中仍有网站时，最后一位成员不能退出：请先移走或删除这些网站。",
   "err.workspace_not_empty": "工作区中仍有网站：请先移走或删除它们。",
   "err.workspace_move_forbidden": "只有网站的创建者（或管理员）可以移动它。"

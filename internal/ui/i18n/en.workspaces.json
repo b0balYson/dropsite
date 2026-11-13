@@ -54,7 +54,7 @@
   "err.workspace_name_invalid": "The workspace name must be 1 to {max} characters on one line.",
   "err.workspace_limit_reached": "Workspace limit reached ({limit}).",
   "err.workspace_member_exists": "This person is already a member.",
-  "err.workspace_user_not_found": "There is no active user with this e-mail on this server. Ask an administrator to create the account.",
+  "err.workspace_user_not_found": "This person could not be added. Check the e-mail; if it is right, ask an administrator to create the account.",
   "err.workspace_last_member": "The last member cannot leave a workspace that still has sites: move or delete the sites first.",
   "err.workspace_not_empty": "The workspace still has sites: move or delete them first.",
   "err.workspace_move_forbidden": "Only the person who created the site (or an administrator) can move it."

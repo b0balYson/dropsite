@@ -26,7 +26,7 @@ func TestWorkspacePages(t *testing.T) {
 
 	p = h.submit(wsPath, wsPath+"/members", url.Values{"email": {"nobody@pp.test"}})
 	p = h.follow(p)
-	wantContains(t, p.body, "нет активного пользователя")
+	wantContains(t, p.body, "Не удалось добавить этого человека")
 	p = h.follow(h.submit(wsPath, wsPath+"/members", url.Values{"email": {"bob@pp.test"}}))
 	wantContains(t, p.body, "bob@pp.test теперь участник")
 

@@ -81,7 +81,7 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 | `GET /workspaces/{id}` | | `Workspace` with members |
 | `PATCH /workspaces/{id}` | `{name}` | `Workspace` |
 | `DELETE /workspaces/{id}` | | `204` (`409 workspace_not_empty` while it has sites) |
-| `POST /workspaces/{id}/members` | `{email}` | `201 Workspace` (`400 workspace_user_not_found`, `409 workspace_member_exists`) |
+| `POST /workspaces/{id}/members` | `{email}` | `201 Workspace` (`400 workspace_user_not_found` for any e-mail without an active user, `409 workspace_member_exists`, `429 rate_limited` after 20 attempts an hour) |
 | `DELETE /workspaces/{id}/members/{user_id}` | | `{workspace_deleted}` (own ID: leave; `409 workspace_last_member`) |
 | `GET /sites/{ref}` | | `Site` |
 | `PATCH /sites/{ref}` | `{title?, slug?, noindex?, protected?, password?, expires_at?}`; `slug: ""` or `null` removes it | `Site` |

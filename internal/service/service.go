@@ -24,9 +24,12 @@ import (
 
 // Rate limits from the PRD (section 8) plus a token brute-force guard.
 const (
-	DeploysPerHour     = 30
-	FailedLoginsPerIP  = 10
-	FailedLoginsWindow = 15 * time.Minute
+	DeploysPerHour = 30
+	// WorkspaceMemberAddsPerHour caps attempts to add workspace members per
+	// user, so addresses cannot be probed for accounts in bulk.
+	WorkspaceMemberAddsPerHour = 20
+	FailedLoginsPerIP          = 10
+	FailedLoginsWindow         = 15 * time.Minute
 	// FailedLoginsPerAccount caps failures per submitted email (any email,
 	// existing or not) across all IPs within FailedLoginsWindow.
 	FailedLoginsPerAccount = 20
@@ -85,6 +88,7 @@ type Service struct {
 	uploadDir string
 
 	deployLimit  *ratelimit.Window
+	memberLimit  *ratelimit.Window
 	loginLimit   *ratelimit.Window
 	accountLimit *ratelimit.Window
 	tokenLimit   *ratelimit.Window
@@ -139,6 +143,7 @@ func New(d Deps) *Service {
 		extract:      extract,
 		uploadDir:    d.UploadDir,
 		deployLimit:  ratelimit.New(DeploysPerHour, time.Hour).WithClock(now),
+		memberLimit:  ratelimit.New(WorkspaceMemberAddsPerHour, time.Hour).WithClock(now),
 		loginLimit:   ratelimit.New(FailedLoginsPerIP, FailedLoginsWindow).WithClock(now),
 		accountLimit: ratelimit.New(FailedLoginsPerAccount, FailedLoginsWindow).WithClock(now),
 		tokenLimit:   ratelimit.New(FailedTokensPerIP, FailedLoginsWindow).WithClock(now),

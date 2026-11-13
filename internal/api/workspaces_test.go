@@ -1,9 +1,40 @@
 package api
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"testing"
+
+	"github.com/b0balYson/dropsite/internal/service"
 )
+
+// Unknown and blocked addresses answer alike, and probing is limited.
+func TestWorkspaceMemberAddIsNeutralAndLimited(t *testing.T) {
+	h := newHarness(t)
+	_, ann := h.user("ann@pp.test")
+	blocked, _ := h.user("blocked@pp.test")
+	if _, err := h.env.Svc.SetUserBlocked(context.Background(), h.env.Admin, blocked.User.ID, true); err != nil {
+		t.Fatal(err)
+	}
+	ws := decodeAs[workspaceDTO](t, h.do(http.MethodPost, "/api/v1/workspaces", ann, map[string]string{"name": "Team"}))
+	path := "/api/v1/workspaces/" + ws.ID + "/members"
+	unknown := wantError(t, h.do(http.MethodPost, path, ann, map[string]string{"email": "nobody@pp.test"}),
+		http.StatusBadRequest, "workspace_user_not_found")
+	blockedAnswer := wantError(t, h.do(http.MethodPost, path, ann, map[string]string{"email": "blocked@pp.test"}),
+		http.StatusBadRequest, "workspace_user_not_found")
+	if unknown.Message != blockedAnswer.Message {
+		t.Fatalf("answers differ: %q vs %q", unknown.Message, blockedAnswer.Message)
+	}
+	for i := 2; i < service.WorkspaceMemberAddsPerHour; i++ {
+		h.do(http.MethodPost, path, ann, map[string]string{"email": fmt.Sprintf("guess%d@pp.test", i)})
+	}
+	rec := h.do(http.MethodPost, path, ann, map[string]string{"email": "guess@pp.test"})
+	wantError(t, rec, http.StatusTooManyRequests, "rate_limited")
+	if rec.Header().Get("Retry-After") == "" {
+		t.Fatal("no Retry-After")
+	}
+}
 
 func TestWorkspacesAPI(t *testing.T) {
 	h := newHarness(t)
