@@ -43,7 +43,11 @@ func (a *api) deploy(w http.ResponseWriter, r *http.Request) error {
 	}
 	defer part.Close()
 	body := &limitedBody{r: part, limit: limit}
-	res, err := a.svc.Deploy(r.Context(), actorFrom(r.Context()), r.PathValue("ref"), body, deploySource(r))
+	opts, err := publishOptions(r)
+	if err != nil {
+		return err
+	}
+	res, err := a.svc.DeployWith(r.Context(), actorFrom(r.Context()), r.PathValue("ref"), body, deploySource(r), opts)
 	if err != nil {
 		return err
 	}
@@ -111,7 +115,7 @@ func (a *api) listDeploys(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	writeJSON(w, http.StatusOK, newList(toDeploys(ds, v.Site.CurrentDeployID, a.svc.PreviewURL), len(ds)))
+	writeJSON(w, http.StatusOK, newList(markDraft(toDeploys(ds, v.Site.CurrentDeployID, a.svc.PreviewURL), v), len(ds)))
 	return nil
 }
 

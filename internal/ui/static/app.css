@@ -1497,3 +1497,13 @@ a.xdomain__host { text-decoration: none; border-bottom: 2px solid var(--c-ink); 
 .quality__meta dt { font-weight: 600; margin-top: var(--s-2); }
 .quality__meta dd { margin: 0; color: var(--c-ink-2); }
 .quality__columns { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+
+/* Draft releases (change staged-publish) */
+.badge--draft { color: var(--c-warn); background: var(--c-warn-bg); }
+.draft-block { border-left: 3px solid var(--c-warn); padding-left: var(--s-4); }
+.draft-block__actions { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--s-3); margin-top: var(--s-3); }
+.draft-block__actions form { margin: 0; }
+.draft-block__discard > summary { list-style: none; cursor: pointer; }
+.draft-block__discard > summary::-webkit-details-marker { display: none; }
+.draft-block__confirm { display: grid; gap: var(--s-2); margin-top: var(--s-2); }
+.draft-toggle { margin-bottom: var(--s-3); }

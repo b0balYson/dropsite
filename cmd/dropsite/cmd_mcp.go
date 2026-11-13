@@ -54,7 +54,7 @@ func (a *app) mcpServer() *sdk.Server {
 
 // mcpOptions are the tools of the local server: those of the remote server,
 // with deploy_folder instead of deploy_files.
-var mcpOptions = mcp.Options{Folder: true, SiteFiles: true, Forms: true, Cabinet: true, Collections: true, Workflow: true, Instructions: mcp.Instructions}
+var mcpOptions = mcp.Options{Folder: true, SiteFiles: true, Forms: true, Cabinet: true, Collections: true, Workflow: true, Drafts: true, Instructions: mcp.Instructions}
 
 type nopCloser struct{ io.Reader }
 
@@ -82,7 +82,7 @@ func deref(s *string) string {
 func fromDeploy(d client.Deploy) mcp.Deploy {
 	return mcp.Deploy{
 		ID: d.ID, Source: d.Source, SizeBytes: d.SizeBytes, FileCount: d.FileCount, Status: d.Status,
-		CreatedAt: stampTime(&d.CreatedAt), Current: d.Current, PreviewURL: deref(d.PreviewURL),
+		CreatedAt: stampTime(&d.CreatedAt), Current: d.Current, PreviewURL: deref(d.PreviewURL), Draft: d.Draft,
 	}
 }
 
@@ -101,11 +101,16 @@ func fromSite(s client.Site) mcp.Site {
 		d := fromDeploy(*s.CurrentDeploy)
 		out.CurrentDeploy = &d
 	}
+	out.Draft = fromDraft(s.Draft)
 	return out
 }
 
 func fromResult(r *client.DeployResult) mcp.DeployResult {
-	return mcp.DeployResult{SiteID: r.Site.ID, DeployID: r.DeployID, URL: r.URL, URLs: r.URLs, Quality: r.Quality}
+	out := mcp.DeployResult{SiteID: r.Site.ID, DeployID: r.DeployID, URL: r.URL, URLs: r.URLs, Quality: r.Quality}
+	if r.Deploy.Draft && r.Site.Draft != nil {
+		out.Draft, out.PreviewURL = true, deref(r.Site.Draft.PreviewURL)
+	}
+	return out
 }
 
 // toolError turns CLI errors into one actionable line for the model, worded
@@ -217,7 +222,7 @@ func (b localBackend) DeployFolder(ctx context.Context, f mcp.Folder) (mcp.Deplo
 		mode = sensitiveSkip
 	}
 	r, err := b.a.publishDir(ctx, b.c, deployOpts{dir: dir, site: f.Site, title: f.Title,
-		sensitive: mode, sensitiveHints: mcpSensitiveHints})
+		sensitive: mode, sensitiveHints: mcpSensitiveHints, draft: f.Draft})
 	if err != nil {
 		return mcp.DeployResult{}, toolError(err)
 	}

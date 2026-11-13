@@ -49,7 +49,11 @@ func (s *Service) Reconcile(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("list deleted sites: %w", err)
 	}
-	report, err := s.files.Reconcile(ctx, s.toStorageLayout(layout), storage.Retained{SiteIDs: pending})
+	desired, err := s.withDraftLayouts(ctx, s.toStorageLayout(layout))
+	if err != nil {
+		return err
+	}
+	report, err := s.files.Reconcile(ctx, desired, storage.Retained{SiteIDs: pending})
 	if err != nil {
 		return fmt.Errorf("reconcile sites volume: %w", err)
 	}

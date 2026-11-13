@@ -135,7 +135,12 @@ func (s *Service) hostnamesOf(ctx context.Context, siteID string) ([]string, err
 	if err != nil {
 		return nil, err
 	}
-	return append(out, previews...), nil
+	out = append(out, previews...)
+	draft, err := s.draftHostOf(ctx, siteID)
+	if err != nil || draft == "" {
+		return out, err
+	}
+	return append(out, draft), nil
 }
 
 func (s *Service) setFlag(flag storage.HostFlag, hosts []string) error {

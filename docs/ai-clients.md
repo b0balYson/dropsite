@@ -143,6 +143,7 @@ Details: [screenshots.md](screenshots.md).
 | `clone_site` | a new site from the served release of a site; only files are copied |
 | `schedule_publish` | `publish_at` (RFC 3339 with the user's zone) plus `upload_id` (the session becomes a prepared release) or `site` + `deploy_id` |
 | `list_scheduled_publishes`, `cancel_scheduled_publish` | waiting and recent publishes; cancel a waiting one |
+| `publish_draft`, `discard_draft` | make the site's draft live, or delete it (`confirm`); a draft is saved by `deploy_files`, `deploy_folder`, `update_site_files` or `commit_upload` with `draft: true` and shown at the site's stable `preview_url` |
 | `screenshot_site`, `compare_versions` | the first screen of a release as an image block, and "before \| after" with the share of changed pixels; `renderer_unavailable` when the server has no renderer |
 | `inspect_reference` | design brief of a site the user likes (palette, fonts, spacing, layout, components; no texts or images) and, with the renderer, its first screen as an image block ([references.md](references.md)) |
 

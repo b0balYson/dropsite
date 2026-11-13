@@ -20,6 +20,11 @@ type SiteLayout struct {
 	// Previews are by-host entries pointing at a release directory instead
 	// of current (wildcard TLS mode only); empty otherwise.
 	Previews []Preview
+	// DraftHost is the stable draft preview address (change staged-publish),
+	// empty when the site has none; it serves DraftDeployID or, when nil,
+	// nothing.
+	DraftHost     string
+	DraftDeployID *string
 }
 
 // Preview is the by-host entry of one release.
@@ -115,9 +120,13 @@ func (f *FS) Reconcile(ctx context.Context, desired []SiteLayout, keep Retained)
 type hostLink struct {
 	siteID   string
 	deployID string // empty: the entry points at current
+	draft    bool   // the entry points at the site's draft link
 }
 
 func (h hostLink) target() string {
+	if h.draft {
+		return draftHostTarget(h.siteID)
+	}
 	if h.deployID != "" {
 		return previewTarget(h.siteID, h.deployID)
 	}
@@ -145,6 +154,11 @@ func indexDesired(desired []SiteLayout) (map[string]SiteLayout, map[string]hostL
 				return nil, nil, err
 			}
 		}
+		if s.DraftDeployID != nil {
+			if err := validateDeployID(*s.DraftDeployID); err != nil {
+				return nil, nil, err
+			}
+		}
 		for _, h := range s.Hostnames {
 			if err := validateHostname(h); err != nil {
 				return nil, nil, err
@@ -159,6 +173,9 @@ func indexDesired(desired []SiteLayout) (map[string]SiteLayout, map[string]hostL
 	// Previews after every hostname, so a collision is found in any order.
 	for _, s := range desired {
 		if err := indexPreviews(s, hosts); err != nil {
+			return nil, nil, err
+		}
+		if err := indexDraftHost(s, hosts); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -216,6 +233,9 @@ func (f *FS) reconcileSites(ctx context.Context, want map[string]SiteLayout, kep
 		}
 		// Repoint current first so it never dangles while pruning.
 		if err := f.fixCurrent(layout, rep); err != nil {
+			return err
+		}
+		if err := f.fixDraft(layout, rep); err != nil {
 			return err
 		}
 		if onDisk[id] {

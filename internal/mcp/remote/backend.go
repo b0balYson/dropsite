@@ -41,12 +41,17 @@ func toSite(v service.SiteView) mcp.Site {
 		d := toDeploy(*v.Current, v.Current.ID, v.CurrentPreviewURL)
 		s.CurrentDeploy = &d
 	}
+	s.Draft = toDraft(v)
 	return s
 }
 
 func toResult(r service.DeployResult) mcp.DeployResult {
-	return mcp.DeployResult{SiteID: r.Site.Site.ID, DeployID: r.Deploy.ID, URL: r.Site.URL, URLs: r.Site.URLs,
+	out := mcp.DeployResult{SiteID: r.Site.Site.ID, DeployID: r.Deploy.ID, URL: r.Site.URL, URLs: r.Site.URLs,
 		Quality: quality.Summarize(r.Quality)}
+	if isDraft(r.Site, r.Deploy.ID) {
+		out.Draft, out.PreviewURL = true, r.Site.Draft.PreviewURL
+	}
+	return out
 }
 
 // toolError turns a service error into text the model can act on. Internal
@@ -121,7 +126,9 @@ func (b backend) ListDeploys(ctx context.Context, ref string) ([]mcp.Deploy, err
 	}
 	out := make([]mcp.Deploy, 0, len(ds))
 	for _, d := range ds {
-		out = append(out, toDeploy(d, current, b.svc.PreviewURL(d)))
+		md := toDeploy(d, current, b.svc.PreviewURL(d))
+		md.Draft = isDraft(v, d.ID)
+		out = append(out, md)
 	}
 	return out, nil
 }

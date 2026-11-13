@@ -1,0 +1,16 @@
+{
+  "draft.title": "Draft",
+  "draft.lede": "A new version that visitors do not see yet. Saved {date}.",
+  "draft.open": "Open preview",
+  "draft.publish": "Publish",
+  "draft.discard": "Delete draft",
+  "draft.discard.confirm": "Delete the draft? The site stays as it is now.",
+  "draft.data_note": "The preview uses the site's live data: collections, form requests and API keys are the real ones.",
+  "draft.no_preview": "This site has no preview address: its name is taken by an older address.",
+  "draft.published": "The draft is live now.",
+  "draft.discarded": "The draft was deleted.",
+  "draft.upload": "Save as a draft: visitors keep seeing the current version until you publish it",
+  "draft.saved": "Draft saved. Check it in the preview and publish it when ready.",
+  "draft.badge": "draft",
+  "err.no_draft": "This site has no draft."
+}

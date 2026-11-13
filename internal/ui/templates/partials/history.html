@@ -6,6 +6,7 @@
     <div class="release__head">
       <span class="release__id mono">{{.ID}}</span>
       {{if .Current}}<span class="badge badge--current">{{$.L.T "history.current"}}</span>
+      {{else if and $.D.V.Draft (eq .ID $.D.V.Draft.Deploy.ID)}}<span class="badge badge--draft">{{$.L.T "draft.badge"}}</span>
       {{else if eq .Status "pruned"}}<span class="badge badge--muted">{{$.L.T "history.pruned"}}</span>
       {{else if eq .Status "failed"}}<span class="badge badge--error">{{$.L.T "history.failed"}}</span>{{end}}
     </div>

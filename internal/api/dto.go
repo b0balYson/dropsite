@@ -71,6 +71,8 @@ type deployDTO struct {
 	// PreviewURL is the release's own address (wildcard TLS mode, ready
 	// releases only); null otherwise.
 	PreviewURL *string `json:"preview_url"`
+	// Draft marks the site's draft release (change staged-publish).
+	Draft bool `json:"draft"`
 }
 
 type siteDTO struct {
@@ -87,6 +89,8 @@ type siteDTO struct {
 	Noindex       bool          `json:"noindex"`
 	Protected     bool          `json:"protected"`
 	ExpiresAt     *time.Time    `json:"expires_at"`
+	// Draft is the site's draft release, null when it has none.
+	Draft *draftDTO `json:"draft"`
 }
 
 type siteItemDTO struct {
@@ -260,6 +264,7 @@ func toSite(v service.SiteView) siteDTO {
 		d := toDeploy(*v.Current, &v.Current.ID, v.CurrentPreviewURL)
 		s.CurrentDeploy = &d
 	}
+	s.Draft = toDraft(v)
 	return s
 }
 
@@ -278,10 +283,11 @@ func toSiteItems(rows []service.SiteSummaryView) []siteItemDTO {
 }
 
 func toDeployResult(res service.DeployResult) deployResultDTO {
+	d := toDeploy(res.Deploy, res.Site.Site.CurrentDeployID, resultPreview(res))
+	d.Draft = res.Site.Draft != nil && res.Site.Draft.Deploy.ID == d.ID
 	return deployResultDTO{
 		DeployID: res.Deploy.ID, URL: res.Site.URL, URLs: nonNil(res.Site.URLs),
-		Deploy: toDeploy(res.Deploy, res.Site.Site.CurrentDeployID, resultPreview(res)), Site: toSite(res.Site),
-		Quality: quality.Summarize(res.Quality),
+		Deploy: d, Site: toSite(res.Site), Quality: quality.Summarize(res.Quality),
 	}
 }
 

@@ -63,6 +63,8 @@ type Deploy struct {
 	Current   bool      `json:"current"`
 	// PreviewURL is set only in wildcard TLS mode for ready releases.
 	PreviewURL *string `json:"preview_url"`
+	// Draft marks the site's draft release.
+	Draft bool `json:"draft"`
 }
 
 // Site is the full site object.
@@ -80,6 +82,8 @@ type Site struct {
 	Noindex       bool       `json:"noindex"`
 	Protected     bool       `json:"protected"`
 	ExpiresAt     *time.Time `json:"expires_at"`
+	// Draft is the site's draft release, nil when it has none.
+	Draft *Draft `json:"draft"`
 }
 
 // SiteItem is the compact site object used in lists.

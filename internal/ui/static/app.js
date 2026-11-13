@@ -157,6 +157,8 @@
     var token = csrfToken();
     var data = new FormData();
     data.append('_csrf', token);
+    var draft = this.form.querySelector('[data-draft]');
+    if (draft && draft.checked) { data.append('draft', '1'); }
     data.append('archive', file, file.name);
     var xhr = new XMLHttpRequest();
     xhr.open('POST', this.form.action);
@@ -189,6 +191,11 @@
       reply = JSON.parse(xhr.responseText);
     } catch (e) {
       reply = null;
+    }
+    if (xhr.status === 200 && reply && reply.ok && reply.reload) {
+      // A draft: the page shows it in its own block (the flash is set).
+      window.location.reload();
+      return;
     }
     if (xhr.status === 200 && reply && reply.ok) {
       this.setStatus('ok', reply.message, reply.url);

@@ -35,6 +35,7 @@ type filesArgs struct {
 	Site  string `json:"site,omitempty" jsonschema:"site ID or slug to update; omit to create a new site"`
 	Title string `json:"title,omitempty" jsonschema:"name of the new site when site is omitted"`
 	Files []File `json:"files" jsonschema:"every file of the site; index.html is required at the root; at most 16 MB in total"`
+	Draft bool   `json:"draft,omitempty" jsonschema:"save as the site's draft instead of going live (default for a site that is already live, see get_guide topic drafts)"`
 }
 
 type folderArgs struct {
@@ -42,6 +43,7 @@ type folderArgs struct {
 	Site          string `json:"site,omitempty" jsonschema:"site ID or slug; omit to use the site remembered in the folder or create a new one"`
 	Title         string `json:"title,omitempty" jsonschema:"name of a newly created site (default: the folder name)"`
 	SkipSensitive bool   `json:"skip_sensitive_files,omitempty" jsonschema:"publish without secret-looking files (.env, keys, credentials) instead of refusing the folder"`
+	Draft         bool   `json:"draft,omitempty" jsonschema:"save as the site's draft instead of going live (default for a site that is already live, see get_guide topic drafts)"`
 }
 
 type sitesOut struct {
@@ -83,8 +85,8 @@ func (t tools) register(s *sdk.Server, o Options) {
 			"when the user wants an address reserved before the content is ready."}, t.createSite)
 	sdk.AddTool(s, &sdk.Tool{Name: "get_site", Annotations: readOnly("Get site"),
 		Description: "Get one site: its name, every link (primary first), the version being served, password, " +
-			"search engine and expiry settings, own domains, and what is attached (forms with requests, delivery " +
-			"channels, analytics counters). Call it when a chat turns to an existing site, and build on what is " +
+			"search engine and expiry settings, own domains, the draft waiting to be published, and what is " +
+			"attached (forms with requests, delivery channels, analytics counters). Call it when a chat turns to an existing site, and build on what is " +
 			"already set up instead of offering it again. Show the user the primary link."}, t.getSite)
 	sdk.AddTool(s, &sdk.Tool{Name: "set_slug", Annotations: writes("Set address", false, true),
 		Description: "Set, change or remove (empty slug) the memorable address of a site, e.g. coffee-river." +
@@ -92,7 +94,7 @@ func (t tools) register(s *sdk.Server, o Options) {
 			"user the new link; it may need a minute to open the first time."}, t.setSlug)
 	sdk.AddTool(s, &sdk.Tool{Name: "list_deploys", Annotations: readOnly("List versions"),
 		Description: "List the versions (releases) of a site, newest first, marking the one being served, with " +
-			"date, origin and, when enabled, a preview link of each version. Use it when the user asks about " +
+			"date, origin and, when enabled, a preview link of each version; the draft, if any, is marked. Use it when the user asks about " +
 			"earlier versions; describe them by date and origin, not by ID."}, t.listDeploys)
 	sdk.AddTool(s, &sdk.Tool{Name: "rollback", Annotations: writes("Restore version", false, false),
 		Description: "Serve an earlier version of a site again: the previous one when deploy_id is empty " +
@@ -109,7 +111,7 @@ func (t tools) register(s *sdk.Server, o Options) {
 				"index.html is required at the root. Every file not passed is gone from the new version: to change " +
 				"an existing site use list_site_files, read_site_files and update_site_files instead. For sites " +
 				"larger than 16 MB use begin_upload, upload_files and commit_upload. Ship every image, font and script with the " +
-				"site (no CDNs or hotlinks; see get_guide topic assets). Reply \"Your site is live: <link>\"."}, t.deployFiles)
+				"site (no CDNs or hotlinks; see get_guide topic assets). Reply \"Your site is live: <link>\"." + draftAdvice}, t.deployFiles)
 	}
 	t.registerFiles(s, o)
 	if o.Folder {
@@ -120,7 +122,7 @@ func (t tools) register(s *sdk.Server, o Options) {
 				"file system roots are refused, and so is a folder with secret-looking files (.env, keys, " +
 				"credentials) unless skip_sensitive_files is true, which leaves them out. " +
 				"The first publication creates a site and remembers it in .dropsite.json inside the folder; " +
-				"later publications of the same folder update that site."}, t.deployFolder)
+				"later publications of the same folder update that site." + draftAdvice}, t.deployFolder)
 	}
 	t.registerForms(s, o)
 	t.registerCabinet(s, o)
@@ -129,6 +131,7 @@ func (t tools) register(s *sdk.Server, o Options) {
 	t.registerQuality(s, o)
 	t.registerWorkflow(s, o)
 	t.registerReferences(s, o)
+	t.registerDrafts(s, o)
 }
 
 func (t tools) listSites(ctx context.Context, req *sdk.CallToolRequest, _ struct{}) (*sdk.CallToolResult, sitesOut, error) {
@@ -229,6 +232,14 @@ func (t tools) deployFiles(ctx context.Context, req *sdk.CallToolRequest, in fil
 	d, ok := b.(FilesDeployer)
 	if !ok {
 		return nil, DeployResult{}, errNoPublisher
+	}
+	if in.Draft {
+		dd, ok := b.(DraftFilesDeployer)
+		if !ok {
+			return nil, DeployResult{}, errNoDrafts
+		}
+		r, err := dd.DeployFilesDraft(ctx, in.Site, in.Title, in.Files)
+		return nil, r, err
 	}
 	r, err := d.DeployFiles(ctx, in.Site, in.Title, in.Files)
 	return nil, r, err

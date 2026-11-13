@@ -41,6 +41,7 @@ type Repository interface {
 	PublishRepository
 	ReportRepository
 	ScheduleRepository
+	DraftRepository
 	Ping(ctx context.Context) error
 }
 

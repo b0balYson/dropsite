@@ -24,6 +24,8 @@ type deployOpts struct {
 	// how to override a refusal in the caller's terms.
 	sensitive      sensitiveMode
 	sensitiveHints []string
+	// draft saves the release as the site's draft instead of going live.
+	draft bool
 }
 
 // deployOutput is the --json result of deploy and rollback.
@@ -32,20 +34,26 @@ type deployOutput struct {
 	DeployID string   `json:"deploy_id"`
 	URL      string   `json:"url"`
 	URLs     []string `json:"urls"`
+	// Draft and PreviewURL are set for a draft (deploy --draft).
+	Draft      bool   `json:"draft,omitempty"`
+	PreviewURL string `json:"preview_url,omitempty"`
 }
 
 func cmdDeploy(ctx context.Context, a *app, args []string) error {
-	fs := a.newFlagSet("deploy", "<dir> [--site <id|slug>] [--title <text>] [--expires <when>] [--skip-sensitive|--include-sensitive] [--json]",
+	fs := a.newFlagSet("deploy", "<dir> [--site <id|slug>] [--title <text>] [--expires <when>] [--draft] [--skip-sensitive|--include-sensitive] [--json]",
 		"Pack <dir> (it must contain index.html), publish it and print the site URL.\n"+
 			"Without --site the site is taken from "+brand.ProjectFile+" in <dir>; if there is\n"+
 			"none, a new site is created and remembered there. A folder with secret-looking\n"+
 			"files (.env*, .npmrc, .netrc, .git-credentials, .ssh/, .aws/, *.pem, *.key,\n"+
-			"id_rsa*) is refused unless --skip-sensitive or --include-sensitive is given.")
+			"id_rsa*) is refused unless --skip-sensitive or --include-sensitive is given.\n"+
+			"With --draft the release becomes the site's draft: visitors keep seeing the\n"+
+			"current version, the preview address is printed, and 'draft publish' makes it live.")
 	var o deployOpts
 	fs.StringVar(&o.site, "site", "", "publish to this site (ID or slug)")
 	fs.StringVar(&o.title, "title", "", "title of a newly created site (default: the directory name)")
 	fs.StringVar(&o.expires, "expires", "", "take the site down after: 7d, 36h, 2026-12-31 (end of day, UTC), an RFC 3339 time, or never")
 	fs.BoolVar(&o.asJSON, "json", false, "print one JSON object {site_id, deploy_id, url, urls}")
+	fs.BoolVar(&o.draft, "draft", false, "save as the site's draft and print its preview address instead of going live")
 	skipSensitive := fs.Bool("skip-sensitive", false, "publish without secret-looking files (.env*, keys, credentials) instead of stopping")
 	includeSensitive := fs.Bool("include-sensitive", false, "publish secret-looking files too (only if they are really meant to be public)")
 	pos, err := parseArgs(fs, args)
@@ -128,17 +136,17 @@ func (a *app) publishDir(ctx context.Context, c *client.Client, o deployOpts) (*
 	if err != nil {
 		return nil, errors.Join(err, p.stop())
 	}
-	return a.upload(ctx, c, siteID, o.dir, p)
+	return a.upload(ctx, c, siteID, o, p)
 }
 
 func packLimits(l client.Limits) archive.Limits {
 	return archive.Limits{MaxTotalBytes: l.MaxSiteBytes, MaxFileBytes: l.MaxFileBytes, MaxFiles: l.MaxFiles}
 }
 
-func (a *app) upload(ctx context.Context, c *client.Client, siteID, dir string, p *packer) (*client.DeployResult, error) {
-	fmt.Fprintf(a.stderr, "Uploading %s to site %s...\n", dir, siteID)
+func (a *app) upload(ctx context.Context, c *client.Client, siteID string, o deployOpts, p *packer) (*client.DeployResult, error) {
+	fmt.Fprintf(a.stderr, "Uploading %s to site %s...\n", o.dir, siteID)
 	var sent atomic.Int64
-	res, err := c.Deploy(ctx, siteID, p, func(n int64) { sent.Store(n) })
+	res, err := c.DeployWith(ctx, siteID, p, func(n int64) { sent.Store(n) }, client.DeployOptions{Draft: o.draft})
 	packErr := p.stop()
 	if err != nil {
 		return nil, uploadError(siteID, err, packErr)
@@ -146,8 +154,12 @@ func (a *app) upload(ctx context.Context, c *client.Client, siteID, dir string, 
 	if packErr != nil {
 		return nil, packErr
 	}
-	fmt.Fprintf(a.stderr, "Published %d files (%s, %s compressed) as deploy %s\n",
-		p.res.Files, formatBytes(p.res.Bytes), formatBytes(sent.Load()), res.DeployID)
+	verb := "Published"
+	if o.draft {
+		verb = "Saved as a draft"
+	}
+	fmt.Fprintf(a.stderr, "%s %d files (%s, %s compressed) as deploy %s\n",
+		verb, p.res.Files, formatBytes(p.res.Bytes), formatBytes(sent.Load()), res.DeployID)
 	if res.Quality != nil {
 		fmt.Fprintln(a.stderr, res.Quality.Summary)
 	}
@@ -167,8 +179,16 @@ func uploadError(siteID string, err, packErr error) error {
 }
 
 func (a *app) printDeploy(res *client.DeployResult, asJSON bool) error {
+	preview := ""
+	if res.Deploy.Draft && res.Site.Draft != nil {
+		preview = deref(res.Site.Draft.PreviewURL)
+	}
 	if asJSON {
-		return writeJSON(a.stdout, deployOutput{SiteID: res.Site.ID, DeployID: res.DeployID, URL: res.URL, URLs: res.URLs})
+		return writeJSON(a.stdout, deployOutput{SiteID: res.Site.ID, DeployID: res.DeployID, URL: res.URL, URLs: res.URLs,
+			Draft: res.Deploy.Draft, PreviewURL: preview})
+	}
+	if res.Deploy.Draft {
+		return a.printDraft(res, preview)
 	}
 	fmt.Fprintln(a.stdout, res.URL)
 	return nil

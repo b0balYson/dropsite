@@ -258,6 +258,13 @@
         "description": "The body may be at most max_site_bytes + max_files KiB + 1 MiB (plus multipart framing); larger bodies get 413 without being read fully. The source is `cli` when X-Dropsite-Client starts with `cli/`, otherwise `api`. At most 30 publications per user per hour.",
         "parameters": [
           {
+            "name": "draft",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean" },
+            "description": "true: build the release as the site's draft (checked like any publication, not served at the site's addresses; a previous draft is replaced)"
+          },
+          {
             "name": "X-Dropsite-Client",
             "in": "header",
             "required": false,
@@ -2492,6 +2499,34 @@
         }
       }
     },
+    "/sites/{ref}/draft/publish": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }],
+      "post": {
+        "operationId": "publishDraft",
+        "summary": "Switch the site to its draft, like a rollback; no new release is created",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DeployResult" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/sites/{ref}/draft": {
+      "parameters": [{ "$ref": "#/components/parameters/SiteRef" }],
+      "delete": {
+        "operationId": "discardDraft",
+        "summary": "Delete the site's draft; its preview address then answers 404",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Site" } } } },
+          "400": { "$ref": "#/components/responses/Invalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
     "/schedules/{id}": {
       "parameters": [{ "$ref": "#/components/parameters/ID" }],
       "delete": {
@@ -3644,6 +3679,10 @@
               "null"
             ],
             "description": "Address serving exactly this release (TLS_MODE=wildcard and status ready only), with X-Robots-Tag: noindex; null otherwise"
+          },
+          "draft": {
+            "type": "boolean",
+            "description": "True for the site's draft release"
           }
         }
       },
@@ -3662,7 +3701,8 @@
           "current_deploy",
           "noindex",
           "protected",
-          "expires_at"
+          "expires_at",
+          "draft"
         ],
         "properties": {
           "id": {
@@ -3674,6 +3714,13 @@
           "url": {
             "type": "string",
             "description": "Primary address: slug if set, otherwise the random default"
+          },
+          "draft": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/Draft" },
+              { "type": "null" }
+            ],
+            "description": "The site's draft release: built and checked, not served at the site's addresses"
           },
           "urls": {
             "type": "array",
@@ -5994,6 +6041,10 @@
             "items": {
               "$ref": "#/components/schemas/FetchSpec"
             }
+          },
+          "draft": {
+            "type": "boolean",
+            "description": "Build the release as the site's draft instead of switching the site to it"
           }
         }
       },
@@ -6449,6 +6500,22 @@
             "items": {
               "type": "string"
             }
+          },
+          "draft": {
+            "type": "boolean",
+            "description": "Close the upload into the site's draft instead of switching the site to it"
+          }
+        }
+      },
+      "Draft": {
+        "type": "object",
+        "required": ["deploy_id", "created_at", "preview_url"],
+        "properties": {
+          "deploy_id": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "preview_url": {
+            "type": ["string", "null"],
+            "description": "Stable preview address of the site's draft (p-<site id>.<BASE_DOMAIN>, both TLS modes), with X-Robots-Tag: noindex; null only when an older slug owns the name"
           }
         }
       },
