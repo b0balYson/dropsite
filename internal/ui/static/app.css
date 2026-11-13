@@ -1005,10 +1005,12 @@ legend.field__label { float: left; width: 100%; }
   font-size: var(--t-sm);
   line-height: 1.55;
   white-space: pre-wrap;
+  /* Commands wrap between words; only a token longer than the line (a URL,
+     a key) is broken inside. */
   overflow-wrap: anywhere;
-  word-break: break-all;
+  word-break: normal;
 }
-.code--tall { max-height: 22rem; overflow-y: auto; word-break: normal; }
+.code--tall { max-height: 22rem; overflow-y: auto; }
 .issued .code { background: var(--c-surface); color: var(--c-ink); border: 1.5px solid var(--c-ink); font-weight: 600; }
 .quote {
   font-size: var(--t-xl);
@@ -1208,8 +1210,8 @@ input.input, select.input { height: 2.75rem; }
 .connect-code.is-expired .code { opacity: 0.45; }
 .connect-code.is-expired [data-copy] { visibility: hidden; }
 
-.chat-steps { display: grid; gap: var(--s-5); }
-@media (min-width: 48rem) { .chat-steps { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--s-5) var(--s-6); } }
+/* One client per row: each card has room for its steps and commands. */
+.chat-steps { display: grid; gap: var(--s-6); }
 .steps-small .code { margin-block: var(--s-2); }
 /* The chat comes first; the computer command is the second, quieter step. */
 .connect-hero--next { border-top: 0; }
