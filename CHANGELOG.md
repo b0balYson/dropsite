@@ -10,6 +10,8 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-11-13
+
 ### Fixed
 
 - Remote MCP: streamed responses were held back by the API request logger, so clients on the 2026-07-28 protocol (Claude Code) waited 25–30 seconds for the `subscriptions/listen` acknowledgement and reconnected. Streams are now flushed at once.
@@ -123,7 +125,8 @@ First public release.
 - The installer does not keep the first administrator password on the server.
 - Threat model and operator guidance in [docs/security.md](docs/security.md).
 
-[Unreleased]: https://github.com/b0balYson/dropsite/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/b0balYson/dropsite/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/b0balYson/dropsite/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/b0balYson/dropsite/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/b0balYson/dropsite/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/b0balYson/dropsite/compare/v0.3.0...v0.4.0
