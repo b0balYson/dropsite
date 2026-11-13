@@ -44,6 +44,7 @@ If anything fails, run the same command again: finished steps are skipped. The s
 | --- | --- |
 | Open the admin interface | run `ssh <name>`, keep the window open, open `http://localhost:<port>` (the port is shown at the end of the installation) |
 | Sign in | the e-mail you entered and the generated password shown once at the end; change it on the Account page |
+| Finish the setup | the **Getting started** page (first item of the menu): it checks that the domain points to the server and that HTTPS works, shows the exact DNS records with copy buttons and lists the remaining steps |
 | Connect ChatGPT or Claude | the **Connect AI** page of the admin interface |
 | Update | `ssh <name> dropsite-update` (backup, download, restart) |
 | Undo the last update | `ssh <name> dropsite-rollback` (restores the backup taken right before the update) |

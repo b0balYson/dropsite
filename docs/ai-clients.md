@@ -16,6 +16,8 @@ All of them connect to the remote MCP endpoint `https://api.<BASE_DOMAIN>/mcp` (
 - **claude.ai and Claude Desktop:** Settings → Connectors → Add custom connector, paste the address, press Add and Connect. The connector appears in Claude Desktop too. On a Team or Enterprise plan an owner adds it for the organisation first.
 - **Claude Code:** `claude mcp add --transport http dropsite https://api.<BASE_DOMAIN>/mcp`, then `/mcp` in Claude Code to sign in.
 
+The Connect AI page spells these out as numbered steps with the exact menu names, a copy button for the address in the step that needs it, a first message to try ("Show my dropsite sites") and a troubleshooting list (DNS not ready, "connector failed", ChatGPT plan, expired code, the chat not using dropsite).
+
 When the dropsite page opens, the user presses **Connect** on the Connect AI page, enters the one-time code and presses **Allow**. The page shows the application name, the domain it returns to and the permissions; it never asks for a password (passwords are typed only on the private interface).
 
 Example requests (the Connect AI page shows them in the interface language):
