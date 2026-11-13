@@ -103,7 +103,7 @@ Independently of file names, the server refuses every publication whose files co
 
 Every tool with its hints, inputs, outputs and description, and the naming and confirmation conventions: [mcp-tools.md](mcp-tools.md).
 
-The remote server offers every chat tool. A whole small site is published in one call with `deploy_files` (instead of the local `deploy_folder`): `files` is an array of `{path, content, encoding}` (`utf8` or `base64`), at most 16 MB decoded in total; omit `site` to create a new site. Larger sites go up in an upload session where the server offers one; otherwise the error recommends the web interface, the CLI or Claude Desktop. Releases published this way have the source `mcp`.
+The remote server offers every chat tool. A whole small site is published in one call with `deploy_files` (instead of the local `deploy_folder`): `files` is an array of `{path, content, encoding}` (`utf8` or `base64`), at most 16 MB decoded in total; omit `site` to create a new site. Larger sites go up in an upload session whose files travel through its upload link, not through the chat (see [Upload link](#upload-link)); the `files_too_large` error says so. Releases published this way have the source `mcp`.
 
 Form tools (details in [forms.md](forms.md#from-a-chat-assistant)): `get_form_settings`, `set_form_settings`, `list_submissions`, `export_submissions`, `list_channels`, `add_channel`, `verify_channel`, `set_channel_enabled`, `delete_channel`, `rotate_channel_secret`.
 
@@ -134,7 +134,7 @@ The assistant does not need the original files: it reads the published ones.
 | `list_site_files` | files of the served release (or `deploy_id`): path, size, sha256, type; up to 1000 per call, `prefix` narrows the list. Returns `deploy_id`. |
 | `read_site_files` | up to 2000 paths or patterns (`css/*.css`): text as is, binaries up to 4 MB as base64, larger files only described; at most 8 MB of content per call. The analytics block Dropsite inserts into HTML is not shown. |
 | `update_site_files` | `base_deploy_id` (required) plus `files` to write, `delete` (files or folders) and `fetch` (`{url, path}` downloaded by the server). Builds a new release from the base with the changes; everything else is kept, the previous release stays available for rollback. |
-| `begin_upload`, `upload_files`, `commit_upload` | sites larger than 16 MB: a session in `replace` mode (new content, a new site when `site` is omitted) or `patch` mode (on top of `base_deploy_id`), up to 16 MB per `upload_files` call. |
+| `begin_upload`, `upload_files`, `commit_upload` | sites larger than 16 MB: a session in `replace` mode (new content, a new site when `site` is omitted) or `patch` mode (on top of `base_deploy_id`). `begin_upload` returns the session's upload link (`upload_url`, `upload_command`, `next_steps`); `upload_files` takes up to 16 MB per call by value or `fetch`. |
 
 If the site changed after the assistant read it (another publication, a rollback, a parallel edit), `update_site_files` and a `patch` commit fail with `deploy_conflict` and the current release ID; the assistant reads the files again and repeats the change. Of two simultaneous edits of the same release exactly one is published.
 
@@ -156,13 +156,22 @@ Details: [screenshots.md](screenshots.md).
 
 Upload sessions: at most 50 open per user, closed after 24 idle hours (every `upload_files` call extends a session) and on a restart of `control`; their files live in the upload directory of the state volume and are removed by housekeeping.
 
+### Upload link
+
+A model cannot write megabytes of base64 into tool arguments, so a site with many photos or animation frames would not fit through `upload_files`. `begin_upload` therefore returns `upload_url`, `https://<API_HOST>/u/<token>`, bound to that one session:
+
+- **Assistants with a terminal** (Claude Code, Codex, Cursor) run `upload_command`: `tar -C <folder> -cf - . | curl -sS --data-binary @- -H 'Content-Type: application/x-tar' '<upload_url>'`. The answer is JSON with `received`, `skipped` and the session totals, or an error to fix. Single files: `PUT <upload_url>/<path>`.
+- **Chats without a terminal** (ChatGPT, claude.ai) give the user the link. The page (Russian, English or Chinese by the browser language) takes a folder or files by drag and drop or a picker, shows progress and per-file errors and ends with "Done. Go back to the chat and write “done”"; then the assistant calls `commit_upload`.
+
+The result's `next_steps` tells any assistant exactly this and forbids tunnels (ngrok and the like) and other hosting. The link works for one hour from its last use (never longer than the session), stops at commit or session close, and grants nothing else: no reading, no commit, no account access. Path rules, the owner's limits and the secret-file rules are those of `upload_files`; in a tar stream, service files are skipped silently and secret-looking files and links are skipped and listed. Details: [security.md](security.md#upload-links).
+
 ### Images and fonts downloaded by the server
 
 `fetch` entries let the assistant put images, fonts, CSS and JS inside the site instead of linking to other servers. The server downloads them only over `https` on port 443, without a proxy, and only from public addresses: the address actually connected to is checked after every DNS lookup and on every redirect (at most 3), so private, loopback, link-local, cloud metadata and other reserved networks are never reached. Allowed: images (PNG, JPEG, GIF, WebP, AVIF, SVG, ICO), fonts (WOFF, WOFF2, TTF, OTF, EOT), `.css`, `.js`, `.mjs` — by the response type and the target extension. Limits: 500 URLs and 256 MB per call, 50 MB per file (and at most the owner's `MAX_FILE_BYTES`), 10 minutes per call, 100000 URLs per user per hour. JPEG and PNG wider than 2000 px are scaled down to 2000 px when that makes the file smaller. One failed URL cancels the whole call and the error names it.
 
 `list_sites` and `get_site` also return `hidden_from_search`, `password_protected`, `expires_at`, `root_domain` and `own_domains`. `get_site` adds `attached`: forms that received requests, the number of delivery channels and of working ones, whether Altcha is required, the site's own counters, whether an administrator adds counters to every site, the data collections and API key proxy endpoints, and a `summary`, so an assistant in a new chat sees what is already set up (both servers; the local one reads `GET /sites/{ref}/attachments`). Answers carry ready links and a short `summary` the assistant can repeat. The local `dropsite mcp` offers all of these tools through the API (see [api-contract.md](api-contract.md)).
 
-No tool issues credentials: API tokens and connect codes are created only in the web interface.
+No tool issues credentials: API tokens and connect codes are created only in the web interface. The upload link of `begin_upload` is not a credential in this sense: it can only add files to one upload session the assistant already controls.
 
 Whatever token reaches `/mcp` (an OAuth token or an API token), the assistant works only with the user's own sites: an administrator's assistant gets no administrator powers and cannot see, publish to, roll back or delete other users' sites. Administration stays in the web interface, the API and the CLI; the only installation-level action available to an administrator's chat is the root domain, with explicit confirmation.
 

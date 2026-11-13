@@ -122,6 +122,17 @@ The response is staged: the first flag makes session challenges 10 times harder 
 
 Every answer of a site protected by a visitor password carries `Cache-Control: private, no-store`: HTML, assets, 404 pages, `/_dropsite/data` and `/_dropsite/proxy`. A CDN or shared cache in front of Caddy therefore never stores them and cannot serve them to visitors who did not sign in. Open sites keep `no-cache` for HTML and `public, max-age=3600` for assets.
 
+## Upload links
+
+Assistants publish through MCP, and a model cannot write megabytes of file content into tool arguments. `begin_upload` (MCP and `POST /api/v1/uploads`) therefore returns an upload link, `https://<API_HOST>/u/<token>`, where a terminal command or the browser of the user sends the files of that one upload session ([api-contract.md](api-contract.md#upload-links)).
+
+- **A capability, not a credential.** The token (256 random bits, base64url) is kept only as a SHA-256 hash in the memory of `control`, bound to one upload session and its user. It can add files to that session and read its counts and limits; it cannot read files, commit, publish, see the account or reach any other session, and it does not survive a restart. Publishing still needs `commit_upload` with the assistant's own authorization, and every commit runs the usual checks and the secret scan. This is why the rule "MCP never issues credentials" still holds.
+- **Lifetime.** One hour from issue or last successful upload, never longer than the session (24 idle hours); dead after commit, session expiry, restart or blocking of the owner. A new `begin_upload` gives a new session and link.
+- **Limits.** The owner's limits and path rules of `upload_files` apply to every request; a tar stream is bounded by the owner's upload size while reading (also after decompression), and a failed request stores nothing. Per link 3000 requests an hour (or twice `MAX_FILES`), per client network 6000 requests an hour and 30 unknown or expired tokens per 15 minutes. Caddy caps bodies on `/u/*` at 512 MB.
+- **Secret files.** Secret-looking paths (`.env*`, keys, credentials, `.ssh/`, `.aws/`) are refused for a single file and skipped and listed in a tar stream, like `dropsite deploy --skip-sensitive`; service files are skipped silently.
+- **No leaks.** The page sets no cookies and sends `Referrer-Policy: no-referrer`, `X-Robots-Tag: noindex`, a CSP without inline code (`script-src 'self'`, `connect-src 'self'`, `form-action 'none'`) and `X-Frame-Options: DENY`. The access log of `control` records the route template (`PUT /u/{token}/{path}`), never the path, and error logs replace the token with `REDACTED`; the Caddy access log of the API host does the same with a log filter.
+- **No tunnels.** Tool results, errors and the guide tell assistants to use the link and never tunnels (ngrok and the like), file hosting or other servers, so files never leave the user's computer for a third party.
+
 ## Account privacy
 
 Adding a member to a workspace answers the same way for every e-mail without an active account (unknown, blocked or not yet activated), and a user may try at most 20 additions an hour. The exact reason is written to the audit log only (`workspace.member.refused`). Sign-in answers are uniform and timing-equalized as well.

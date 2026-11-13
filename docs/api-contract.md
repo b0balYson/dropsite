@@ -105,7 +105,7 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 | `GET /sites/{ref}/files` | `?deploy_id&prefix` | `{site_id, url, deploy_id, current, files: SiteFile[], total_files, total_bytes, truncated}` |
 | `POST /sites/{ref}/files/read` | `{deploy_id?, paths[]}` (1–50 paths or patterns) | `{site_id, deploy_id, current, files[SiteFile + {encoding, content, note}], missing[], truncated}` |
 | `PATCH /sites/{ref}/files` | `{base_deploy_id, files?[{path, content, encoding?}], delete?[], fetch?[{url, path}]}` | `FilesResult`; `409 deploy_conflict` when the base is not current |
-| `POST /uploads` | `{site?, title?, mode?, base_deploy_id?}` | `201 Upload` |
+| `POST /uploads` | `{site?, title?, mode?, base_deploy_id?}` | `201 Upload` with `upload_url` and `upload_url_expires_at` (only here) |
 | `POST /uploads/{id}/files` | `{files?[], fetch?[]}` | `Upload` |
 | `POST /uploads/{id}/commit` | `{delete?[]}` (patch mode) | `201 FilesResult` |
 | `POST /uploads/{id}/schedule` | `{publish_at}` (RFC 3339 with zone) | `201 Schedule`; the session becomes a prepared release that goes live at `publish_at` |
@@ -168,11 +168,25 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 
 `{ref}` is a site ID or its slug. `limit` defaults to 50; values outside 1–200 are rejected with 400. JSON request bodies are limited to 64 KiB, except `PATCH /sites/{ref}/files` and `POST /uploads/{id}/files` (32 MiB; at most 16 MB of decoded file content per call).
 
+## Upload links
+
+`POST /uploads` returns `upload_url`, `https://<API_HOST>/u/<token>` (outside `/api/v1`, no bearer token: the token in the path is the credential). It adds files to that one session and does nothing else; `POST /uploads/{id}/commit` still needs the user's token.
+
+| Method and path | Body | Response |
+| --- | --- | --- |
+| `GET /u/{token}` | | HTML page: drag and drop of a folder or files (ru, en, zh by `Accept-Language` or `?ui_lang=`); an expired link shows a page asking for a new one (404) |
+| `PUT /u/{token}/{path}` | the raw file | `LinkReceipt`; a path sent again replaces the file |
+| `POST /u/{token}` | a tar stream of the folder, `Content-Type: application/x-tar` (also `application/gzip`; gzip is detected by its magic bytes) | `LinkReceipt` |
+
+`LinkReceipt` is `{received, bytes, skipped[{path, reason}], upload{files, bytes, max_bytes, max_files, max_file_bytes, expires_at}, message}`. Path rules, the owner's `MAX_FILE_BYTES`, `MAX_SITE_BYTES` and `MAX_FILES` for the whole session and the refusal of secret-looking paths are those of `POST /uploads/{id}/files`. In a tar stream, `./` prefixes and directory entries are dropped, service files (`.git/`, `node_modules/`, `.DS_Store`, `__MACOSX/`, AppleDouble `._*`) are skipped silently, secret-looking files and non-regular entries (links, devices) are skipped and listed in `skipped`; anything else wrong fails the whole request and stores nothing. Errors use the usual envelope: `404 upload_link_invalid` (unknown, expired, committed or closed), `413 archive_file_too_large`, `archive_too_large`, `archive_too_many_files`, `400 archive_corrupt` or `invalid_input`, `429 rate_limited`.
+
+The link works for one hour from its last successful upload, never longer than the session, and stops at commit, when the session expires or `control` restarts, or when the owner is blocked. Limits: 3000 requests per link and hour (or twice the owner's `MAX_FILES`, whichever is more), 6000 requests per client network and hour, 30 unknown or expired tokens per client network in 15 minutes. Caddy caps request bodies on `/u/*` at 512 MB.
+
 ## Endpoints for assistants
 
 These endpoints give the local MCP server of the CLI (`dropsite mcp`) the tools of the remote `/mcp` endpoint; they call the same service methods, so limits, checks and errors are the same (see [ai-clients.md](ai-clients.md)).
 
-- Site files and upload sessions follow the spec of `update_site_files` and `begin_upload`/`upload_files`/`commit_upload`: releases they create have the source `mcp`; downloads in `fetch` go only to public `https` addresses; a stale `base_deploy_id` gives `409 deploy_conflict`. A site without a release answers `400 site_not_published`. Upload sessions belong to the user (at most 3, closed after 30 idle minutes); an unknown, expired or other user's session answers `400 upload_expired`.
+- Site files and upload sessions follow the spec of `update_site_files` and `begin_upload`/`upload_files`/`commit_upload`: releases they create have the source `mcp`; downloads in `fetch` go only to public `https` addresses; a stale `base_deploy_id` gives `409 deploy_conflict`. A site without a release answers `400 site_not_published`. Upload sessions belong to the user (at most 50, closed after 24 idle hours); an unknown, expired or other user's session answers `400 upload_expired`.
 - `PATCH /sites/{ref}/counters` changes only the fields present; with neither it answers 400.
 - `GET /connections` marks with `current` the token of the request; `DELETE /connections/{kind}/{id}` disconnects an app (all its tokens) or revokes a token. Credentials are never created here: tokens come from `POST /tokens` or the web interface.
 - `PUT /root-site` and `DELETE /root-site` require `confirm` to repeat the ID or slug of the site (for `DELETE`, of the site now on the root domain). Users who are not administrators get `400 invalid_input`, the same answer an assistant gets.

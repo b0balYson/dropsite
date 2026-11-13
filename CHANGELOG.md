@@ -10,6 +10,10 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+### Added
+
+- Upload link for large sites: `begin_upload` returns `upload_url` (one hour, one upload session only) so an assistant with a terminal sends the site folder with one `tar | curl` command and a chat without one gives the user a drag-and-drop page; files no longer have to fit into tool calls, and assistants are told never to use tunnels or other hosting.
+
 ## [0.6.0] - 2026-11-13
 
 ### Added
