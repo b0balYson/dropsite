@@ -66,7 +66,45 @@ func ReadLog(path string, c Cursor, maxBytes int64) (Chunk, error) {
 	if c.Inode == 0 || st.Size() < offset {
 		offset = 0
 	}
-	return readFrom(path, Cursor{Inode: ino, Offset: offset}, st.Size(), maxBytes, false)
+	replaced := false
+	if offset > 0 {
+		var err error
+		if replaced, err = replacedUnder(path, offset); err != nil {
+			return Chunk{}, err
+		}
+		if replaced {
+			offset = 0
+		}
+	}
+	ch, err := readFrom(path, Cursor{Inode: ino, Offset: offset}, st.Size(), maxBytes, false)
+	ch.Lost = ch.Lost || replaced
+	return ch, err
+}
+
+// replacedUnder reports whether the file at path is not the one the cursor
+// was read from although it has the same inode: file systems reuse the inode
+// of a deleted log for the next file. The cursor always stops right after a
+// newline, or inside a line longer than MaxLineBytes that was skipped, so any
+// other byte before the offset means the content changed under it.
+func replacedUnder(path string, offset int64) (bool, error) {
+	f, err := os.Open(path) //nolint:gosec // path comes from configuration
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return false, nil
+		}
+		return false, fmt.Errorf("stats: open log: %w", err)
+	}
+	defer f.Close()
+	window := min(offset, int64(MaxLineBytes)+1)
+	buf := make([]byte, window)
+	if _, err := f.ReadAt(buf, offset-window); err != nil && !errors.Is(err, io.EOF) {
+		return false, fmt.Errorf("stats: read log: %w", err)
+	}
+	if buf[len(buf)-1] == '\n' {
+		return false, nil
+	}
+	// Inside a skipped over-long line: no newline in the last MaxLineBytes+1 bytes.
+	return window <= int64(MaxLineBytes) || bytes.IndexByte(buf, '\n') >= 0, nil
 }
 
 func readRotated(path string, c Cursor, current uint64, maxBytes int64) (Chunk, error) {

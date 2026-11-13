@@ -135,6 +135,28 @@ func TestReadLogRotatedFileGone(t *testing.T) {
 	}
 }
 
+// A new log that got the inode of the deleted one (common on tmpfs and ext4)
+// must be read from the start, not from the old offset in the middle of a line.
+func TestReadLogReplacedUnderSameInode(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "sites-access.log")
+	appendFile(t, p, "a\n")
+	_, c, _ := drain(t, p, Cursor{}, 1<<20)
+	// Rewriting in place keeps the inode, as a reused inode would.
+	if err := os.WriteFile(p, []byte("zz\nfresh\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	lines, c, info := drain(t, p, c, 1<<20)
+	if strings.Join(lines, ",") != "zz,fresh" || !info.Lost {
+		t.Fatalf("lines = %v lost = %v", lines, info.Lost)
+	}
+	// Growing the same file is not mistaken for a replacement.
+	appendFile(t, p, "more\n")
+	lines, _, info = drain(t, p, c, 1<<20)
+	if strings.Join(lines, ",") != "more" || info.Lost {
+		t.Fatalf("lines = %v lost = %v", lines, info.Lost)
+	}
+}
+
 func TestReadLogLongLines(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "sites-access.log")
 	long := strings.Repeat("x", MaxLineBytes+10)
