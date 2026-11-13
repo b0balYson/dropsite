@@ -10,6 +10,8 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-13
+
 ### Added
 
 - Opt-in access to the admin interface from the internet at `https://admin.<domain>` (installer question, default No, and Settings), and an Altcha check on the admin sign-in and invitation forms.
@@ -91,7 +93,8 @@ First public release.
 - The installer does not keep the first administrator password on the server.
 - Threat model and operator guidance in [docs/security.md](docs/security.md).
 
-[Unreleased]: https://github.com/b0balYson/dropsite/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/b0balYson/dropsite/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/b0balYson/dropsite/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/b0balYson/dropsite/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/b0balYson/dropsite/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/b0balYson/dropsite/releases/tag/v0.1.0
