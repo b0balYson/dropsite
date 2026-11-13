@@ -88,6 +88,7 @@ func Login(svc *service.Service, log *slog.Logger, clientIP func(*http.Request) 
 	mux.HandleFunc("POST "+LoginPath, l.submit)
 	mux.HandleFunc("GET "+ChallengePath, l.challenge)
 	mux.HandleFunc("GET "+cssPath, serveCSS)
+	mux.HandleFunc("GET "+iconPath, serveIcon)
 	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "not found", http.StatusNotFound)
 	})
@@ -113,6 +114,12 @@ func serveCSS(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write(cssBody)
 }
 
+func serveIcon(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "image/svg+xml")
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	_, _ = w.Write(brand.Icon)
+}
+
 type pageData struct {
 	Lang          string
 	T             map[string]string
@@ -121,6 +128,7 @@ type pageData struct {
 	CSRF          string
 	Error         string
 	CSSPath       string
+	IconPath      string
 	Action        string
 	StyleNonce    string
 	ChallengePath string
@@ -163,7 +171,7 @@ func (l *login) render(w http.ResponseWriter, r *http.Request, status int, next,
 	lang := pickLang(r.Header.Get("Accept-Language"))
 	data := pageData{
 		Lang: langTags[lang], T: catalog[lang], Title: title, Next: next, CSRF: token, Error: errMsg,
-		CSSPath: cssHref, Action: LoginPath, StyleNonce: styleNonce,
+		CSSPath: cssHref, IconPath: iconPath, Action: LoginPath, StyleNonce: styleNonce,
 		ChallengePath: ChallengePath, WidgetPath: widgetPath,
 	}
 	var buf bytes.Buffer

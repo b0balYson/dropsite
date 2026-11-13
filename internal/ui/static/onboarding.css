@@ -234,3 +234,67 @@
   .dns-table__value code { font-size: var(--t-base); }
 }
 .setup-restore { margin-top: var(--s-3); }
+
+/* ---- friendly ink -------------------------------------------------------- */
+/* Rounded ink cards for the checklist, the card on the sites list and the
+   chat guides; the accent marks the step to do now. */
+
+.side-start .side-link { box-shadow: none; background: var(--c-accent-soft); border-color: var(--c-ink); }
+.side-start .side-link[aria-current="page"] { background: var(--c-accent); box-shadow: 0 2px 0 var(--c-ink); }
+
+.setup-status {
+  border: var(--bw) solid var(--c-ink);
+  border-radius: var(--r-lg);
+}
+.setup-status--ready { border-color: var(--c-ok); position: relative; }
+.setup-status--ready::after {
+  content: "";
+  position: absolute;
+  top: -0.9rem;
+  right: -0.6rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231c1a17' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='M7 9.5 5.5 3M12 12l5-5M14.5 17.5l6-1'/%3E%3C/svg%3E") no-repeat center / contain;
+  pointer-events: none;
+}
+.setup-status__count { font-weight: var(--w-heavy); }
+.setup-status__count .mono { font-family: var(--f-sans); }
+.setup-meter li { height: 10px; border: 1.5px solid var(--c-ink); border-radius: var(--r-pill); background: var(--c-surface); }
+.setup-meter li.is-done { background: var(--c-ok); }
+
+.setup-step__mark { border-width: var(--bw); font-weight: var(--w-heavy); }
+.setup-step--done .setup-step__mark,
+.setup-step--problem .setup-step__mark { border-color: var(--c-ink); }
+.setup-step__title { font-weight: var(--w-heavy); }
+.setup-now li { border-left-width: var(--bw); }
+
+.setup-records { border-left: 0; border: 1.5px solid var(--c-line-soft); border-radius: var(--r-md); }
+.setup-records .table { border-width: 1.5px; }
+
+.setup-card {
+  border: var(--bw) solid var(--c-ink);
+  border-radius: var(--r-lg);
+  box-shadow: inset 8px 0 0 var(--c-accent);
+  padding-left: calc(var(--s-5) + 8px);
+}
+.setup-card--ready { box-shadow: inset 8px 0 0 var(--c-ok); }
+.setup-card--loading { box-shadow: inset 8px 0 0 var(--c-hair); }
+.setup-card__title { font-weight: var(--w-heavy); }
+.setup-dismiss { border-top: var(--bw) dashed var(--c-line-soft); }
+
+.guide { border-top: var(--bw) dashed var(--c-line-soft); }
+.guide-steps > li::before { border-width: var(--bw); font-family: var(--f-sans); font-weight: var(--w-heavy); background: var(--c-accent-soft); }
+.guide-url { border-radius: var(--r-md); }
+
+.first-say {
+  border: var(--bw) solid var(--c-ink);
+  border-radius: var(--r-lg);
+  background: var(--c-accent-soft);
+}
+.first-say__label { color: var(--c-ink-2); }
+.first-say__phrase { font-weight: var(--w-heavy); }
+
+.trouble-list { border: var(--bw) solid var(--c-ink); border-radius: var(--r-lg); background: var(--c-surface); overflow: clip; }
+.trouble, .trouble:first-child { padding-inline: var(--card-pad); border-top: var(--rule-thin) solid var(--c-hair); }
+.trouble:first-child { border-top: 0; }
+.trouble dt { font-weight: var(--w-heavy); }

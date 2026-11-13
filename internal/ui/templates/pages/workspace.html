@@ -25,8 +25,8 @@
     <tbody>
       {{range $w.Members}}
       <tr>
-        <td class="mono">{{.Email}}</td>
-        <td>{{$.L.Date .AddedAt}}</td>
+        <td class="mono" data-label="{{$.L.T "workspaces.email"}}">{{.Email}}</td>
+        <td data-label="{{$.L.T "workspaces.added"}}">{{$.L.Date .AddedAt}}</td>
         <td class="table__actions">
           <form method="post" action="{{$base}}/members/{{.UserID}}/remove">
             {{template "csrf" $}}

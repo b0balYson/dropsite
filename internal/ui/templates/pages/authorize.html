@@ -6,13 +6,13 @@
 <meta name="referrer" content="same-origin">
 <meta name="robots" content="noindex">
 <title>{{.L.T "oauth.title"}} — {{.Product}}</title>
-<link rel="icon" href="{{.Asset "favicon.svg"}}" type="image/svg+xml">
+{{template "head_icons" .}}
 <link rel="stylesheet" href="{{.Asset "app.css"}}">
 </head>
 <body>
 <header class="masthead">
   <div class="masthead__inner">
-    <span class="wordmark"><span class="wordmark__mark" aria-hidden="true"></span>{{.Product}}</span>
+    <span class="wordmark">{{template "logo" .}}</span>
     {{with .D.Langs}}
     <div class="masthead__aside">
       <nav class="lang" aria-label="{{$.L.T "nav.language"}}">

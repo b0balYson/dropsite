@@ -3,12 +3,14 @@ package api
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"html/template"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/b0balYson/dropsite/internal/brand"
 	"github.com/b0balYson/dropsite/internal/domain"
 	"github.com/b0balYson/dropsite/internal/forms"
 	"github.com/b0balYson/dropsite/internal/service"
@@ -177,20 +179,34 @@ var formPageTexts = map[string]map[string]string{
 	"zh": {"ok_title": "谢谢！", "ok_text": "您的信息已提交成功。", "err_title": "提交未成功", "back": "返回网站"},
 }
 
-// formPage is the neutral built-in page: no platform branding, inline
-// styles only, nothing loaded from elsewhere.
+// formIcon is the product icon inlined as the page's favicon, so the page
+// still loads nothing from elsewhere.
+var formIcon = template.URL("data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString(brand.Icon)) //nolint:gosec // our own embedded SVG
+
+// formPage is the built-in reply page in the "friendly ink" look of the
+// interface: inline styles only, system fonts, nothing loaded from elsewhere.
+// A successful reply gets the small "pop" strokes of the logo.
 var formPage = template.Must(template.New("form").Parse(`<!doctype html>
 <html lang="{{.Lang}}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex"><title>{{.Title}}</title>
-<style>body{margin:0;min-height:100vh;display:grid;place-items:center;font:16px/1.5 system-ui,-apple-system,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif;background:#f6f6f4;color:#1b1b1b;overflow-wrap:break-word}
-main{max-width:28rem;margin:1rem;padding:2rem;background:#fff;border:1px solid #e2e2dc;border-radius:12px}
-h1{margin:0 0 .5rem;font-size:1.5rem}p{margin:0 0 1.25rem}a{color:inherit}</style></head>
-<body><main><h1>{{.Title}}</h1><p>{{.Text}}</p><p><a href="/">{{.Back}}</a></p></main></body></html>
+<meta name="robots" content="noindex"><title>{{.Title}}</title><link rel="icon" href="{{.Icon}}" type="image/svg+xml">
+<style>:root{color-scheme:light dark;--bg:#fbf8f1;--card:#fffdf8;--ink:#1c1a17;--muted:#5a544a;--accent:#ffc83d;--err:#b42318}
+@media (prefers-color-scheme:dark){:root{--bg:#1a1815;--card:#24211c;--ink:#f6f1e6;--muted:#b9b1a2;--err:#ff9b8c}}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:1rem;font:16px/1.55 "Nunito",ui-rounded,"SF Pro Rounded",system-ui,-apple-system,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif;background:var(--bg);color:var(--ink);overflow-wrap:break-word}
+main{position:relative;width:100%;max-width:28rem;padding:2rem;background:var(--card);border:2px solid var(--ink);border-radius:22px}
+.err{border-color:var(--err)}h1{margin:0 0 .5rem;font-size:1.625rem;font-weight:800;line-height:1.2}p{margin:0 0 1.25rem;color:var(--muted)}
+a{display:inline-flex;align-items:center;min-height:2.75rem;padding:0 1.1rem;border:2px solid var(--ink);border-radius:999px;background:var(--accent);color:#1c1a17;font-weight:700;text-decoration:none;box-shadow:0 3px 0 var(--ink)}
+a:hover{transform:translateY(-1px)}a:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.pop{position:absolute;top:-1.1rem;right:-.9rem;width:2.4rem;height:2.4rem;fill:none;stroke:var(--ink);stroke-width:3;stroke-linecap:round}</style></head>
+<body><main{{if not .OK}} class="err"{{end}}>{{if .OK}}<svg class="pop" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9.5 5.5 3M12 12l5-5M14.5 17.5l6-1"/></svg>{{end}}<h1>{{.Title}}</h1><p>{{.Text}}</p><p style="margin:0"><a href="/">{{.Back}}</a></p></main></body></html>
 `))
 
 func writeFormPage(w http.ResponseWriter, status int, lang string, ok bool, msg string) {
 	t := formPageTexts[lang]
-	data := struct{ Lang, Title, Text, Back string }{Lang: visitorLangTags[lang], Back: t["back"]}
+	data := struct {
+		Lang, Title, Text, Back string
+		OK                      bool
+		Icon                    template.URL
+	}{Lang: visitorLangTags[lang], Back: t["back"], OK: ok, Icon: formIcon}
 	if ok {
 		data.Title, data.Text = t["ok_title"], t["ok_text"]
 	} else {

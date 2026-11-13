@@ -70,6 +70,7 @@ func newServer(svc *service.Service, log *slog.Logger) (*server, error) {
 func (s *server) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /static/{file...}", s.serveStatic)
+	mux.HandleFunc("GET /favicon.ico", s.serveFavicon)
 
 	mux.HandleFunc("GET /login", s.anon(s.loginPage))
 	mux.HandleFunc("POST /login", s.anon(s.loginSubmit))

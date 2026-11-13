@@ -27,6 +27,7 @@ const (
 	Prefix    = "/_" + brand.Name + "/"
 	LoginPath = Prefix + "login"
 	cssPath   = Prefix + "login.css"
+	iconPath  = Prefix + "icon.svg"
 	// ChallengePath issues the Altcha challenge of the login page. It lies
 	// under Prefix, which Caddy proxies before forward_auth, so it works
 	// without the access cookie (unlike /_form/challenge).

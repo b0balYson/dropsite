@@ -303,6 +303,7 @@ func TestLoginOtherPaths(t *testing.T) {
 		{"api.pp.test", LoginPath, http.StatusNotFound},
 		{h.host, Prefix + "other", http.StatusNotFound},
 		{h.host, cssPath, http.StatusOK},
+		{h.host, iconPath, http.StatusOK},
 		{h.host, ChallengePath, http.StatusOK},
 		{h.open, ChallengePath, http.StatusNotFound},
 		{"unknown.pp.test", ChallengePath, http.StatusNotFound},

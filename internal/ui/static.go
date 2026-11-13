@@ -37,6 +37,8 @@ func loadStatic() (map[string]staticFile, map[string]string, error) {
 		switch path.Ext(name) {
 		case ".woff2":
 			ctype = "font/woff2"
+		case ".ico":
+			ctype = "image/x-icon"
 		case ".txt":
 			ctype = "text/plain; charset=utf-8"
 		case ".js":
@@ -55,7 +57,17 @@ func loadStatic() (map[string]staticFile, map[string]string, error) {
 }
 
 func (s *server) serveStatic(w http.ResponseWriter, r *http.Request) {
-	f, ok := s.static[r.PathValue("file")]
+	s.serveFile(w, r, r.PathValue("file"))
+}
+
+// serveFavicon answers browsers that ask for /favicon.ico without reading
+// the page's icon links.
+func (s *server) serveFavicon(w http.ResponseWriter, r *http.Request) {
+	s.serveFile(w, r, "brand/favicon.ico")
+}
+
+func (s *server) serveFile(w http.ResponseWriter, r *http.Request, name string) {
+	f, ok := s.static[name]
 	if !ok {
 		http.NotFound(w, r)
 		return

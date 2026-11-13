@@ -10,6 +10,14 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+### Changed
+
+- Brand identity: a logo (laughing browser window with a Fredoka wordmark),
+  favicons and the "friendly ink" look across the web interface, the
+  protected-site sign-in page and the form reply page: warm paper, 2px
+  rounded ink outlines, one sunny accent for primary actions and focus.
+  Interface text uses the self-hosted Nunito font; the README shows the logo.
+
 ## [0.1.0] - 2026-11-13
 
 First public release.

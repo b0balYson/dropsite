@@ -14,7 +14,7 @@
 {{define "sidebar"}}
 <aside class="sidebar" id="sidebar" data-menu>
   <div class="sidebar__head">
-    <a class="wordmark" href="/"><span class="wordmark__mark" aria-hidden="true"></span>{{.Product}}</a>
+    <a class="wordmark wordmark--tilt" href="/">{{template "logo" .}}</a>
     <a class="sidebar__close" href="#" data-menu-close><span aria-hidden="true">✕</span><span class="sr-only">{{.L.T "nav.menu.close"}}</span></a>
   </div>
   <nav class="side-nav" aria-label="{{.L.T "nav.label"}}">

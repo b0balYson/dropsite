@@ -6,7 +6,7 @@
 <meta name="htmx-config" content='{"allowEval":false,"allowScriptTags":false,"includeIndicatorStyles":false,"historyCacheSize":0}'>
 <meta name="referrer" content="same-origin">
 <title>{{block "title" .}}{{.L.T .Title}}{{end}} — {{.Product}}</title>
-<link rel="icon" href="{{.Asset "favicon.svg"}}" type="image/svg+xml">
+{{template "head_icons" .}}
 <link rel="stylesheet" href="{{.Asset "app.css"}}">
 <link rel="stylesheet" href="{{.Asset "onboarding.css"}}">
 <script src="{{.Asset "htmx.min.js"}}" defer></script>
@@ -17,7 +17,7 @@
 {{if .Me}}
 <div class="shell">
   <header class="topbar">
-    <a class="wordmark" href="/"><span class="wordmark__mark" aria-hidden="true"></span>{{.Product}}</a>
+    <a class="wordmark" href="/">{{template "logo" .}}</a>
     <span class="topbar__section">{{.SectionLabel}}</span>
     <a class="topbar__menu" href="#sidebar" aria-controls="sidebar" aria-expanded="false" data-menu-open>
       <span class="topbar__burger" aria-hidden="true"></span>{{.L.T "nav.menu"}}
@@ -42,7 +42,7 @@
 {{else}}
 <header class="masthead">
   <div class="masthead__inner">
-    <a class="wordmark" href="/"><span class="wordmark__mark" aria-hidden="true"></span>{{.Product}}</a>
+    <a class="wordmark" href="/">{{template "logo" .}}</a>
     <div class="masthead__aside">{{template "lang_switch" .}}</div>
   </div>
 </header>

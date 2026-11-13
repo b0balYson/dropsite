@@ -1,35 +1,37 @@
-/* Visitor login page of a password-protected site. Deliberately neutral:
-   system fonts, no platform branding, the site title is the hero. */
+/* Visitor login page of a password-protected site. The site title is the
+   hero; the page shares the "friendly ink" look of the web interface (warm
+   paper, 2px rounded ink outlines, one sunny accent) but loads no fonts:
+   rounded system faces stand in for Nunito. */
 :root {
   color-scheme: light dark;
-  --bg: #f4f3ef;
-  --surface: #ffffff;
-  --ink: #16171a;
-  --muted: #5d6068;
-  --line: #c9c8c2;
-  --focus: #1f5fd1;
-  --accent: #16171a;
-  --on-accent: #ffffff;
+  --bg: #fbf8f1;
+  --surface: #fffdf8;
+  --ink: #1c1a17;
+  --muted: #5a544a;
+  --line: #1c1a17;
+  --hair: #e4dccb;
+  --accent: #ffc83d;
+  --accent-ink: #1c1a17;
   --error: #b42318;
-  --error-bg: #fdf0ee;
+  --error-bg: #fdecea;
   --control-h: 3rem;
-  --radius: 0.5rem;
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --bw: 2px;
+  --radius: 14px;
+  --radius-lg: 22px;
+  --font: "Nunito", ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #121315;
-    --surface: #1b1c1f;
-    --ink: #f1f0ec;
-    --muted: #a4a6ad;
-    --line: #3a3c42;
-    --focus: #7aa7ff;
-    --accent: #f1f0ec;
-    --on-accent: #121315;
-    --error: #ff8a7a;
-    --error-bg: #2d1714;
+    --bg: #1a1815;
+    --surface: #24211c;
+    --ink: #f6f1e6;
+    --muted: #b9b1a2;
+    --line: #f6f1e6;
+    --hair: #3d3830;
+    --error: #ff9b8c;
+    --error-bg: #3a1d18;
   }
 }
 
@@ -46,7 +48,7 @@ body {
   padding: clamp(1.5rem, 6vw, 4rem) 1rem;
   background: var(--bg);
   color: var(--ink);
-  font: 400 1rem/1.5 var(--font);
+  font: 400 1rem/1.55 var(--font);
 }
 
 .gate {
@@ -58,16 +60,18 @@ body {
   display: block;
   margin-bottom: 1.25rem;
   fill: none;
-  stroke: var(--muted);
-  stroke-width: 1.6;
+  stroke: var(--ink);
+  stroke-width: 2;
   stroke-linecap: round;
+  stroke-linejoin: round;
+  transform: rotate(-8deg);
 }
 
 .gate__eyebrow {
   margin: 0 0 0.5rem;
   color: var(--muted);
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -75,9 +79,9 @@ body {
 .gate__title {
   margin: 0 0 0.75rem;
   font-size: clamp(2rem, 1.4rem + 3vw, 2.75rem);
-  font-weight: 700;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.015em;
   overflow-wrap: anywhere;
 }
 
@@ -89,15 +93,15 @@ body {
 .gate__form {
   display: grid;
   gap: 0.5rem;
-  padding: 1.25rem;
+  padding: 1.5rem;
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border: var(--bw) solid var(--line);
+  border-radius: var(--radius-lg);
 }
 
 .gate__label {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 0.9375rem;
+  font-weight: 700;
 }
 
 .gate__input,
@@ -110,7 +114,7 @@ body {
 
 .gate__input {
   padding: 0 0.875rem;
-  border: 1px solid var(--line);
+  border: var(--bw) solid var(--line);
   background: var(--bg);
   color: var(--ink);
 }
@@ -119,22 +123,24 @@ body {
 
 .gate__input:focus-visible,
 .gate__submit:focus-visible {
-  outline: 2px solid var(--focus);
+  outline: 3px solid var(--ink);
   outline-offset: 2px;
+  box-shadow: 0 0 0 6px var(--accent);
 }
 
 .gate__submit {
   margin-top: 0.5rem;
-  border: 0;
+  border: var(--bw) solid var(--line);
   background: var(--accent);
-  color: var(--on-accent);
-  font-weight: 600;
+  color: var(--accent-ink);
+  font-weight: 800;
   cursor: pointer;
-  transition: opacity 150ms ease-out, transform 150ms ease-out;
+  box-shadow: 0 3px 0 var(--line);
+  transition: transform 150ms ease-out, box-shadow 150ms ease-out;
 }
 
-.gate__submit:hover { opacity: 0.88; }
-.gate__submit:active { transform: translateY(1px); }
+.gate__submit:hover { transform: translateY(-1px); box-shadow: 0 4px 0 var(--line); }
+.gate__submit:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--line); }
 
 /* Altcha widget: full width and the page's own tokens, so the automatic
    check reads as part of the form rather than a third-party box. */
@@ -142,12 +148,13 @@ body {
   display: block;
   --altcha-max-width: 100%;
   --altcha-border-radius: var(--radius);
-  --altcha-border-color: var(--line);
+  --altcha-border-width: var(--bw);
+  --altcha-border-color: var(--hair);
   --altcha-color-base: var(--surface);
   --altcha-color-base-content: var(--ink);
-  --altcha-color-neutral: var(--line);
-  --altcha-color-primary: var(--accent);
-  --altcha-color-primary-content: var(--on-accent);
+  --altcha-color-neutral: var(--hair);
+  --altcha-color-primary: var(--ink);
+  --altcha-color-primary-content: var(--surface);
   --altcha-spinner-color: var(--muted);
   color: var(--muted);
   font-size: 0.9375rem;
@@ -155,11 +162,13 @@ body {
 
 .gate__error {
   margin: 0 0 0.5rem;
-  padding: 0.625rem 0.75rem;
-  border-left: 3px solid var(--error);
+  padding: 0.625rem 0.875rem;
+  border: var(--bw) solid var(--error);
+  border-radius: var(--radius);
   background: var(--error-bg);
   color: var(--error);
   font-size: 0.9375rem;
+  font-weight: 600;
 }
 
 .gate__note {
@@ -176,4 +185,5 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .gate__submit { transition: none; }
+  .gate__submit:hover, .gate__submit:active { transform: none; }
 }
