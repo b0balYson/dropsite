@@ -238,7 +238,7 @@ func TestOAuthFlowEndToEnd(t *testing.T) {
 		t.Fatalf("protected resource metadata: %s", prm)
 	}
 	_, asm := f.do(http.MethodGet, "/.well-known/oauth-authorization-server", "", nil)
-	for _, want := range []string{`"code_challenge_methods_supported":["S256"]`, `"client_id_metadata_document_supported":true`,
+	for _, want := range []string{`"code_challenge_methods_supported":["S256"]`, `"client_id_metadata_document_supported":false`,
 		`"token_endpoint":"https://api.pp.test/oauth/token"`, `"authorization_response_iss_parameter_supported":true`} {
 		if !strings.Contains(asm, want) {
 			t.Fatalf("server metadata lacks %s: %s", want, asm)

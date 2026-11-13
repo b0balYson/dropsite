@@ -3,7 +3,6 @@ package oauth
 import (
 	"context"
 	"net/http"
-	"net/netip"
 	"net/url"
 	"strings"
 	"testing"
@@ -11,11 +10,16 @@ import (
 	"github.com/b0balYson/dropsite/internal/service"
 )
 
-// Claude Code (built-in metadata, loopback redirect on a run-time port)
-// connecting with a connect URL: the request is valid and carries the code.
+// A Claude-Code-style client (dynamically registered, loopback redirect on a
+// run-time port) connecting with a connect URL: the request is valid and
+// carries the code.
 func TestClaudeCodeWithConnectURL(t *testing.T) {
-	r := newRig(t, Options{Resolver: fakeResolver{addrs: addrs("127.0.0.1")}, AllowAddr: func(netip.Addr) bool { return false }})
-	q := url.Values{"client_id": {"https://claude.ai/oauth/claude-code-client-metadata"}, "response_type": {"code"},
+	r := newRig(t, Options{})
+	c, err := r.env.Svc.RegisterOAuthClient(context.Background(), "Claude Code", []string{"http://localhost/callback"}, "1.1.1.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	q := url.Values{"client_id": {c.ID}, "response_type": {"code"},
 		"state": {"s"}, "code_challenge": {service.PKCEChallenge(strings.Repeat("v", 43))}, "code_challenge_method": {"S256"},
 		"redirect_uri": {"http://localhost:53123/callback"}, "resource": {"https://api.pp.test/mcp/c/abcd-efgh-jkmnp"}}
 	p, err := r.s.ValidateAuthorize(context.Background(), q, "1.1.1.1")

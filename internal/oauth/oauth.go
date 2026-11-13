@@ -63,6 +63,12 @@ type Options struct {
 	// MetadataDialPort connects to this port instead of 443 when fetching
 	// client metadata documents (tests only).
 	MetadataDialPort string
+	// ClientMetadataDocuments accepts client IDs that are https URLs of
+	// client metadata documents and advertises it in the server metadata.
+	// Off in production: publishers such as claude.ai put their documents
+	// behind bot protection that refuses data-centre servers, so clients
+	// register dynamically instead and the server fetches nothing.
+	ClientMetadataDocuments bool
 }
 
 // Server is the OAuth protocol adapter.
@@ -127,6 +133,9 @@ func (s *Server) Routes() []Route {
 // limited per address.
 func (s *Server) ResolveClient(ctx context.Context, clientID, ip string) (Client, error) {
 	if IsMetadataURL(clientID) {
+		if !s.o.ClientMetadataDocuments {
+			return Client{}, errors.New("client metadata documents are not accepted; register the client")
+		}
 		return s.cimd.get(ctx, clientID, ip)
 	}
 	if clientID == "" || len(clientID) > 64 {

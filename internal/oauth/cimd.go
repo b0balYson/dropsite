@@ -149,11 +149,6 @@ func (f *fetcher) get(ctx context.Context, clientID, ip string) (Client, error) 
 	}
 	c, ttl, err := f.fetch(ctx, clientID)
 	if err != nil {
-		if k, ok := knownClient(clientID); ok {
-			// Retry the live document after a short while.
-			f.store(clientID, cimdEntry{client: k, expires: now.Add(cimdFailureTTL)})
-			return k, nil
-		}
 		if ctx.Err() == nil { // the caller giving up is not the document's fault
 			f.store(clientID, cimdEntry{failed: true, expires: now.Add(cimdFailureTTL)})
 		}
