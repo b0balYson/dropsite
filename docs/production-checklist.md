@@ -4,7 +4,8 @@ The automated end-to-end test (`make e2e`) runs the whole stack with a local cer
 
 - [ ] `docker compose ps`: `caddy` is running, `control` is `healthy`, `caddy-init` exited with code 0.
 - [ ] The web interface opens on `UI_URL` from the private network and **not** from the internet (`curl --max-time 5 http://<public IP>:8082` fails).
-- [ ] The first administrator signs in.
+- [ ] The first administrator signs in; afterwards `.env` has no `ADMIN_PASSWORD` and `docker compose logs control` shows no warning about it ([security.md](security.md#the-first-administrators-password)).
+- [ ] A protected site's asset answers `Cache-Control: private, no-store` (`curl -sI` with the access cookie), an open site's asset `public, max-age=3600`.
 - [ ] A new user receives an invite, sets a password and signs in.
 - [ ] A new site uploaded as zip opens on `https://<random>.<domain>/` with a valid certificate (`curl -sI https://<random>.<domain>/` without `-k`).
 - [ ] After setting a slug the site opens on both addresses; a taken or reserved slug is rejected.

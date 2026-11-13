@@ -189,6 +189,8 @@ Migrations run automatically; downgrades are not supported, so roll back with th
 - Another user's site always answers "not found". Archives are checked before anything is written, and publications with secret keys in their files are refused.
 - Caddy reads the sites read-only and has no access to the database. Both containers run as non-root with read-only root filesystems.
 - Use a dedicated base domain (see Requirements).
+- The admin interface refuses to start on a public address unless you allow it explicitly; the first administrator password is not kept on the server after installation.
+- Threat model, CDN setup and abuse handling: [docs/security.md](docs/security.md).
 
 ### Development
 

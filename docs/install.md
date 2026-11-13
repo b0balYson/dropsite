@@ -157,9 +157,11 @@ The interface is served over plain HTTP on `ADMIN_BIND_IP:8082` and must only be
 
 Invite links use `UI_URL`; make sure it is the address your colleagues can open.
 
+`control` checks this at start: on a public `ADMIN_BIND_IP` (or `0.0.0.0`) it refuses to start unless `ALLOW_PUBLIC_ADMIN=1` is set, and on a private address it logs a warning that the interface uses plain HTTP. See [security.md](security.md).
+
 ## First steps
 
-1. Sign in with `ADMIN_EMAIL` and `ADMIN_PASSWORD`. The password variable is only read on the first start; change it later by issuing yourself a new invite (Users → reissue invite). Locked out? On the server run `docker compose exec -T control /control reset-password [email]` (default: `ADMIN_EMAIL`): it prints a new random password and ends that user's sessions.
+1. Sign in with `ADMIN_EMAIL` and `ADMIN_PASSWORD`. The password variable is only read on the first start: once you have signed in, remove `ADMIN_PASSWORD` from `.env` and run `docker compose up -d control` (the server installer does this itself), otherwise it stays visible through `docker inspect` and `control` logs a warning. Change the password later by issuing yourself a new invite (Users → reissue invite). Locked out? On the server run `docker compose exec -T control /control reset-password [email]` (default: `ADMIN_EMAIL`): it prints a new random password and ends that user's sessions.
 2. Create users and send them invite links.
 3. Optionally bind a site to the base domain root (All sites → bind root).
 4. Review limits in Settings.

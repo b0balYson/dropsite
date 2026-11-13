@@ -189,6 +189,8 @@ $env:DROPSITE_SERVER='https://api.example.com'; $env:DROPSITE_CODE='ABCD-EFGH-JK
 - 访问其他用户的网站时始终返回“未找到”。压缩包在写入磁盘前会经过检查，文件中包含机密密钥的发布会被拒绝。
 - Caddy 以只读方式读取网站文件，无法访问数据库。两个容器都以非 root 用户运行，根文件系统为只读。
 - 请使用专用的基础域名（见“系统要求”）。
+- 除非明确允许，管理界面不会在公网地址上启动；安装完成后，服务器上不再保存首个管理员的密码。
+- 威胁模型、CDN 配置和滥用处理：[docs/security.md](docs/security.md)（英文）。
 
 ### 开发
 
