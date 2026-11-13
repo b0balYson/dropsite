@@ -171,11 +171,19 @@ func (s *Service) DeliverDueForms(ctx context.Context) (int, error) {
 	return len(jobs), nil
 }
 
+// ownerLangs lists the languages of texts sent to site owners; the first
+// is the default.
+var ownerLangs = []string{"ru", "en", "zh"}
+
+// ownerLang returns the owner's language when texts exist for it, or the
+// default.
 func ownerLang(lang string) string {
-	if lang == "en" {
-		return "en"
+	for _, l := range ownerLangs {
+		if l == lang {
+			return l
+		}
 	}
-	return "ru"
+	return ownerLangs[0]
 }
 
 func (s *Service) deliver(ctx context.Context, cfg formConfig, j store.DeliveryJob) {
@@ -312,7 +320,7 @@ func (s *Service) bindTelegram(ctx context.Context, cfg formConfig, ch domain.Fo
 	if err == nil {
 		host = s.siteHost(ctx, site)
 	}
-	text := "Готово: заявки с сайта " + host + " будут приходить в этот чат.\nDone: submissions from " + host + " will arrive in this chat."
+	text := "Готово: заявки с сайта " + host + " будут приходить в этот чат.\nDone: submissions from " + host + " will arrive in this chat.\n完成：网站 " + host + " 的表单提交将发送到此聊天。"
 	if err := s.senders.TelegramSend(ctx, cfg.telegramToken, chatID, text); err != nil {
 		s.log.Warn("telegram binding confirmation failed", "channel", ch.ID, "err", forms.ErrDetail(err))
 	}

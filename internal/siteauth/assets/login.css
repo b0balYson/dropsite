@@ -14,7 +14,8 @@
   --error-bg: #fdf0ee;
   --control-h: 3rem;
   --radius: 0.5rem;
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -166,6 +167,12 @@ body {
   color: var(--muted);
   font-size: 0.8125rem;
 }
+
+/* Chinese: no tracking on CJK glyphs, room for taller ideographs, strict
+   line breaking so closing punctuation never starts a line. */
+:lang(zh) body { line-break: strict; }
+:lang(zh) .gate__eyebrow { letter-spacing: 0; }
+:lang(zh) .gate__title { line-height: 1.25; letter-spacing: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   .gate__submit { transition: none; }

@@ -340,6 +340,7 @@ func TestSafeNext(t *testing.T) {
 func TestPickLang(t *testing.T) {
 	for in, want := range map[string]string{
 		"": "en", "ru": "ru", "ru-RU,en;q=0.5": "ru", "de-DE,en-US;q=0.8,ru;q=0.5": "en", "fr": "en",
+		"zh-CN,zh;q=0.9,en;q=0.8": "zh", "fr,zh-TW;q=0.5": "zh",
 	} {
 		if got := pickLang(in); got != want {
 			t.Errorf("pickLang(%q) = %q", in, got)

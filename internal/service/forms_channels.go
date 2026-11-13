@@ -154,7 +154,7 @@ func (s *Service) prepareTelegram(ctx context.Context, site domain.Site, ch *dom
 		return ChannelResult{}, err
 	}
 	code := forms.DigitCode()
-	text := fmt.Sprintf("dropsite: код подтверждения / confirmation code %s\n%s", code, s.siteHost(ctx, site))
+	text := fmt.Sprintf("dropsite: код подтверждения / confirmation code / 验证码 %s\n%s", code, s.siteHost(ctx, site))
 	if err := s.senders.TelegramSend(ctx, cfg.telegramToken, chatID, text); err != nil {
 		s.log.Warn("form channel confirmation message failed", "site", site.ID, "err", forms.ErrDetail(err))
 		return ChannelResult{}, channelErr(domain.CodeChannelInvalid,
@@ -166,7 +166,7 @@ func (s *Service) prepareTelegram(ctx context.Context, site domain.Site, ch *dom
 }
 
 // confirmSubject is the subject of confirmation e-mails.
-const confirmSubject = "dropsite: код подтверждения / confirmation code"
+const confirmSubject = "dropsite: код подтверждения / confirmation code / 验证码"
 
 func (s *Service) prepareEmail(ctx context.Context, site domain.Site, ch *domain.FormChannel, target string) error {
 	cfg, err := s.formConfig(ctx)
@@ -187,7 +187,7 @@ func (s *Service) prepareEmail(ctx context.Context, site domain.Site, ch *domain
 	host := s.siteHost(ctx, site)
 	// The subject is fixed: the site address is chosen by the user and stays
 	// in the body as plain text.
-	body := fmt.Sprintf("Код подтверждения: %s\nConfirmation code: %s\n\nСайт / site: %s\n", code, code, host)
+	body := fmt.Sprintf("Код подтверждения: %s\nConfirmation code: %s\n验证码：%s\n\nСайт / site / 网站: %s\n", code, code, code, host)
 	if err := s.senders.Email(ctx, cfg.smtp, addr, confirmSubject, body); err != nil {
 		s.log.Warn("form channel confirmation e-mail failed", "site", site.ID, "err", forms.ErrDetail(err))
 		return channelErr(domain.CodeChannelUnavailable,

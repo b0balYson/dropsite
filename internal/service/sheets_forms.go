@@ -13,12 +13,23 @@ import (
 // columns are the time and the form; fields go to the columns with the same
 // header, and a field without a column gets a new one on the right.
 
-// Header names of the fixed columns per owner language; both are
+// Header names of the fixed columns per owner language; all of them are
 // recognized so a language change does not add duplicate columns.
 var (
-	sheetDateHeaders = map[string]string{"ru": "Дата", "en": "Date"}
-	sheetFormHeaders = map[string]string{"ru": "Форма", "en": "Form"}
+	sheetDateHeaders = map[string]string{"ru": "Дата", "en": "Date", "zh": "日期"}
+	sheetFormHeaders = map[string]string{"ru": "Форма", "en": "Form", "zh": "表单"}
+	sheetDateNames   = headerNames(sheetDateHeaders)
+	sheetFormNames   = headerNames(sheetFormHeaders)
 )
+
+// headerNames lists the names of one fixed column in every language.
+func headerNames(byLang map[string]string) []string {
+	names := make([]string, 0, len(byLang))
+	for _, lang := range ownerLangs {
+		names = append(names, byLang[lang])
+	}
+	return names
+}
 
 func headerIndex(header []string, names ...string) int {
 	for i, h := range header {
@@ -43,10 +54,10 @@ func trimHeader(row []string) []string {
 
 // baseHeader adds the fixed columns missing from header.
 func baseHeader(header []string, lang string) []string {
-	if headerIndex(header, sheetDateHeaders["ru"], sheetDateHeaders["en"]) < 0 {
+	if headerIndex(header, sheetDateNames...) < 0 {
 		header = append(header, sheetDateHeaders[lang])
 	}
-	if headerIndex(header, sheetFormHeaders["ru"], sheetFormHeaders["en"]) < 0 {
+	if headerIndex(header, sheetFormNames...) < 0 {
 		header = append(header, sheetFormHeaders[lang])
 	}
 	return header
@@ -95,8 +106,8 @@ func sheetRow(header []string, m forms.Message) ([]string, []string, bool) {
 	before := len(header)
 	header = baseHeader(header, m.Lang)
 	values := map[int]string{
-		headerIndex(header, sheetDateHeaders["ru"], sheetDateHeaders["en"]): m.CreatedAt.UTC().Format("2006-01-02 15:04:05"),
-		headerIndex(header, sheetFormHeaders["ru"], sheetFormHeaders["en"]): m.Form,
+		headerIndex(header, sheetDateNames...): m.CreatedAt.UTC().Format("2006-01-02 15:04:05"),
+		headerIndex(header, sheetFormNames...): m.Form,
 	}
 	for _, f := range m.Fields {
 		i := headerIndex(header, f.Name)

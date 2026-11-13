@@ -156,6 +156,9 @@ func TestMessageText(t *testing.T) {
 	if (Message{Lang: "de"}).texts() != catalog["ru"] {
 		t.Fatal("fallback language")
 	}
+	if zh := (Message{Host: "promo.test", Form: "lead", Lang: "zh"}).Text(); !strings.Contains(zh, "网站: promo.test") {
+		t.Fatalf("zh text:\n%s", zh)
+	}
 	b, err := m.WebhookJSON()
 	if err != nil || !strings.Contains(string(b), `"id":"7"`) || !strings.Contains(string(b), `"name":"\u003cb\u003eAnn\u003c/b\u003e"`) {
 		t.Fatalf("json %s %v", b, err)

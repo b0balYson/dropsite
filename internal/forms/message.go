@@ -73,7 +73,7 @@ type Message struct {
 	Form      string
 	CreatedAt time.Time
 	Fields    []domain.FormField
-	// Lang selects the language of human-readable texts ("ru" or "en").
+	// Lang selects the language of human-readable texts ("ru", "en" or "zh").
 	Lang string
 }
 
@@ -84,6 +84,7 @@ type texts struct {
 var catalog = map[string]texts{
 	"en": {"New submission", "New form submission", "Site", "Form", "Time", "(empty)"},
 	"ru": {"Новая заявка", "Новая заявка с формы", "Сайт", "Форма", "Время", "(пусто)"},
+	"zh": {"新提交", "新的表单提交", "网站", "表单", "时间", "（空）"},
 }
 
 func (m Message) texts() texts {

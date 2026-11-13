@@ -162,7 +162,7 @@ func (l *login) render(w http.ResponseWriter, r *http.Request, status int, next,
 	})
 	lang := pickLang(r.Header.Get("Accept-Language"))
 	data := pageData{
-		Lang: lang, T: catalog[lang], Title: title, Next: next, CSRF: token, Error: errMsg,
+		Lang: langTags[lang], T: catalog[lang], Title: title, Next: next, CSRF: token, Error: errMsg,
 		CSSPath: cssHref, Action: LoginPath, StyleNonce: styleNonce,
 		ChallengePath: ChallengePath, WidgetPath: widgetPath,
 	}

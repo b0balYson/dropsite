@@ -31,7 +31,23 @@ var catalog = map[string]map[string]string{
 		"err.altcha":   "The browser check did not complete. Wait until it shows \"Verified\" and try again.",
 		"noscript":     "Turn on JavaScript to sign in: it runs an automatic browser check.",
 	},
+	"zh": { //nolint:gosec // UI strings, not credentials
+		"page.title":   "访问网站",
+		"page.eyebrow": "此网站受密码保护",
+		"page.lead":    "请输入网站所有者提供给您的密码。",
+		"field.pass":   "密码",
+		"submit":       "打开网站",
+		"note":         "此设备将记住密码 7 天。",
+		"err.password": "密码错误。请检查输入法和大小写后重试。",
+		"err.rate":     "尝试次数过多。请在 {minutes} 分钟后重试。",
+		"err.csrf":     "页面已过期，请重新输入密码。",
+		"err.altcha":   "浏览器验证未完成。请等到显示“已验证”后再试一次。",
+		"noscript":     "请启用 JavaScript 以登录：登录时需要自动进行浏览器验证。",
+	},
 }
+
+// langTags maps a page language to its html lang attribute.
+var langTags = map[string]string{"ru": "ru", "en": "en", "zh": "zh-CN"}
 
 // pickLang returns the first supported language in Accept-Language order
 // (quality values are not weighed: browsers list preferences in order).

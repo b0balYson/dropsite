@@ -92,6 +92,11 @@ func TestFormPostBrowserAndFetch(t *testing.T) {
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "Спасибо") || rec.Header().Get("Location") != "" {
 		t.Fatalf("thank-you page %d %s", rec.Code, rec.Body.String())
 	}
+	rec = f.visitor(http.MethodPost, "/_form/lead", formCT, "name=Li", browser(),
+		withHeader("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8"))
+	if body := rec.Body.String(); rec.Code != http.StatusOK || !strings.Contains(body, `<html lang="zh-CN">`) || !strings.Contains(body, "谢谢") {
+		t.Fatalf("zh thank-you page %d %s", rec.Code, body)
+	}
 	rec = f.visitor(http.MethodPost, "/_form/lead", "application/json", `{"name":"<script>alert(1)</script>"}`,
 		withHeader("Accept", "application/json"))
 	if rec.Code != http.StatusOK || strings.TrimSpace(rec.Body.String()) != `{"ok":true}` {
@@ -107,11 +112,11 @@ func TestFormPostBrowserAndFetch(t *testing.T) {
 	wantStatus(t, rec, http.StatusOK)
 
 	subs := decodeAs[list[submissionDTO]](t, f.do(http.MethodGet, "/api/v1/sites/"+f.site.ID+"/forms/submissions", f.owner, nil))
-	if subs.Total != 4 || subs.Items[0].Form != "call" || len(subs.Items[0].Fields) != 1 || subs.Items[1].Fields[0].Value != "<script>alert(1)</script>" {
+	if subs.Total != 5 || subs.Items[0].Form != "call" || len(subs.Items[0].Fields) != 1 || subs.Items[1].Fields[0].Value != "<script>alert(1)</script>" {
 		t.Fatalf("submissions %+v", subs)
 	}
 	filtered := decodeAs[list[submissionDTO]](t, f.do(http.MethodGet, "/api/v1/sites/"+f.site.ID+"/forms/submissions?form=lead", f.owner, nil))
-	if filtered.Total != 3 {
+	if filtered.Total != 4 {
 		t.Fatalf("filter %d", filtered.Total)
 	}
 }

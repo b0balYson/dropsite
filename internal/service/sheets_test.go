@@ -352,3 +352,19 @@ func TestSheetDocumentsRules(t *testing.T) {
 		t.Error("bad values must stay strings")
 	}
 }
+
+func TestSheetFixedColumnsPerLanguage(t *testing.T) {
+	if got := baseHeader(nil, ownerLang("zh")); !reflect.DeepEqual(got, []string{"日期", "表单"}) {
+		t.Fatalf("zh header %v", got)
+	}
+	// A header written in another language is recognized, not duplicated.
+	if got := baseHeader([]string{"Дата", "Форма", "name"}, "zh"); len(got) != 3 {
+		t.Fatalf("header grew %v", got)
+	}
+	if ownerLang("de") != "ru" || ownerLang("zh") != "zh" {
+		t.Fatal("owner language fallback")
+	}
+	if sheetValue("boolean", "是") != true || sheetValue("boolean", "否") != false {
+		t.Fatal("chinese booleans")
+	}
+}

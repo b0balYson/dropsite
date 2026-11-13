@@ -97,9 +97,9 @@ func sheetValue(typ, v string) any {
 		}
 	case "boolean":
 		switch strings.ToLower(v) {
-		case "true", "yes", "да", "1", "истина":
+		case "true", "yes", "да", "1", "истина", "是", "真":
 			return true
-		case "false", "no", "нет", "0", "ложь":
+		case "false", "no", "нет", "0", "ложь", "否", "假":
 			return false
 		}
 	case "array":

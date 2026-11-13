@@ -112,12 +112,21 @@ func (a *api) formError(w http.ResponseWriter, r *http.Request, html bool, err e
 	writeJSON(w, status, formReply{Error: &errorPayload{Code: e.Code, Message: e.Message}})
 }
 
+// visitorLang returns the first language of Accept-Language that the
+// visitor page speaks (browsers list preferences in order), or English.
 func visitorLang(r *http.Request) string {
-	if strings.HasPrefix(strings.ToLower(strings.TrimSpace(r.Header.Get("Accept-Language"))), "ru") {
-		return "ru"
+	for _, part := range strings.Split(r.Header.Get("Accept-Language"), ",") {
+		tag, _, _ := strings.Cut(strings.TrimSpace(part), ";")
+		primary, _, _ := strings.Cut(strings.ToLower(tag), "-")
+		if _, ok := formPageTexts[primary]; ok {
+			return primary
+		}
 	}
 	return "en"
 }
+
+// visitorLangTags maps a page language to its html lang attribute.
+var visitorLangTags = map[string]string{"ru": "ru", "en": "en", "zh": "zh-CN"}
 
 var formErrorTexts = map[string]map[string]string{
 	"ru": {
@@ -142,6 +151,17 @@ var formErrorTexts = map[string]map[string]string{
 		"":                         "The submission could not be accepted: check the form fields.",
 		domain.CodeFormUnsupported: "The form was sent in an unsupported format.",
 	},
+	"zh": {
+		domain.CodeNotFound:        "未找到该表单。",
+		domain.CodeFormTooLarge:    "表单中的数据过多。",
+		domain.CodeFormEmpty:       "表单为空：请至少填写一个字段。",
+		domain.CodeFormCaptcha:     "人机验证未通过或已过期。请刷新页面后重新提交表单。",
+		domain.CodeRateLimited:     "提交次数过多，请稍后再试。",
+		domain.CodeFormOrigin:      "表单是从其他网站提交的。",
+		domain.CodeInternal:        "暂时无法接收您的提交，请稍后再试。",
+		"":                         "无法接收您的提交：请检查表单中的各个字段。",
+		domain.CodeFormUnsupported: "表单以不支持的格式提交。",
+	},
 }
 
 func formErrorText(lang, code string) string {
@@ -154,6 +174,7 @@ func formErrorText(lang, code string) string {
 var formPageTexts = map[string]map[string]string{
 	"ru": {"ok_title": "Спасибо!", "ok_text": "Заявка отправлена.", "err_title": "Заявка не отправлена", "back": "Вернуться на сайт"},
 	"en": {"ok_title": "Thank you!", "ok_text": "Your submission has been sent.", "err_title": "Submission not sent", "back": "Back to the site"},
+	"zh": {"ok_title": "谢谢！", "ok_text": "您的信息已提交成功。", "err_title": "提交未成功", "back": "返回网站"},
 }
 
 // formPage is the neutral built-in page: no platform branding, inline
@@ -161,7 +182,7 @@ var formPageTexts = map[string]map[string]string{
 var formPage = template.Must(template.New("form").Parse(`<!doctype html>
 <html lang="{{.Lang}}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex"><title>{{.Title}}</title>
-<style>body{margin:0;min-height:100vh;display:grid;place-items:center;font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:#f6f6f4;color:#1b1b1b}
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;font:16px/1.5 system-ui,-apple-system,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif;background:#f6f6f4;color:#1b1b1b;overflow-wrap:break-word}
 main{max-width:28rem;margin:1rem;padding:2rem;background:#fff;border:1px solid #e2e2dc;border-radius:12px}
 h1{margin:0 0 .5rem;font-size:1.5rem}p{margin:0 0 1.25rem}a{color:inherit}</style></head>
 <body><main><h1>{{.Title}}</h1><p>{{.Text}}</p><p><a href="/">{{.Back}}</a></p></main></body></html>
@@ -169,7 +190,7 @@ h1{margin:0 0 .5rem;font-size:1.5rem}p{margin:0 0 1.25rem}a{color:inherit}</styl
 
 func writeFormPage(w http.ResponseWriter, status int, lang string, ok bool, msg string) {
 	t := formPageTexts[lang]
-	data := struct{ Lang, Title, Text, Back string }{Lang: lang, Back: t["back"]}
+	data := struct{ Lang, Title, Text, Back string }{Lang: visitorLangTags[lang], Back: t["back"]}
 	if ok {
 		data.Title, data.Text = t["ok_title"], t["ok_text"]
 	} else {

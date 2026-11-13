@@ -24,13 +24,33 @@ var altchaMain []byte
 var altchaRussian []byte
 
 // altchaStrings replaces the generic "Verifying..." so that a proof of work
-// lasting several seconds does not look like a hang.
+// lasting several seconds does not look like a hang, and adds the
+// Simplified Chinese strings, which the widget package does not bundle here.
 const altchaStrings = `
 {
   const i18n = globalThis.$altcha.i18n;
   const patch = (lang, s) => i18n.set(lang, { ...(i18n.get(lang) || {}), ...s });
   patch("ru", { verifying: "Проверяем, что вы не робот…", waitAlert: "Проверяем, что вы не робот… Это займёт несколько секунд." });
   patch("en", { verifying: "Checking that you are not a robot…", waitAlert: "Checking that you are not a robot… This takes a few seconds." });
+  patch("zh", {
+    ariaLinkLabel: "Altcha（官方网站）",
+    enterCode: "输入验证码",
+    enterCodeAria: "输入您听到的验证码。按空格键播放音频。",
+    error: "验证失败，请稍后重试。",
+    expired: "验证已过期，请重试。",
+    footer: '由 <a href="https://altcha.org/" target="_blank" rel="noopener" aria-label="Altcha（官方网站，在新标签页中打开）">ALTCHA</a> 提供保护',
+    getAudioChallenge: "获取音频验证",
+    label: "我不是机器人",
+    loading: "加载中…",
+    reload: "重新加载",
+    verify: "验证",
+    verificationRequired: "需要验证！",
+    verified: "已验证",
+    verifying: "正在确认您不是机器人…",
+    waitAlert: "正在确认您不是机器人…需要几秒钟。",
+    cancel: "取消",
+    enterCodeFromImage: "请输入下方图片中的验证码以继续。"
+  });
 }
 `
 
