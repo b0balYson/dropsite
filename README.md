@@ -33,6 +33,11 @@ The installer asks for the server IP, the root password (or a key file), your do
 3. shows the two DNS records to create where you bought the domain and waits until the domain works;
 4. tells you the command to run, the address to open, the login and the password.
 
+It also asks whether to open the admin interface from the internet at `https://admin.<your domain>` (default **No**).
+
+> [!WARNING]
+> Opening the admin interface to the internet is a **potential threat**: anyone can find the sign-in page and try passwords. Keep the default No and use the SSH tunnel. If you turn it on (now or later in Settings), give every user a strong, unique password and turn it off when you do not need it. Details: [docs/security.md](docs/security.md#admin-interface-from-the-internet).
+
 You only see a check mark per step. The details are in `~/.dropsite/install-<name>.log`; add `--verbose` to see them on the screen. If something fails, run the same command again: finished steps are skipped. Details and options: [docs/install.md](docs/install.md#one-command-installer).
 
 ## First steps
@@ -189,7 +194,8 @@ Migrations run automatically; downgrades are not supported, so roll back with th
 
 ### Security notes
 
-- The web interface is on a separate listener that is not reachable from the internet; passwords are typed only there.
+- The web interface is on a separate listener that is not reachable from the internet; passwords are typed only there. Its sign-in and invitation forms carry an Altcha anti-robot check.
+- **Opening the admin interface to the internet** (`https://admin.<domain>`, off by default) **is a potential threat**: keep it off and use the SSH tunnel. If you need it, use a strong, unique password for every user and turn it off in Settings when it is not needed. HTTPS, `__Host-` cookies, a strict origin check and per-client sign-in limits protect it, but it can be found and attacked by anyone.
 - Chat clients connect with OAuth 2.1 (PKCE, short-lived tokens, refresh rotation) confirmed by a one-time connect code. The API accepts only bearer tokens, stored as hashes.
 - Another user's site always answers "not found". Archives are checked before anything is written, and publications with secret keys in their files are refused.
 - Caddy reads the sites read-only and has no access to the database. Both containers run as non-root with read-only root filesystems.

@@ -22,7 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/ins
 
 `--lang` switches the language of the installer: `en`, `ru` or `zh`. Without it the language follows your system.
 
-Answer four questions: the server IP, how you sign in (root password or a key file), the domain and your e-mail. The short name of the server comes from the domain (`sites.example.com` gives `sites`); the installer asks for it only when another server in `~/.ssh/config` already uses that name. When ssh asks for the password, type the root password: it stays invisible while you type. The password is used **once** to add a dedicated key and is never saved anywhere. Installing takes 10-20 minutes.
+Answer four questions: the server IP, how you sign in (root password or a key file), the domain and your e-mail. A fifth, short yes/no question asks whether to also open the admin interface from the internet at `https://admin.<domain>`; the default is **No** (press Enter). Opening it is more convenient but a potential threat: anyone can find the sign-in page ([security.md](security.md#admin-interface-from-the-internet)). With yes, the final block also shows that address; the SSH tunnel is configured either way. You can change the choice later in Settings. The short name of the server comes from the domain (`sites.example.com` gives `sites`); the installer asks for it only when another server in `~/.ssh/config` already uses that name. When ssh asks for the password, type the root password: it stays invisible while you type. The password is used **once** to add a dedicated key and is never saved anywhere. Installing takes 10-20 minutes.
 
 The output stays short: a check mark for each step (connected to the server, installed dropsite, the domain works, HTTPS is on), the two DNS records to create, and at the end the command to run, the address to open, the login and the generated password:
 
@@ -62,7 +62,8 @@ If anything fails, run the same command again: finished steps are skipped. The l
 
 | Task | How |
 | --- | --- |
-| Open the admin interface | run `ssh <name>`, keep the window open, open `http://localhost:<port>` (the port is shown at the end of the installation) |
+| Open the admin interface | run `ssh <name>`, keep the window open, open `http://localhost:<port>` (the port is shown at the end of the installation); or `https://admin.<domain>` if you opened it to the internet |
+| Open or close the admin interface to the internet | Settings → "Access to the admin interface from the internet", or `ssh <name> 'cd /opt/dropsite/deploy && docker compose exec -T control /control public-admin on'` (`off`, `status`) |
 | Sign in | the e-mail you entered and the generated password shown once at the end; change it on the Account page |
 | Finish the setup | the **Getting started** page (first item of the menu): it checks that the domain points to the server and that HTTPS works, shows the exact DNS records with copy buttons and lists the remaining steps |
 | Connect ChatGPT or Claude | the **Connect AI** page of the admin interface |
@@ -74,7 +75,7 @@ If anything fails, run the same command again: finished steps are skipped. The l
 
 ### Automation
 
-Every answer can also be passed as an option or an environment variable, for example `curl ... | sh -s -- --host 203.0.113.7 --name sites --domain sites.example.com --email me@example.com --yes`. Options: `--host`, `--port`, `--key` (a private key file instead of the password), `--name`, `--domain`, `--email`, `--skip-dns`, `--check-dns`, `--yes`, `--verbose`, `--lang`; the matching variables are `DROPSITE_HOST`, `DROPSITE_SSH_PORT`, `DROPSITE_SSH_KEY`, `DROPSITE_NAME`, `DROPSITE_DOMAIN`, `DROPSITE_EMAIL`, `DROPSITE_SKIP_DNS=1`, `DROPSITE_CHECK_DNS=1`, `DROPSITE_YES=1`, `DROPSITE_VERBOSE=1`, `DROPSITE_LANG`. The language comes from `--lang`, then `DROPSITE_LANG`, then the system locale. Without a terminal the server name comes from the domain, or `dropsite-<name>` when that one is taken. The server part, [`scripts/server-bootstrap.sh`](../scripts/server-bootstrap.sh), can also be run by hand as root on the server.
+Every answer can also be passed as an option or an environment variable, for example `curl ... | sh -s -- --host 203.0.113.7 --name sites --domain sites.example.com --email me@example.com --yes`. Options: `--host`, `--port`, `--key` (a private key file instead of the password), `--name`, `--domain`, `--email`, `--public-admin` / `--no-public-admin`, `--skip-dns`, `--check-dns`, `--yes`, `--verbose`, `--lang`; the matching variables are `DROPSITE_HOST`, `DROPSITE_SSH_PORT`, `DROPSITE_SSH_KEY`, `DROPSITE_NAME`, `DROPSITE_DOMAIN`, `DROPSITE_EMAIL`, `DROPSITE_PUBLIC_ADMIN=1|0`, `DROPSITE_SKIP_DNS=1`, `DROPSITE_CHECK_DNS=1`, `DROPSITE_YES=1`, `DROPSITE_VERBOSE=1`, `DROPSITE_LANG`. Without a terminal or with `--yes` the public-admin question is not asked: unless `--public-admin` is given, a new server keeps the interface behind the SSH tunnel and an existing one keeps its current choice. The language comes from `--lang`, then `DROPSITE_LANG`, then the system locale. Without a terminal the server name comes from the domain, or `dropsite-<name>` when that one is taken. The server part, [`scripts/server-bootstrap.sh`](../scripts/server-bootstrap.sh), can also be run by hand as root on the server.
 
 Limits: the installer signs in as `root` (providers that give a sudo user instead are not supported yet); only `~/.ssh/config` itself is read when choosing the name and the port, not files it includes.
 
@@ -178,6 +179,8 @@ The interface is served over plain HTTP on `ADMIN_BIND_IP:8082` and must only be
 Invite links use `UI_URL`; make sure it is the address your colleagues can open.
 
 `control` checks this at start: on a public `ADMIN_BIND_IP` (or `0.0.0.0`) it refuses to start unless `ALLOW_PUBLIC_ADMIN=1` is set, and on a private address it logs a warning that the interface uses plain HTTP. See [security.md](security.md).
+
+- **From the internet (opt-in):** Settings → "Access to the admin interface from the internet" serves the interface at `https://admin.<BASE_DOMAIN>` through Caddy (HTTPS, a certificate on demand or the wildcard one). Nothing else needs configuring: `admin` is covered by the `*` DNS record, the Caddy block is always there and `control` serves it only while the switch is on. It is a potential threat; read [security.md](security.md#admin-interface-from-the-internet) first.
 
 ## First steps
 

@@ -33,6 +33,11 @@ curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/ins
 3. 列出需要在域名注册商处添加的两条 DNS 记录，并等待域名生效；
 4. 告诉您要运行的命令、要打开的地址、登录名和密码。
 
+安装程序还会询问是否通过 `https://admin.<您的域名>` 从互联网打开管理面板（默认**否**）。
+
+> [!WARNING]
+> 从互联网打开管理面板是一个**潜在的威胁**：任何人都能找到登录页面并尝试猜测密码。请保持默认的“否”，通过 SSH 隧道访问。如果开启（现在或之后在设置中），每个用户都需要强且唯一的密码，不需要时请关闭。详情：[docs/security.md](docs/security.md#admin-interface-from-the-internet)（英文）。
+
 屏幕上每一步只显示一个勾号。详细信息写入 `~/.dropsite/install-<名称>.log`；加上 `--verbose` 可以在屏幕上查看。如果中途出错，再次运行同一条命令即可，已完成的步骤会自动跳过。详细说明和参数：[docs/install.md](docs/install.md#one-command-installer)。
 
 ## 开始使用
@@ -189,7 +194,8 @@ $env:DROPSITE_SERVER='https://api.example.com'; $env:DROPSITE_CODE='ABCD-EFGH-JK
 
 ### 安全说明
 
-- 网页管理界面运行在独立的监听端口上，无法从互联网访问；密码只在这里输入。
+- 网页管理界面运行在独立的监听端口上，无法从互联网访问；密码只在这里输入。登录和邀请表单带有 Altcha 人机验证。
+- **从互联网打开管理面板**（`https://admin.<域名>`，默认关闭）**是一个潜在的威胁**：请保持关闭并通过 SSH 隧道访问。如确有需要，每个用户都应使用强且唯一的密码，不需要时在设置中关闭。HTTPS、`__Host-` Cookie、严格的来源检查和按客户端计算的登录限制会保护它，但任何人都能找到并攻击它。
 - 对话客户端通过 OAuth 2.1（PKCE、短期令牌、刷新令牌轮换）连接，并用一次性连接码确认。API 只接受 Bearer 令牌，令牌以哈希形式存储。
 - 访问其他用户的网站时始终返回“未找到”。压缩包在写入磁盘前会经过检查，文件中包含机密密钥的发布会被拒绝。
 - Caddy 以只读方式读取网站文件，无法访问数据库。两个容器都以非 root 用户运行，根文件系统为只读。

@@ -4,7 +4,7 @@ This page describes what dropsite protects, what it deliberately leaves to the o
 
 ## Deployment model
 
-One server runs Caddy (TLS and serving of published sites) and `control` (API, MCP endpoint, web interface, deploys) with Docker Compose. Only ports 80 and 443 face the internet. The web interface is a separate plain-HTTP listener on port 8082 that is meant for the operator's own machine or a private network. Everything below assumes this single-node model.
+One server runs Caddy (TLS and serving of published sites) and `control` (API, MCP endpoint, web interface, deploys) with Docker Compose. Only ports 80 and 443 face the internet. The web interface is a separate plain-HTTP listener on port 8082 that is meant for the operator's own machine or a private network; an administrator can additionally open it to the internet over HTTPS at `https://admin.<BASE_DOMAIN>` (off by default, see [below](#admin-interface-from-the-internet)). Everything below assumes this single-node model.
 
 ## Web interface (admin UI)
 
@@ -12,6 +12,7 @@ The interface listens on `ADMIN_BIND_IP:8082`, by default `127.0.0.1:8082`, and 
 
 - **SSH tunnel (default, recommended):** `ssh -L 8082:127.0.0.1:8082 server`, then open `http://127.0.0.1:8082`. The server installer writes this tunnel into `~/.ssh/config` for you.
 - **Private network:** join the server to an overlay network (Tailscale, WireGuard, NetBird) and set `ADMIN_BIND_IP` to its address in that network.
+- **From the internet (opt-in, a potential threat):** `https://admin.<BASE_DOMAIN>` through Caddy, turned on by an administrator in Settings or by the installer. See [Admin interface from the internet](#admin-interface-from-the-internet).
 
 `control` checks the address at start:
 
@@ -24,6 +25,10 @@ The interface listens on `ADMIN_BIND_IP:8082`, by default `127.0.0.1:8082`, and 
 In Docker Compose `control` always listens on `:8082` inside the container (`ADMIN_ADDR`), so the check reads the published `ADMIN_BIND_IP`. A binary started outside Docker checks the host of `ADMIN_ADDR`, which defaults to `127.0.0.1:8082`.
 
 Set `ALLOW_PUBLIC_ADMIN=1` only when something else protects the port: TLS termination in front of it and a firewall that admits known addresses. TLS on the admin listener itself is not built in: the tunnel already encrypts the traffic.
+
+### Sign-in check (Altcha)
+
+The sign-in form and the invitation (set-password) form carry an Altcha proof of work, on the loopback and the public listener alike. The widget solves it in the browser when the form is submitted; the server verifies the solution (signed, bound to the request host and to the admin purpose, single use) **before** the password is checked, and an address that is already over the sign-in limit is refused before any work is spent. Solutions of site forms or of a protected site's login page are not accepted. The difficulty is the forms base level (Settings → forms) and rises one step (×4) for an address after a failed sign-in; it does not rise with every challenge, because everyone behind the SSH tunnel shares one address. Without JavaScript the form cannot be submitted, and the page says so. The password check itself is unchanged: argon2id with a dummy hash for unknown users, and the per-IP and per-account limits.
 
 ### Sessions
 
@@ -39,13 +44,29 @@ A session lasts 14 days and is extended while it is used. It is not bound to an 
 
 `deploy/local.env` contains a public password and is for local development only; never use it on a server.
 
+## Admin interface from the internet
+
+Off by default. When an administrator turns it on, the same web interface is served at `https://admin.<BASE_DOMAIN>`; the SSH tunnel keeps working. **This is a potential threat:** anyone who knows or guesses the address can reach the sign-in page and try passwords, and every vulnerability of the interface becomes reachable from the internet. Keep it off and use the SSH tunnel unless you need it; if you turn it on, give every user a strong unique password and turn it off again when you no longer need it.
+
+How it is built:
+
+- **Switch.** Settings → "Access to the admin interface from the internet". Only an administrator signed in to the web interface can change it; turning it on needs the "I understand the risk" checkbox and the administrator's current password (checked under the sign-in limits). API tokens, OAuth grants and AI assistants (MCP) cannot read or change it. Every change is in the audit log. The installer asks once (default No) and passes the answer with `control public-admin on|off`; it is stored in the database, never in `.env`.
+- **Caddy.** A static site block for `admin.<BASE_DOMAIN>` always exists and proxies to `control:8084`, a separate listener that is never published to the host. Caddy is never reloaded. The block adds HSTS, `X-Frame-Options: DENY` and `noindex`, and writes no access log (invitation links carry their secret in the path).
+- **Certificates.** In ondemand mode the permission endpoint allows `admin.<BASE_DOMAIN>` only while `/data/tls-hosts/admin.<BASE_DOMAIN>` exists; `control` writes it when public access is turned on, removes it when it is turned off and repairs it at every start from the database. So no certificate is requested while it is off. In wildcard mode the `*.<BASE_DOMAIN>` certificate already covers the name; nothing is issued for it.
+- **The listener.** While public access is off, every request to `:8084` (pages, static files, the Altcha challenge, anything) gets a bare `404` before any cookie is set. It also answers `404` to any `Host` other than `admin.<BASE_DOMAIN>` (with the HTTPS port in local development).
+- **Client address.** On this listener `control` reads exactly one `X-Forwarded-For` hop, the rightmost, and only from a peer in `TRUSTED_PROXIES` (the Compose network): the address Caddy writes. Sign-in limits and audit entries are therefore per real client. The loopback listener still never reads the header.
+- **Cookies and CSRF.** The admin host lies under the base domain, whose other subdomains run user JavaScript (published sites) and are same-site with it. Therefore every cookie on this listener is `Secure`, `HttpOnly` and carries the `__Host-` prefix, which a sibling subdomain cannot set or overwrite, and cookies without the prefix are ignored. Unsafe requests need the CSRF token, `Sec-Fetch-Site: same-origin` (when the browser sends it; `same-site` is refused) and, when present, an `Origin` exactly equal to `https://admin.<BASE_DOMAIN>`. The CSP, frame and referrer headers are those of the loopback listener.
+- **Other containers.** The optional screenshot renderer shares a network with `control` and could open a connection to `:8084`, but the browser cannot set the `Host` header, so it only ever gets `404`.
+
+`ALLOW_PUBLIC_ADMIN` is unrelated: it still governs publishing the plain-HTTP port 8082 on a public `ADMIN_BIND_IP`, and the public admin listener does not count as such.
+
 ## Client addresses and proxies
 
 The client IP is the key of every per-IP rate limit (sign-in, API tokens, forms, site data, the secret proxy, OAuth) and is written into the audit log.
 
 - Caddy replaces `X-Forwarded-For` on every request it forwards to `control` with exactly one address, `{client_ip}`: the address of its peer, whatever the client sent.
 - `control` reads `X-Forwarded-For` only when the connection comes from `TRUSTED_PROXIES` (default: RFC 1918 and loopback, which covers the Compose network), and then believes only the **rightmost** address. A client in a trusted network (VPN, LAN, another container) therefore cannot prepend a forged address.
-- The web interface never reads `X-Forwarded-For`: there is no proxy in front of it.
+- The web interface on the loopback listener never reads `X-Forwarded-For`: there is no proxy in front of it. The public admin listener reads one hop as described [above](#admin-interface-from-the-internet).
 
 ### A CDN or load balancer in front of Caddy
 

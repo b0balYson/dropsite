@@ -10,6 +10,10 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+### Added
+
+- Opt-in access to the admin interface from the internet at `https://admin.<domain>` (installer question, default No, and Settings), and an Altcha check on the admin sign-in and invitation forms.
+
 ### Changed
 
 - `dropsite-update` and `dropsite-rollback` print a short status per service
