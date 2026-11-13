@@ -28,11 +28,17 @@ type InlineFile struct {
 	Encoding string // "utf8" (default) or "base64"
 }
 
+// FilesTooLargeAdvice tells an assistant how to move a site that does not
+// fit into tool arguments (spec upload-link).
+const FilesTooLargeAdvice = "the files are larger than 16 MB in total, too much to send through the chat. " +
+	"Call begin_upload instead: it returns upload_url and upload_command. If you can run commands in a terminal " +
+	"on the computer that has the files, run upload_command for the site folder (the one with index.html); " +
+	"otherwise give the user upload_url and ask them to open it and drag the site folder onto the page, then wait " +
+	"for them to say it is done. Then call commit_upload. Never use tunnels (ngrok and the like), file hosting " +
+	"or other servers to move the files"
+
 func errFilesTooLarge() error {
-	return domain.E(domain.KindTooLarge, domain.CodeFilesTooLarge,
-		"the files are larger than 1 MB in total; send them in parts with begin_upload, upload_files and "+
-			"commit_upload, or publish this site with the Dropsite CLI "+
-			"(dropsite deploy <folder>), from Claude Desktop, or upload a zip in the web interface").
+	return domain.E(domain.KindTooLarge, domain.CodeFilesTooLarge, FilesTooLargeAdvice).
 		WithParams(map[string]any{"limit": MaxInlineBytes})
 }
 

@@ -42,6 +42,10 @@ type siteFilesState struct {
 	fetcher    SiteFetcher
 	fetchLimit *ratelimit.Window
 	uploads    uploadRegistry
+	// Upload link limits: per link, per client network, failures per network.
+	linkLimit     *ratelimit.Window
+	linkIPLimit   *ratelimit.Window
+	linkFailLimit *ratelimit.Window
 }
 
 func newSiteFilesState(d Deps, now func() time.Time) siteFilesState {
@@ -52,7 +56,11 @@ func newSiteFilesState(d Deps, now func() time.Time) siteFilesState {
 	return siteFilesState{
 		fetcher:    f,
 		fetchLimit: ratelimit.New(FetchedURLsPerHour, time.Hour).WithClock(now),
-		uploads:    uploadRegistry{sessions: map[string]*uploadSession{}},
+		uploads:    uploadRegistry{sessions: map[string]*uploadSession{}, links: map[[32]byte]string{}},
+
+		linkLimit:     ratelimit.New(UploadLinkRequestsPerHour, time.Hour).WithClock(now),
+		linkIPLimit:   ratelimit.New(UploadLinkRequestsPerIPHour, time.Hour).WithClock(now),
+		linkFailLimit: ratelimit.New(UploadLinkFailuresPerIP, FailedLoginsWindow).WithClock(now),
 	}
 }
 

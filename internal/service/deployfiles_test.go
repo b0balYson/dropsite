@@ -55,7 +55,7 @@ func TestDeployFilesValidation(t *testing.T) {
 	big := strings.Repeat("a", MaxInlineBytes)
 	_, err := e.svc.DeployFiles(ctx, u, "", "", []InlineFile{{Path: "index.html", Content: big}, {Path: "b", Content: "x"}})
 	wantCode(t, err, domain.CodeFilesTooLarge)
-	if !strings.Contains(domain.AsError(err).Message, "dropsite deploy") {
+	if !strings.Contains(domain.AsError(err).Message, "upload_url") {
 		t.Fatalf("message lacks advice: %v", err)
 	}
 	// No index.html: the regular pipeline rejects it.

@@ -56,7 +56,9 @@ const (
 	CodeSiteNotPublished = "site_not_published"
 	CodeUploadExpired    = "upload_expired"
 	CodeUploadLimit      = "upload_limit_reached"
-	CodeFetchFailed      = "fetch_failed"
+	// CodeUploadLinkInvalid covers unknown, expired and closed upload links.
+	CodeUploadLinkInvalid = "upload_link_invalid"
+	CodeFetchFailed       = "fetch_failed"
 
 	// External domain codes.
 	CodeDomainInvalid       = "domain_invalid"

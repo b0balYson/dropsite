@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -43,6 +44,11 @@ type UploadInfo struct {
 	MaxFiles     int
 	MaxFileBytes int64
 	MaxCallBytes int
+	// LinkURL is the upload link (spec upload-link); only BeginUpload
+	// returns it, since the server keeps nothing but its hash.
+	LinkURL string
+	// LinkExpiresAt is when the upload link stops working if left unused.
+	LinkExpiresAt time.Time
 }
 
 type uploadSession struct {
@@ -60,11 +66,17 @@ type uploadSession struct {
 	touched time.Time
 	// closed is set once the session was committed or expired.
 	closed bool
+	// link is the SHA-256 of the upload link token; linkUsed is when the
+	// link was issued or last used (see upload_link.go).
+	link     [sha256.Size]byte
+	linkUsed time.Time
 }
 
 type uploadRegistry struct {
 	mu       sync.Mutex
 	sessions map[string]*uploadSession
+	// links maps an upload link hash to its session ID.
+	links map[[sha256.Size]byte]string
 }
 
 func errUploadExpired() error {
@@ -78,7 +90,7 @@ func (u *uploadSession) info() UploadInfo {
 	return UploadInfo{
 		ID: u.id, Mode: u.mode, SiteID: u.siteID, Base: u.base, Files: len(u.files), Bytes: u.bytes,
 		ExpiresAt: u.touched.Add(UploadSessionTTL), MaxBytes: u.lim.MaxSiteBytes, MaxFiles: u.lim.MaxFiles,
-		MaxFileBytes: u.lim.MaxFileBytes, MaxCallBytes: MaxInlineBytes,
+		MaxFileBytes: u.lim.MaxFileBytes, MaxCallBytes: MaxInlineBytes, LinkExpiresAt: u.linkExpires(),
 	}
 }
 
@@ -130,6 +142,10 @@ func (s *Service) BeginUpload(ctx context.Context, a Actor, ref, title, mode, ba
 	sess.id = uploadIDPrefix + hex.EncodeToString(raw[:])
 	sess.dir = filepath.Join(s.sessionsRoot(), sess.id)
 	sess.touched = now
+	token, err := sess.issueLink(now)
+	if err != nil {
+		return UploadInfo{}, err
+	}
 	reg := &s.uploads
 	reg.mu.Lock()
 	defer reg.mu.Unlock()
@@ -148,7 +164,10 @@ func (s *Service) BeginUpload(ctx context.Context, a Actor, ref, title, mode, ba
 		return UploadInfo{}, fmt.Errorf("create upload session: %w", err)
 	}
 	reg.sessions[sess.id] = sess
-	return sess.info(), nil
+	reg.links[sess.link] = sess.id
+	info := sess.info()
+	info.LinkURL = s.uploadLinkURL(token)
+	return info, nil
 }
 
 const dirPerm = 0o755
@@ -172,6 +191,7 @@ func (s *Service) session(a Actor, id string, now time.Time) (*uploadSession, er
 	u.mu.Unlock()
 	if expired {
 		delete(reg.sessions, id)
+		delete(reg.links, u.link)
 		s.dropSessionDir(u)
 		return nil, errUploadExpired()
 	}
@@ -225,9 +245,35 @@ func (s *Service) UploadFiles(ctx context.Context, a Actor, id string, files []I
 // write stores files in the session directory within the owner limits.
 // The caller holds u.mu.
 func (u *uploadSession) write(overlay map[string]overlayFile) error {
-	bytes, count := u.bytes, len(u.files)
+	sizes := make(map[string]int64, len(overlay))
 	for p, f := range overlay {
-		n := int64(len(f.data))
+		sizes[p] = int64(len(f.data))
+	}
+	if err := u.admit(sizes); err != nil {
+		return err
+	}
+	root, err := os.OpenRoot(u.dir)
+	if err != nil {
+		return fmt.Errorf("open upload session: %w", err)
+	}
+	defer func() { _ = root.Close() }()
+	for p, f := range overlay {
+		if err := makeParent(root, p); err != nil {
+			return err
+		}
+		if err := root.WriteFile(filepath.FromSlash(p), f.data, 0o644); err != nil {
+			return invalidFile(p, "a folder with the same name as this file was uploaded earlier")
+		}
+		u.record(p, int64(len(f.data)))
+	}
+	return nil
+}
+
+// admit checks that files of these sizes fit the owner limits together
+// with what the session already holds. The caller holds u.mu.
+func (u *uploadSession) admit(sizes map[string]int64) error {
+	bytes, count := u.bytes, len(u.files)
+	for p, n := range sizes {
 		if u.lim.MaxFileBytes > 0 && n > u.lim.MaxFileBytes {
 			return domain.E(domain.KindTooLarge, domain.CodeArchiveFileTooBig, "file exceeds the size limit").
 				WithParams(map[string]any{"limit": u.lim.MaxFileBytes, "path": p})
@@ -246,24 +292,23 @@ func (u *uploadSession) write(overlay map[string]overlayFile) error {
 		return domain.E(domain.KindTooLarge, domain.CodeArchiveTooMany, "the upload has too many files").
 			WithParams(map[string]any{"limit": u.lim.MaxFiles})
 	}
-	root, err := os.OpenRoot(u.dir)
-	if err != nil {
-		return fmt.Errorf("open upload session: %w", err)
-	}
-	defer func() { _ = root.Close() }()
-	for p, f := range overlay {
-		if dir := path.Dir(p); dir != "." {
-			if err := root.MkdirAll(filepath.FromSlash(dir), dirPerm); err != nil {
-				return invalidFile(p, "a file with the same name as this folder was uploaded earlier")
-			}
+	return nil
+}
+
+// makeParent creates the folders of p inside the session directory.
+func makeParent(root *os.Root, p string) error {
+	if dir := path.Dir(p); dir != "." {
+		if err := root.MkdirAll(filepath.FromSlash(dir), dirPerm); err != nil {
+			return invalidFile(p, "a file with the same name as this folder was uploaded earlier")
 		}
-		if err := root.WriteFile(filepath.FromSlash(p), f.data, 0o644); err != nil {
-			return invalidFile(p, "a folder with the same name as this file was uploaded earlier")
-		}
-		u.bytes += int64(len(f.data)) - u.files[p]
-		u.files[p] = int64(len(f.data))
 	}
 	return nil
+}
+
+// record books a written file. The caller holds u.mu.
+func (u *uploadSession) record(p string, n int64) {
+	u.bytes += n - u.files[p]
+	u.files[p] = n
 }
 
 // CommitUpload publishes a session and closes it. A rate-limited commit
@@ -291,6 +336,7 @@ func (s *Service) finishUpload(ctx context.Context, a Actor, id string, deletes 
 		return UpdateResult{}, errUploadExpired()
 	}
 	delete(reg.sessions, id)
+	delete(reg.links, u.link)
 	reg.mu.Unlock()
 	u.mu.Lock()
 	if u.closed {
@@ -309,6 +355,7 @@ func (s *Service) finishUpload(ctx context.Context, a Actor, id string, deletes 
 	if retry {
 		reg.mu.Lock()
 		reg.sessions[id] = u
+		reg.links[u.link] = id
 		reg.mu.Unlock()
 		return UpdateResult{}, err
 	}
@@ -377,6 +424,7 @@ func (s *Service) purgeUploads(now time.Time) {
 			if now.Sub(u.touched) > UploadSessionTTL {
 				u.closed = true
 				delete(reg.sessions, id)
+				delete(reg.links, u.link)
 				gone = append(gone, u)
 			}
 			u.mu.Unlock()
