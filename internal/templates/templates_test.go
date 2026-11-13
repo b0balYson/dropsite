@@ -149,7 +149,7 @@ func checkForm(t *testing.T, name, body string) {
 	}
 	for _, want := range []string{
 		`name="_hp" tabindex="-1" autocomplete="off"`, `class="hp" aria-hidden="true"`, `name="_t"`,
-		`<altcha-widget challenge="/_form/challenge"></altcha-widget>`,
+		`<altcha-widget challenge="/_form/challenge" auto="onsubmit"></altcha-widget>`,
 		`<script async defer src="/_dropsite/altcha.js" type="module"></script>`,
 		`input[name="_t"]`, `Date.now()`, `<button class="btn" type="submit">`, " required",
 	} {
