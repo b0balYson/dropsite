@@ -73,7 +73,7 @@ install-test:
 # Whole installer against a disposable Ubuntu 24.04 container on the local
 # Docker engine (10-30 minutes). Never targets a real server.
 install-e2e: install-test
-	sh test/install/e2e.sh
+	$(ENV) sh test/install/e2e.sh
 
 build:
 	$(ENV) CGO_ENABLED=0 go build -trimpath -ldflags '$(LDFLAGS)' -o bin/control ./cmd/control

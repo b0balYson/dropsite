@@ -131,6 +131,8 @@ type view struct {
 	assets    map[string]string
 	// placed records whether a section rendered the flash (see FlashAt).
 	placed *flashPlacement
+	// Altcha loads the anti-robot widget (sign-in and invitation pages).
+	Altcha *altchaView
 	D      any
 }
 

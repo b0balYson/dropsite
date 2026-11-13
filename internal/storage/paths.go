@@ -7,6 +7,7 @@
 //	<root>/by-host/<preview>  -> ../sites/<site_id>/releases/<deploy_id>
 //	<root>/empty/                                      shared empty directory
 //	<root>/flags/<flag>/<hostname>                     per-host marker files
+//	<root>/tls-hosts/<hostname>                        extra names allowed a certificate
 //
 // Caddy mounts the root read-only, possibly at another path, so every link is
 // relative. Every link replacement is atomic (temporary link + rename(2)).
@@ -48,6 +49,7 @@ type Storage interface {
 	LinkDraftHost(hostname, siteID string) error
 	UnlinkHost(hostname string) error
 	SetHostFlag(flag HostFlag, hostname string) error
+	SetCertHosts(ctx context.Context, hosts []string) error
 	ClearHostFlag(flag HostFlag, hostname string) error
 	DeleteRelease(siteID, deployID string) error
 	DeleteSite(siteID string) error
@@ -68,9 +70,10 @@ func NewFS(root string) *FS {
 	return &FS{root: filepath.Clean(root)}
 }
 
-// Init creates sites/, by-host/, empty/ and the flag directories if missing.
+// Init creates sites/, by-host/, empty/, tls-hosts/ and the flag directories
+// if missing.
 func (f *FS) Init(ctx context.Context) error {
-	dirs := []string{sitesDir, byHostDir, emptyDir}
+	dirs := []string{sitesDir, byHostDir, emptyDir, certHostsDir}
 	for _, fl := range AllHostFlags {
 		dirs = append(dirs, filepath.Join(flagsDir, string(fl)))
 	}

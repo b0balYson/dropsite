@@ -57,6 +57,9 @@ type connectData struct {
 	TTLs     []int
 	// TokensOpen keeps the manual-token section expanded after using it.
 	TokensOpen bool
+	// PublicAdminURL is the public address of the interface while public
+	// access is on ("" otherwise).
+	PublicAdminURL string
 }
 
 // unixCommand installs the CLI, exchanges the code and connects assistants.
@@ -95,7 +98,7 @@ func (s *server) connectData(r *http.Request, rc *reqCtx) (connectData, error) {
 		rows = append(rows, tokenRow{Token: t, State: state})
 	}
 	return connectData{Tokens: rows, Apps: apps, TTLs: tokenTTLs, MCPURL: s.svc.MCPResource(),
-		MetaURL: s.svc.APIURL() + setupcheck.ProbePath}, nil
+		MetaURL: s.svc.APIURL() + setupcheck.ProbePath, PublicAdminURL: s.publicAdminURL(r)}, nil
 }
 
 func (s *server) connectPage(w http.ResponseWriter, r *http.Request, rc *reqCtx) {

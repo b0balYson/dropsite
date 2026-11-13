@@ -89,10 +89,12 @@ const (
 
 // Purposes a challenge can be issued for. The purpose is part of the signed
 // data, so a solution for a site form cannot be spent on the visitor login
-// page of the same host, and vice versa.
+// page of the same host, and vice versa. PurposeAdmin protects the sign-in
+// and invitation forms of the admin interface.
 const (
 	PurposeForm  = "form"
 	PurposeLogin = "login"
+	PurposeAdmin = "admin"
 )
 
 // Altcha issues and verifies challenges. Challenges are deterministic: the

@@ -2193,3 +2193,30 @@ a.chip[aria-current="page"] { background: var(--c-ink); color: var(--c-paper); b
 }
 /* The open drawer and its scrim stay above a toast. */
 .menu-open .toast { visibility: hidden; }
+
+/* Altcha on the sign-in forms: the widget sizes itself; it only needs the
+   form's width so it never overflows a phone screen. */
+.altcha-field {
+  display: block;
+  max-width: 100%;
+  --altcha-max-width: 100%;
+  --altcha-border-radius: var(--r-sm);
+  --altcha-color-base: var(--c-surface);
+  --altcha-color-base-content: var(--c-ink);
+}
+
+/* Settings: access to the admin interface from the internet. */
+.public-admin__state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  margin-bottom: var(--s-4);
+}
+.public-admin__url { min-width: 0; overflow-wrap: anywhere; }
+.public-admin__risk { margin-bottom: var(--s-5); max-width: 46rem; }
+.public-admin__risk p + p { margin-top: var(--s-2); }
+.public-admin__form { max-width: 34rem; }
+.public-admin__form .hint { margin-bottom: var(--s-3); }
+.public-admin__password .input { max-width: 22rem; }
+.public-admin-note { margin-bottom: var(--s-5); overflow-wrap: anywhere; }

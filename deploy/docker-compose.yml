@@ -55,6 +55,9 @@ services:
       ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required (ACME account email), see .env.example}
       # Computed here: the Caddyfile adapter does not expand nested defaults.
       API_HOST: ${API_HOST:-api.${BASE_DOMAIN}}
+      # The admin interface from the internet; control serves it only while
+      # an administrator keeps public access on (docs/security.md).
+      ADMIN_HOST: admin.${BASE_DOMAIN:?BASE_DOMAIN is required (base domain for sites), see .env.example}
       CADDY_GLOBAL_EXTRA: ${CADDY_GLOBAL_EXTRA:-}
       # trusted_proxies and client_ip_headers of a CDN in front of Caddy
       # (docs/security.md). Empty without a CDN.
@@ -117,6 +120,11 @@ services:
       ADMIN_ADDR: ":8082"
       ADMIN_BIND_IP: ${ADMIN_BIND_IP:-127.0.0.1}
       ALLOW_PUBLIC_ADMIN: ${ALLOW_PUBLIC_ADMIN:-}
+      # The listener Caddy proxies https://admin.<BASE_DOMAIN> to. Never
+      # published: it stays inside the compose network, and it answers 404
+      # until an administrator turns public access on (Settings, or
+      # "control public-admin on").
+      PUBLIC_ADMIN_ADDR: ":8084"
       # Optional: an empty value means "use the built-in default".
       API_HOST: ${API_HOST:-api.${BASE_DOMAIN}}
       UI_URL: ${UI_URL:-http://${ADMIN_BIND_IP:-127.0.0.1}:8082}
@@ -149,8 +157,9 @@ services:
       - state:/state
       # Read-only: control only reads the access log written by caddy.
       - logs:/logs:ro
-    # Only the admin UI is published. 8080 (public API, behind caddy) and
-    # 8081 (internal: healthz) stay inside the compose network.
+    # Only the admin UI is published. 8080 (public API, behind caddy), 8081
+    # (internal: healthz) and 8084 (the public admin interface, behind caddy)
+    # stay inside the compose network.
     ports:
       - "${ADMIN_BIND_IP:-127.0.0.1}:8082:8082"
     # render: the internal network the optional renderer reaches control on.

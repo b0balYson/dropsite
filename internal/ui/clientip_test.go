@@ -24,7 +24,7 @@ func TestLoginLimitIgnoresForwardedFor(t *testing.T) {
 	h := newHarness(t)
 	var p page
 	for i := range 11 {
-		p = h.submit("/login", "/login", url.Values{"email": {"x@pp.test"}, "password": {"wrong-password-1"}},
+		p = h.submit("/login", "/login", url.Values{"email": {"x@pp.test"}, "password": {"wrong-password-1"}, "altcha": {h.solve()}},
 			"X-Forwarded-For", fmt.Sprintf("6.6.6.%d", i+1))
 	}
 	wantStatus(t, p, http.StatusTooManyRequests)

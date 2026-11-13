@@ -63,7 +63,7 @@ func TestLoginLogout(t *testing.T) {
 	}
 
 	p := h.submit("/login?next=/connect", "/login", url.Values{
-		"email": {"alice@pp.test"}, "password": {testenv.UserPassword}, "next": {"/connect"},
+		"email": {"alice@pp.test"}, "password": {testenv.UserPassword}, "next": {"/connect"}, "altcha": {h.solve()},
 	})
 	wantStatus(t, p, http.StatusSeeOther)
 	if p.location() != "/connect" {
@@ -101,6 +101,7 @@ func TestLoginOpenRedirectIsBlocked(t *testing.T) {
 	h := newHarness(t)
 	p := h.submit("/login", "/login", url.Values{
 		"email": {testenv.AdminEmail}, "password": {testenv.AdminPassword}, "next": {"//evil.example/x"},
+		"altcha": {h.solve()},
 	})
 	wantStatus(t, p, http.StatusSeeOther)
 	if p.location() != "/" {
@@ -148,15 +149,15 @@ func TestInvite(t *testing.T) {
 	form := wantStatusPage(t, h.get(path), http.StatusOK)
 	wantContains(t, form, "new@pp.test", `minlength="10"`)
 
-	short := h.submit(path, path, url.Values{"password": {"short"}, "password2": {"short"}})
+	short := h.submit(path, path, url.Values{"password": {"short"}, "password2": {"short"}, "altcha": {h.solve()}})
 	wantStatus(t, short, http.StatusUnprocessableEntity)
 	wantContains(t, short.body, "не меньше 10 символов")
 
-	mismatch := h.submit(path, path, url.Values{"password": {"long-password-1"}, "password2": {"long-password-2"}})
+	mismatch := h.submit(path, path, url.Values{"password": {"long-password-1"}, "password2": {"long-password-2"}, "altcha": {h.solve()}})
 	wantStatus(t, mismatch, http.StatusUnprocessableEntity)
 	wantContains(t, mismatch.body, "Пароли не совпадают")
 
-	ok := h.submit(path, path, url.Values{"password": {"long-password-1"}, "password2": {"long-password-1"}})
+	ok := h.submit(path, path, url.Values{"password": {"long-password-1"}, "password2": {"long-password-1"}, "altcha": {h.solve()}})
 	wantStatus(t, ok, http.StatusSeeOther)
 	home := h.get("/")
 	wantStatus(t, home, http.StatusOK)
@@ -231,7 +232,8 @@ func TestCSRFProtection(t *testing.T) {
 
 func TestSecurityHeaders(t *testing.T) {
 	h := newHarness(t)
-	p := h.get("/login")
+	h.loginAdmin()
+	p := h.get("/connect")
 	want := map[string]string{
 		"Content-Security-Policy": csp,
 		"X-Frame-Options":         "DENY",

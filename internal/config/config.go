@@ -37,6 +37,10 @@ const (
 	// DefaultAdminAddr keeps a binary started outside Docker reachable from
 	// this machine only; compose sets ADMIN_ADDR=:8082 inside the container.
 	DefaultAdminAddr = "127.0.0.1:8082"
+	// DefaultPublicAdminAddr is the listener Caddy proxies
+	// https://admin.<base domain> to. It is never published to the host:
+	// compose sets PUBLIC_ADMIN_ADDR=:8084 inside the container network.
+	DefaultPublicAdminAddr = "127.0.0.1:8084"
 
 	TLSModeOnDemand = "ondemand"
 	TLSModeWildcard = "wildcard"
@@ -70,6 +74,10 @@ type Config struct {
 	// AllowPublicAdmin lets the admin UI start on a public address
 	// (ALLOW_PUBLIC_ADMIN=1); without it control refuses to start.
 	AllowPublicAdmin bool
+	// PublicAdminAddr is the listener of the public admin interface behind
+	// Caddy (https://admin.<base domain>). It answers 404 to everything
+	// until an administrator turns public access on in the settings.
+	PublicAdminAddr string
 
 	TrustedProxies []netip.Prefix
 
@@ -150,14 +158,15 @@ func (r *reader) bytes(key string, def int64) int64 {
 func Load(get Getenv) (*Config, error) {
 	r := &reader{get: get}
 	c := &Config{
-		TLSMode:       strings.ToLower(r.str("TLS_MODE", TLSModeOnDemand)),
-		AdminEmail:    r.str("ADMIN_EMAIL", ""),
-		AdminPassword: r.str("ADMIN_PASSWORD", ""),
-		SitesDir:      r.str("SITES_DIR", "/data"),
-		StateDir:      r.str("STATE_DIR", "/state"),
-		PublicAddr:    r.str("PUBLIC_ADDR", ":8080"),
-		InternalAddr:  r.str("INTERNAL_ADDR", ":8081"),
-		AdminAddr:     r.str("ADMIN_ADDR", DefaultAdminAddr),
+		TLSMode:         strings.ToLower(r.str("TLS_MODE", TLSModeOnDemand)),
+		AdminEmail:      r.str("ADMIN_EMAIL", ""),
+		AdminPassword:   r.str("ADMIN_PASSWORD", ""),
+		SitesDir:        r.str("SITES_DIR", "/data"),
+		StateDir:        r.str("STATE_DIR", "/state"),
+		PublicAddr:      r.str("PUBLIC_ADDR", ":8080"),
+		InternalAddr:    r.str("INTERNAL_ADDR", ":8081"),
+		AdminAddr:       r.str("ADMIN_ADDR", DefaultAdminAddr),
+		PublicAdminAddr: r.str("PUBLIC_ADMIN_ADDR", DefaultPublicAdminAddr),
 		Limits: domain.Limits{
 			MaxSiteBytes:    r.bytes("MAX_SITE_BYTES", DefaultMaxSiteBytes),
 			MaxFileBytes:    r.bytes("MAX_FILE_BYTES", DefaultMaxFileBytes),

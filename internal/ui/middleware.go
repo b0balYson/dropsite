@@ -62,7 +62,7 @@ func (s *server) wrap(h handler, needUser, needAdmin, checkBody bool) http.Handl
 			return
 		}
 		if isUnsafe(r.Method) {
-			if !sameOrigin(r) {
+			if !s.sameOrigin(r) {
 				s.forbidden(w, r, rc)
 				return
 			}
@@ -78,8 +78,8 @@ func (s *server) wrap(h handler, needUser, needAdmin, checkBody bool) http.Handl
 
 // begin resolves the session, language and CSRF token for a request.
 func (s *server) begin(w http.ResponseWriter, r *http.Request) *reqCtx {
-	rc := &reqCtx{ip: clientIP(r)}
-	if secret := sessionCookie(r); secret != "" {
+	rc := &reqCtx{ip: s.clientIP(r)}
+	if secret := s.sessionCookie(r); secret != "" {
 		actor, sess, err := s.svc.AuthenticateSession(r.Context(), secret, rc.ip)
 		if err == nil {
 			rc.actor, rc.session, rc.secret, rc.authed = actor, sess, secret, true

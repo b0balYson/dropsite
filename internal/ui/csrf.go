@@ -27,7 +27,7 @@ func sessionCSRF(secret []byte) string {
 // anonCSRF returns the double-submit token for pages without a session,
 // issuing the cookie when it is missing.
 func (s *server) anonCSRF(w http.ResponseWriter, r *http.Request) string {
-	if c, err := r.Cookie(anonCookieName); err == nil && len(c.Value) == 2*anonTokenBytes {
+	if c, err := s.readCookie(r, anonCookieName); err == nil && len(c.Value) == 2*anonTokenBytes {
 		if _, err := hex.DecodeString(c.Value); err == nil {
 			return c.Value
 		}

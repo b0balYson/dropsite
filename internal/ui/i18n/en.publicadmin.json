@@ -1,0 +1,23 @@
+{
+  "login.altcha": "The browser check did not complete. Wait a few seconds and press the button again.",
+  "login.noscript": "Signing in needs JavaScript: your browser has to pass a short automatic \"I am not a robot\" check. Turn JavaScript on and reload the page.",
+  "publicadmin.title": "Access to the admin interface from the internet",
+  "publicadmin.state.on": "Open to the internet",
+  "publicadmin.state.off": "Only through the SSH tunnel",
+  "publicadmin.risk.title": "This is a potential threat.",
+  "publicadmin.risk.text": "The admin interface becomes reachable over HTTPS by anyone who knows or guesses the address: it can be found and passwords can be guessed against it. Keeping it off and using the SSH tunnel is safer. If you turn it on, every user needs a strong, unique password, and turn it off again when you do not need it.",
+  "publicadmin.off.hint": "The admin interface opens only through the SSH tunnel now. To open it at the address above, confirm the risk and enter your password.",
+  "publicadmin.on.hint": "The admin interface is open at the address above. The SSH tunnel keeps working too.",
+  "publicadmin.confirm": "I understand the risk: anyone will be able to find the admin interface",
+  "publicadmin.password": "Your password",
+  "publicadmin.password.hint": "The password you signed in with, so nobody can do this from a browser you left open.",
+  "publicadmin.enable": "Open to the internet",
+  "publicadmin.disable": "Close access from the internet",
+  "publicadmin.enabled": "The admin interface is open to the internet: {url}. The first visit there may take up to a minute while the certificate is issued.",
+  "publicadmin.disabled": "Access from the internet is closed. The admin interface opens only through the SSH tunnel.",
+  "publicadmin.need_confirm": "Tick \"I understand the risk\" and enter your password.",
+  "publicadmin.bad_password": "Wrong password. Enter the password you signed in with.",
+  "publicadmin.note": "The admin interface is also open to the internet, without the SSH tunnel:",
+  "audit.action.settings.public_admin": "Access to the admin interface from the internet changed",
+  "audit.action.auth.confirm_failed": "Wrong password on confirmation"
+}

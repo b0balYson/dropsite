@@ -16,6 +16,9 @@ export SITES_DIR="$data/sites" STATE_DIR="$data/state"
 export PUBLIC_ADDR="${PUBLIC_ADDR:-127.0.0.1:18081}"
 export INTERNAL_ADDR="${INTERNAL_ADDR:-127.0.0.1:18083}"
 export ADMIN_ADDR="${ADMIN_ADDR:-127.0.0.1:18082}"
+# The public admin listener (https://admin.<base> behind Caddy in production);
+# here it is called directly with "Host: admin.dropsite.localhost:18443".
+export PUBLIC_ADMIN_ADDR="${PUBLIC_ADMIN_ADDR:-127.0.0.1:18084}"
 export UI_URL="${UI_URL:-http://127.0.0.1:18082}"
 export SITES_HTTPS_PORT="${SITES_HTTPS_PORT:-18443}"
 export LOG_LEVEL="${LOG_LEVEL:-debug}"

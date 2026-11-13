@@ -19,6 +19,7 @@
       <label class="field__label" for="password">{{.L.T "login.password"}}</label>
       <input class="input" id="password" name="password" type="password" autocomplete="current-password" required>
     </div>
+    {{template "altcha_field" .}}
     <button class="btn btn--primary btn--wide" type="submit">{{.L.T "login.submit"}}</button>
     <p class="hint">{{.L.T "login.forgot"}}</p>
   </form>

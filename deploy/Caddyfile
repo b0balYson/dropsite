@@ -6,6 +6,10 @@
 #   API_HOST            public API host; computed in compose because a nested
 #                       default such as {$API_HOST:api.{$BASE_DOMAIN}} is not
 #                       expanded by the Caddyfile adapter
+#   ADMIN_HOST          host of the admin interface from the internet,
+#                       admin.<BASE_DOMAIN> (computed in compose like API_HOST);
+#                       control serves it only while an administrator keeps
+#                       public access on
 #   CADDY_GLOBAL_EXTRA  extra global options (local dev: local_certs and
 #                       skip_install_trust); empty in production
 #   CADDY_SERVERS_EXTRA extra options of the servers block: trusted_proxies
@@ -82,7 +86,9 @@
 
 # On-demand TLS permission endpoint, reachable only from inside this
 # container (bind 127.0.0.1). A name is allowed if /data/by-host/<name>/
-# exists and resolves to a directory.
+# exists and resolves to a directory (a site address), or if
+# /data/tls-hosts/<name> is a regular file (the public admin host, written by
+# control only while public access is on).
 # - The regexp is mandatory: ".." and "%2e%2e" collapse to /data/by-host/
 #   itself and would otherwise be allowed. It is the @site expression below
 #   without the port. IP addresses pass the regexp but have no by-host entry.
@@ -97,7 +103,15 @@ http://127.0.0.1:8090 {
 			try_files {query.domain}/
 		}
 	}
+	@extra {
+		vars_regexp {query.domain} ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$
+		file {
+			root /data/tls-hosts
+			try_files {query.domain}
+		}
+	}
 	respond @allowed 200
+	respond @extra 200
 	respond 404
 }
 
@@ -105,6 +119,35 @@ http://127.0.0.1:8090 {
 	import security_headers
 	log
 	reverse_proxy control:8080 {
+		import to_control
+	}
+	handle_errors {
+		import security_headers
+		import plain_error
+	}
+}
+
+# The admin interface from the internet (docs/security.md). The block is
+# always here and Caddy is never reloaded: control decides. Its listener
+# control:8084 answers 404 to everything while public access is off, and the
+# certificate permission above allows this name only while it is on. TLS is
+# on demand in both modes: in ondemand mode the first visit obtains a
+# certificate if permitted; in wildcard mode the *.<BASE_DOMAIN> certificate
+# already covers the name, so nothing is issued. No access log: invitation
+# links carry their secret in the path.
+{$ADMIN_HOST} {
+	tls {
+		on_demand
+	}
+	import security_headers
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Frame-Options DENY
+		Referrer-Policy same-origin
+		X-Robots-Tag "noindex, nofollow"
+		-Server
+	}
+	reverse_proxy control:8084 {
 		import to_control
 	}
 	handle_errors {

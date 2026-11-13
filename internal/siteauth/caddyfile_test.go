@@ -64,7 +64,7 @@ func TestCaddyfileMatchesPaths(t *testing.T) {
 			t.Errorf("deploy/Caddyfile: %q must import to_control", l)
 		}
 	}
-	if n, m := strings.Count(cf, "control:8080 {"), strings.Count(cf, "import to_control"); n != m {
+	if n, m := strings.Count(cf, "control:8080 {")+strings.Count(cf, "control:8084 {"), strings.Count(cf, "import to_control"); n != m {
 		t.Errorf("deploy/Caddyfile: %d proxies to control, %d import to_control", n, m)
 	}
 	// Protected sites must not be cached by shared caches: the rule comes

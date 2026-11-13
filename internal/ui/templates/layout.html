@@ -11,6 +11,8 @@
 <link rel="stylesheet" href="{{.Asset "onboarding.css"}}">
 <script src="{{.Asset "htmx.min.js"}}" defer></script>
 <script src="{{.Asset "app.js"}}" defer></script>
+{{with .Altcha}}<meta name="csp-nonce" content="{{.Nonce}}">
+<script async src="{{$.Asset "altcha.js"}}" type="module"></script>{{end}}
 </head>
 <body hx-headers='{"X-CSRF-Token":"{{.CSRF}}"}'>
 <a class="skip-link" href="#main">{{.L.T "nav.skip"}}</a>

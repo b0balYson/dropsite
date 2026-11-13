@@ -103,7 +103,7 @@ func (c catalogs) locale(lang string) *locale {
 // pickLang chooses the language: cookie, then the user's stored preference,
 // then Accept-Language, then Russian.
 func (s *server) pickLang(r *http.Request, rc *reqCtx) string {
-	if c, err := r.Cookie(langCookieName); err == nil && supportedLang(c.Value) {
+	if c, err := s.readCookie(r, langCookieName); err == nil && supportedLang(c.Value) {
 		return c.Value
 	}
 	if rc.authed && supportedLang(rc.actor.User.Lang) {

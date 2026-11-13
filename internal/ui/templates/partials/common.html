@@ -39,3 +39,11 @@
 <meta name="theme-color" content="#fbf8f1">{{end}}
 
 {{define "logo"}}<img class="wordmark__logo" src="{{.Asset "brand/logo.svg"}}" alt="{{.Product}}" width="137" height="40">{{end}}
+
+{{/* The anti-robot check of the sign-in forms: solved on submit, so there is
+     nothing to click. Without JavaScript the form cannot pass it. */}}
+{{define "altcha_field"}}{{with .Altcha}}
+    <altcha-widget class="altcha-field" challenge="{{.Challenge}}" auto="onsubmit" name="altcha"
+      configuration='{"hideFooter":true,"hideLogo":true}'></altcha-widget>
+    <noscript><p class="notice notice--error" role="alert">{{$.L.T "login.noscript"}}</p></noscript>
+{{end}}{{end}}

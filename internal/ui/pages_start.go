@@ -22,6 +22,9 @@ type startData struct {
 	// Done counts finished required steps; it is only meaningful with Checks.
 	Done  int
 	Total int
+	// PublicAdminURL is the public address of the interface while public
+	// access is on ("" otherwise): an alternative to the SSH tunnel.
+	PublicAdminURL string
 }
 
 // AllDone reports a ready server: every required step is finished.
@@ -63,7 +66,8 @@ func (s *server) startData(r *http.Request, rc *reqCtx, checks *setupcheck.Repor
 		return startData{}, err
 	}
 	cfg := s.svc.Config()
-	d := startData{Progress: p, Checks: checks, Domain: cfg.BaseDomain, APIHost: cfg.APIHost, Total: requiredSteps}
+	d := startData{Progress: p, Checks: checks, Domain: cfg.BaseDomain, APIHost: cfg.APIHost, Total: requiredSteps,
+		PublicAdminURL: s.publicAdminURL(r)}
 	if checks != nil {
 		for _, ok := range []bool{checks.Domain.State == setupcheck.Done, checks.HTTPS.State == setupcheck.Done, p.Chat, p.Site} {
 			if ok {

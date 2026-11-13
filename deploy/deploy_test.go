@@ -68,6 +68,13 @@ type composeService struct {
 	Command     []string          `json:"command"`
 	Volumes     []composeVolume   `json:"volumes"`
 	Environment map[string]string `json:"environment"`
+	Ports       []composePort     `json:"ports"`
+}
+
+type composePort struct {
+	Target    int    `json:"target"`
+	Published string `json:"published"`
+	HostIP    string `json:"host_ip"`
 }
 
 type composeBuild struct {
@@ -200,6 +207,7 @@ func checkCompose(t *testing.T, out []byte) {
 		t.Errorf("caddy-init must hand /logs to caddy: command=%v", initSvc.Command)
 	}
 	checkAdminEnv(t, control.Environment)
+	checkPublicAdmin(t, caddy, control)
 }
 
 // control listens on :8082 inside the container and checks the published
@@ -252,11 +260,13 @@ func TestCaddyfileValidates(t *testing.T) {
 	} {
 		t.Run(mode, func(t *testing.T) {
 			args := append([]string{"run", "--rm", "-e", "BASE_DOMAIN=example.com", "-e", "ACME_EMAIL=a@example.com",
-				"-e", "API_HOST=api.example.com", "-v", abs + ":/etc/caddy/Caddyfile:ro"}, extra...)
+				"-e", "API_HOST=api.example.com", "-e", "ADMIN_HOST=admin.example.com",
+				"-v", abs + ":/etc/caddy/Caddyfile:ro"}, extra...)
 			args = append(args, caddyImage)
 			run(t, "docker", append(args, "caddy", "validate", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile")...)
 			out := run(t, "docker", append(args, "caddy", "adapt", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile")...)
 			checkLogging(t, out, mode == "wildcard")
+			checkAdminBlock(t, out)
 		})
 	}
 }

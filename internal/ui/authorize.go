@@ -18,8 +18,8 @@ import (
 const authorizeStatic = "/oauth/static/"
 
 // NewAuthorize returns the OAuth consent page for the public API host. It
-// never asks for a password (passwords are entered only on the internal
-// listener): the user proves their identity with a connect code issued in
+// never asks for a password (passwords are entered only in the web
+// interface, on its own listeners): the user proves their identity with a connect code issued in
 // the interface. clientIP returns the address resolved by the API middleware.
 func NewAuthorize(svc *service.Service, az *oauth.Server, clientIP func(*http.Request) string, log *slog.Logger) http.Handler {
 	if log == nil {

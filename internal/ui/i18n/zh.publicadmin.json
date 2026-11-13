@@ -1,0 +1,23 @@
+{
+  "login.altcha": "浏览器验证未完成。请稍等几秒钟，然后再次点击按钮。",
+  "login.noscript": "登录需要 JavaScript：浏览器需要通过一个简短的自动“我不是机器人”验证。请启用 JavaScript 并刷新页面。",
+  "publicadmin.title": "从互联网访问管理界面",
+  "publicadmin.state.on": "已向互联网开放",
+  "publicadmin.state.off": "仅通过 SSH 隧道访问",
+  "publicadmin.risk.title": "这是一个潜在的威胁。",
+  "publicadmin.risk.text": "任何知道或猜到地址的人都能通过 HTTPS 访问管理界面：它可能被发现，并被尝试猜测密码。保持关闭并通过 SSH 隧道访问更安全。如果开启，每个用户都需要一个强且唯一的密码，不需要时请再次关闭。",
+  "publicadmin.off.hint": "目前管理界面只能通过 SSH 隧道打开。要在上面的地址开放，请确认风险并输入您的密码。",
+  "publicadmin.on.hint": "管理界面已在上面的地址开放。SSH 隧道也继续可用。",
+  "publicadmin.confirm": "我了解风险：任何人都能找到管理界面",
+  "publicadmin.password": "您的密码",
+  "publicadmin.password.hint": "您登录时使用的密码，这样即使有人使用您未关闭的浏览器也无法开启。",
+  "publicadmin.enable": "向互联网开放",
+  "publicadmin.disable": "关闭互联网访问",
+  "publicadmin.enabled": "管理界面已向互联网开放：{url}。首次访问可能需要最多一分钟来签发证书。",
+  "publicadmin.disabled": "互联网访问已关闭。管理界面只能通过 SSH 隧道打开。",
+  "publicadmin.need_confirm": "请勾选“我了解风险”并输入您的密码。",
+  "publicadmin.bad_password": "密码错误。请输入您登录时使用的密码。",
+  "publicadmin.note": "管理界面也已向互联网开放，无需 SSH 隧道：",
+  "audit.action.settings.public_admin": "已更改从互联网访问管理界面",
+  "audit.action.auth.confirm_failed": "确认时密码错误"
+}

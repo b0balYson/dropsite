@@ -48,6 +48,9 @@ type app struct {
 	public http.Handler
 	intern http.Handler
 	admin  http.Handler
+	// publicAdmin serves https://admin.<base domain> behind Caddy; it
+	// answers 404 while public access is off.
+	publicAdmin http.Handler
 }
 
 func newLogger(level slog.Level) *slog.Logger {
@@ -79,6 +82,8 @@ func build(ctx context.Context, cfg *config.Config, log *slog.Logger) (*app, err
 		public: publicHandler(svc, log),
 		intern: internalHandler(svc, log),
 		admin:  ui.New(svc, log),
+
+		publicAdmin: ui.NewPublic(svc, log),
 	}, nil
 }
 
@@ -144,6 +149,7 @@ func (a *app) run(ctx context.Context) error {
 		newServer(a.cfg.PublicAddr, a.public, a.log),
 		newServer(a.cfg.InternalAddr, a.intern, a.log),
 		newServer(a.cfg.AdminAddr, a.admin, a.log),
+		newServer(a.cfg.PublicAdminAddr, a.publicAdmin, a.log),
 	}
 	if a.cfg.Renderer.Enabled() {
 		// The renderer fetches release files here by one-time token.

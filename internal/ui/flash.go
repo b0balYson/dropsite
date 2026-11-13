@@ -140,7 +140,7 @@ func (s *server) setFlashIn(w http.ResponseWriter, r *http.Request, kind, msg, s
 
 // takeFlash reads and clears the flash cookie; tampered values are ignored.
 func (s *server) takeFlash(w http.ResponseWriter, r *http.Request) *flash {
-	c, err := r.Cookie(flashCookieName)
+	c, err := s.readCookie(r, flashCookieName)
 	if err != nil {
 		return nil
 	}

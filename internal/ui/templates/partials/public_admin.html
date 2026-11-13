@@ -1,0 +1,43 @@
+{{define "admin_public_admin"}}{{$p := .D.PublicAdmin}}
+<section class="section public-admin{{if $p.Enabled}} public-admin--on{{end}}" aria-labelledby="public-admin-h">
+  <h2 class="section-title" id="public-admin-h">{{.L.T "publicadmin.title"}}</h2>
+  {{template "section_flash" (bundle $ "public-admin-h")}}
+  <div class="public-admin__state">
+    {{if $p.Enabled}}<span class="badge badge--warn">{{.L.T "publicadmin.state.on"}}</span>{{else}}<span class="badge badge--muted">{{.L.T "publicadmin.state.off"}}</span>{{end}}
+    <span class="public-admin__url mono">{{if $p.Enabled}}<a href="{{$p.URL}}" rel="noopener noreferrer" target="_blank">{{$p.URL}}</a>{{else}}{{$p.URL}}{{end}}</span>
+  </div>
+  <div class="notice notice--warn public-admin__risk" role="note">
+    <p><strong>{{.L.T "publicadmin.risk.title"}}</strong></p>
+    <p>{{.L.T "publicadmin.risk.text"}}</p>
+  </div>
+  {{if $p.Enabled}}
+  <form method="post" action="/admin/settings/public-admin" class="public-admin__form">
+    {{template "csrf" .}}{{template "section_field" "public-admin-h"}}
+    <input type="hidden" name="enabled" value="0">
+    <p class="hint">{{.L.T "publicadmin.on.hint"}}</p>
+    <button class="btn btn--danger" type="submit">{{.L.T "publicadmin.disable"}}</button>
+  </form>
+  {{else}}
+  <form method="post" action="/admin/settings/public-admin" class="public-admin__form stack" autocomplete="off">
+    {{template "csrf" .}}{{template "section_field" "public-admin-h"}}
+    <input type="hidden" name="enabled" value="1">
+    <p class="hint">{{.L.T "publicadmin.off.hint"}}</p>
+    <label class="check"><input type="checkbox" name="confirm" value="1" required> {{.L.T "publicadmin.confirm"}}</label>
+    <div class="field public-admin__password">
+      <label class="field__label" for="pa-password">{{.L.T "publicadmin.password"}}</label>
+      <input class="input" id="pa-password" name="password" type="password" autocomplete="current-password" required aria-describedby="pa-password-hint">
+      <p class="hint" id="pa-password-hint">{{.L.T "publicadmin.password.hint"}}</p>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn--primary" type="submit">{{.L.T "publicadmin.enable"}}</button>
+    </div>
+  </form>
+  {{end}}
+</section>
+{{end}}
+
+{{/* The public address on the checklist and the Connect AI page, while
+     public access is on: an alternative to the SSH tunnel. */}}
+{{define "public_admin_note"}}{{/* .R = view, .V = URL or "" */}}{{with .V}}
+<p class="notice public-admin-note" role="note">{{$.R.L.T "publicadmin.note"}} <a class="mono" href="{{.}}" rel="noopener noreferrer" target="_blank">{{.}}</a></p>
+{{end}}{{end}}

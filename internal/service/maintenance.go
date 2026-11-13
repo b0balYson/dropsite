@@ -39,7 +39,10 @@ func (s *Service) Start(ctx context.Context) error {
 	if err := s.ExpireSites(ctx); err != nil {
 		return err
 	}
-	return s.Reconcile(ctx)
+	if err := s.Reconcile(ctx); err != nil {
+		return err
+	}
+	return s.reconcilePublicAdmin(ctx)
 }
 
 // Reconcile brings the sites volume in line with the database.

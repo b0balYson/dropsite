@@ -5,6 +5,7 @@ package e2e
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"mime/multipart"
@@ -14,6 +15,9 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
+
+	altcha "github.com/altcha-org/altcha-lib-go/v2"
 )
 
 var (
@@ -64,7 +68,8 @@ func (u *ui) post(path string, form url.Values) (int, string) {
 func (u *ui) login(email, password string) {
 	u.t.Helper()
 	tok := u.csrf("/login")
-	status, body := u.post("/login", url.Values{"_csrf": {tok}, "email": {email}, "password": {password}, "next": {"/"}})
+	status, body := u.post("/login", url.Values{"_csrf": {tok}, "email": {email}, "password": {password}, "next": {"/"},
+		"altcha": {solveAltcha(u.t, u.c, uiURL+"/login/challenge")}})
 	if status != http.StatusSeeOther && status != http.StatusFound {
 		u.t.Fatalf("login as %s: status %d\n%.300s", email, status, body)
 	}
@@ -84,7 +89,8 @@ func (u *ui) issueToken(name string) string {
 func (u *ui) acceptInvite(secret, password string) {
 	u.t.Helper()
 	tok := u.csrf("/invite/" + secret)
-	status, body := u.post("/invite/"+secret, url.Values{"_csrf": {tok}, "password": {password}, "password2": {password}})
+	status, body := u.post("/invite/"+secret, url.Values{"_csrf": {tok}, "password": {password}, "password2": {password},
+		"altcha": {solveAltcha(u.t, u.c, uiURL+"/login/challenge")}})
 	if status >= 400 {
 		u.t.Fatalf("accept invite: %d\n%.300s", status, body)
 	}
@@ -194,4 +200,28 @@ func hostOf(rawURL string) string {
 		return ""
 	}
 	return u.Hostname()
+}
+
+// solveAltcha fetches the Altcha challenge of the admin sign-in forms and
+// solves it like the widget does.
+func solveAltcha(t *testing.T, c *http.Client, challengeURL string) string {
+	t.Helper()
+	resp, err := c.Get(challengeURL) //nolint:noctx // test
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("altcha challenge: %d", resp.StatusCode)
+	}
+	var ch altcha.Challenge
+	if err := json.NewDecoder(resp.Body).Decode(&ch); err != nil {
+		t.Fatal(err)
+	}
+	sol, err := altcha.SolveChallenge(altcha.SolveChallengeOptions{Challenge: ch, DeriveKey: altcha.DeriveKeyPBKDF2(), Timeout: 5 * time.Minute})
+	if err != nil || sol == nil {
+		t.Fatalf("solve altcha: %v", err)
+	}
+	b, _ := json.Marshal(altcha.Payload{Challenge: ch, Solution: *sol})
+	return base64.StdEncoding.EncodeToString(b)
 }

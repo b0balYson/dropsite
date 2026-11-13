@@ -28,6 +28,8 @@ type server struct {
 	static   map[string]staticFile
 	flashKey []byte
 	secure   bool
+	// public is set on the public admin listener only (see NewPublic).
+	public *publicMode
 }
 
 // New returns the handler for the admin listener.
@@ -53,6 +55,7 @@ func newServer(svc *service.Service, log *slog.Logger) (*server, error) {
 	if err != nil {
 		return nil, err
 	}
+	addAltchaWidget(static, urls)
 	pages, err := parsePages()
 	if err != nil {
 		return nil, err
@@ -77,6 +80,7 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /logout", s.user(s.logout))
 	mux.HandleFunc("GET /invite/{secret}", s.anon(s.invitePage))
 	mux.HandleFunc("POST /invite/{secret}", s.anon(s.inviteSubmit))
+	mux.HandleFunc("GET "+altchaChallengePath, s.altchaChallenge)
 	mux.HandleFunc("POST /lang", s.anon(s.setLang))
 
 	mux.HandleFunc("GET /{$}", s.user(s.sitesPage))
@@ -168,6 +172,7 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /admin/settings", s.admin(s.saveSettings))
 	mux.HandleFunc("POST /admin/settings/forms", s.admin(s.saveFormSettings))
 	mux.HandleFunc("POST /admin/settings/sheets", s.admin(s.saveSheetsKey))
+	mux.HandleFunc("POST /admin/settings/public-admin", s.admin(s.savePublicAdmin))
 
 	mux.HandleFunc("/", s.user(s.notFound))
 	return mux

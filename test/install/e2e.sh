@@ -220,14 +220,18 @@ close_tunnel() {
 	TUNNEL_PID=""
 }
 # login EMAIL PASSWORD: HTTP status of the sign-in form (303 = signed in).
+# The Altcha check is solved by test/install/altchasolve (Go), like the
+# widget does in a browser.
 login() {
 	jar="$WORK/jar"
 	rm -f "$jar"
 	curl -s -o /dev/null -c "$jar" "http://127.0.0.1:$LOCAL_PORT/login"
 	token=$(awk '$6 == "ds_csrf" { print $7 }' "$jar")
+	solution=$(cd "$ROOT" && go run ./test/install/altchasolve "http://127.0.0.1:$LOCAL_PORT/login/challenge") || solution=""
 	curl -s -o /dev/null -w '%{http_code}' -b "$jar" \
 		-H "Origin: http://127.0.0.1:$LOCAL_PORT" \
 		--data-urlencode "_csrf=$token" --data-urlencode "email=$1" --data-urlencode "password=$2" \
+		--data-urlencode "altcha=$solution" \
 		"http://127.0.0.1:$LOCAL_PORT/login"
 }
 

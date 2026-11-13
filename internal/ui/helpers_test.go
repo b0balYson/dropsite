@@ -3,6 +3,8 @@ package ui
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"mime/multipart"
@@ -13,8 +15,12 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
+
+	altcha "github.com/altcha-org/altcha-lib-go/v2"
 
 	"github.com/b0balYson/dropsite/internal/domain"
+	"github.com/b0balYson/dropsite/internal/forms"
 	"github.com/b0balYson/dropsite/internal/service"
 	"github.com/b0balYson/dropsite/internal/testenv"
 )
@@ -31,6 +37,11 @@ type harness struct {
 func newHarness(t *testing.T, opts ...testenv.Option) *harness {
 	t.Helper()
 	env := testenv.New(t, opts...)
+	// The easiest Altcha level keeps the many sign-ins of the tests fast.
+	easiest := forms.MinAltchaMaxNumber
+	if _, err := env.Svc.UpdateFormSettings(context.Background(), env.Admin, service.FormSettingsUpdate{AltchaMaxNumber: &easiest}); err != nil {
+		t.Fatal(err)
+	}
 	logs := &bytes.Buffer{}
 	srv := httptest.NewServer(New(env.Svc, slog.New(slog.NewTextHandler(logs, nil))))
 	t.Cleanup(srv.Close)
@@ -134,7 +145,26 @@ func (h *harness) submit(tokenPage, path string, form url.Values, headers ...str
 
 func (h *harness) login(email, password string) page {
 	h.t.Helper()
-	return h.submit("/login", "/login", url.Values{"email": {email}, "password": {password}})
+	return h.submit("/login", "/login", url.Values{"email": {email}, "password": {password}, "altcha": {h.solve()}})
+}
+
+// solve fetches an admin Altcha challenge and solves it like the widget.
+func (h *harness) solve(headers ...string) string {
+	h.t.Helper()
+	p := h.get(altchaChallengePath, headers...)
+	if p.status != http.StatusOK {
+		h.t.Fatalf("challenge: %d %s", p.status, p.body)
+	}
+	var ch altcha.Challenge
+	if err := json.Unmarshal([]byte(p.body), &ch); err != nil {
+		h.t.Fatal(err)
+	}
+	sol, err := altcha.SolveChallenge(altcha.SolveChallengeOptions{Challenge: ch, DeriveKey: altcha.DeriveKeyPBKDF2(), Timeout: time.Minute})
+	if err != nil || sol == nil {
+		h.t.Fatalf("solve: %v", err)
+	}
+	b, _ := json.Marshal(altcha.Payload{Challenge: ch, Solution: *sol})
+	return base64.StdEncoding.EncodeToString(b)
 }
 
 func (h *harness) loginAdmin() {

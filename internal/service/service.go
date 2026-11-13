@@ -103,6 +103,7 @@ type Service struct {
 	siteLocks    keyedMutex
 	settingsMu   sync.RWMutex
 	settingsData *effectiveSettings
+	publicAdmin  publicAdminCache
 	dns          *dnscheck.Checker
 	ipCache      serverIPCache
 	setup        *setupcheck.Checker
