@@ -44,6 +44,9 @@ type CollectionCreate struct {
 	Title  string          `json:"title,omitempty"`
 	Mode   string          `json:"mode,omitempty"`
 	Schema json.RawMessage `json:"schema,omitempty"`
+	// Template names a built-in template; WithSamples writes its samples.
+	Template    string `json:"template,omitempty"`
+	WithSamples bool   `json:"with_samples,omitempty"`
 }
 
 // CollectionPatch changes a collection: nil fields are not sent, a Schema

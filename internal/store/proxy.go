@@ -24,6 +24,8 @@ type ProxyRepository interface {
 	DeleteProxyEndpoint(ctx context.Context, siteID string, id int64) error
 	// RecordProxyUse counts one call of an endpoint.
 	RecordProxyUse(ctx context.Context, id int64, outcome ProxyOutcome, status int, now time.Time) error
+	// AddProxyRejected adds n calls refused before forwarding in one write.
+	AddProxyRejected(ctx context.Context, id int64, n, status int, at time.Time) error
 	// PurgeProxyEndpoints deletes the endpoints (and secrets) of deleted sites.
 	PurgeProxyEndpoints(ctx context.Context) (int, error)
 }

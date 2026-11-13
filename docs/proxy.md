@@ -51,7 +51,7 @@ Caddy sends `/_dropsite/proxy/*` to control only after `forward_auth`, so a pass
 
 ## Usage and audit
 
-Each endpoint counts forwarded calls, failed ones (upstream 5xx or unreachable), refused ones (origin, method, path, rate, missing key, size) and the time and status of the last call. No IP addresses, paths or bodies are stored. The audit log records `proxy.endpoint.create`, `proxy.endpoint.update`, `proxy.endpoint.delete`, `proxy.secret.set` and `proxy.secret.clear` with the site, the endpoint name and the upstream host, never the key. Visitor calls are not audited.
+Each endpoint counts forwarded calls, failed ones (upstream 5xx or unreachable), refused ones (origin, method, path, rate, missing key, size) and the time and status of the last call. Refused calls are counted in memory and written at most once every 10 seconds (and before the owner views the endpoints), so a flood of refused calls does not turn into database writes; a restart may lose the refusals of the last 10 seconds. No IP addresses, paths or bodies are stored. The audit log records `proxy.endpoint.create`, `proxy.endpoint.update`, `proxy.endpoint.delete`, `proxy.secret.set` and `proxy.secret.clear` with the site, the endpoint name and the upstream host, never the key. Visitor calls are not audited.
 
 ## Risks the owner accepts
 

@@ -303,8 +303,36 @@ func (db *DB) InsertPendingDocument(ctx context.Context, d domain.Document, maxD
 		if err != nil {
 			return fmt.Errorf("insert pending document: %w", err)
 		}
-		return bumpVersion(ctx, tx, d.SiteID, d.Collection)
+		// A pending document is not public: the data version (and the
+		// public ETag) stays, so proposals neither leak activity nor bust
+		// caches.
+		return nil
 	})
+}
+
+// versionRule tells changeDocuments when a change is publicly visible and
+// so bumps the data version.
+type versionRule int
+
+const (
+	// bumpOnChange: every affected document was or becomes public.
+	bumpOnChange versionRule = iota
+	// bumpNever: only pending documents are affected.
+	bumpNever
+	// bumpIfApproved: bump only when an approved document is affected.
+	bumpIfApproved
+)
+
+// countApproved counts the approved documents among ids.
+func countApproved(ctx context.Context, tx *sql.Tx, siteID, collection string, ids []string) (int, error) {
+	in, args := idList(ids)
+	var n int
+	err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM site_documents WHERE site_id = ? AND collection = ? "+ //nolint:gosec // G202: placeholders only
+		"AND status = 'approved' AND id IN ("+in+")", append([]any{siteID, collection}, args...)...).Scan(&n)
+	if err != nil {
+		return 0, fmt.Errorf("count approved documents: %w", err)
+	}
+	return n, nil
 }
 
 func idList(ids []string) (string, []any) {
@@ -316,8 +344,9 @@ func idList(ids []string) (string, []any) {
 }
 
 // changeDocuments runs one statement over the listed documents of an
-// existing collection and bumps the data version when it changed any.
-func (db *DB) changeDocuments(ctx context.Context, siteID, collection, stmt string, lead []any, ids []string) (int, error) {
+// existing collection and bumps the data version when it changed any
+// publicly visible document (see versionRule).
+func (db *DB) changeDocuments(ctx context.Context, siteID, collection, stmt string, lead []any, ids []string, rule versionRule) (int, error) {
 	var n int64
 	err := db.withTx(ctx, func(tx *sql.Tx) error {
 		if err := requireCollection(ctx, tx, siteID, collection); err != nil {
@@ -325,6 +354,14 @@ func (db *DB) changeDocuments(ctx context.Context, siteID, collection, stmt stri
 		}
 		if len(ids) == 0 {
 			return nil
+		}
+		public := rule == bumpOnChange
+		if rule == bumpIfApproved {
+			approved, err := countApproved(ctx, tx, siteID, collection, ids)
+			if err != nil {
+				return err
+			}
+			public = approved > 0
 		}
 		in, args := idList(ids)
 		res, err := tx.ExecContext(ctx, strings.Replace(stmt, "(?ids)", "("+in+")", 1),
@@ -335,7 +372,7 @@ func (db *DB) changeDocuments(ctx context.Context, siteID, collection, stmt stri
 		if n, err = res.RowsAffected(); err != nil {
 			return fmt.Errorf("change documents: %w", err)
 		}
-		if n == 0 {
+		if n == 0 || !public {
 			return nil
 		}
 		return bumpVersion(ctx, tx, siteID, collection)
@@ -343,20 +380,23 @@ func (db *DB) changeDocuments(ctx context.Context, siteID, collection, stmt stri
 	return int(n), err
 }
 
-// DeleteDocuments removes documents by ID.
+// DeleteDocuments removes documents by ID; the data version changes only
+// when an approved (public) document was among them.
 func (db *DB) DeleteDocuments(ctx context.Context, siteID, collection string, ids []string, _ time.Time) (int, error) {
 	return db.changeDocuments(ctx, siteID, collection,
-		"DELETE FROM site_documents WHERE site_id = ? AND collection = ? AND id IN (?ids)", nil, ids)
+		"DELETE FROM site_documents WHERE site_id = ? AND collection = ? AND id IN (?ids)", nil, ids, bumpIfApproved)
 }
 
-// ModerateDocuments approves or rejects (deletes) pending documents.
+// ModerateDocuments approves or rejects (deletes) pending documents. Only
+// approval changes what visitors see, so only it bumps the data version.
 func (db *DB) ModerateDocuments(ctx context.Context, siteID, collection string, ids []string, approve bool, now time.Time) (int, error) {
 	if approve {
 		return db.changeDocuments(ctx, siteID, collection, `UPDATE site_documents SET status = 'approved', updated_at = ?
-			WHERE site_id = ? AND collection = ? AND status = 'pending' AND id IN (?ids)`, []any{toMS(now)}, ids)
+			WHERE site_id = ? AND collection = ? AND status = 'pending' AND id IN (?ids)`, []any{toMS(now)}, ids, bumpOnChange)
 	}
 	return db.changeDocuments(ctx, siteID, collection,
-		"DELETE FROM site_documents WHERE site_id = ? AND collection = ? AND status = 'pending' AND id IN (?ids)", nil, ids)
+		"DELETE FROM site_documents WHERE site_id = ? AND collection = ? AND status = 'pending' AND id IN (?ids)", nil, ids,
+		bumpNever)
 }
 
 const documentCols = "site_id, collection, id, data_json, position, status, created_at, updated_at"

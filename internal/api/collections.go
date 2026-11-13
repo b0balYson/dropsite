@@ -65,10 +65,12 @@ func (a *api) listCollections(w http.ResponseWriter, r *http.Request) error {
 }
 
 type createCollectionRequest struct {
-	Name   string          `json:"name"`
-	Title  string          `json:"title"`
-	Mode   string          `json:"mode"`
-	Schema json.RawMessage `json:"schema"`
+	Name        string          `json:"name"`
+	Title       string          `json:"title"`
+	Mode        string          `json:"mode"`
+	Schema      json.RawMessage `json:"schema"`
+	Template    string          `json:"template"`
+	WithSamples bool            `json:"with_samples"`
 }
 
 func (a *api) createCollection(w http.ResponseWriter, r *http.Request) error {
@@ -78,6 +80,7 @@ func (a *api) createCollection(w http.ResponseWriter, r *http.Request) error {
 	}
 	c, err := a.svc.CreateCollection(r.Context(), actorFrom(r.Context()), r.PathValue("ref"), service.CollectionInput{
 		Name: req.Name, Title: req.Title, Mode: domain.CollectionMode(req.Mode), Schema: req.Schema,
+		Template: req.Template, WithSamples: req.WithSamples,
 	})
 	if err != nil {
 		return err

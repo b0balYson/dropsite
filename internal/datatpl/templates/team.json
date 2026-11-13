@@ -1,0 +1,33 @@
+{
+  "name": "team",
+  "title": "Team members",
+  "description": "People with a photo, role, short bio and links; the owner adds or removes people from the chat. For studios, agencies, clinics, schools.",
+  "mode": "public",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+      "role": { "type": "string", "maxLength": 120 },
+      "bio": { "type": "string", "maxLength": 1000 },
+      "photo": { "type": "string", "maxLength": 300, "description": "path of a photo in the site files" },
+      "photo_alt": { "type": "string", "maxLength": 200 },
+      "links": {
+        "type": "array",
+        "maxItems": 5,
+        "items": {
+          "type": "object",
+          "properties": {
+            "label": { "type": "string", "minLength": 1, "maxLength": 60 },
+            "url": { "type": "string", "minLength": 1, "maxLength": 300 }
+          },
+          "required": ["label", "url"]
+        }
+      }
+    },
+    "required": ["name"]
+  },
+  "samples": [
+    { "id": "maria", "position": 10, "data": { "name": "Maria Ivanova", "role": "Founder, lead designer", "bio": "Ten years of interior design; loves small spaces.", "photo": "/images/team/maria.webp", "photo_alt": "Portrait of Maria smiling", "links": [{ "label": "Portfolio", "url": "/portfolio/" }] } },
+    { "id": "alex", "position": 20, "data": { "name": "Alex Petrov", "role": "Project manager", "photo": "/images/team/alex.webp", "photo_alt": "Portrait of Alex in a grey shirt" } }
+  ]
+}

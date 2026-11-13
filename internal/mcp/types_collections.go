@@ -14,14 +14,18 @@ type CollectionsBackend interface {
 	SaveDocuments(ctx context.Context, ref, name string, docs []DocumentInput, replace bool) ([]string, Collection, error)
 	DeleteDocuments(ctx context.Context, ref, name string, ids []string) (int, Collection, error)
 	ModerateDocuments(ctx context.Context, ref, name string, ids []string, approve bool) (int, Collection, error)
+	ListCollectionTemplates(ctx context.Context) ([]CollectionTemplate, error)
 }
 
-// CollectionInput creates a collection; Schema nil means none.
+// CollectionInput creates a collection; Schema nil means none. Template
+// names a built-in template; WithSamples also writes its samples.
 type CollectionInput struct {
-	Name   string
-	Title  string
-	Mode   string
-	Schema map[string]any
+	Name        string
+	Title       string
+	Mode        string
+	Schema      map[string]any
+	Template    string
+	WithSamples bool
 }
 
 // CollectionPatch changes a collection; nil fields stay. RemoveSchema

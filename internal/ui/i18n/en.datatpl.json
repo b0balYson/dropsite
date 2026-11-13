@@ -1,0 +1,13 @@
+{
+  "datatpl.field": "Start from a template",
+  "datatpl.none": "No template",
+  "datatpl.hint": "A template sets the fields (schema) and who writes; you can change both later in the settings. The ready code for the page appears on the collection page.",
+  "datatpl.samples": "Add sample documents to edit",
+  "datatpl.menu": "Menu with categories and prices",
+  "datatpl.catalog": "Product catalog",
+  "datatpl.services": "Price list of services",
+  "datatpl.events": "Events and schedule",
+  "datatpl.team": "Team members",
+  "datatpl.faq": "Questions and answers",
+  "datatpl.reviews": "Reviews (moderated)"
+}

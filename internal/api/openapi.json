@@ -529,6 +529,17 @@
         }
       }
     },
+    "/collection-templates": {
+      "get": {
+        "operationId": "listCollectionTemplates",
+        "summary": "Built-in collection templates: schema, default mode, sample documents and an unstyled rendering snippet",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CollectionTemplateList" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
     "/sites/{ref}/collections": {
       "parameters": [{ "$ref": "#/components/parameters/SiteRef" }],
       "get": {
@@ -3092,7 +3103,37 @@
           "name": { "type": "string" },
           "title": { "type": "string" },
           "mode": { "type": "string", "enum": ["public", "moderated"], "default": "public" },
-          "schema": { "type": ["object", "null"], "description": "required for moderated collections" }
+          "schema": { "type": ["object", "null"], "description": "required for moderated collections" },
+          "template": { "type": "string", "description": "built-in template name (see GET /collection-templates); fills an empty title, mode and schema" },
+          "with_samples": { "type": "boolean", "default": false, "description": "also write the template's sample documents; needs template" }
+        }
+      },
+      "CollectionTemplateList": {
+        "type": "object",
+        "required": ["items", "total"],
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/CollectionTemplate" } },
+          "total": { "type": "integer" }
+        }
+      },
+      "CollectionTemplate": {
+        "type": "object",
+        "required": ["name", "title", "description", "mode", "schema", "samples", "snippet"],
+        "properties": {
+          "name": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "mode": { "type": "string", "enum": ["public", "moderated"] },
+          "schema": { "type": "object" },
+          "samples": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "position", "data"],
+              "properties": { "id": { "type": "string" }, "position": { "type": "integer" }, "data": { "type": "object" } }
+            }
+          },
+          "snippet": { "type": "string", "description": "HTML and JavaScript for a collection named like the template: loads /_dropsite/data/<name>, keeps the fallback content, no styles" }
         }
       },
       "CollectionUpdate": {

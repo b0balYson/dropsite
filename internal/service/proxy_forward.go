@@ -112,16 +112,16 @@ func (s *Service) OpenProxy(ctx context.Context, c ProxyCall) (*ProxyResponse, e
 	}
 	segs, err := s.checkProxyCall(e, site.ID, c)
 	if err != nil {
-		s.recordProxy(ctx, e.ID, store.ProxyRejected, proxyStatusOf(err))
+		s.recordProxyRejected(ctx, e.ID, proxyStatusOf(err))
 		return nil, err
 	}
 	resp, err := s.forwardProxy(ctx, e, host, segs, c)
 	if err != nil {
-		outcome := store.ProxyFailed
 		if code := domain.AsError(err).Code; code == domain.CodeProxySecretMissing || code == domain.CodeProxyTooLarge {
-			outcome = store.ProxyRejected
+			s.recordProxyRejected(ctx, e.ID, proxyStatusOf(err))
+		} else {
+			s.recordProxy(ctx, e.ID, store.ProxyFailed, proxyStatusOf(err))
 		}
-		s.recordProxy(ctx, e.ID, outcome, proxyStatusOf(err))
 		return nil, err
 	}
 	outcome := store.ProxyForwarded

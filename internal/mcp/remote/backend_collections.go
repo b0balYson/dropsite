@@ -74,7 +74,7 @@ func (b backend) CreateCollection(ctx context.Context, ref string, in mcp.Collec
 		return mcp.Collection{}, err
 	}
 	c, err := b.svc.CreateCollection(ctx, b.actor, ref, service.CollectionInput{Name: in.Name, Title: in.Title,
-		Mode: domain.CollectionMode(in.Mode), Schema: schema})
+		Mode: domain.CollectionMode(in.Mode), Schema: schema, Template: in.Template, WithSamples: in.WithSamples})
 	if err != nil {
 		return mcp.Collection{}, b.collectionsError(err)
 	}

@@ -1,0 +1,89 @@
+<!-- Upcoming events from the collection __COLLECTION__. No styles on purpose: style it with the site's own
+     CSS (the data-* attributes and elements are the hooks). Keep the fallback in sync with the data. -->
+<section id="__COLLECTION__" aria-labelledby="__COLLECTION__-title">
+  <h2 id="__COLLECTION__-title">Upcoming events</h2>
+  <ol data-items>
+    <!-- Fallback content: shown when the data cannot be loaded and read by search engines. -->
+    <li data-item>
+      <article>
+        <h3>Jazz night</h3>
+        <p><time datetime="2030-12-05T19:00:00+03:00">5 December, 19:00</time></p>
+        <p data-location>Main hall</p>
+      </article>
+    </li>
+  </ol>
+  <p data-empty hidden>No upcoming events yet.</p>
+</section>
+<script>
+(() => {
+  const NAME = '__COLLECTION__';
+  const MORE = 'Details';
+  const root = document.getElementById(NAME);
+  const box = root.querySelector('[data-items]');
+  const lang = document.documentElement.lang || undefined;
+  const when = new Intl.DateTimeFormat(lang, { dateStyle: 'long', timeStyle: 'short' });
+  const el = (tag, text, attr) => {
+    const e = document.createElement(tag);
+    if (text !== undefined && text !== null && text !== '') e.textContent = String(text);
+    if (attr) e.setAttribute(attr, '');
+    return e;
+  };
+  // Only site paths and https links: never javascript: or data: URLs from data.
+  const safeURL = (u) => (typeof u === 'string' && (/^\/(?!\/)/.test(u) || /^https:\/\//.test(u)) ? u : '');
+
+  async function loadAll() {
+    const items = [];
+    let after = '';
+    for (let page = 0; page < 25; page++) {
+      const r = await fetch('/_dropsite/data/' + NAME + '?limit=200' + (after ? '&after=' + encodeURIComponent(after) : ''));
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const body = await r.json();
+      items.push(...body.items);
+      if (!body.next) break;
+      after = body.next;
+    }
+    return items;
+  }
+
+  function time(value) {
+    const t = el('time', when.format(new Date(value)));
+    t.dateTime = value;
+    return t;
+  }
+
+  function event(d) {
+    const li = el('li', null, 'data-item');
+    const article = el('article');
+    article.append(el('h3', d.title));
+    const p = el('p');
+    p.append(time(d.start));
+    if (d.end) p.append(' – ', time(d.end));
+    article.append(p);
+    if (d.location) article.append(el('p', d.location, 'data-location'));
+    if (d.price) article.append(el('p', d.price, 'data-price'));
+    if (d.description) article.append(el('p', d.description, 'data-description'));
+    const href = safeURL(d.url);
+    if (href) {
+      const a = el('a', MORE);
+      a.href = href;
+      a.setAttribute('aria-label', MORE + ': ' + d.title);
+      article.append(el('p'));
+      article.lastChild.append(a);
+    }
+    li.append(article);
+    return li;
+  }
+
+  function render(items) {
+    const now = Date.now();
+    const upcoming = items.map(({ data }) => data)
+      .filter((d) => !Number.isNaN(Date.parse(d.start)) && Date.parse(d.end || d.start) >= now)
+      .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+    box.replaceChildren(...upcoming.map(event));
+    root.querySelector('[data-empty]').hidden = upcoming.length > 0;
+  }
+
+  // Values are set with textContent and properties only: never innerHTML with data.
+  loadAll().then(render).catch(() => { /* keep the fallback content */ });
+})();
+</script>

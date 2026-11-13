@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/b0balYson/dropsite/internal/datatpl"
 	"github.com/b0balYson/dropsite/internal/domain"
 	"github.com/b0balYson/dropsite/internal/mcp"
 	"github.com/b0balYson/dropsite/internal/service"
@@ -27,11 +28,13 @@ func collectionPagePath(siteID, name string) string {
 
 // collectionForm is a submitted create or edit form, kept for re-rendering.
 type collectionForm struct {
-	Name   string
-	Title  string
-	Mode   string
-	Schema string
-	Error  string
+	Name        string
+	Title       string
+	Mode        string
+	Schema      string
+	Template    string
+	WithSamples bool
+	Error       string
 }
 
 type collectionsPageData struct {
@@ -39,6 +42,7 @@ type collectionsPageData struct {
 	Collections []service.CollectionView
 	New         collectionForm
 	Edit        collectionForm // the collection whose edit form failed
+	Templates   []datatpl.Template
 }
 
 func (s *server) renderCollections(w http.ResponseWriter, r *http.Request, rc *reqCtx, status int, newForm, edit collectionForm) {
@@ -51,11 +55,11 @@ func (s *server) renderCollections(w http.ResponseWriter, r *http.Request, rc *r
 		newForm.Mode = string(domain.CollectionPublic)
 	}
 	s.page(w, r, rc, status, "collections", "sites", "data.title",
-		collectionsPageData{V: v, Collections: cs, New: newForm, Edit: edit})
+		collectionsPageData{V: v, Collections: cs, New: newForm, Edit: edit, Templates: s.svc.CollectionTemplates()})
 }
 
 func (s *server) collectionsPage(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
-	s.renderCollections(w, r, rc, http.StatusOK, collectionForm{}, collectionForm{})
+	s.renderCollections(w, r, rc, http.StatusOK, collectionForm{WithSamples: true}, collectionForm{})
 }
 
 // describeData is describe plus the English detail of document and schema
@@ -78,10 +82,8 @@ func schemaText(raw string) json.RawMessage {
 
 func (s *server) createCollection(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	f := collectionForm{Name: r.PostFormValue("name"), Title: r.PostFormValue("title"), Mode: r.PostFormValue("mode"),
-		Schema: r.PostFormValue("schema")}
-	c, err := s.svc.CreateCollection(r.Context(), rc.actor, r.PathValue("ref"), service.CollectionInput{
-		Name: f.Name, Title: f.Title, Mode: domain.CollectionMode(f.Mode), Schema: schemaText(f.Schema),
-	})
+		Schema: r.PostFormValue("schema"), Template: r.PostFormValue("template"), WithSamples: r.PostFormValue("with_samples") != ""}
+	c, err := s.svc.CreateCollection(r.Context(), rc.actor, r.PathValue("ref"), templateInput(f))
 	if err != nil {
 		if isNotFound(err) {
 			s.notFound(w, r, rc)
@@ -184,7 +186,7 @@ func (s *server) renderCollection(w http.ResponseWriter, r *http.Request, rc *re
 		return
 	}
 	base := collectionPagePath(v.Site.ID, c.Name)
-	data := collectionPageData{V: v, C: c, Docs: p.Items, Status: st, Snippet: mcp.CollectionSnippet(c.Name),
+	data := collectionPageData{V: v, C: c, Docs: p.Items, Status: st, Snippet: mcp.SnippetFor(c.Name, c.Schema),
 		Statuses: []string{"all", string(domain.DocumentPending), string(domain.DocumentApproved)}}
 	if p.Next != "" {
 		data.Next = base + "?" + url.Values{"status": {st}, "cursor": {p.Next}}.Encode()

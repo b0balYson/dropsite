@@ -1,0 +1,67 @@
+<!-- Questions and answers from the collection __COLLECTION__. No styles on purpose: style it with the
+     site's own CSS (the data-* attributes and elements are the hooks). Keep the fallback in sync with the data. -->
+<section id="__COLLECTION__" aria-labelledby="__COLLECTION__-title">
+  <h2 id="__COLLECTION__-title">Questions and answers</h2>
+  <div data-items>
+    <!-- Fallback content: shown when the data cannot be loaded and read by search engines. -->
+    <details data-item>
+      <summary>Do you deliver?</summary>
+      <p>Yes, within the city in 1-2 days.</p>
+      <p>Delivery is free for orders over 50 EUR.</p>
+    </details>
+  </div>
+</section>
+<script>
+(() => {
+  const NAME = '__COLLECTION__';
+  const root = document.getElementById(NAME);
+  const box = root.querySelector('[data-items]');
+  const el = (tag, text, attr) => {
+    const e = document.createElement(tag);
+    if (text !== undefined && text !== null && text !== '') e.textContent = String(text);
+    if (attr) e.setAttribute(attr, '');
+    return e;
+  };
+
+  async function loadAll() {
+    const items = [];
+    let after = '';
+    for (let page = 0; page < 25; page++) {
+      const r = await fetch('/_dropsite/data/' + NAME + '?limit=200' + (after ? '&after=' + encodeURIComponent(after) : ''));
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const body = await r.json();
+      items.push(...body.items);
+      if (!body.next) break;
+      after = body.next;
+    }
+    return items;
+  }
+
+  function entry(d) {
+    const details = el('details', null, 'data-item');
+    details.append(el('summary', d.question));
+    // An empty line in the answer starts a new paragraph.
+    for (const part of String(d.answer).split(/\n\s*\n/)) {
+      if (part.trim()) details.append(el('p', part.trim()));
+    }
+    return details;
+  }
+
+  function render(items) {
+    if (items.length === 0) return; // keep the fallback rather than an empty block
+    const groups = new Map(); // categories in the order of their first question
+    for (const { data } of items) {
+      const key = data.category || '';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(data);
+    }
+    box.replaceChildren(...[...groups].flatMap(([category, list]) => {
+      const nodes = list.map(entry);
+      return category ? [el('h3', category, 'data-category'), ...nodes] : nodes;
+    }));
+  }
+
+  // Values are set with textContent only: never innerHTML with data.
+  loadAll().then(render).catch(() => { /* keep the fallback content */ });
+})();
+</script>

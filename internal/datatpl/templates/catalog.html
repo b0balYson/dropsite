@@ -1,0 +1,103 @@
+<!-- Product catalog from the collection __COLLECTION__. No styles on purpose: style it with the site's own
+     CSS (the data-* attributes and elements are the hooks). Keep the fallback in sync with the data. -->
+<section id="__COLLECTION__" aria-labelledby="__COLLECTION__-title">
+  <h2 id="__COLLECTION__-title">Catalog</h2>
+  <ul data-items>
+    <!-- Fallback content: shown when the data cannot be loaded and read by search engines. -->
+    <li data-item>
+      <article>
+        <img src="/images/mug-blue.webp" alt="A blue glazed mug on a wooden table" loading="lazy">
+        <h3><a href="/products/mug-blue/">Blue ceramic mug</a></h3>
+        <p data-description>Hand-thrown stoneware, 350 ml, dishwasher safe.</p>
+        <p><data data-price value="18">$18.00</data></p>
+      </article>
+    </li>
+  </ul>
+  <p data-empty hidden>New products are coming soon.</p>
+</section>
+<script>
+(() => {
+  const NAME = '__COLLECTION__';
+  const CURRENCY = 'USD'; // ISO 4217 code of the prices
+  const OUT_OF_STOCK = 'Out of stock';
+  const root = document.getElementById(NAME);
+  const box = root.querySelector('[data-items]');
+  const lang = document.documentElement.lang || undefined;
+  const money = new Intl.NumberFormat(lang, { style: 'currency', currency: CURRENCY });
+  const el = (tag, text, attr) => {
+    const e = document.createElement(tag);
+    if (text !== undefined && text !== null && text !== '') e.textContent = String(text);
+    if (attr) e.setAttribute(attr, '');
+    return e;
+  };
+  // Only site paths and https links: never javascript: or data: URLs from data.
+  const safeURL = (u) => (typeof u === 'string' && (/^\/(?!\/)/.test(u) || /^https:\/\//.test(u)) ? u : '');
+
+  async function loadAll() {
+    const items = [];
+    let after = '';
+    for (let page = 0; page < 25; page++) {
+      const r = await fetch('/_dropsite/data/' + NAME + '?limit=200' + (after ? '&after=' + encodeURIComponent(after) : ''));
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const body = await r.json();
+      items.push(...body.items);
+      if (!body.next) break;
+      after = body.next;
+    }
+    return items;
+  }
+
+  function price(d) {
+    const p = el('p');
+    const now = el('data', money.format(d.price), 'data-price');
+    now.value = String(d.price);
+    if (typeof d.old_price === 'number' && d.old_price > d.price) {
+      const old = el('del', money.format(d.old_price), 'data-old-price');
+      p.append(old, ' ', el('ins', null));
+      p.lastChild.append(now);
+    } else {
+      p.append(now);
+    }
+    return p;
+  }
+
+  function product(d) {
+    const li = el('li', null, 'data-item');
+    const article = el('article');
+    const src = safeURL(d.image);
+    if (src) {
+      const img = el('img');
+      img.src = src;
+      img.alt = d.image_alt || '';
+      img.loading = 'lazy';
+      article.append(img);
+    }
+    const h3 = el('h3');
+    const href = safeURL(d.url);
+    if (href) {
+      const a = el('a', d.name);
+      a.href = href;
+      h3.append(a);
+    } else {
+      h3.textContent = d.name;
+    }
+    article.append(h3);
+    if (d.description) article.append(el('p', d.description, 'data-description'));
+    article.append(price(d));
+    if (d.in_stock === false) {
+      li.setAttribute('data-out-of-stock', '');
+      article.append(el('p', OUT_OF_STOCK, 'data-stock'));
+    }
+    li.append(article);
+    return li;
+  }
+
+  function render(items) {
+    box.replaceChildren(...items.map(({ data }) => product(data)));
+    root.querySelector('[data-empty]').hidden = items.length > 0;
+  }
+
+  // Values are set with textContent and properties only: never innerHTML with data.
+  loadAll().then(render).catch(() => { /* keep the fallback content */ });
+})();
+</script>

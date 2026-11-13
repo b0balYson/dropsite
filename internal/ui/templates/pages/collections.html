@@ -53,6 +53,16 @@
       <input class="input mono" id="new-name" name="name" required maxlength="64" pattern="[a-zA-Z0-9][a-zA-Z0-9_\-]*" value="{{.D.New.Name}}" placeholder="menu">
       <p class="hint">{{.L.T "data.field.name.hint"}}</p>
     </div>
+    <div class="field">
+      <label class="field__label" for="new-template">{{.L.T "datatpl.field"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+      <select class="input" id="new-template" name="template" aria-describedby="new-template-hint">
+        <option value="">{{.L.T "datatpl.none"}}</option>
+        {{range .D.Templates}}<option value="{{.Name}}" {{if eq $.D.New.Template .Name}}selected{{end}}>{{$.L.T (printf "datatpl.%s" .Name)}}</option>
+        {{end}}
+      </select>
+      <p class="hint" id="new-template-hint">{{.L.T "datatpl.hint"}}</p>
+      <label class="check"><input type="checkbox" name="with_samples" value="1" {{if .D.New.WithSamples}}checked{{end}}> {{.L.T "datatpl.samples"}}</label>
+    </div>
     {{template "collection_fields" (bundle $ (dict "Name" "new" "Title" .D.New.Title "Mode" .D.New.Mode "Schema" .D.New.Schema))}}
     <button class="btn btn--primary" type="submit">{{.L.T "data.create"}}</button>
   </form>
