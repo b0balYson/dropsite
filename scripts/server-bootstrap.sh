@@ -13,7 +13,8 @@
 # starts the stack, removes that password from .env once the administrator
 # exists (it is shown once; dropsite-admin-password resets it), installs a daily backup and the helper commands
 # dropsite-update, dropsite-rollback, dropsite-backup, dropsite-admin-password
-# and dropsite-info.
+# and dropsite-info, and dropsite-update-watch: the root job that runs an
+# update an administrator requested with the button in the web interface.
 #
 # Releases: DROPSITE_VERSION in deploy/.env selects a published release
 # ("latest", the default, or an exact version such as 1.4.2). The checkout is
@@ -61,6 +62,8 @@ APP_DIR=${DROPSITE_DIR:-/opt/dropsite}
 LOG=/var/log/dropsite-install.log
 BIN_DIR=/usr/local/bin
 CRON_FILE=/etc/cron.d/dropsite-backup
+UPDATE_CRON_FILE=/etc/cron.d/dropsite-update
+SYSTEMD_DIR=/etc/systemd/system
 COMPOSE_MIN=2.24.4
 SWAP_TARGET_MB=3072 # RAM + swap of at least 3 GB: enough to compile control
 STATE_DIR=/var/lib/dropsite
@@ -526,7 +529,7 @@ write_file() {
 }
 
 install_helpers() {
-	step "Installing the commands dropsite-update, dropsite-rollback, dropsite-backup, dropsite-admin-password, dropsite-info"
+	step "Installing the commands dropsite-update, dropsite-rollback, dropsite-backup, dropsite-admin-password, dropsite-info, dropsite-update-watch"
 	header=$(printf '#!/usr/bin/env bash\n# Installed by dropsite server-bootstrap.sh; reinstalled by dropsite-update.\nset -euo pipefail\nAPP_DIR=%q\n' "$APP_DIR")
 
 	{
@@ -559,7 +562,34 @@ EOF
 		cat <<'EOF'
 # Update dropsite: back up, remember what runs now (for dropsite-rollback),
 # download the new version, start it and restart Caddy if its config changed.
+#   dropsite-update            the release DROPSITE_VERSION in deploy/.env names
+#                              (latest by default)
+#   dropsite-update --to X.Y.Z exactly that release (the update button in the
+#                              web interface passes the version it showed)
 STATE_DIR=/var/lib/dropsite
+TO=""
+usage() { echo "usage: dropsite-update [--to X.Y.Z]" >&2; exit 2; }
+while [ $# -gt 0 ]; do
+	case $1 in
+	--to)
+		[ $# -ge 2 ] || usage
+		TO=$2
+		shift 2
+		;;
+	--to=*)
+		TO=${1#--to=}
+		shift
+		;;
+	*) usage ;;
+	esac
+done
+if [ -n "$TO" ] && ! [[ $TO =~ ^[0-9]{1,6}\.[0-9]{1,6}\.[0-9]{1,6}$ ]]; then
+	echo "dropsite-update: --to needs a release such as 1.4.2" >&2
+	exit 2
+fi
+# One update at a time, whoever starts it.
+exec 8>>/run/dropsite-update.lock
+flock -n 8 || { echo "dropsite-update: another update is running" >&2; exit 1; }
 cd "$APP_DIR"
 echo "==> Backing up"
 backup=$(dropsite-backup)
@@ -588,6 +618,15 @@ if ! git symbolic-ref -q HEAD >/dev/null; then
 	git checkout -q "$(cat "$STATE_DIR/branch" 2>/dev/null || echo main)"
 fi
 git pull -q --ff-only
+if [ -n "$TO" ]; then
+	echo "==> Selecting release $TO"
+	export DROPSITE_VERSION="$TO"
+	# A pinned version follows the explicit choice; "latest" stays latest.
+	case "$(sed -n 's/^DROPSITE_VERSION=//p' deploy/.env | tail -n 1)" in
+	"" | latest) ;;
+	*) sed -i "s/^DROPSITE_VERSION=.*/DROPSITE_VERSION=$TO/" deploy/.env ;;
+	esac
+fi
 echo "==> Starting the new version (a few minutes)"
 bash "$APP_DIR/scripts/server-bootstrap.sh" --up
 cd deploy
@@ -676,12 +715,190 @@ exec bash "$APP_DIR/scripts/server-bootstrap.sh" --info
 EOF
 	} | write_file "$BIN_DIR/dropsite-info" 0755
 
+	{
+		printf '%s\n' "$header"
+		cat <<'EOF'
+# Run an update an administrator requested with the button in the web
+# interface. control cannot update itself (no Docker access): it writes
+# update/request into its state volume, and this root job, started every
+# minute by cron (and at once by a systemd path unit where systemd runs):
+#   - writes update/heartbeat, so the web interface knows it is installed;
+#   - reads the request and removes it; the request is two lines,
+#     "version=X.Y.Z" and "admin=<user id>", and anything else is refused;
+#   - accepts only a release tag vX.Y.Z that exists in the repository and is
+#     newer than the running version; nothing from the file is executed;
+#   - runs dropsite-update --to X.Y.Z and writes update/status (JSON: state
+#     running, done or failed, versions, times, the last log lines).
+# Every file operation inside the volume runs as control's own user
+# (setpriv), so a link a compromised control planted there cannot make root
+# read or overwrite anything. Log: /var/log/dropsite-update.log.
+VOLUME=${DROPSITE_STATE_VOLUME:-dropsite_state}
+UPDATE_BIN=${DROPSITE_UPDATE_BIN:-/usr/local/bin/dropsite-update}
+LOG=${DROPSITE_UPDATE_LOG:-/var/log/dropsite-update.log}
+LOCK=${DROPSITE_UPDATE_LOCK:-/run/dropsite-update-watch.lock}
+CONTROL_UID=65532
+VERSION_RE='^[0-9]{1,6}\.[0-9]{1,6}\.[0-9]{1,6}$'
+ADMIN_RE='^[1-9][0-9]{0,17}$'
+MAX_REQUEST=256
+LOG_LINES=20
+
+as_control() {
+	setpriv --reuid="$CONTROL_UID" --regid="$CONTROL_UID" --clear-groups --no-new-privs -- "$@"
+}
+
+data=$(docker volume inspect -f '{{.Mountpoint}}' "$VOLUME" 2>/dev/null) || exit 0
+[ -n "$data" ] && [ -d "$data" ] || exit 0
+dir=$data/update
+as_control mkdir -p -m 700 -- "$dir" 2>/dev/null || exit 0
+
+# put NAME: stdin becomes $dir/NAME, replaced atomically, as control.
+put() {
+	tmp="$dir/.$1.$$"
+	as_control tee -- "$tmp" >/dev/null && as_control mv -f -- "$tmp" "$dir/$1"
+}
+
+note() { printf '%s %s\n' "$(date -u +%FT%TZ)" "$*" >>"$LOG"; }
+
+# json STRING: a JSON string without control characters, at most 300 bytes.
+json() {
+	s=$(printf '%s' "$1" | LC_ALL=C tr -d '\000-\037\177' | head -c 300)
+	s=${s//\\/\\\\}
+	s=${s//\"/\\\"}
+	printf '"%s"' "$s"
+}
+
+# status STATE MESSAGE [LOGFILE]
+status() {
+	{
+		printf '{"state":%s,"from":%s,"to":%s,"admin":%s,"started_at":%s,"finished_at":%s,"message":%s,"log":[' \
+			"$(json "$1")" "$(json "$current")" "$(json "$version")" "$(json "$admin")" \
+			"$(json "$started")" "$(json "${finished:-}")" "$(json "$2")"
+		if [ -n "${3:-}" ]; then
+			sep=""
+			while IFS= read -r line; do
+				printf '%s%s' "$sep" "$(json "$line")"
+				sep=,
+			done < <(tail -n "$LOG_LINES" -- "$3")
+		fi
+		printf ']}\n'
+	} | put status
+}
+
+# newer A B: release A is newer than release B (both X.Y.Z, validated).
+newer() {
+	IFS=. read -r a1 a2 a3 <<<"$1"
+	IFS=. read -r b1 b2 b3 <<<"$2"
+	for p in "$((10#$a1 - 10#$b1))" "$((10#$a2 - 10#$b2))" "$((10#$a3 - 10#$b3))"; do
+		[ "$p" -gt 0 ] && return 0
+		[ "$p" -lt 0 ] && return 1
+	done
+	return 1
+}
+
+reject() {
+	finished=$(date -u +%FT%TZ)
+	note "update request refused: $1"
+	status failed "request refused: $1"
+	exit 0
+}
+
+date +%s | put heartbeat || exit 0
+
+exec 9>>"$LOCK"
+flock -n 9 || exit 0
+
+req=$(as_control timeout 5 head -c "$MAX_REQUEST" -- "$dir/request" 2>/dev/null) || exit 0
+as_control rm -f -- "$dir/request"
+started=$(date -u +%FT%TZ)
+version=""
+admin=""
+current=""
+ctr=$(cd "$APP_DIR/deploy" && docker compose ps -q control 2>/dev/null) || ctr=""
+if [ -n "$ctr" ]; then
+	current=$(docker exec "$ctr" /control version 2>/dev/null | awk '{print $NF}') || current=""
+fi
+[[ $current =~ ^[0-9A-Za-z.+-]{1,64}$ ]] || current=""
+
+v=""
+a=""
+n=0
+while IFS= read -r line || [ -n "$line" ]; do
+	n=$((n + 1))
+	[ "$n" -le 2 ] || reject "unexpected content"
+	case $line in
+	version=*)
+		[ -z "$v" ] || reject "version given twice"
+		v=${line#version=}
+		;;
+	admin=*)
+		[ -z "$a" ] || reject "administrator given twice"
+		a=${line#admin=}
+		;;
+	*) reject "unexpected content" ;;
+	esac
+done <<<"$req"
+[[ $v =~ $VERSION_RE ]] || reject "the version is not X.Y.Z"
+[[ $a =~ $ADMIN_RE ]] || reject "no administrator"
+version=$v
+admin=$a
+git -C "$APP_DIR" fetch -q --tags --force origin >/dev/null 2>&1 </dev/null || true
+git -C "$APP_DIR" rev-parse -q --verify "refs/tags/v$version^{commit}" >/dev/null ||
+	reject "release $version does not exist"
+running=${current%%[-+]*}
+if [[ $running =~ $VERSION_RE ]] && ! newer "$version" "$running"; then
+	reject "release $version is not newer than $current"
+fi
+
+note "update to $version requested by administrator $admin (running ${current:-unknown})"
+status running ""
+out=$(mktemp)
+trap 'rm -f "$out"' EXIT
+rc=0
+# The lock stays with this job only, never with what the update starts.
+"$UPDATE_BIN" --to "$version" >"$out" 2>&1 </dev/null 9>&- || rc=$?
+cat "$out" >>"$LOG"
+finished=$(date -u +%FT%TZ)
+if [ "$rc" = 0 ]; then
+	note "update to $version done"
+	status done "" "$out"
+else
+	note "update to $version failed (exit $rc)"
+	status failed "dropsite-update exited with $rc" "$out"
+fi
+EOF
+	} | write_file "$BIN_DIR/dropsite-update-watch" 0755
+
+	printf '%s\n' \
+		'# dropsite: run an update requested in the web interface (see dropsite-update-watch).' \
+		'SHELL=/bin/bash' \
+		'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' \
+		'* * * * * root /usr/local/bin/dropsite-update-watch >/dev/null 2>&1' |
+		write_file "$UPDATE_CRON_FILE" 0644
+	install_update_unit
+
 	printf '%s\n' \
 		'# dropsite: daily backup at 03:15 server time (see dropsite-backup).' \
 		'SHELL=/bin/bash' \
 		'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' \
 		'15 3 * * * root /usr/local/bin/dropsite-backup >>/var/log/dropsite-backup.log 2>&1' |
 		write_file "$CRON_FILE" 0644
+}
+
+# install_update_unit starts dropsite-update-watch as soon as a request
+# appears, where systemd runs; cron picks it up within a minute anyway.
+install_update_unit() {
+	[ -d /run/systemd/system ] || return 0
+	data=$(docker volume inspect -f '{{.Mountpoint}}' dropsite_state 2>/dev/null) || return 0
+	[ -n "$data" ] || return 0
+	printf '%s\n' '[Unit]' 'Description=Run a dropsite update requested in the web interface' '' \
+		'[Service]' 'Type=oneshot' 'ExecStart=/usr/local/bin/dropsite-update-watch' |
+		write_file "$SYSTEMD_DIR/dropsite-update-watch.service" 0644
+	printf '%s\n' '[Unit]' 'Description=Watch for dropsite update requests' '' \
+		'[Path]' "PathChanged=$data/update/request" '' '[Install]' 'WantedBy=multi-user.target' |
+		write_file "$SYSTEMD_DIR/dropsite-update-watch.path" 0644
+	if ! { systemctl daemon-reload && systemctl enable --now dropsite-update-watch.path; } >>"$LOG" 2>&1 </dev/null; then
+		warn "could not start dropsite-update-watch.path; cron runs requested updates within a minute"
+	fi
 }
 
 # apply_public_admin passes the owner's answer to control once. The setting

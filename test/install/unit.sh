@@ -397,6 +397,137 @@ if command -v bash >/dev/null 2>&1; then
 	check "bootstrap: no public address while off" test -z "$url"
 fi
 
+# --- dropsite-update-watch: the update request from the web interface ---------
+# The host job against a request file a compromised control could have
+# written: only version=X.Y.Z of an existing newer tag and admin=<id> pass;
+# nothing from the file runs. docker, setpriv, flock and timeout are stubbed;
+# dropsite-update is a stub that records its arguments.
+if command -v bash >/dev/null 2>&1 && command -v git >/dev/null 2>&1; then
+	uw="$WORK/update-watch"
+	mkdir -p "$uw/bin" "$uw/stub" "$uw/volume" "$uw/app/deploy"
+	git -C "$uw/app" init -q
+	git -C "$uw/app" -c user.name=t -c user.email=t@example.invalid commit -q --allow-empty -m init
+	git -C "$uw/app" tag v0.4.0
+	git -C "$uw/app" tag v0.5.0
+	git -C "$uw/app" tag v0.5.0-rc.1
+	DROPSITE_BOOTSTRAP_LIB=1 DROPSITE_DIR="$uw/app" bash -c '
+		. "$1"
+		BIN_DIR=$2/bin CRON_FILE=$2/cron-backup UPDATE_CRON_FILE=$2/cron-update SYSTEMD_DIR=$2/systemd
+		install_update_unit() { :; }
+		install_helpers 2>/dev/null
+	' _ "$ROOT/scripts/server-bootstrap.sh" "$uw"
+	check "watch: installed" test -x "$uw/bin/dropsite-update-watch"
+	check "watch: cron every minute" grep -q '^\* \* \* \* \* root /usr/local/bin/dropsite-update-watch' "$uw/cron-update"
+	cat >"$uw/stub/docker" <<'EOF'
+#!/bin/sh
+case "$1 $2" in
+"volume inspect") printf '%s\n' "$UW_VOLUME" ;;
+"compose ps") echo ctr1 ;;
+"exec ctr1") echo "dropsite control $UW_CURRENT" ;;
+*) exit 1 ;;
+esac
+EOF
+	cat >"$uw/stub/setpriv" <<'EOF'
+#!/bin/sh
+while [ "$1" != -- ]; do shift; done
+shift
+exec "$@"
+EOF
+	printf '#!/bin/sh\nexit 0\n' >"$uw/stub/flock"
+	printf '#!/bin/sh\nshift\nexec "$@"\n' >"$uw/stub/timeout"
+	cat >"$uw/dropsite-update" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >>"$UW_CALLS"
+printf '==> Backing up\nquote " backslash \\ tab\there\n'
+exit "${UW_RC:-0}"
+EOF
+	chmod +x "$uw/stub/"* "$uw/dropsite-update"
+	req="$uw/volume/update/request"
+	st="$uw/volume/update/status"
+	# watch REQUEST [CURRENT]: write the request (no file when "-"), run the job.
+	watch() {
+		rm -f "$st" "$uw/calls"
+		mkdir -p "$uw/volume/update"
+		[ "$1" = - ] || printf '%b' "$1" >"$req"
+		PATH="$uw/stub:$PATH" UW_VOLUME="$uw/volume" UW_CURRENT="${2:-0.4.0}" UW_CALLS="$uw/calls" \
+			DROPSITE_UPDATE_BIN="$uw/dropsite-update" DROPSITE_UPDATE_LOG="$uw/update.log" \
+			DROPSITE_UPDATE_LOCK="$uw/lock" bash "$uw/bin/dropsite-update-watch" >/dev/null 2>&1
+	}
+	state() { sed -n 's/^{"state":"\([a-z]*\)".*/\1/p' "$st" 2>/dev/null; }
+	valid_json() {
+		if command -v python3 >/dev/null 2>&1; then python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$1"; else test -s "$1"; fi
+	}
+
+	watch -
+	check "watch: heartbeat written" grep -Eq '^[0-9]{9,}$' "$uw/volume/update/heartbeat"
+	check "watch: no request, no status" test ! -e "$st"
+	check "watch: no request, no update" test ! -e "$uw/calls"
+
+	watch 'version=0.5.0\nadmin=7\n'
+	check "watch: valid request runs dropsite-update --to 0.5.0" test "$(cat "$uw/calls" 2>/dev/null)" = "--to 0.5.0"
+	check "watch: request removed" test ! -e "$req"
+	check "watch: status done" test "$(state)" = "done"
+	check "watch: status is valid JSON with escaped log lines" valid_json "$st"
+	check "watch: status names the versions" grep -q '"from":"0.4.0","to":"0.5.0","admin":"7"' "$st"
+	check "watch: status keeps the last log lines" grep -q 'Backing up' "$st"
+	check "watch: log written" grep -q 'update to 0.5.0 done' "$uw/update.log"
+	watch 'version=0.5.0\nadmin=7'
+	check "watch: request without a final newline accepted" test "$(state)" = "done"
+
+	UW_RC=3
+	export UW_RC
+	watch 'version=0.5.0\nadmin=7\n'
+	unset UW_RC
+	check "watch: failed update reported" test "$(state)" = failed
+	check "watch: failed status is valid JSON" valid_json "$st"
+
+	for bad in \
+		'version=0.5.0;touch PWNED\nadmin=7\n' \
+		'version=$(touch PWNED)\nadmin=7\n' \
+		'version=`touch PWNED`\nadmin=7\n' \
+		'version=0.5.0\nadmin=7;touch PWNED\n' \
+		'version=0.5.0 \nadmin=7\n' \
+		'version=v0.5.0\nadmin=7\n' \
+		'version=0.5.0-rc.1\nadmin=7\n' \
+		'version=0.5\nadmin=7\n' \
+		'version=9.9.9\nadmin=7\n' \
+		'version=0.4.0\nadmin=7\n' \
+		'version=0.3.9\nadmin=7\n' \
+		'version=0.5.0\n' \
+		'version=0.5.0\nadmin=0\n' \
+		'version=0.5.0\nadmin=-1\n' \
+		'version=0.5.0\nversion=0.5.0\n' \
+		'version=0.5.0\nadmin=7\nextra=1\n' \
+		'admin=7\nversion=0.5.0\nadmin=8\n' \
+		'#!/bin/sh\ntouch PWNED\n' \
+		'' \
+		'version=0.5.0\r\nadmin=7\r\n'; do
+		(cd "$uw" && watch "$bad")
+		check "watch: refused $(printf '%s' "$bad" | tr '\n' ' ' | cut -c1-40)" sh -c '
+			[ ! -e "$1/calls" ] && [ ! -e "$1/PWNED" ] && [ ! -e "$1/volume/update/PWNED" ] && [ ! -e "$2" ] &&
+				grep -q "^{\"state\":\"failed\"" "$3"' _ "$uw" "$req" "$st"
+	done
+	check "watch: refusals are valid JSON" valid_json "$st"
+	watch 'version=0.5.0\nadmin=7\n' dev+abc123
+	check "watch: a development build may update to a release" test "$(state)" = "done"
+	watch 'version=0.5.0\nadmin=7\n' 0.5.0
+	check "watch: the running version is refused" test "$(state)" = failed
+
+	# The request is read and removed as control's user, never followed by
+	# root: a link to another file is just refused content here.
+	ln -s "$uw/app/.git/HEAD" "$uw/volume/update/request"
+	watch -
+	check "watch: a link as the request is refused" test "$(state)" = failed
+	check "watch: the link target is untouched" test -e "$uw/app/.git/HEAD"
+
+	for args in "--to 1.2" "--to 1.2.3;id" "--to" "--bogus" "--to v1.2.3" "--to=1.2.3-rc.1"; do
+		rc=0
+		# shellcheck disable=SC2086 # the arguments are split on purpose
+		bash "$uw/bin/dropsite-update" $args >/dev/null 2>&1 || rc=$?
+		check "dropsite-update refuses '$args'" test "$rc" = 2
+	done
+fi
+
 if [ "$FAILS" != 0 ]; then
 	printf '\n%s check(s) failed\n' "$FAILS"
 	exit 1

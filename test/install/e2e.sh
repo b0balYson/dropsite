@@ -17,7 +17,8 @@
 # local install log (mode 600, no passwords); --verbose; .env and helper commands;
 # backup, secrets key copy and cron; dropsite-admin-password; idempotent
 # re-run with a key file; dropsite-update (Caddy restart on a Caddyfile change)
-# and dropsite-rollback; --check-dns mode.
+# and dropsite-rollback; the update button's request handled by
+# dropsite-update-watch; --check-dns mode.
 # shellcheck disable=SC2012,SC2016 # ls for file modes; remote commands in single quotes
 set -eu
 
@@ -289,6 +290,48 @@ close_tunnel
 rc=0
 REMOTE dropsite-update >"$WORK/update2.log" 2>&1 || rc=$?
 check "dropsite-update after a rollback returns to the branch" test "$rc" = 0 -a "$(REMOTE git -C /opt/dropsite symbolic-ref --short HEAD)" = main
+
+# --- the update button: request file, host job, status -------------------------
+# control writes update/request into its state volume (here written as its
+# user, like control would); dropsite-update-watch validates it, runs
+# dropsite-update --to and reports update/status. A new release tag in the
+# "GitHub" repository plays the newer release; it has no published images,
+# so the update builds it from source.
+log "update request from the web interface (dropsite-update-watch)"
+UPDATE_DIR='$(docker volume inspect -f "{{.Mountpoint}}" dropsite_state)/update'
+check "update watcher installed" REMOTE test -x /usr/local/bin/dropsite-update-watch
+check "update watcher cron" REMOTE grep -q dropsite-update-watch /etc/cron.d/dropsite-update
+REMOTE dropsite-update-watch
+check "heartbeat written as control's user" test "$(REMOTE "stat -c %u $UPDATE_DIR/heartbeat")" = 65532
+put_request() { # put_request CONTENT: as control's user, like control writes it
+	REMOTE "printf '$1' | setpriv --reuid=65532 --regid=65532 --clear-groups -- tee $UPDATE_DIR/request >/dev/null"
+}
+update_state() { REMOTE "sed -n 's/^{\"state\":\"\([a-z]*\)\".*/\1/p' $UPDATE_DIR/status"; }
+put_request 'version=1.0.0;touch /tmp/pwned\nadmin=1\n'
+REMOTE dropsite-update-watch
+check "malicious request refused" test "$(update_state)" = failed
+check "nothing from the request ran" REMOTE test ! -e /tmp/pwned
+check "refused request removed" REMOTE "test ! -e $UPDATE_DIR/request"
+put_request 'version=98.0.0\nadmin=1\n'
+REMOTE dropsite-update-watch
+check "request for a missing tag refused" test "$(update_state)" = failed
+docker exec "$CTR" sh -c 'cd /srv/dropsite-src && git tag v99.0.0'
+put_request 'version=99.0.0\nadmin=1\n'
+rc=0
+REMOTE dropsite-update-watch >"$WORK/watch.log" 2>&1 || rc=$?
+REMOTE "tail -n 15 /var/log/dropsite-update.log" >&2 || true
+check "update job exits 0" test "$rc" = 0
+check "status done" test "$(update_state)" = "done"
+check "status names the target" REMOTE "grep -q '\"to\":\"99.0.0\"' $UPDATE_DIR/status"
+check "request removed" REMOTE "test ! -e $UPDATE_DIR/request"
+check "control runs the requested release" remote_out_is 'docker exec $(cd /opt/dropsite/deploy && docker compose ps -q control) /control version' 'dropsite control 99.0.0'
+check "checkout at the release tag" test "$(REMOTE git -C /opt/dropsite describe --tags --exact-match)" = v99.0.0
+open_tunnel >/dev/null || true
+check "login works after the update" test "$(login "$EMAIL" "$NEWPW")" = 303
+close_tunnel
+put_request 'version=99.0.0\nadmin=1\n'
+REMOTE dropsite-update-watch
+check "the running version is not installed again" test "$(update_state)" = failed
 
 # --- --check-dns mode ---------------------------------------------------------
 log "--check-dns (DNS cannot resolve in a test: expect 'not ready', exit 3)"
