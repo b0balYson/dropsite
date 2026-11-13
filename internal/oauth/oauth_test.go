@@ -465,7 +465,7 @@ func TestResolveMetadataClient(t *testing.T) {
 	pool.AddCert(c.srv.Certificate())
 	r := newRig(t, Options{
 		Resolver: fakeResolver{addrs: addrs("127.0.0.1")}, AllowAddr: allowAll,
-		TLSConfig: &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}, MetadataDialPort: c.port(),
+		TLSConfig: &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}, MetadataDialPort: c.port(), ClientMetadataDocuments: true,
 	})
 	got, err := r.s.ResolveClient(context.Background(), id, "1.1.1.1")
 	if err != nil || !got.Metadata {
@@ -489,25 +489,6 @@ func TestResolveMetadataClient(t *testing.T) {
 	_ = fmt.Sprint
 }
 
-func TestKnownClientFallback(t *testing.T) {
-	const id = "https://claude.ai/oauth/claude-code-client-metadata"
-	// A fetch that cannot succeed (blocked address) falls back to the built-in copy.
-	f := newFetcher(fakeResolver{addrs: addrs("127.0.0.1")}, nil, func(netip.Addr) bool { return false }, "")
-	got, err := f.get(context.Background(), id, "1.1.1.1")
-	if err != nil || got.Name != "Claude Code" || !got.Metadata || len(got.RedirectURIs) != 2 {
-		t.Fatalf("fallback: %+v %v", got, err)
-	}
-	// The copy is not shared: changing it does not change the table.
-	got.RedirectURIs[0] = "https://evil.example/cb"
-	if again, _ := knownClient(id); again.RedirectURIs[0] != "http://localhost/callback" {
-		t.Fatal("built-in metadata mutated")
-	}
-	// Unknown documents still fail.
-	if _, err := f.get(context.Background(), "https://example.com/client.json", "1.1.1.1"); err == nil {
-		t.Fatal("unknown client accepted")
-	}
-}
-
 func TestValidateAuthorizeLoopbackPort(t *testing.T) {
 	r := newRig(t, Options{})
 	ctx := context.Background()
@@ -528,5 +509,16 @@ func TestValidateAuthorizeLoopbackPort(t *testing.T) {
 		if _, err := r.s.ValidateAuthorize(ctx, q, "1.1.1.1"); !errors.As(err, &pe) {
 			t.Errorf("%s accepted: %v", bad, err)
 		}
+	}
+}
+
+func TestClientMetadataDocumentsOff(t *testing.T) {
+	r := newRig(t, Options{})
+	if _, err := r.s.ResolveClient(context.Background(), "https://claude.ai/oauth/claude-code-client-metadata", "1.1.1.1"); err == nil {
+		t.Fatal("metadata document client accepted while off")
+	}
+	_, body := r.req(http.MethodGet, ServerMeta, "", "")
+	if !strings.Contains(body, `"client_id_metadata_document_supported":false`) {
+		t.Fatalf("metadata advertises documents: %s", body)
 	}
 }

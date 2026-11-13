@@ -12,7 +12,7 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ### Fixed
 
-- Claude Code could not connect: its OAuth redirect on `localhost` with a run-time port did not match the registered `http://localhost/callback`, and claude.ai refuses to serve the client's metadata document to data-centre servers. Loopback redirects now match with any port (RFC 8252), and control falls back to a built-in copy of the Claude Code document when the live one cannot be loaded.
+- Claude Code could not connect: claude.ai refuses to serve its client metadata document to data-centre servers, and its OAuth redirect on `localhost` with a run-time port did not match the registered `http://localhost/callback`. The server no longer advertises client metadata documents, so every client registers dynamically, and loopback redirects match with any port (RFC 8252).
 
 ## [0.5.0] - 2026-11-13
 

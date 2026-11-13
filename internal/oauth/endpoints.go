@@ -44,7 +44,7 @@ func (s *Server) serverMetadata(w http.ResponseWriter, r *http.Request) {
 		"token_endpoint_auth_methods_supported":          []string{"none"},
 		"revocation_endpoint_auth_methods_supported":     []string{"none"},
 		"scopes_supported":                               []string{service.OAuthScope},
-		"client_id_metadata_document_supported":          true,
+		"client_id_metadata_document_supported":          s.o.ClientMetadataDocuments,
 		"authorization_response_iss_parameter_supported": true,
 	})
 }
