@@ -184,6 +184,7 @@ $env:DROPSITE_SERVER='https://api.example.com'; $env:DROPSITE_CODE='ABCD-EFGH-JK
 
 | Задача | Сервер от установщика | Вручную, из `dropsite/deploy` |
 | --- | --- | --- |
+| Обновить из панели | Настройки → Обновления: уведомление о новом выпуске, кнопка **Обновить** (сначала бэкап; `UPDATE_CHECK=0` выключает проверку) | — |
 | Обновить | `ssh <имя> dropsite-update` | бэкап, переход на новый тег, `docker compose pull && docker compose up -d --wait` |
 | Отменить последнее обновление | `ssh <имя> dropsite-rollback` | прежний тег и бэкап, сделанный перед обновлением |
 | Бэкап | ежедневно автоматически или `ssh <имя> dropsite-backup` | `docker compose exec -T control /control backup - > backup.tar.gz` |

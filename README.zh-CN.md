@@ -184,6 +184,7 @@ $env:DROPSITE_SERVER='https://api.example.com'; $env:DROPSITE_CODE='ABCD-EFGH-JK
 
 | 任务 | 通过安装程序部署的服务器 | 手动操作（在 `dropsite/deploy` 中执行） |
 | --- | --- | --- |
+| 在管理面板中更新 | 设置 → 更新：有新版本时显示提示，点击 **更新**（先备份；`UPDATE_CHECK=0` 关闭检查） | — |
 | 更新 | `ssh <名称> dropsite-update` | 备份，切换到新标签，`docker compose pull && docker compose up -d --wait` |
 | 撤销上次更新 | `ssh <名称> dropsite-rollback` | 切回之前的标签，并恢复更新前的备份 |
 | 备份 | 每天自动备份，或 `ssh <名称> dropsite-backup` | `docker compose exec -T control /control backup - > backup.tar.gz` |

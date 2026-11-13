@@ -67,7 +67,7 @@ If anything fails, run the same command again: finished steps are skipped. The l
 | Sign in | the e-mail you entered and the generated password shown once at the end; change it on the Account page |
 | Finish the setup | the **Getting started** page (first item of the menu): it checks that the domain points to the server and that HTTPS works, shows the exact DNS records with copy buttons and lists the remaining steps |
 | Connect ChatGPT or Claude | the **Connect AI** page of the admin interface |
-| Update | `ssh <name> dropsite-update` (backup, switch to the newest release, download its images, restart) |
+| Update | the **Update** button in Settings → Updates when a new release is out, or `ssh <name> dropsite-update` (backup, switch to the newest release, download its images, restart); see [Updating](#updating) |
 | Undo the last update | `ssh <name> dropsite-rollback` (previous release and the backup taken right before the update) |
 | Stay on one release | set `DROPSITE_VERSION=X.Y.Z` in `/opt/dropsite/deploy/.env`, then `dropsite-update`; `latest` follows new releases again ([releasing.md](releasing.md#on-a-server)) |
 | Forgot the admin password | `ssh <name> dropsite-admin-password` prints a new one |
@@ -202,6 +202,18 @@ go build -o ./bin/dropsite ./cmd/dropsite
 
 Replace the server URL, connect code and site path. Use `./bin/dropsite.exe` as the output and command name on Windows. Copy the binary to a directory on `PATH` if you want to run it as `dropsite`. `setup` records its absolute path for Claude Desktop; keep the binary at that path.
 
-## Updates
+## Updating
 
-See [backup and upgrade](backup.md#upgrade) and [releasing.md](releasing.md#on-a-server). An update checks out the tag of the new release and downloads its images; a source build stays available as a fallback.
+**The notice.** About twice a day (and shortly after a start) `control` asks the GitHub API for the newest stable dropsite release. When it is newer than the running version, administrators see a calm notice in the sidebar: "Version X.Y.Z is available · What's new →", linking to the release page with its notes. Other users see nothing. Development builds (`dev+<commit>`) are never compared.
+
+**Settings → Updates** shows the running version, the latest release, when it was last checked (with **Check now**, limited to 5 checks per 10 minutes), the what's-new link and the **Update to X.Y.Z** button. The button asks for confirmation: the server takes a backup first, the panel restarts for about a minute, the sites keep working, and `dropsite-rollback` on the server undoes the update. While the update runs the section shows its progress; when the panel is restarting the page says "Updating… the page reloads by itself" and reloads once the panel answers. Afterwards it shows "Updated to X.Y.Z", or the error with the last lines of the log (the previous version keeps running then).
+
+**How the button works.** `control` has no Docker access and cannot update itself. It writes a small request file (`update/request` in its state volume: the target version and the administrator's ID) and nothing else. `dropsite-update-watch`, a root job the installer sets up (cron every minute, plus a systemd path unit where systemd runs), checks the request strictly, runs `dropsite-update --to X.Y.Z` and writes the progress back to `update/status`. It also writes a heartbeat every minute; without one (a manual installation, or an older server that has not run `dropsite-update` since) the section shows the command instead of the button: `ssh <server> dropsite-update`. The request and its checks are described in [security.md](security.md#updates); the job logs to `/var/log/dropsite-update.log`.
+
+**Older servers** get the helper with their next `dropsite-update`: it reinstalls the helper commands of the release it switches to (`server-bootstrap.sh --install-helpers`), so one manual update turns the button on.
+
+**Turning the check off.** `UPDATE_CHECK=0` in `/opt/dropsite/deploy/.env` (then `dropsite-update`, or `docker compose up -d`) stops the outgoing request; the section then only shows the running version, and you update with `ssh <server> dropsite-update`.
+
+**By hand.** `ssh <server> dropsite-update` works as before, and `dropsite-update --to X.Y.Z` installs exactly that release. One update runs at a time.
+
+See also [backup and upgrade](backup.md#upgrade) and [releasing.md](releasing.md#on-a-server). An update checks out the tag of the new release and downloads its images; a source build stays available as a fallback.

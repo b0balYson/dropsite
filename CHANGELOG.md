@@ -10,6 +10,10 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+### Added
+
+- Administrators see when a new release is out (a calm notice with a "what's new" link) and can update from Settings → Updates: the server backs up first and the sites keep working; assistants learn about it read-only through `check_updates` and `get_account`, and `UPDATE_CHECK=0` turns the check off.
+
 ### Changed
 
 - The release workflow no longer repeats formatting, lint and tests: it

@@ -184,6 +184,7 @@ Further variables: `RESERVED_SLUGS` (extra forbidden short addresses), `LOG_LEVE
 
 | Task | Installed with the installer | By hand, from `dropsite/deploy` |
 | --- | --- | --- |
+| Update from the web interface | Settings → Updates: a notice when a release is out, **Update** (backup first; `UPDATE_CHECK=0` turns the check off) | — |
 | Update | `ssh <name> dropsite-update` | back up, check out the new tag, `docker compose pull && docker compose up -d --wait` |
 | Undo the last update | `ssh <name> dropsite-rollback` | previous tag plus the backup taken before the update |
 | Back up | daily automatically, or `ssh <name> dropsite-backup` | `docker compose exec -T control /control backup - > backup.tar.gz` |
