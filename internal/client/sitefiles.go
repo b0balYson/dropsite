@@ -110,6 +110,9 @@ type Upload struct {
 	MaxFileBytes int64         `json:"max_file_bytes"`
 	MaxCallBytes int           `json:"max_call_bytes"`
 	Fetched      []FetchedFile `json:"fetched"`
+	// UploadURL is the upload link; only BeginUpload returns it.
+	UploadURL          string     `json:"upload_url,omitempty"`
+	UploadURLExpiresAt *time.Time `json:"upload_url_expires_at,omitempty"`
 }
 
 func filesPath(ref string) string { return sitePath(ref) + "/files" }

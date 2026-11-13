@@ -98,7 +98,8 @@ func fromUpload(u *client.Upload) mcp.Upload {
 	return mcp.Upload{
 		UploadID: u.ID, Mode: u.Mode, SiteID: u.SiteID, BaseDeployID: u.BaseDeployID, Files: u.Files, Bytes: u.Bytes,
 		ExpiresAt: stampTime(&u.ExpiresAt), MaxBytes: u.MaxBytes, MaxFiles: u.MaxFiles, MaxFileBytes: u.MaxFileBytes,
-		MaxCallBytes: u.MaxCallBytes, Fetched: fromFetched(u.Fetched),
+		MaxCallBytes: u.MaxCallBytes, Fetched: fromFetched(u.Fetched), UploadURL: u.UploadURL,
+		UploadURLExpiresAt: stampTime(u.UploadURLExpiresAt),
 	}
 }
 

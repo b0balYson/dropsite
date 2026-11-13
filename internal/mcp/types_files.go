@@ -107,6 +107,11 @@ type Upload struct {
 	MaxFileBytes int64         `json:"max_file_bytes"`
 	MaxCallBytes int           `json:"max_call_bytes" jsonschema:"at most this many bytes of file content per upload_files call"`
 	Fetched      []FetchedFile `json:"fetched,omitempty"`
+	// UploadURL and the fields after it come only from begin_upload.
+	UploadURL          string `json:"upload_url,omitempty" jsonschema:"upload link of this session: files sent here by HTTP or dropped on its page join the upload without passing through the chat"`
+	UploadURLExpiresAt string `json:"upload_url_expires_at,omitempty" jsonschema:"the link stops working if unused until then (one hour, extended by every use)"`
+	UploadCommand      string `json:"upload_command,omitempty" jsonschema:"shell command that sends a whole folder to upload_url; replace <folder> with the site folder"`
+	NextSteps          string `json:"next_steps,omitempty" jsonschema:"what to do next: follow it"`
 }
 
 // UploadStart is a begin_upload request.

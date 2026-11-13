@@ -126,7 +126,7 @@ func TestRemoteToolsWithAPIToken(t *testing.T) {
 		t.Fatalf("missing: %q", msg)
 	}
 	if _, msg := call(t, cs, "deploy_files", map[string]any{"files": []map[string]string{
-		{"path": "index.html", "content": strings.Repeat("a", service.MaxInlineBytes+1)}}}); !strings.Contains(msg, "dropsite deploy") {
+		{"path": "index.html", "content": strings.Repeat("a", service.MaxInlineBytes+1)}}}); !strings.Contains(msg, "upload_url") {
 		t.Fatalf("too large: %q", msg)
 	}
 	if _, msg := call(t, cs, "delete_site", map[string]any{"site": site, "confirm": "x"}); msg == "" {

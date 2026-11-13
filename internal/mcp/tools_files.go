@@ -77,13 +77,18 @@ func (t tools) registerFiles(s *sdk.Server, o Options) {
 			"deploy_files; for collection data use save_documents." + fetchAdvice + draftAdvice}, t.updateSiteFiles)
 	sdk.AddTool(s, &sdk.Tool{Name: "begin_upload", Annotations: writes("Start upload", false, false),
 		InputSchema: withEnums[beginUploadArgs](map[string][]string{"mode": {"", "replace", "patch"}}),
-		Description: "Start uploading a site that is larger than 16 MB, in parts. mode replace publishes exactly " +
-			"the uploaded files (a new site when site is omitted); mode patch adds them on top of base_deploy_id. " +
-			"Then call upload_files (up to 16 MB per call) and commit_upload, or schedule_publish with upload_id to " +
-			"go live at a given time. The session closes after 24 idle hours; at most 50 can be open."}, t.beginUpload)
+		Description: "Start uploading a site that is larger than 16 MB or has many images. mode replace publishes " +
+			"exactly the uploaded files (a new site when site is omitted); mode patch adds them on top of " +
+			"base_deploy_id. Returns upload_url, a one-hour link for this upload only: with a terminal run " +
+			"upload_command for the site folder; without one give the user upload_url to open and drop the folder " +
+			"on, then wait for their \"done\". Small parts can also go through upload_files. Then commit_upload, or " +
+			"schedule_publish with upload_id. Never use tunnels (ngrok) or other hosting for the files. The session " +
+			"closes after 24 idle hours; at most 50 can be open."}, t.beginUpload)
 	sdk.AddTool(s, &sdk.Tool{Name: "upload_files", Annotations: writes("Upload files", false, true),
 		Description: "Send the next part of an upload started with begin_upload: files by value (at most 16 MB per " +
-			"call) and/or fetch entries the server downloads. Sending a path again replaces it." + fetchAdvice}, t.uploadFiles)
+			"call) and/or fetch entries the server downloads from public addresses. Sending a path again replaces " +
+			"it. Files on the user's computer that are too big for the chat go through upload_url of begin_upload " +
+			"instead." + fetchAdvice}, t.uploadFiles)
 	sdk.AddTool(s, &sdk.Tool{Name: "commit_upload", Annotations: writes("Publish upload", false, false),
 		Description: "Publish an upload as a new version of the site and close the session. index.html is required " +
 			"at the root. Give the user the returned link." + draftAdvice}, t.commitUpload)
@@ -142,7 +147,7 @@ func (t tools) beginUpload(ctx context.Context, req *sdk.CallToolRequest, in beg
 		return nil, Upload{}, err
 	}
 	out, err := b.BeginUpload(ctx, UploadStart{Site: in.Site, Title: in.Title, Mode: in.Mode, Base: in.BaseDeployID})
-	return nil, out, err
+	return nil, withUploadLink(out), err
 }
 
 func (t tools) uploadFiles(ctx context.Context, req *sdk.CallToolRequest, in uploadFilesArgs) (*sdk.CallToolResult, Upload, error) {

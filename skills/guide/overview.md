@@ -25,7 +25,7 @@ Call get_guide with one of these topics when you need details:
 - `create`: build a new site and publish it.
 - `references`: a site in the style of a link or picture the user likes, without copying it.
 - `update`: change an existing site, also from a new chat.
-- `large_sites`: sites over 16 MB (many photos, several pages).
+- `large_sites`: sites over 16 MB (many photos, animation frames): the upload link instead of the chat.
 - `assets`: self-contained, fast, mobile-friendly, accessible sites (read before building any site).
 - `forms`: forms on the site, where requests go (Telegram, e-mail, webhook, Google Sheet), reading and exporting requests.
 - `data`: content that changes without a new release (prices, menus, schedules) and visitor reviews with approval.

@@ -98,11 +98,16 @@ func (b backend) UpdateSiteFiles(ctx context.Context, c mcp.FilesChange) (mcp.Fi
 }
 
 func toUpload(i service.UploadInfo, fetched []service.FetchedFile) mcp.Upload {
-	return mcp.Upload{
+	out := mcp.Upload{
 		UploadID: i.ID, Mode: i.Mode, SiteID: i.SiteID, BaseDeployID: i.Base, Files: i.Files, Bytes: i.Bytes,
 		ExpiresAt: i.ExpiresAt.UTC().Format(time.RFC3339), MaxBytes: i.MaxBytes, MaxFiles: i.MaxFiles,
 		MaxFileBytes: i.MaxFileBytes, MaxCallBytes: i.MaxCallBytes, Fetched: toFetched(fetched),
 	}
+	if i.LinkURL != "" {
+		out.UploadURL = i.LinkURL
+		out.UploadURLExpiresAt = i.LinkExpiresAt.UTC().Format(time.RFC3339)
+	}
+	return out
 }
 
 func (b backend) BeginUpload(ctx context.Context, u mcp.UploadStart) (mcp.Upload, error) {
