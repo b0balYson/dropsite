@@ -13,7 +13,8 @@
 #
 # Checks: password sign-in once, dedicated key afterwards; ~/.ssh/config block
 # with the next free local port; ssh <name> and the LocalForward tunnel to the
-# admin UI; login with the generated password; .env and helper commands;
+# admin UI; login with the generated password; short default output and the
+# local install log (mode 600, no passwords); --verbose; .env and helper commands;
 # backup, secrets key copy and cron; dropsite-admin-password; idempotent
 # re-run with a key file; dropsite-update (Caddy restart on a Caddyfile change)
 # and dropsite-rollback; --check-dns mode.
@@ -137,7 +138,7 @@ installer() {
 
 # Output contains the generated password: kept in the work dir only, shown
 # with the password masked.
-show() { sed -e 's/^\(Password: *\).*/\1********/' "$1" | tail -n "${2:-40}" >&2; }
+show() { sed -e 's/\(Password: *\)[A-Za-z0-9]\{12,\}/\1********/' "$1" | tail -n "${2:-40}" >&2; }
 
 # --- run 1: root password ---------------------------------------------------
 log "run 1: install with the root password (10-20 minutes)"
@@ -147,7 +148,7 @@ installer --host 127.0.0.1 --port "$SSH_PORT" --name "$NAME" --domain "$DOMAIN" 
 show "$WORK/run1.log" 60
 check "run 1 exits 0" test "$rc" = 0
 [ "$rc" = 0 ] || exit 1
-PASSWORD=$(sed -n 's/^Password: *//p' "$WORK/run1.log" | tail -n 1)
+PASSWORD=$(sed -n 's/.*Password: *\([A-Za-z0-9]\{12,\}\).*/\1/p' "$WORK/run1.log" | tail -n 1)
 check "generated password shown" test "${#PASSWORD}" -ge 20
 
 CFG="$HOME/.ssh/config"
@@ -162,9 +163,14 @@ check "User root" block_has "    User root"
 check "IdentitiesOnly yes" block_has "    IdentitiesOnly yes"
 check "dedicated key exists with mode 600" test "$(ls -l "$HOME/.ssh/dropsite_$NAME" | cut -c1-10)" = -rw-------
 check "ssh config mode 600" test "$(ls -l "$CFG" | cut -c1-10)" = -rw-------
-check "final screen tells ssh <name>" grep -q "ssh $NAME\$" "$WORK/run1.log"
+check "final screen tells ssh <name>" grep -q "ssh $NAME " "$WORK/run1.log"
 check "final screen tells the local URL" grep -q "http://localhost:$LOCAL_PORT" "$WORK/run1.log"
-check "final screen tells dropsite-update" grep -q "ssh $NAME dropsite-update" "$WORK/run1.log"
+check "default output is short (<= 25 lines: $(grep -c . "$WORK/run1.log"))" test "$(grep -c . "$WORK/run1.log")" -le 25
+check "default output hides the server steps" sh -c '! grep -qiE "==>|swap|firewall|docker|\\.env|localforward|bootstrap" "$1"' _ "$WORK/run1.log"
+INSTALL_LOG="$HOME/.dropsite/install-$NAME.log"
+check "install log written with mode 600" test "$(ls -l "$INSTALL_LOG" | cut -c1-10)" = -rw-------
+check "install log has the server steps" grep -q '^==> Installing base packages' "$INSTALL_LOG"
+check "install log has the stack start" grep -q '^==> dropsite is running' "$INSTALL_LOG"
 check "DNS records printed" grep -q "^  A      \\*  " "$WORK/run1.log"
 
 # ssh <name>, exactly as the user types it (plus the temporary known_hosts).
@@ -195,6 +201,8 @@ check "ufw allows 22" remote_grep 'ufw status' '^22/tcp'
 check "ufw allows 80" remote_grep 'ufw status' '^80/tcp'
 check "ufw allows 443" remote_grep 'ufw status' '^443/tcp'
 check "password not in the install log" remote_out_is "grep -c -F -- '$PASSWORD' /var/log/dropsite-install.log || true" 0
+check "password not in the local install log" sh -c '! grep -q -F -- "$1" "$2"' _ "$PASSWORD" "$INSTALL_LOG"
+check "root password not in the local install log" sh -c '! grep -q -F -- "$1" "$2"' _ "$ROOT_PASSWORD" "$INSTALL_LOG"
 
 # --- the tunnel and the admin login ------------------------------------------
 open_tunnel() {
@@ -236,15 +244,17 @@ check "new password works" test "$(login "$EMAIL" "$NEWPW")" = 303
 close_tunnel
 
 # --- run 2: re-run with a key file, idempotent ---------------------------------
-log "run 2: re-run with --key (idempotent)"
+log "run 2: re-run with --key and --verbose (idempotent)"
 rc=0
 installer --host 127.0.0.1 --port "$SSH_PORT" --key "$HOME/.ssh/dropsite_$NAME" --name "$NAME" \
-	--domain "$DOMAIN" --email "$EMAIL" --skip-dns --yes >"$WORK/run2.log" 2>&1 || rc=$?
+	--domain "$DOMAIN" --email "$EMAIL" --skip-dns --yes --verbose >"$WORK/run2.log" 2>&1 || rc=$?
 show "$WORK/run2.log" 25
 check "run 2 exits 0" test "$rc" = 0
 check "still one block" test "$(grep -c "^# BEGIN dropsite $NAME$" "$CFG")" = 1
 check "same local port" test "$(block | awk '$1 == "LocalForward" { print $2 }')" = "$LOCAL_PORT"
 check "existing password not reprinted" grep -q 'the one from the first installation' "$WORK/run2.log"
+check "--verbose shows the server steps" grep -q '^==> ' "$WORK/run2.log"
+check "--verbose final screen tells dropsite-update" grep -q "ssh $NAME dropsite-update" "$WORK/run2.log"
 open_tunnel >/dev/null || true
 check "reset password still valid after re-run" test "$(login "$EMAIL" "$NEWPW")" = 303
 close_tunnel

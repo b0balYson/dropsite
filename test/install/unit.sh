@@ -76,6 +76,22 @@ for l in ru zh; do
 	)
 	check "messages $l complete ${missing:+(missing: $missing)}" test -z "$missing"
 done
+# --lang wins over DROPSITE_LANG and the locale; DROPSITE_LANG over the locale.
+lang_of() { (parse_args "$@" && pick_lang) 2>/dev/null; }
+check "--lang ru wins over DROPSITE_LANG and LANG" test "$(DROPSITE_LANG=zh LANG=en_US.UTF-8 LC_ALL='' lang_of --lang ru)" = ru
+check "--lang=zh form" test "$(DROPSITE_LANG=en LANG=ru_RU.UTF-8 LC_ALL='' lang_of --lang=zh)" = zh
+check "DROPSITE_LANG wins over the locale" test "$(DROPSITE_LANG=zh LANG=ru_RU.UTF-8 LC_ALL='' lang_of)" = zh
+check "locale without flag or env" test "$(DROPSITE_LANG='' LANG=ru_RU.UTF-8 LC_ALL='' lang_of)" = ru
+for v in de RU "" ru_RU; do
+	rc=0
+	(parse_args --lang "$v") 2>/dev/null || rc=$?
+	check "bad --lang '$v' exits 2" test "$rc" = 2
+done
+out=$( (parse_args --lang de) 2>&1 || true)
+check "bad --lang message names en, ru, zh" sh -c 'printf "%s" "$1" | grep -q "en, ru or zh"' _ "$out"
+check "--verbose flag" test "$( (parse_args --verbose && echo "$VERBOSE"))" = 1
+check "DROPSITE_VERBOSE=1" test "$( (DROPSITE_VERBOSE=1 parse_args && echo "$VERBOSE"))" = 1
+check "quiet by default" test "$( (DROPSITE_VERBOSE='' parse_args && echo "$VERBOSE"))" = 0
 
 # --- ~/.ssh/config ----------------------------------------------------------
 cfg="$HOME/.ssh/config"
@@ -147,6 +163,133 @@ if command -v ssh >/dev/null 2>&1; then
 	check "ssh -G: Port" sh -c 'printf "%s\n" "$1" | grep -q "^port 2222$"' _ "$out"
 	check "ssh -G: User" sh -c 'printf "%s\n" "$1" | grep -q "^user root$"' _ "$out"
 	check "ssh -G: IdentityFile" sh -c 'printf "%s\n" "$1" | grep -q "^identityfile .*my keys/dropsite_sites$"' _ "$out"
+fi
+
+# --- the server name ---------------------------------------------------------
+# name_for DOMAIN [NAME]: the name chosen without a terminal, in a fresh HOME
+# whose ~/.ssh/config already has "Host taken".
+name_for() {
+	(
+		HOME="$WORK/names"
+		mkdir -p "$HOME/.ssh"
+		printf 'Host taken\n    HostName 192.0.2.9\n' >"$HOME/.ssh/config"
+		HAVE_TTY=0 VERBOSE=0 DOMAIN=$1 NAME=${2:-}
+		choose_name
+		printf '%s' "$NAME"
+	)
+}
+check "name from the domain, no question" test "$(name_for r3100.com)" = r3100
+check "name from a subdomain" test "$(name_for sites.example.com)" = sites
+check "taken name gets a free alternative" test "$(name_for taken.example.com)" = dropsite-taken
+check "invalid name from the domain becomes dropsite" test "$(name_for 123.example.com)" = dropsite
+check "--name wins over the domain" test "$(name_for r3100.com myvps)" = myvps
+check "--name is lowercased" test "$(name_for r3100.com MyVps)" = myvps
+rc=0
+(name_for r3100.com Bad_Name) >/dev/null 2>&1 || rc=$?
+check "invalid --name without a terminal exits 2" test "$rc" = 2
+rc=0
+(name_for r3100.com taken) >/dev/null 2>&1 || rc=$?
+check "taken --name without a terminal exits 2" test "$rc" = 2
+
+# --- whole runs with the server stubbed ------------------------------------------
+# sim LANG MODE ARGS...: run main against stubs (no network, no server) with a
+# fresh HOME; MODE ok or fail. Output in $WORK/sim-LANG-MODE.out, exit code
+# in .rc, HOME in sim-LANG-MODE.home.
+SIM_PW=SimPass0123456789abcdefgh
+sim() {
+	l=$1 mode=$2
+	shift 2
+	h="$WORK/sim-$l-$mode.home"
+	rm -rf "$h"
+	mkdir -p "$h"
+	rc=0
+	(
+		HOME=$h
+		export HOME DROPSITE_LANG="$l" DROPSITE_NO_TTY=1 DROPSITE_BOOTSTRAP="$ROOT/scripts/server-bootstrap.sh"
+		export SIM_MODE="$mode"
+		key_works() { true; }
+		port_listening() { false; }
+		points_to() { true; }
+		resolve() { :; }
+		https_works() { true; }
+		kssh() {
+			case "$*" in
+			*"cat >/root/dropsite-bootstrap.sh"*) cat >/dev/null ;;
+			*"bash /root/dropsite-bootstrap.sh"*)
+				printf '==> Installing base packages\n==> Adding swap (the server has 961 MB of memory)\n==> Writing /opt/dropsite/deploy/.env\n' >&2
+				if [ "$SIM_MODE" = fail ]; then
+					printf 'E: Unable to locate package docker-ce\nerror: command failed: apt-get (full log: /var/log/dropsite-install.log)\n' >&2
+					return 1
+				fi
+				# Even if the new password leaked into the progress stream, the
+				# installer scrubs it from the log once it knows it.
+				printf 'note: leaked %s\n==> dropsite is running\n' "$SIM_PW" >&2
+				printf 'DROPSITE_RESULT domain=r3100.com\nDROPSITE_RESULT api_host=api.r3100.com\n'
+				printf 'DROPSITE_RESULT admin_email=me@example.com\nDROPSITE_RESULT ipv4=186.243.218.235\nDROPSITE_RESULT ipv6=\n'
+				printf 'DROPSITE_RESULT admin_password=%s\nDROPSITE_RESULT admin_password_new=1\n' "$SIM_PW"
+				;;
+			*os-release*) printf 'ubuntu 24.04' ;;
+			*) : ;;
+			esac
+		}
+		main --host 186.243.218.235 --domain r3100.com --email me@example.com --yes "$@"
+	) >"$WORK/sim-$l-$mode.out" 2>&1 </dev/null || rc=$?
+	printf '%s' "$rc" >"$WORK/sim-$l-$mode.rc"
+}
+has() { grep -qF -- "$2" "$WORK/sim-$1.out"; }
+hasnt() { ! grep -qiE -- "$2" "$WORK/sim-$1.out"; }
+simlog() { printf '%s' "$WORK/sim-$1.home/.dropsite/install-r3100.log"; }
+
+if command -v ssh-keygen >/dev/null 2>&1; then
+	sim en ok
+	check "run: exits 0" test "$(cat "$WORK/sim-en-ok.rc")" = 0
+	check "run: short output (<= 20 non-empty lines)" test "$(grep -c . "$WORK/sim-en-ok.out")" -le 20
+	check "run: no technical words on screen" hasnt en-ok 'swap|firewall|\.env|docker|localforward|bootstrap|==>'
+	check "run: connect step" has en-ok "✓ Connected to the server"
+	check "run: install step" has en-ok "✓ Installed dropsite"
+	check "run: HTTPS step" has en-ok "✓ Turned on HTTPS"
+	check "run: two A records" test "$(grep -c '^  A      [@*] ' "$WORK/sim-en-ok.out")" = 2
+	check "run: Cloudflare hint" has en-ok 'DNS only'
+	check "run: name from the domain in the final block" has en-ok "1. Run: ssh r3100 "
+	check "run: password shown once" test "$(grep -c "$SIM_PW" "$WORK/sim-en-ok.out")" = 1
+	check "run: ssh config block for the derived name" grep -q '^Host r3100$' "$WORK/sim-en-ok.home/.ssh/config"
+	lg=$(simlog en-ok)
+	check "log: written" test -s "$lg"
+	check "log: mode 600" test "$(ls -l "$lg" | cut -c1-10)" = -rw-------
+	check "log: directory 700" test "$(ls -ld "$(dirname "$lg")" | cut -c1-10)" = drwx------
+	check "log: has the server output" grep -q '^==> Adding swap' "$lg"
+	check "log: has the technical lines" grep -q 'admin interface on local port' "$lg"
+	check "log: never the admin password" sh -c '! grep -q "$1" "$2"' _ "$SIM_PW" "$lg"
+	check "log: no private key" sh -c '! grep -q "PRIVATE KEY" "$1"' _ "$lg"
+
+	sim en verbose --verbose
+	check "verbose: exits 0" test "$(cat "$WORK/sim-en-verbose.rc")" = 0
+	check "verbose: server steps shown" has en-verbose "==> Adding swap"
+	check "verbose: summary shown" has en-verbose "We are going to install:"
+	check "verbose: full final block" has en-verbose "ssh r3100 dropsite-update"
+	check "verbose: log path shown" has en-verbose "install-r3100.log"
+
+	sim en fail
+	check "failure: exits 1" test "$(cat "$WORK/sim-en-fail.rc")" = 1
+	check "failure: plain sentence" has en-fail "The installation on the server stopped with an error."
+	check "failure: step marked" has en-fail "✗ Installing dropsite on the server"
+	check "failure: last log lines" has en-fail "  error: command failed: apt-get"
+	check "failure: log path" has en-fail "Full log: $(simlog en-fail)"
+	check "failure: run again" has en-fail "Run the same command again: finished steps are skipped."
+	check "failure: no password in the log" sh -c '! grep -q "$1" "$2"' _ "$SIM_PW" "$(simlog en-fail)"
+
+	sim ru ok
+	check "ru: exits 0" test "$(cat "$WORK/sim-ru-ok.rc")" = 0
+	check "ru: steps in Russian" has ru-ok "✓ Установил dropsite"
+	check "ru: final block in Russian" has ru-ok "1. Выполните: ssh r3100"
+	sim zh ok
+	check "zh: final block in Chinese" has zh-ok "1. 运行：ssh r3100"
+	if [ -n "${SHOW_SIM:-}" ]; then
+		for f in en-ok ru-ok en-fail; do
+			printf '\n----- %s -----\n' "$f"
+			sed "s/$SIM_PW/<password>/" "$WORK/sim-$f.out"
+		done
+	fi
 fi
 
 # --- server-bootstrap.sh: the first administrator password ---------------------
