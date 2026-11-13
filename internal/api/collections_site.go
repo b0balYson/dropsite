@@ -16,7 +16,8 @@ import (
 
 // Site data on site hosts: /_dropsite/data/<collection>[/<id>]. Caddy
 // forwards these paths after the access check of protected sites. Every
-// answer, errors included, is JSON with Cache-Control: no-cache.
+// answer, errors included, is JSON with Cache-Control: no-cache, or
+// private, no-store on a protected site.
 const dataPath = "/_dropsite/data"
 
 func (a *api) registerDataPaths(mux *http.ServeMux) {
@@ -40,10 +41,23 @@ func (a *api) dataHandler(pattern string, h handlerFunc) http.Handler {
 			info.route = pattern
 		}
 		w.Header().Set("Cache-Control", "no-cache")
+		a.noStoreIfProtected(w, r)
 		if err := h(w, r); err != nil {
 			a.dataError(w, r, err)
 		}
 	})
+}
+
+// cacheProtected is the Cache-Control of every answer of a protected site: a
+// shared cache must never hand it to a visitor who did not sign in.
+const cacheProtected = "private, no-store"
+
+// noStoreIfProtected marks the answer uncacheable when the host belongs to a
+// password-protected site.
+func (a *api) noStoreIfProtected(w http.ResponseWriter, r *http.Request) {
+	if a.svc.VisitorHostProtected(r.Context(), r.Host) {
+		w.Header().Set("Cache-Control", cacheProtected)
+	}
 }
 
 // dataStatus maps visitor errors to HTTP statuses.

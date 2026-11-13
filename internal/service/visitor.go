@@ -139,6 +139,21 @@ func (s *Service) siteByHost(ctx context.Context, host string) (domain.Site, err
 	return site, err
 }
 
+// VisitorHostProtected reports whether answers on a visitor host belong to a
+// password-protected site and so must never be stored by a shared cache.
+// Lookup failures report true: an uncached answer is the safe side.
+func (s *Service) VisitorHostProtected(ctx context.Context, rawHost string) bool {
+	host := normalizeHost(rawHost)
+	if host == "" {
+		return false
+	}
+	site, err := s.siteByHost(ctx, host)
+	if errors.Is(err, domain.ErrNotFound) {
+		return false
+	}
+	return err != nil || site.Protected
+}
+
 // maxVisitorCookies bounds how many access cookie values one request may
 // have checked.
 const maxVisitorCookies = 8

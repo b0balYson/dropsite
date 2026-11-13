@@ -121,7 +121,8 @@ func isUnsafe(method string) bool {
 	return true
 }
 
-// clientIP is the connection address: the UI listener is reached directly.
+// clientIP is the connection address: the UI listener is reached directly,
+// with no proxy in front, so X-Forwarded-For is never read here.
 func clientIP(r *http.Request) string {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {

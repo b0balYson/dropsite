@@ -53,6 +53,32 @@ func TestCaddyfileMatchesPaths(t *testing.T) {
 	if i, j := strings.Index(cf, "forward_auth @protected"), strings.Index(cf, "reverse_proxy @data"); i < 0 || j < 0 || i > j {
 		t.Error("site data must be proxied after forward_auth")
 	}
+	// control believes only the rightmost X-Forwarded-For hop, so every
+	// proxy to it must replace the header with the client address.
+	if !strings.Contains(cf, "header_up X-Forwarded-For {client_ip}") {
+		t.Error("deploy/Caddyfile must send X-Forwarded-For {client_ip} to control")
+	}
+	for _, line := range strings.Split(cf, "\n") {
+		if l := strings.TrimSpace(line); strings.HasPrefix(l, "reverse_proxy") && strings.Contains(l, "control:8080") &&
+			!strings.HasSuffix(l, "{") {
+			t.Errorf("deploy/Caddyfile: %q must import to_control", l)
+		}
+	}
+	if n, m := strings.Count(cf, "control:8080 {"), strings.Count(cf, "import to_control"); n != m {
+		t.Errorf("deploy/Caddyfile: %d proxies to control, %d import to_control", n, m)
+	}
+	// Protected sites must not be cached by shared caches: the rule comes
+	// after the open-site rules, so it replaces them, and 404 pages get it too.
+	const protectedCache = `header @protected Cache-Control "private, no-store"`
+	asset := strings.Index(cf, `header @asset Cache-Control "public, max-age=3600"`)
+	html := strings.Index(cf, "header @html Cache-Control no-cache")
+	protected := strings.Index(cf, protectedCache)
+	if asset < 0 || html < 0 || protected < asset || protected < html {
+		t.Errorf("deploy/Caddyfile must set %s after the @html and @asset rules", protectedCache)
+	}
+	if strings.Count(cf, protectedCache) != 2 {
+		t.Errorf("deploy/Caddyfile must set %s for files and for the custom 404 page", protectedCache)
+	}
 	if service.VisitorCookieName != "__Host-dropsite_access" {
 		t.Errorf("cookie name changed to %q: update docs", service.VisitorCookieName)
 	}

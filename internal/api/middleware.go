@@ -182,7 +182,12 @@ func bearerToken(h string) (string, bool) {
 }
 
 // clientIP returns RemoteAddr, or, when the peer is a trusted proxy, the
-// rightmost X-Forwarded-For address that is not itself a trusted proxy.
+// rightmost X-Forwarded-For address. Only that one hop is believed: Caddy
+// replaces the header with the address of its own peer, so anything to the
+// left was written by the client and may be forged, even when the client
+// itself sits in a trusted network (VPN, LAN, another container). A CDN in
+// front of Caddy is configured in Caddy (trusted_proxies), which then still
+// forwards exactly one correct hop (docs/security.md).
 func clientIP(r *http.Request, trusted []netip.Prefix) string {
 	remote, ok := parseRemote(r.RemoteAddr)
 	if !ok {
@@ -192,18 +197,14 @@ func clientIP(r *http.Request, trusted []netip.Prefix) string {
 		return remote.String()
 	}
 	hops := forwardedHops(r.Header.Values("X-Forwarded-For"))
-	ip := remote
-	for i := len(hops) - 1; i >= 0; i-- {
-		hop, err := netip.ParseAddr(hops[i])
-		if err != nil {
-			break
-		}
-		ip = hop.Unmap()
-		if !isTrusted(ip, trusted) {
-			break
-		}
+	if len(hops) == 0 {
+		return remote.String()
 	}
-	return ip.String()
+	hop, err := netip.ParseAddr(hops[len(hops)-1])
+	if err != nil {
+		return remote.String()
+	}
+	return hop.Unmap().String()
 }
 
 func parseRemote(s string) (netip.Addr, bool) {

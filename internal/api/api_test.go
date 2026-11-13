@@ -151,10 +151,13 @@ func TestClientIP(t *testing.T) {
 		{"direct", "203.0.113.5:1234", nil, "203.0.113.5"},
 		{"spoofed xff from untrusted peer", "203.0.113.5:1234", []string{"1.2.3.4"}, "203.0.113.5"},
 		{"trusted proxy", "10.0.0.2:80", []string{"198.51.100.7"}, "198.51.100.7"},
-		{"rightmost untrusted wins", "10.0.0.2:80", []string{"1.1.1.1, 198.51.100.7, 10.0.0.9"}, "198.51.100.7"},
+		{"only the rightmost hop", "10.0.0.2:80", []string{"1.1.1.1, 198.51.100.7, 10.0.0.9"}, "10.0.0.9"},
+		{"private client cannot prepend a hop", "10.0.0.2:80", []string{"6.6.6.6, 10.1.1.1"}, "10.1.1.1"},
+		{"private client cannot claim another private address", "10.0.0.2:80", []string{"10.9.9.9, 10.1.1.1"}, "10.1.1.1"},
 		{"multiple headers", "10.0.0.2:80", []string{"1.1.1.1", "198.51.100.8"}, "198.51.100.8"},
 		{"all trusted", "10.0.0.2:80", []string{"10.1.1.1"}, "10.1.1.1"},
 		{"garbage hop", "10.0.0.2:80", []string{"1.1.1.1, not-an-ip"}, "10.0.0.2"},
+		{"garbage left of the hop is ignored", "10.0.0.2:80", []string{"not-an-ip, 198.51.100.7"}, "198.51.100.7"},
 		{"no xff", "10.0.0.2:80", nil, "10.0.0.2"},
 		{"ipv6 trusted", "[::1]:80", []string{"2001:db8::1"}, "2001:db8::1"},
 		{"mapped v4", "[::ffff:203.0.113.9]:80", nil, "203.0.113.9"},
@@ -181,7 +184,9 @@ func TestSpoofedForwardedForIsNotAudited(t *testing.T) {
 	// httptest requests come from 192.0.2.1, which is not a trusted proxy.
 	h.do(http.MethodPost, "/api/v1/sites", tok, map[string]string{"title": "Spoof"}, withHeader("X-Forwarded-For", "6.6.6.6"))
 	trusted := func(r *http.Request) { r.RemoteAddr = "127.0.0.1:5555" }
-	h.do(http.MethodPost, "/api/v1/sites", tok, map[string]string{"title": "Proxied"}, trusted, withHeader("X-Forwarded-For", "6.6.6.6, 127.0.0.1"))
+	h.do(http.MethodPost, "/api/v1/sites", tok, map[string]string{"title": "Proxied"}, trusted, withHeader("X-Forwarded-For", "6.6.6.6, 198.51.100.4"))
+	// A client in a trusted network cannot hide behind a prepended hop.
+	h.do(http.MethodPost, "/api/v1/sites", tok, map[string]string{"title": "Private"}, trusted, withHeader("X-Forwarded-For", "6.6.6.6, 10.1.1.1"))
 
 	rec := h.do(http.MethodGet, "/api/v1/admin/audit?action=site.create", h.adminToken, nil)
 	items := decodeAs[list[auditDTO]](t, rec).Items
@@ -189,7 +194,7 @@ func TestSpoofedForwardedForIsNotAudited(t *testing.T) {
 	for _, it := range items {
 		ips[it.Meta["title"].(string)] = it.IP
 	}
-	if ips["Spoof"] != "192.0.2.1" || ips["Proxied"] != "6.6.6.6" {
+	if ips["Spoof"] != "192.0.2.1" || ips["Proxied"] != "198.51.100.4" || ips["Private"] != "10.1.1.1" {
 		t.Fatalf("audited IPs %v", ips)
 	}
 }

@@ -8,6 +8,9 @@
 #                       expanded by the Caddyfile adapter
 #   CADDY_GLOBAL_EXTRA  extra global options (local dev: local_certs and
 #                       skip_install_trust); empty in production
+#   CADDY_SERVERS_EXTRA extra options of the servers block: trusted_proxies
+#                       and client_ip_headers of a CDN in front of Caddy
+#                       (docs/security.md); empty without a CDN
 #   TLS_MODE            ondemand (default) or wildcard; selects the snippet
 #                       tls_<mode> below, so switching needs no edit here
 #   BASE_DOMAIN         base domain (wildcard mode only)
@@ -56,7 +59,16 @@
 			read_header 10s
 			idle 2m
 		}
+		{$CADDY_SERVERS_EXTRA}
 	}
+}
+
+# Every proxy to control sends exactly one X-Forwarded-For hop: the client
+# address as Caddy determined it ({client_ip}: the peer, or the CDN's client
+# header when the peer is in trusted_proxies). Whatever the client sent is
+# replaced, and control believes only this rightmost hop.
+(to_control) {
+	header_up X-Forwarded-For {client_ip}
 }
 
 (security_headers) {
@@ -92,7 +104,9 @@ http://127.0.0.1:8090 {
 {$API_HOST} {
 	import security_headers
 	log
-	reverse_proxy control:8080
+	reverse_proxy control:8080 {
+		import to_control
+	}
 	handle_errors {
 		import security_headers
 		import plain_error
@@ -183,6 +197,7 @@ http:// {
 			# never doubled with the @preview/@noindex ones.
 			header @platform X-Robots-Tag "noindex, nofollow"
 			reverse_proxy @platform control:8080 {
+				import to_control
 				header_down -X-Robots-Tag
 			}
 
@@ -215,8 +230,12 @@ http:// {
 			request_body @formPost {
 				max_size 64KiB
 			}
-			reverse_proxy @formPost control:8080
-			reverse_proxy @formChallenge control:8080
+			reverse_proxy @formPost control:8080 {
+				import to_control
+			}
+			reverse_proxy @formChallenge control:8080 {
+				import to_control
+			}
 
 			# Site data (collections): control answers every method with JSON,
 			# 404 and 405 included, so handle_errors never sees them. Visitor
@@ -229,7 +248,9 @@ http:// {
 			request_body @dataPost {
 				max_size 8KiB
 			}
-			reverse_proxy @data control:8080
+			reverse_proxy @data control:8080 {
+				import to_control
+			}
 			# Secret proxy: pages call /_dropsite/proxy/<name>/... with any of
 			# the methods control allows for the endpoint; control adds the
 			# stored key and forwards upstream. Bodies are capped here too
@@ -238,7 +259,9 @@ http:// {
 			request_body @proxy {
 				max_size 1MiB
 			}
-			reverse_proxy @proxy control:8080
+			reverse_proxy @proxy control:8080 {
+				import to_control
+			}
 
 			error @hidden 404
 			error @reserved 404
@@ -286,6 +309,10 @@ http:// {
 			header @html Cache-Control no-cache
 			@asset not path / */ *.html *.htm
 			header @asset Cache-Control "public, max-age=3600"
+			# Protected sites must never be stored by a shared cache or CDN,
+			# whatever the file: it would serve them to visitors who never
+			# passed forward_auth. Last, so it replaces the two rules above.
+			header @protected Cache-Control "private, no-store"
 
 			encode zstd gzip
 			file_server
@@ -320,7 +347,11 @@ http:// {
 			}
 			handle @custom404 {
 				rewrite * /404.html
-				header Cache-Control no-cache
+				# route keeps the order: the protected rule must win.
+				route {
+					header Cache-Control no-cache
+					header @protected Cache-Control "private, no-store"
+				}
 				encode zstd gzip
 				file_server {
 					status 404

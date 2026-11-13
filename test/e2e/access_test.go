@@ -36,6 +36,7 @@ func TestSiteAccess(t *testing.T) {
 		id := str(body, "id")
 		st, body = ann.deploy(id, makeZip(t, site(map[string]string{
 			"index.html": "<h1>" + title + "</h1>", "404.html": "custom 404 of " + title, "200.html": "spa of " + title,
+			"app.css": "body{color:#123}",
 		})...))
 		must(t, st, http.StatusCreated, body, "deploy "+title)
 		host := id + "." + baseDomain
@@ -83,6 +84,24 @@ func TestSiteAccess(t *testing.T) {
 		resp, b, err := s.get(lockedHost, "/missing/route", "Cookie", cookie) //nolint:bodyclose // s.get closes it
 		if err != nil || resp.StatusCode != http.StatusOK || !strings.Contains(b, "spa of Locked") {
 			t.Fatalf("with access: %v %v %.100q", resp, err, b)
+		}
+		// No shared cache may store anything of a protected site; open
+		// sites keep their caching rules.
+		cacheControl := func(host, path string, hdr ...string) string {
+			t.Helper()
+			resp, _, err := s.get(host, path, hdr...) //nolint:bodyclose // s.get closes it
+			if err != nil {
+				t.Fatalf("%s%s: %v", host, path, err)
+			}
+			return resp.Header.Get("Cache-Control")
+		}
+		for _, path := range []string{"/app.css", "/", "/_dropsite/data/nope", "/missing.css"} {
+			if got := cacheControl(lockedHost, path, "Cookie", cookie); got != "private, no-store" {
+				t.Errorf("protected %s: Cache-Control %q", path, got)
+			}
+		}
+		if got := cacheControl(plainHost, "/app.css"); got != "public, max-age=3600" {
+			t.Errorf("open asset: Cache-Control %q", got)
 		}
 		// Changing the password signs everybody out.
 		st, body = ann.json(http.MethodPatch, "/sites/"+lockedID, map[string]any{"password": "visitor-pass-2"})

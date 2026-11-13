@@ -40,6 +40,9 @@ func (a *api) proxyCall(w http.ResponseWriter, r *http.Request) error {
 	for k, vs := range resp.Header {
 		h[k] = vs
 	}
+	// After the upstream headers: its own Cache-Control must not let a
+	// shared cache store an answer of a protected site.
+	a.noStoreIfProtected(w, r)
 	w.WriteHeader(resp.Status)
 	if r.Method == http.MethodHead {
 		return nil
@@ -91,5 +94,6 @@ func (a *api) proxyError(w http.ResponseWriter, r *http.Request, err error) {
 		h.Set("Retry-After", retryAfterSeconds(e))
 	}
 	h.Set("X-Robots-Tag", "noindex")
+	a.noStoreIfProtected(w, r)
 	writeJSON(w, status, errorBody(domain.E(e.Kind, e.Code, e.Message)))
 }
