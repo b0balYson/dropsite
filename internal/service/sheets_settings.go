@@ -99,10 +99,12 @@ func (s *Service) GetSheetsStatus(ctx context.Context) (SheetsStatus, error) {
 	if err == nil {
 		return SheetsStatus{Configured: true, Email: c.Email()}, nil
 	}
-	switch {
-	case errors.Is(err, errSheetsUnreadable):
+	// Both errors share the code sheets_not_configured, and errors.Is on a
+	// domain error compares codes: tell them apart by identity.
+	switch err { //nolint:errorlint // sheetsAPI returns these sentinels unwrapped
+	case errSheetsUnreadable:
 		return SheetsStatus{Unreadable: true}, nil
-	case errors.Is(err, errSheetsNotConfigured):
+	case errSheetsNotConfigured:
 		return SheetsStatus{}, nil
 	}
 	return SheetsStatus{}, err

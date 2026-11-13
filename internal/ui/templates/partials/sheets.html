@@ -1,6 +1,6 @@
 {{define "admin_sheets"}}
 {{$s := .D.Sheets}}
-<form method="post" action="/admin/settings/sheets" class="settings" autocomplete="off">
+<form method="post" action="/admin/settings/sheets" class="settings sheets-settings" autocomplete="off">
   {{template "csrf" .}}
   <section class="section" aria-labelledby="sheets-h">
     <h2 class="section-title" id="sheets-h">{{.L.T "sheets.admin.title"}}</h2>

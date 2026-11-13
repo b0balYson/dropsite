@@ -39,7 +39,7 @@ func TestSheetsServiceAccount(t *testing.T) {
 	e, f := sheetsEnv(t, false)
 	ann := e.user("ann@pp.test")
 	st, err := e.svc.GetSheetsStatus(ctx)
-	if err != nil || st.Configured || st.Email != "" {
+	if err != nil || st.Configured || st.Email != "" || st.Unreadable {
 		t.Fatalf("initial status %+v %v", st, err)
 	}
 	wantNotFound(t, func() error { _, err := e.svc.SetSheetsServiceAccount(ctx, ann, string(sheetstest.Key())); return err }())
