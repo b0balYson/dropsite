@@ -10,19 +10,19 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-13
+
 ### Added
 
 - Abuse protection: API key endpoints get classes (`ai` and `send` send only a server-side request template and need an invisible visitor session from `/_dropsite/session.js`, `read` allows GET only, `transparent` keeps the old behaviour with a warning) and a daily budget that pauses the endpoint and notifies the owner once a day; Caddy blocks AI scrapers on sites and cloud ranges on the proxy (Settings → Abuse protection, `control defender`), limits each client to about 50 requests per second, and control bans networks that keep hitting the limit or call on a schedule (Settings, `control bans`).
 
-### Changed
-
-- **Upgrade note:** Caddy now runs the `ghcr.io/b0balyson/dropsite-caddy` image in every TLS mode, not only in wildcard mode; `dropsite-update` switches to it automatically, a manual update needs `docker compose pull && docker compose up -d`. Existing API key endpoints become `transparent`, and a new endpoint created through the API or MCP without a class is `ai` and needs a template.
-
-## [0.5.2] - 2026-11-13
-
 ### Fixed
 
 - Remote MCP: streamed responses were held back by the API request logger, so clients on the 2026-07-28 protocol (Claude Code) waited 25–30 seconds for the `subscriptions/listen` acknowledgement and reconnected. Streams are now flushed at once.
+
+### Changed
+
+- **Upgrade note:** Caddy now runs the `ghcr.io/b0balyson/dropsite-caddy` image in every TLS mode, not only in wildcard mode; `dropsite-update` switches to it automatically, a manual update needs `docker compose pull && docker compose up -d`. Existing API key endpoints become `transparent`, and a new endpoint created through the API or MCP without a class is `ai` and needs a template.
 
 ## [0.5.1] - 2026-11-13
 
@@ -133,7 +133,8 @@ First public release.
 - The installer does not keep the first administrator password on the server.
 - Threat model and operator guidance in [docs/security.md](docs/security.md).
 
-[Unreleased]: https://github.com/b0balYson/dropsite/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/b0balYson/dropsite/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/b0balYson/dropsite/compare/v0.5.1...v0.6.0
 [0.5.2]: https://github.com/b0balYson/dropsite/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/b0balYson/dropsite/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/b0balYson/dropsite/compare/v0.4.0...v0.5.0
