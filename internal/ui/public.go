@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/b0balYson/dropsite/internal/oauth"
 	"github.com/b0balYson/dropsite/internal/service"
 )
 
@@ -33,7 +34,7 @@ type publicMode struct {
 //     only from a trusted proxy (TRUSTED_PROXIES, the compose network);
 //   - cookies are Secure and carry the __Host- prefix;
 //   - unsafe requests must come from the public origin exactly.
-func NewPublic(svc *service.Service, log *slog.Logger) http.Handler {
+func NewPublic(svc *service.Service, log *slog.Logger, az *oauth.Server) http.Handler {
 	if log == nil {
 		log = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
@@ -46,6 +47,7 @@ func NewPublic(svc *service.Service, log *slog.Logger) http.Handler {
 		host: svc.PublicAdminHost(), port: cfg.SitesHTTPSPort,
 		origin: svc.PublicAdminURL(), trusted: cfg.TrustedProxies,
 	}
+	s.az = az
 	return s.publicGate(securityHeaders(s.routes()))
 }
 

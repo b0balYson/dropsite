@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/b0balYson/dropsite/internal/oauth"
 	"github.com/b0balYson/dropsite/internal/service"
 )
 
@@ -30,6 +31,9 @@ type server struct {
 	secure   bool
 	// public is set on the public admin listener only (see NewPublic).
 	public *publicMode
+	// az opens OAuth requests sealed by the consent page of the API host, so
+	// a signed-in user can approve them here (public admin listener only).
+	az *oauth.Server
 }
 
 // New returns the handler for the admin listener.
@@ -141,6 +145,9 @@ func (s *server) routes() http.Handler {
 
 	mux.HandleFunc("GET /connect", s.user(s.connectPage))
 	mux.HandleFunc("POST /connect/code", s.user(s.createCode))
+	mux.HandleFunc("POST /connect/url", s.user(s.createConnectURL))
+	mux.HandleFunc("GET "+sessionAuthorizePath, s.user(s.sessionAuthorizePage))
+	mux.HandleFunc("POST "+sessionAuthorizePath, s.user(s.sessionAuthorizeSubmit))
 	mux.HandleFunc("POST /connect/apps/{id}/revoke", s.user(s.revokeApp))
 	mux.HandleFunc("POST /connect/tokens", s.user(s.createToken))
 	mux.HandleFunc("POST /connect/tokens/{id}/revoke", s.user(s.revokeToken))

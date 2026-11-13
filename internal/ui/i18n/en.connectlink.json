@@ -1,0 +1,17 @@
+{
+  "connect.link.submit": "Connect URL",
+  "connect.link.again": "New connect URL",
+  "connect.link.hint": "Beta. Paste the URL into the chat app instead of the MCP address and no code is needed. Valid for 1 hour and works once.",
+  "connect.link.label": "Connect URL",
+  "connect.link.beta": "beta",
+  "connect.link.expired": "The URL has expired. Get a new one.",
+  "connect.link.after": "Paste the URL into ChatGPT, claude.ai or Claude Code as the MCP server address and press Allow on the confirmation page. Do not forward it: whoever opens it first connects to your account. If the chat app still asks for a code, press Connect and enter a regular code.",
+  "oauth.only_you.link": "Allow only if you added this address to the application yourself.",
+  "oauth.link.title": "Confirm the connection",
+  "oauth.link.text": "You are connecting with a URL from the Dropsite interface, so no code is needed.",
+  "oauth.link.invalid": "The connect URL is invalid, already used or expired. Enter a connect code.",
+  "oauth.session.title": "Confirm the connection",
+  "oauth.session.as": "You are signed in to Dropsite as {email}. The application gets access to this account's sites.",
+  "oauth.admin.text": "Or confirm without a code: sign in to the Dropsite web interface and allow access there.",
+  "oauth.admin.link": "Confirm in the web interface"
+}

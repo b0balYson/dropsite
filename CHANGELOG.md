@@ -10,6 +10,11 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+### Added
+
+- Beta: a connect URL `https://api.<domain>/mcp/c/<code>` for chat clients. Pasted as the MCP server address, it lets ChatGPT, claude.ai and Claude Code connect with a single Allow on the consent page, without typing a code. It works once, within an hour, and stays a valid MCP address afterwards. Get it on the Connect AI page, with `ssh <server> dropsite-connect`, or at the end of a fresh installation.
+- Beta: while the admin interface is open from the internet, the consent page can be approved there by the signed-in user instead of with a code.
+
 ### Fixed
 
 - Claude Code could not connect: its OAuth redirect on `localhost` with a run-time port did not match the registered `http://localhost/callback`, and claude.ai refuses to serve the client's metadata document to data-centre servers. Loopback redirects now match with any port (RFC 8252), and control falls back to a built-in copy of the Claude Code document when the live one cannot be loaded.

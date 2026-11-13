@@ -79,6 +79,20 @@
 	header X-Content-Type-Options nosniff
 }
 
+# Access log of the API host. A connect URL (https://api.<domain>/mcp/c/<code>)
+# carries a one-time code in its path, and the consent page receives it
+# percent-encoded in the resource parameter: the code is replaced before the
+# line is written, in the URI and in the Location of the HTTP->HTTPS redirect.
+(api_log) {
+	log {
+		format filter {
+			request>uri regexp "(?i)(mcp(?:/|%2f)c(?:/|%2f))[^/?&#%]+" "${1}REDACTED"
+			resp_headers>Location regexp "(?i)(mcp(?:/|%2f)c(?:/|%2f))[^/?&#%]+" "${1}REDACTED"
+			wrap json
+		}
+	}
+}
+
 (plain_error) {
 	header Cache-Control no-store
 	respond "{err.status_code} {err.status_text}" {err.status_code}
@@ -117,7 +131,7 @@ http://127.0.0.1:8090 {
 
 {$API_HOST} {
 	import security_headers
-	log
+	import api_log
 	reverse_proxy control:8080 {
 		import to_control
 	}
@@ -160,7 +174,7 @@ http://127.0.0.1:8090 {
 
 http:// {
 	import security_headers
-	log
+	import api_log
 	redir https://{host}{uri} 308
 }
 

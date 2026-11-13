@@ -16,6 +16,9 @@ type ConnectRepository interface {
 	// RedeemConnectCode marks the code with this hash used if it is unused and
 	// not expired at now, and returns its user ID; otherwise ErrNotFound.
 	RedeemConnectCode(ctx context.Context, hash []byte, now time.Time) (int64, error)
+	// PeekConnectCode returns the user ID of an unused code that has not
+	// expired at now, without consuming it; otherwise ErrNotFound.
+	PeekConnectCode(ctx context.Context, hash []byte, now time.Time) (int64, error)
 	DeleteExpiredConnectCodes(ctx context.Context, before time.Time) (int, error)
 }
 
@@ -45,6 +48,20 @@ func (db *DB) RedeemConnectCode(ctx context.Context, hash []byte, now time.Time)
 	}
 	if err != nil {
 		return 0, fmt.Errorf("redeem connect code: %w", err)
+	}
+	return userID, nil
+}
+
+// PeekConnectCode looks a code up without consuming it.
+func (db *DB) PeekConnectCode(ctx context.Context, hash []byte, now time.Time) (int64, error) {
+	var userID int64
+	err := db.r.QueryRowContext(ctx, `SELECT user_id FROM connect_codes
+		WHERE hash = ? AND used_at IS NULL AND expires_at > ?`, hash, toMS(now)).Scan(&userID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, domain.ErrNotFound
+	}
+	if err != nil {
+		return 0, fmt.Errorf("peek connect code: %w", err)
 	}
 	return userID, nil
 }

@@ -12,9 +12,10 @@
 # /opt/dropsite, writes deploy/.env with a generated administrator password,
 # starts the stack, removes that password from .env once the administrator
 # exists (it is shown once; dropsite-admin-password resets it), installs a daily backup and the helper commands
-# dropsite-update, dropsite-rollback, dropsite-backup, dropsite-admin-password
-# and dropsite-info, and dropsite-update-watch: the root job that runs an
-# update an administrator requested with the button in the web interface.
+# dropsite-update, dropsite-rollback, dropsite-backup, dropsite-admin-password,
+# dropsite-info and dropsite-connect, and dropsite-update-watch: the root job
+# that runs an update an administrator requested with the button in the web
+# interface.
 #
 # Releases: DROPSITE_VERSION in deploy/.env selects a published release
 # ("latest", the default, or an exact version such as 1.4.2). The checkout is
@@ -50,9 +51,10 @@
 #
 # Output: progress on stderr; on success the last lines on stdout are
 # "DROPSITE_RESULT key=value" (domain, api_host, admin_email, admin_password,
-# admin_password_new, ipv4, ipv6, public_admin_url) for the local installer. admin_password is
-# printed only by the run that generated it; the password line goes to stdout
-# only and never into the log file.
+# admin_password_new, ipv4, ipv6, public_admin_url, connect_url) for the local installer.
+# admin_password and connect_url (a one-time connect URL for a chat app, beta)
+# are printed only by the run that created the administrator; those lines go to
+# stdout only and never into the log file.
 set -euo pipefail
 umask 022
 
@@ -529,7 +531,7 @@ write_file() {
 }
 
 install_helpers() {
-	step "Installing the commands dropsite-update, dropsite-rollback, dropsite-backup, dropsite-admin-password, dropsite-info, dropsite-update-watch"
+	step "Installing the commands dropsite-update, dropsite-rollback, dropsite-backup, dropsite-admin-password, dropsite-info, dropsite-connect, dropsite-update-watch"
 	header=$(printf '#!/usr/bin/env bash\n# Installed by Dropsite server-bootstrap.sh; reinstalled by dropsite-update.\nset -euo pipefail\nAPP_DIR=%q\n' "$APP_DIR")
 
 	{
@@ -714,6 +716,18 @@ EOF
 exec bash "$APP_DIR/scripts/server-bootstrap.sh" --info
 EOF
 	} | write_file "$BIN_DIR/dropsite-info" 0755
+
+	{
+		printf '%s\n' "$header"
+		cat <<'EOF'
+# Print a one-time connect URL for a chat app (beta): paste it into ChatGPT,
+# claude.ai or Claude Code as the MCP server address and press Allow; no code
+# is needed. It works once, within an hour. For the administrator, or for the
+# e-mail given:  dropsite-connect [email]
+cd "$APP_DIR/deploy"
+exec docker compose exec -T control /control connect-url "$@"
+EOF
+	} | write_file "$BIN_DIR/dropsite-connect" 0755
 
 	{
 		printf '%s\n' "$header"
@@ -920,6 +934,16 @@ apply_public_admin() {
 	fi
 }
 
+# connect_url prints a one-time connect URL for the administrator, or
+# nothing when the running control cannot issue one (a release older than
+# the command). Only the URL leaves on stdout; notes go to the log.
+connect_url() {
+	url=$(compose exec -T control /control connect-url 2>>"$LOG" </dev/null) || return 0
+	case "$url" in
+	https://*/mcp/c/*) printf '%s' "$url" ;;
+	esac
+}
+
 # public_admin_url prints https://admin.<domain> while public access is on.
 public_admin_url() {
 	state=$(compose exec -T control /control public-admin status 2>/dev/null </dev/null) || return 0
@@ -1015,6 +1039,7 @@ main() {
 	print_info
 	if [ "$ADMIN_PASSWORD_NEW" = 1 ]; then
 		printf 'DROPSITE_RESULT admin_password=%s\n' "$admin_password"
+		printf 'DROPSITE_RESULT connect_url=%s\n' "$(connect_url)"
 	else
 		note "the administrator password is not stored on the server; reset it with dropsite-admin-password"
 	fi

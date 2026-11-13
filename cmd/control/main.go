@@ -8,6 +8,7 @@
 //	control restore <path|-> [--force]  restore from a backup archive
 //	control reset-password [email]  set a new random password, print it (default ADMIN_EMAIL)
 //	control public-admin [status|on|off]  show or change access to the admin UI from the internet
+//	control connect-url [email]  print a one-time connect URL for a chat app (beta; default ADMIN_EMAIL)
 //	control version           print the build version
 package main
 
@@ -32,7 +33,7 @@ func main() {
 	}
 }
 
-var errUsage = errors.New("usage: control [serve|healthcheck|backup <path|->|restore <path|-> [--force]|reset-password [email]|public-admin [status|on|off]|version]")
+var errUsage = errors.New("usage: control [serve|healthcheck|backup <path|->|restore <path|-> [--force]|reset-password [email]|public-admin [status|on|off]|connect-url [email]|version]")
 
 func run(ctx context.Context, args []string) error {
 	cmd := "serve"
@@ -52,6 +53,8 @@ func run(ctx context.Context, args []string) error {
 		return resetPasswordCmd(ctx, args, os.Stdout, os.Stderr)
 	case "public-admin":
 		return publicAdminCmd(ctx, args, os.Stdout, os.Stderr)
+	case "connect-url":
+		return connectURLCmd(ctx, args, os.Stdout, os.Stderr)
 	case "version", "--version", "-v":
 		fmt.Println(brand.Name, "control", brand.Version)
 		return nil

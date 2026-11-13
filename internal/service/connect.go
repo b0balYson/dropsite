@@ -31,17 +31,26 @@ type IssuedConnectCode struct {
 // CreateConnectCode issues a one-time connect code for the actor. Earlier
 // codes stay valid until they expire.
 func (s *Service) CreateConnectCode(ctx context.Context, a Actor) (IssuedConnectCode, error) {
-	code := domain.NewConnectCode()
+	return s.issueConnectCode(ctx, a, domain.NewConnectCode(), ConnectCodeTTL, "connect.code_create", nil)
+}
+
+// issueConnectCode stores the hash of code for the actor's user and audits
+// the issue under action.
+func (s *Service) issueConnectCode(ctx context.Context, a Actor, code string, ttl time.Duration,
+	action string, meta map[string]any) (IssuedConnectCode, error) {
+	if a.User.ID == 0 || a.ViaMCP {
+		return IssuedConnectCode{}, domain.ErrUnauthorized
+	}
 	now := s.now()
 	c := domain.ConnectCode{
 		UserID: a.User.ID, Hash: domain.HashSecret(domain.NormalizeConnectCode(code)),
-		CreatedAt: now, ExpiresAt: now.Add(ConnectCodeTTL),
+		CreatedAt: now, ExpiresAt: now.Add(ttl),
 	}
 	id, err := s.repo.CreateConnectCode(ctx, c)
 	if err != nil {
 		return IssuedConnectCode{}, fmt.Errorf("create connect code: %w", err)
 	}
-	s.audit(ctx, a, "connect.code_create", fmt.Sprintf("connect_code:%d", id), nil)
+	s.audit(ctx, a, action, fmt.Sprintf("connect_code:%d", id), meta)
 	return IssuedConnectCode{Code: code, ExpiresAt: c.ExpiresAt}, nil
 }
 
@@ -54,16 +63,7 @@ func (s *Service) redeemConnectCode(ctx context.Context, code, ip, purpose strin
 	if !ok {
 		return domain.User{}, domain.ErrRateLimited.WithRetryAfter(retry)
 	}
-	fail := func() (domain.User, error) {
-		// One row per network and window: the rate limit already bounds
-		// guessing, and the first row is enough to see it happen.
-		if ok, _ := s.codeAudit.Allow(ipKey(ip)); ok {
-			s.audit(ctx, Actor{IP: ip}, "connect.code_failed", "", map[string]any{
-				"purpose": purpose, "repeats_hidden_minutes": int(FailedCodesWindow.Minutes()),
-			})
-		}
-		return domain.User{}, errConnectInvalid
-	}
+	fail := func() (domain.User, error) { return domain.User{}, s.connectFailed(ctx, ip, purpose) }
 	norm := domain.NormalizeConnectCode(code)
 	if norm == "" {
 		return fail()
@@ -83,6 +83,18 @@ func (s *Service) redeemConnectCode(ctx context.Context, code, ip, purpose strin
 	res.Cancel()
 	s.audit(ctx, Actor{User: u, IP: ip}, "connect.code_use", userTarget(u.ID), map[string]any{"purpose": purpose})
 	return u, nil
+}
+
+// connectFailed audits a failed code (one row per network and window: the
+// rate limit already bounds guessing, and the first row is enough to see it
+// happen) and returns the single answer for every failure.
+func (s *Service) connectFailed(ctx context.Context, ip, purpose string) error {
+	if ok, _ := s.codeAudit.Allow(ipKey(ip)); ok {
+		s.audit(ctx, Actor{IP: ip}, "connect.code_failed", "", map[string]any{
+			"purpose": purpose, "repeats_hidden_minutes": int(FailedCodesWindow.Minutes()),
+		})
+	}
+	return errConnectInvalid
 }
 
 // ConnectResult is what exchanging a connect code yields for the CLI.

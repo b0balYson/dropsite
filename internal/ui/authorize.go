@@ -58,6 +58,17 @@ type authorizeData struct {
 	Error        string
 	Fatal        string
 	Langs        []langLink
+	// Action is where the consent form posts (the API host by default).
+	Action string
+	// Link is true when the request came through a connect URL whose code
+	// is still valid: the page asks only for consent, not for a code.
+	Link bool
+	// SessionEmail is set on the public admin host: the signed-in user
+	// approves without a code.
+	SessionEmail string
+	// AdminURL opens the same request on the public admin host (while public
+	// access is on), where a signed-in user approves without a code.
+	AdminURL string
 }
 
 // langLink is one language switch link that keeps the request.
@@ -95,10 +106,16 @@ func (a *authorizer) begin(w http.ResponseWriter, r *http.Request) *reqCtx {
 }
 
 func (a *authorizer) render(w http.ResponseWriter, r *http.Request, rc *reqCtx, status int, d authorizeData, formAction string) {
-	w.Header().Set("Content-Security-Policy", consentCSP(formAction))
+	a.s.renderConsent(w, r, rc, status, d, formAction)
+}
+
+// renderConsent renders the consent page; redirectURI is the client's
+// redirect, allowed as a form target.
+func (s *server) renderConsent(w http.ResponseWriter, r *http.Request, rc *reqCtx, status int, d authorizeData, redirectURI string) {
+	w.Header().Set("Content-Security-Policy", consentCSP(redirectURI))
 	langLinks(r, &d)
-	v := a.s.newView(r, rc, "", "oauth.title", d)
-	a.s.execute(w, status, a.s.pages["authorize"], "authorize_page", v)
+	v := s.newView(r, rc, "", "oauth.title", d)
+	s.execute(w, status, s.pages["authorize"], "authorize_page", v)
 }
 
 // consentCSP is the UI policy with the client's redirect origin allowed as a
@@ -115,9 +132,11 @@ func (a *authorizer) fatal(w http.ResponseWriter, r *http.Request, rc *reqCtx, s
 	a.render(w, r, rc, status, authorizeData{Fatal: rc.loc.T(msgKey)}, "")
 }
 
-func (a *authorizer) data(p oauth.Pending) authorizeData {
+// consentData describes a pending request for the consent page.
+func consentData(az *oauth.Server, p oauth.Pending) authorizeData {
 	d := authorizeData{
-		Sealed: a.az.Seal(p), ClientName: p.Client.Name, RedirectHost: service.RedirectHost(p.Request.RedirectURI),
+		Sealed: az.Seal(p), ClientName: p.Client.Name, RedirectHost: service.RedirectHost(p.Request.RedirectURI),
+		Action: oauth.AuthorizePath, Link: p.LinkCode != "",
 	}
 	if p.Client.Metadata {
 		d.ClientHost = service.RedirectHost(p.Client.ID)
@@ -128,6 +147,31 @@ func (a *authorizer) data(p oauth.Pending) authorizeData {
 		d.Loopback = strings.EqualFold(h, "localhost") || (ip != nil && ip.IsLoopback())
 	}
 	return d
+}
+
+// data is consentData plus the way to approve on the public admin host
+// while public access is on. That link never carries a connect code.
+func (a *authorizer) data(r *http.Request, p oauth.Pending) authorizeData {
+	d := consentData(a.az, p)
+	if !d.Link && a.s.svc.PublicAdminEnabled(r.Context()) {
+		p.LinkCode = ""
+		d.AdminURL = a.s.svc.PublicAdminURL() + sessionAuthorizePath + "?" + url.Values{"request": {a.az.Seal(p)}}.Encode()
+	}
+	return d
+}
+
+// linkFailed is the page after a connect URL that cannot authorize (unknown,
+// used or expired code, or too many failures): the usual code field with a
+// message that does not tell which.
+func (a *authorizer) linkFailed(w http.ResponseWriter, r *http.Request, rc *reqCtx, p oauth.Pending, err error) {
+	p.LinkCode = ""
+	d := a.data(r, p)
+	d.Error = rc.loc.T("oauth.link.invalid")
+	if domain.AsError(err).Kind == domain.KindRateLimited {
+		d.Error, _ = a.s.describe(rc, err)
+		w.Header().Set("Retry-After", retryAfter(err))
+	}
+	a.render(w, r, rc, http.StatusOK, d, p.Request.RedirectURI)
 }
 
 func (a *authorizer) show(w http.ResponseWriter, r *http.Request) {
@@ -148,7 +192,18 @@ func (a *authorizer) show(w http.ResponseWriter, r *http.Request) {
 		a.fatal(w, r, rc, http.StatusBadRequest, "oauth.error.request")
 		return
 	}
-	a.render(w, r, rc, http.StatusOK, a.data(p), p.Request.RedirectURI)
+	if p.LinkCode != "" {
+		if err := a.s.svc.CheckConnectLink(r.Context(), p.LinkCode, rc.ip); err != nil {
+			if domain.AsError(err).Kind == domain.KindInternal {
+				msg, status := a.s.describe(rc, err)
+				a.render(w, r, rc, status, authorizeData{Fatal: msg}, "")
+				return
+			}
+			a.linkFailed(w, r, rc, p, err)
+			return
+		}
+	}
+	a.render(w, r, rc, http.StatusOK, a.data(r, p), p.Request.RedirectURI)
 }
 
 func (a *authorizer) submit(w http.ResponseWriter, r *http.Request) {
@@ -169,7 +224,12 @@ func (a *authorizer) submit(w http.ResponseWriter, r *http.Request) {
 		}))
 		return
 	}
-	code, err := a.s.svc.AuthorizeOAuth(r.Context(), p.Request, r.PostFormValue("code"), rc.ip)
+	var code string
+	if p.LinkCode != "" {
+		code, err = a.s.svc.AuthorizeOAuthLink(r.Context(), p.Request, p.LinkCode, rc.ip)
+	} else {
+		code, err = a.s.svc.AuthorizeOAuth(r.Context(), p.Request, r.PostFormValue("code"), rc.ip)
+	}
 	var oe *service.OAuthError
 	if errors.As(err, &oe) {
 		a.redirectOut(w, r, p, a.az.ErrorURL(&oauth.RedirectError{
@@ -177,8 +237,14 @@ func (a *authorizer) submit(w http.ResponseWriter, r *http.Request) {
 		}))
 		return
 	}
+	if err != nil && p.LinkCode != "" && domain.AsError(err).Kind != domain.KindInternal {
+		// The link was used meanwhile (another tab) or expired: fall back
+		// to the code field.
+		a.linkFailed(w, r, rc, p, err)
+		return
+	}
 	if err != nil {
-		d := a.data(p)
+		d := a.data(r, p)
 		msg, status := a.s.describe(rc, err)
 		if domain.AsError(err).Kind == domain.KindRateLimited {
 			w.Header().Set("Retry-After", retryAfter(err))
@@ -191,6 +257,11 @@ func (a *authorizer) submit(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *authorizer) redirectOut(w http.ResponseWriter, r *http.Request, p oauth.Pending, target string) {
+	consentRedirect(w, r, p, target)
+}
+
+// consentRedirect sends the browser back to the client after the consent.
+func consentRedirect(w http.ResponseWriter, r *http.Request, p oauth.Pending, target string) {
 	w.Header().Set("Content-Security-Policy", consentCSP(p.Request.RedirectURI))
 	http.Redirect(w, r, target, http.StatusSeeOther) //nolint:gosec // G710: target is the client's registered redirect URI
 }

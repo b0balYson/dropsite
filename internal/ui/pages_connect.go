@@ -41,8 +41,17 @@ type issuedCode struct {
 	ExpiresISO string
 }
 
+// issuedLink is a connect URL: the MCP address with a one-time code inside.
+type issuedLink struct {
+	URL        string
+	ExpiresAt  time.Time
+	ExpiresISO string
+}
+
 type connectData struct {
 	Code *issuedCode
+	// Link is a freshly issued connect URL (beta).
+	Link *issuedLink
 	// CodeError is why a connect code was not issued; it shows inside the
 	// connect block, where the button was pressed.
 	CodeError string
@@ -127,6 +136,26 @@ func (s *server) createCode(w http.ResponseWriter, r *http.Request, rc *reqCtx) 
 		Code: res.Code, Unix: unixCommand(server, res.Code), Windows: windowsCommand(server, res.Code),
 		ExpiresAt: res.ExpiresAt, ExpiresISO: res.ExpiresAt.UTC().Format(time.RFC3339),
 	}
+	if isHTMX(r) {
+		s.fragment(w, r, rc, "connect_block", data)
+		return
+	}
+	s.page(w, r, rc, http.StatusOK, "connect", "connect", "connect.title", data)
+}
+
+// createConnectURL issues a connect URL and shows it with a copy button.
+func (s *server) createConnectURL(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
+	res, err := s.svc.CreateConnectURL(r.Context(), rc.actor)
+	if err != nil {
+		s.codeFailed(w, r, rc, err)
+		return
+	}
+	data, err := s.connectData(r, rc)
+	if err != nil {
+		s.failPage(w, r, rc, err)
+		return
+	}
+	data.Link = &issuedLink{URL: res.URL, ExpiresAt: res.ExpiresAt, ExpiresISO: res.ExpiresAt.UTC().Format(time.RFC3339)}
 	if isHTMX(r) {
 		s.fragment(w, r, rc, "connect_block", data)
 		return

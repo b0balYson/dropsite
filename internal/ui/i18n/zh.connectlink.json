@@ -1,0 +1,17 @@
+{
+  "connect.link.submit": "连接链接",
+  "connect.link.again": "新的连接链接",
+  "connect.link.hint": "测试版。把链接代替 MCP 地址粘贴到聊天应用中，就无需输入连接码。有效期 1 小时，只能使用一次。",
+  "connect.link.label": "连接链接",
+  "connect.link.beta": "测试版",
+  "connect.link.expired": "链接已过期，请重新获取。",
+  "connect.link.after": "把链接作为 MCP 服务器地址粘贴到 ChatGPT、claude.ai 或 Claude Code 中，然后在确认页面点击“允许”。不要转发该链接：谁先打开它，谁就连接到您的账户。如果聊天应用仍然要求输入连接码，请点击“连接”并输入普通连接码。",
+  "oauth.only_you.link": "只有当您亲自把这个地址添加到应用中时才允许。",
+  "oauth.link.title": "确认连接",
+  "oauth.link.text": "您正在使用 Dropsite 界面中的链接进行连接，无需输入连接码。",
+  "oauth.link.invalid": "连接链接无效、已被使用或已过期。请输入连接码。",
+  "oauth.session.title": "确认连接",
+  "oauth.session.as": "您已以 {email} 身份登录 Dropsite。该应用将获得此账户网站的访问权限。",
+  "oauth.admin.text": "也可以不用连接码：登录 Dropsite 网页界面并在那里允许访问。",
+  "oauth.admin.link": "在网页界面中确认"
+}

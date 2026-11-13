@@ -67,11 +67,16 @@ func (s *Service) Issuer() string { return s.APIURL() }
 
 // CanonicalResource maps a requested resource indicator to the MCP resource.
 // Empty means the MCP resource; the API origin is accepted as a synonym
-// because some clients send the origin.
+// because some clients send the origin, and so is every connect URL.
 func (s *Service) CanonicalResource(r string) (string, bool) {
 	r = strings.TrimSuffix(r, "/")
 	switch r {
 	case "", s.MCPResource(), s.Issuer():
+		return s.MCPResource(), true
+	}
+	// A connect URL stays an alias of the MCP resource after its code is
+	// used, so tokens requested for it keep working.
+	if s.LinkCode(r) != "" {
 		return s.MCPResource(), true
 	}
 	return "", false
@@ -245,16 +250,34 @@ type AuthorizeRequest struct {
 // authorization code. The request must already be validated by the adapter
 // (client, redirect URI, PKCE); the connect code identifies the user.
 func (s *Service) AuthorizeOAuth(ctx context.Context, req AuthorizeRequest, connectCode, ip string) (string, error) {
+	return s.authorizeWithCode(ctx, req, connectCode, ip, "oauth")
+}
+
+func checkAuthorizeRequest(s *Service, req AuthorizeRequest) error {
 	if req.Challenge == "" || req.ClientID == "" || req.RedirectURI == "" {
-		return "", oauthErr("invalid_request", "incomplete authorization request")
+		return oauthErr("invalid_request", "incomplete authorization request")
 	}
 	if _, ok := s.CanonicalResource(req.Resource); !ok {
-		return "", oauthErr("invalid_target", "unknown resource")
+		return oauthErr("invalid_target", "unknown resource")
 	}
-	u, err := s.redeemConnectCode(ctx, connectCode, ip, "oauth")
+	return nil
+}
+
+// authorizeWithCode consumes a connect code (purpose names where it was
+// entered, for the audit) and issues an authorization code to its owner.
+func (s *Service) authorizeWithCode(ctx context.Context, req AuthorizeRequest, connectCode, ip, purpose string) (string, error) {
+	if err := checkAuthorizeRequest(s, req); err != nil {
+		return "", err
+	}
+	u, err := s.redeemConnectCode(ctx, connectCode, ip, purpose)
 	if err != nil {
 		return "", err
 	}
+	return s.issueAuthCode(ctx, u, req, ip, purpose)
+}
+
+// issueAuthCode stores a new authorization code for u.
+func (s *Service) issueAuthCode(ctx context.Context, u domain.User, req AuthorizeRequest, ip, via string) (string, error) {
 	code := domain.NewSecret()
 	now := s.now()
 	if _, err := s.repo.CreateOAuthCode(ctx, domain.OAuthCode{
@@ -264,9 +287,11 @@ func (s *Service) AuthorizeOAuth(ctx context.Context, req AuthorizeRequest, conn
 	}); err != nil {
 		return "", fmt.Errorf("create authorization code: %w", err)
 	}
-	s.audit(ctx, Actor{User: u, IP: ip}, "oauth.authorize", userTarget(u.ID), map[string]any{
-		"client": CleanClientName(req.ClientName), "redirect_host": RedirectHost(req.RedirectURI),
-	})
+	meta := map[string]any{"client": CleanClientName(req.ClientName), "redirect_host": RedirectHost(req.RedirectURI)}
+	if via != "oauth" {
+		meta["via"] = via
+	}
+	s.audit(ctx, Actor{User: u, IP: ip}, "oauth.authorize", userTarget(u.ID), meta)
 	return code, nil
 }
 

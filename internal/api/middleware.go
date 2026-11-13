@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/b0balYson/dropsite/internal/domain"
 	"github.com/b0balYson/dropsite/internal/service"
 )
 
@@ -121,7 +122,7 @@ func (a *api) recoverPanic(w *statusWriter, r *http.Request, next http.Handler) 
 		if err, ok := v.(error); ok && errors.Is(err, http.ErrAbortHandler) {
 			panic(v)
 		}
-		a.log.Error("api panic", "request_id", infoFrom(r.Context()).id, "path", r.URL.Path, "panic", v)
+		a.log.Error("api panic", "request_id", infoFrom(r.Context()).id, "path", domain.RedactConnectLinks(r.URL.Path), "panic", v)
 		if w.status == 0 {
 			writeJSON(w, http.StatusInternalServerError, errorBody(internalError()))
 		}

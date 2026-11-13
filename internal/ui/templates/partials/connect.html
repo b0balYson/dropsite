@@ -23,12 +23,31 @@
     <p class="hint">{{$.L.T "connect.cmd.after"}}</p>
   </div>
   {{end}}
+  {{with .D.Link}}
+  <div class="connect-code connect-link" data-countdown="{{.ExpiresISO}}" data-countdown-left="{{$.L.T "connect.code.left" "time" "{t}"}}">
+    <div class="codeblock">
+      <p class="codeblock__label">{{$.L.T "connect.link.label"}} <span class="badge badge--info">{{$.L.T "connect.link.beta"}}</span></p>
+      <pre class="code addr-break" id="connect-link"><code>{{.URL}}</code></pre>
+      <button class="btn btn--small" type="button" data-copy="#connect-link" data-copied="{{$.L.T "copy.done"}}">{{$.L.T "copy.button"}}</button>
+    </div>
+    <p class="connect-code__timer" role="timer" aria-live="off">
+      <span data-countdown-live>{{$.L.T "connect.code.until" "time" ($.L.Time .ExpiresAt)}}</span>
+    </p>
+    <p class="notice notice--warn connect-code__expired" data-countdown-expired hidden>{{$.L.T "connect.link.expired"}}</p>
+    <p class="hint">{{$.L.T "connect.link.after"}}</p>
+  </div>
+  {{end}}
   {{template "section_flash" (bundle $ "connect-block")}}
   {{with .D.CodeError}}<p class="notice notice--error notice--flash notice--result" role="alert" tabindex="-1" data-flash="section">{{.}}</p>{{end}}
   <form class="connect-block__form" method="post" action="/connect/code" hx-post="/connect/code" hx-target="#connect-block" hx-swap="outerHTML">
     {{template "csrf" .}}{{template "section_field" "connect-block"}}
     <button class="btn {{if .D.Code}}btn--ghost{{else}}btn--primary btn--hero{{end}}" type="submit">{{if .D.Code}}{{.L.T "connect.code.again"}}{{else}}{{.L.T "connect.code.submit"}}{{end}}</button>
     {{if not .D.Code}}<p class="hint">{{.L.T "connect.code.hint"}}</p>{{end}}
+  </form>
+  <form class="connect-block__form connect-block__form--link" method="post" action="/connect/url" hx-post="/connect/url" hx-target="#connect-block" hx-swap="outerHTML">
+    {{template "csrf" .}}{{template "section_field" "connect-block"}}
+    <button class="btn btn--ghost" type="submit">{{if .D.Link}}{{.L.T "connect.link.again"}}{{else}}{{.L.T "connect.link.submit"}}{{end}}</button>
+    <p class="hint">{{.L.T "connect.link.hint"}}</p>
   </form>
 </div>
 {{end}}
