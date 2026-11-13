@@ -88,7 +88,7 @@ func TestVisitorAccessFlow(t *testing.T) {
 	for i, bad := range []string{
 		strings.Join([]string{parts[0], "9999999999", parts[2], parts[3]}, "."),
 		strings.Join([]string{parts[0], parts[1], "7", parts[3]}, "."),
-		strings.Join([]string{parts[0], parts[1], parts[2], parts[3][:len(parts[3])-2] + "AA"}, "."),
+		strings.Join([]string{parts[0], parts[1], parts[2], flipFirst(parts[3])}, "."),
 		strings.Join([]string{other.Site.ID, parts[1], parts[2], parts[3]}, "."),
 		c.Value + ".x", "garbage", parts[3],
 	} {
@@ -270,4 +270,14 @@ func TestVisitorSecretSurvivesRestart(t *testing.T) {
 	if err != nil || d != AccessAllow {
 		t.Fatalf("after restart: %v %v", d, err)
 	}
+}
+
+// flipFirst changes the first character of a signature, so the decoded bytes
+// always differ (changing the last characters can leave them unchanged).
+func flipFirst(sig string) string {
+	c := byte('A')
+	if sig[0] == 'A' {
+		c = 'B'
+	}
+	return string(c) + sig[1:]
 }
