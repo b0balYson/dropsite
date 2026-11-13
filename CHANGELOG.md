@@ -10,6 +10,10 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+### Fixed
+
+- Remote MCP: streamed responses were held back by the API request logger, so clients on the 2026-07-28 protocol (Claude Code) waited 25–30 seconds for the `subscriptions/listen` acknowledgement and reconnected. Streams are now flushed at once.
+
 ## [0.5.1] - 2026-11-13
 
 ### Fixed
