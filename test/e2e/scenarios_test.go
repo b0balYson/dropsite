@@ -278,7 +278,7 @@ func cliDeploy(t *testing.T, s *stack, token string) {
 // no request may see an error or a 404 caused by a switch.
 func rollbackUnderLoad(t *testing.T, s *stack, owner *api, siteID, host string) {
 	var stop atomic.Bool
-	var total, bad atomic.Int64
+	var total, bad, ipSeq atomic.Int64
 	var mu sync.Mutex
 	var samples []string
 	var wg sync.WaitGroup
@@ -288,7 +288,11 @@ func rollbackUnderLoad(t *testing.T, s *stack, owner *api, siteID, host string) 
 			defer wg.Done()
 			for !stop.Load() {
 				for _, p := range []string{"/common.txt", "/"} {
-					resp, body, err := s.get(host, p)
+					// Every request comes from its own address (compose.forms.yml
+					// trusts the header), so the per-client rate limit of Caddy
+					// does not turn this load into 429 answers.
+					n := ipSeq.Add(1)
+					resp, body, err := s.get(host, p, clientIPHeader, fmt.Sprintf("198.18.%d.%d", (n>>8)&255, n&255))
 					total.Add(1)
 					if err != nil || resp.StatusCode != 200 || (p == "/common.txt" && body != "same in every release") {
 						bad.Add(1)
