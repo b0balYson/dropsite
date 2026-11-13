@@ -17,6 +17,7 @@ import (
 	"github.com/b0balYson/dropsite/internal/dnscheck"
 	"github.com/b0balYson/dropsite/internal/domain"
 	"github.com/b0balYson/dropsite/internal/ratelimit"
+	"github.com/b0balYson/dropsite/internal/setupcheck"
 	"github.com/b0balYson/dropsite/internal/storage"
 	"github.com/b0balYson/dropsite/internal/store"
 )
@@ -69,6 +70,8 @@ type Deps struct {
 	PageFetcher PageFetcher
 	// SheetsTransport replaces the guarded transport to Google (tests).
 	SheetsTransport http.RoundTripper
+	// SetupTransport replaces the transport of the first-run HTTPS check (tests).
+	SetupTransport http.RoundTripper
 }
 
 // Service implements the use cases.
@@ -98,6 +101,7 @@ type Service struct {
 	settingsData *effectiveSettings
 	dns          *dnscheck.Checker
 	ipCache      serverIPCache
+	setup        *setupcheck.Checker
 
 	visitorIPLimit   *ratelimit.Window
 	visitorSiteLimit *ratelimit.Window
@@ -144,6 +148,7 @@ func New(d Deps) *Service {
 		regLimit:     ratelimit.New(RegistrationsPerIP, RegistrationWindow).WithClock(now),
 		hasher:       newPasswordHasher(),
 		dns:          dnscheck.New(d.Resolver, dnscheck.DefaultTimeout),
+		setup:        setupcheck.New(d.Resolver, d.SetupTransport, now),
 
 		visitorIPLimit:   ratelimit.New(VisitorFailuresPerIP, VisitorFailuresWindow).WithClock(now),
 		visitorSiteLimit: ratelimit.New(VisitorFailuresPerSite, VisitorFailuresWindow).WithClock(now),

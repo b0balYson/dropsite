@@ -3,6 +3,7 @@ package testenv
 import (
 	"context"
 	"net"
+	"strings"
 	"sync"
 )
 
@@ -21,7 +22,8 @@ func NewStaticResolver() *StaticResolver {
 	return &StaticResolver{records: map[string][]string{}}
 }
 
-// Set replaces the A/AAAA records of host.
+// Set replaces the A/AAAA records of host. A host "*.<domain>" answers for
+// every name directly below <domain> that has no records of its own.
 func (r *StaticResolver) Set(host string, ips ...string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -33,6 +35,9 @@ func (r *StaticResolver) LookupIPAddr(_ context.Context, host string) ([]net.IPA
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	ips, ok := r.records[host]
+	if _, parent, dot := strings.Cut(host, "."); !ok && dot {
+		ips, ok = r.records["*."+parent]
+	}
 	if !ok {
 		return nil, &net.DNSError{Err: "no such host", Name: host, IsNotFound: true}
 	}

@@ -17,6 +17,8 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"errors"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -104,6 +106,7 @@ type options struct {
 	render service.Screenshotter
 	pages  service.PageFetcher
 	sheets http.RoundTripper
+	setup  http.RoundTripper
 }
 
 // WithRenderer sets the screenshot renderer (none by default).
@@ -129,6 +132,26 @@ func WithProxyTransport(tr http.RoundTripper) Option {
 // WithSheetsTransport replaces the transport to Google Sheets.
 func WithSheetsTransport(tr http.RoundTripper) Option {
 	return func(o *options) { o.sheets = tr }
+}
+
+// WithSetupTransport replaces the transport of the first-run HTTPS check.
+func WithSetupTransport(tr http.RoundTripper) Option {
+	return func(o *options) { o.setup = tr }
+}
+
+// offline is the default transport of network checks: tests never reach
+// the real network unless they pass their own transport.
+type offline struct{}
+
+func (offline) RoundTrip(r *http.Request) (*http.Response, error) {
+	return nil, &net.OpError{Op: "dial", Net: "tcp", Err: errors.New("network disabled in tests (" + r.URL.Host + ")")}
+}
+
+func setupTransport(tr http.RoundTripper) http.RoundTripper {
+	if tr == nil {
+		return offline{}
+	}
+	return tr
 }
 
 // WithEnv sets an environment variable read by config.Load.
@@ -201,6 +224,7 @@ func start(t testing.TB, cfg *config.Config, o *options) *Env {
 		Renderer:        o.render,
 		PageFetcher:     o.pages,
 		SheetsTransport: o.sheets,
+		SetupTransport:  setupTransport(o.setup),
 	})
 	if err := svc.Start(ctx); err != nil {
 		t.Fatalf("testenv: start service: %v", err)
