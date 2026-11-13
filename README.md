@@ -96,6 +96,8 @@ A site can also start from one of five built-in templates, be copied into a new 
 
 Give the assistant a link or a picture of a site you like and it builds an original site in a similar style, never a copy; for a link the server returns a design brief (palette, fonts, spacing, layout) without the page's texts or images: [docs/references.md](docs/references.md).
 
+Teams share sites through workspaces: any user creates one and adds colleagues who already have an account; every member has owner rights on every site of the workspace (there are no roles). A site is personal or belongs to one workspace; its creator can move it in and out without touching its addresses, releases or data, and it always counts against the creator's limits. Workspaces are available in the web interface (Workspaces), the API (`/api/v1/workspaces`), both MCP servers and the CLI (`dropsite workspaces`, `--workspace`).
+
 How the assistant learns the rules (server instructions, the `get_guide` tool, tool descriptions) and what each chat supports: [docs/ai-clients.md](docs/ai-clients.md).
 
 ## Publishing

@@ -8,13 +8,19 @@ import (
 	"github.com/b0balYson/dropsite/internal/domain"
 )
 
-// siteListWhere filters active sites by owner (?1, NULL = all) and by a LIKE
-// pattern (?2, empty = none) over title, owner email and any hostname.
+// siteListWhere filters active sites by owner (?1, NULL = all), by
+// visibility to a user (?5, NULL = all: a personal site of the user or a
+// site of one of their workspaces), by workspace (?6,
+// NULL = any, 0 = personal sites only) and by a LIKE pattern (?2, empty =
+// none) over title, owner email and any hostname. ?3 and ?4 are the page.
 const siteListWhere = ` WHERE s.deleted_at IS NULL AND (?1 IS NULL OR s.owner_id = ?1)
+	AND (?5 IS NULL OR (s.workspace_id IS NULL AND s.owner_id = ?5)
+		OR s.workspace_id IN (SELECT m.workspace_id FROM workspace_members m WHERE m.user_id = ?5))
+	AND (?6 IS NULL OR (?6 = 0 AND s.workspace_id IS NULL) OR s.workspace_id = ?6)
 	AND (?2 = '' OR s.title LIKE ?2 ESCAPE '\' OR u.email LIKE ?2 ESCAPE '\'
 		OR EXISTS (SELECT 1 FROM hostnames h WHERE h.site_id = s.id AND h.hostname LIKE ?2 ESCAPE '\'))`
 
-const siteListFrom = ` FROM sites s JOIN users u ON u.id = s.owner_id`
+const siteListFrom = ` FROM sites s JOIN users u ON u.id = s.owner_id LEFT JOIN workspaces w ON w.id = s.workspace_id`
 
 // ListSites returns a page of active sites, most recently updated first, and
 // the total number of matches. Hostnames are loaded with one extra query.
@@ -23,7 +29,7 @@ func (db *DB) ListSites(ctx context.Context, f SiteFilter) ([]SiteSummary, int, 
 	var total int
 	err := db.withReadTx(ctx, func(tx *sql.Tx) error {
 		pattern := likePattern(f.Query)
-		if err := tx.QueryRowContext(ctx, "SELECT count(*)"+siteListFrom+siteListWhere, f.OwnerID, pattern).
+		if err := tx.QueryRowContext(ctx, "SELECT count(*)"+siteListFrom+siteListWhere, f.args(pattern)...).
 			Scan(&total); err != nil {
 			return fmt.Errorf("count sites: %w", err)
 		}
@@ -41,9 +47,11 @@ func (db *DB) ListSites(ctx context.Context, f SiteFilter) ([]SiteSummary, int, 
 
 func listSitePage(ctx context.Context, tx *sql.Tx, f SiteFilter, pattern string) ([]SiteSummary, error) {
 	limit, offset := f.bounds()
-	rows, err := tx.QueryContext(ctx, "SELECT "+siteColsS+", u.email, d.created_at, d.size_bytes"+siteListFrom+
-		` LEFT JOIN deploys d ON d.id = s.current_deploy_id AND d.site_id = s.id`+siteListWhere+
-		` ORDER BY s.updated_at DESC, s.id LIMIT ?3 OFFSET ?4`, f.OwnerID, pattern, limit, offset)
+	args := f.args(pattern)
+	args[2], args[3] = limit, offset
+	rows, err := tx.QueryContext(ctx, "SELECT "+siteColsS+", u.email, COALESCE(w.name, ''), d.created_at, d.size_bytes"+
+		siteListFrom+` LEFT JOIN deploys d ON d.id = s.current_deploy_id AND d.site_id = s.id`+siteListWhere+
+		` ORDER BY s.updated_at DESC, s.id LIMIT ?3 OFFSET ?4`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list sites: %w", err)
 	}
@@ -66,13 +74,18 @@ func scanSiteSummary(rows *sql.Rows) (SiteSummary, error) {
 	var s SiteSummary
 	var raw siteScan
 	var deployAt, size sql.NullInt64
-	if err := rows.Scan(append(raw.dest(&s.Site), &s.OwnerEmail, &deployAt, &size)...); err != nil {
+	if err := rows.Scan(append(raw.dest(&s.Site), &s.OwnerEmail, &s.WorkspaceName, &deployAt, &size)...); err != nil {
 		return SiteSummary{}, err
 	}
 	raw.finish(&s.Site)
 	s.LastDeployAt, s.SizeBytes = fromNullMS(deployAt), size.Int64
 	s.Hostnames = []domain.Hostname{}
 	return s, nil
+}
+
+// args binds ?1..?6 of siteListWhere; a caller that pages fills ?3 and ?4.
+func (f SiteFilter) args(pattern string) []any {
+	return []any{f.OwnerID, pattern, 0, 0, f.VisibleTo, f.Workspace}
 }
 
 // attachHostnames fills Hostnames for every site of the page in one query.

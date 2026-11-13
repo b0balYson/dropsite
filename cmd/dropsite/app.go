@@ -67,18 +67,19 @@ type command struct {
 
 func commands() map[string]command {
 	return map[string]command{
-		"login":    {"Sign in with a connect code or an API token", cmdLogin},
-		"setup":    {"Connect Claude Code, Codex, Cursor and Claude Desktop", cmdSetup},
-		"mcp":      {"Run a local MCP server over stdio (for Claude Desktop)", cmdMCP},
-		"deploy":   {"Publish a directory and print the site URL", cmdDeploy},
-		"sites":    {"List your sites", cmdSites},
-		"deploys":  {"Show the release history of a site", cmdDeploys},
-		"rollback": {"Switch a site to a previous release", cmdRollback},
-		"clone":    {"Copy a site into a new site", cmdClone},
-		"draft":    {"Publish or delete a site's draft", cmdDraft},
-		"delete":   {"Delete a site and all its releases", cmdDelete},
-		"domains":  {"List, add or remove the own domains of a site", cmdDomains},
-		"version":  {"Print the CLI version", cmdVersion},
+		"login":      {"Sign in with a connect code or an API token", cmdLogin},
+		"setup":      {"Connect Claude Code, Codex, Cursor and Claude Desktop", cmdSetup},
+		"mcp":        {"Run a local MCP server over stdio (for Claude Desktop)", cmdMCP},
+		"deploy":     {"Publish a directory and print the site URL", cmdDeploy},
+		"sites":      {"List your sites", cmdSites},
+		"deploys":    {"Show the release history of a site", cmdDeploys},
+		"rollback":   {"Switch a site to a previous release", cmdRollback},
+		"clone":      {"Copy a site into a new site", cmdClone},
+		"workspaces": {"List your shared workspaces", cmdWorkspaces},
+		"draft":      {"Publish or delete a site's draft", cmdDraft},
+		"delete":     {"Delete a site and all its releases", cmdDelete},
+		"domains":    {"List, add or remove the own domains of a site", cmdDomains},
+		"version":    {"Print the CLI version", cmdVersion},
 	}
 }
 

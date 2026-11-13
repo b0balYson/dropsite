@@ -26,6 +26,8 @@ type SiteView struct {
 	// Draft is the site's draft release (change staged-publish), nil when
 	// there is none.
 	Draft *DraftView
+	// WorkspaceName is the name of Site.WorkspaceID ("" for a personal site).
+	WorkspaceName string
 }
 
 const maxSiteIDAttempts = 5
@@ -41,7 +43,14 @@ func (s *Service) resolveSite(ctx context.Context, a Actor, ref string) (domain.
 	if err != nil {
 		return domain.Site{}, err
 	}
-	if !a.IsAdmin() && site.OwnerID != a.User.ID {
+	if a.IsAdmin() {
+		return site, nil
+	}
+	ok, err := s.canUseSite(ctx, a.User.ID, site)
+	if err != nil {
+		return domain.Site{}, err
+	}
+	if !ok {
 		return domain.Site{}, domain.ErrNotFound
 	}
 	return site, nil
@@ -66,6 +75,13 @@ func (s *Service) view(ctx context.Context, site domain.Site) (SiteView, error) 
 		return SiteView{}, err
 	}
 	v := SiteView{Site: site, OwnerID: site.OwnerID}
+	if site.WorkspaceID != nil {
+		w, err := s.repo.GetWorkspace(ctx, *site.WorkspaceID)
+		if err != nil {
+			return SiteView{}, err
+		}
+		v.WorkspaceName = w.Name
+	}
 	v.Hostnames, v.URLs, v.Slug = s.orderHosts(hosts)
 	if len(v.URLs) > 0 {
 		v.URL = v.URLs[0]
@@ -126,14 +142,10 @@ func (s *Service) summaries(rows []store.SiteSummary) []SiteSummaryView {
 	return out
 }
 
-// ListSites returns the actor's own sites. Admins use ListAllSites for others.
+// ListSites returns the actor's personal sites and the sites of every
+// workspace the actor belongs to. Admins use ListAllSites for others.
 func (s *Service) ListSites(ctx context.Context, a Actor, p store.Page) ([]SiteSummaryView, int, error) {
-	owner := a.User.ID
-	rows, total, err := s.repo.ListSites(ctx, store.SiteFilter{OwnerID: &owner, Page: p})
-	if err != nil {
-		return nil, 0, err
-	}
-	return s.summaries(rows), total, nil
+	return s.ListSitesIn(ctx, a, SiteScope{}, p)
 }
 
 // ListAllSites searches every site (admin only).
@@ -176,6 +188,10 @@ func (s *Service) CreateSite(ctx context.Context, a Actor, title, slug string) (
 			return SiteView{}, err
 		}
 	}
+	ws, err := s.targetWorkspace(ctx, a)
+	if err != nil {
+		return SiteView{}, err
+	}
 	lim, err := s.LimitsFor(ctx, a.User.ID)
 	if err != nil {
 		return SiteView{}, err
@@ -188,7 +204,7 @@ func (s *Service) CreateSite(ctx context.Context, a Actor, title, slug string) (
 		return SiteView{}, domain.E(domain.KindLimit, domain.CodeSiteLimit, "site limit reached").
 			WithParams(map[string]any{"limit": lim.MaxSitesPerUser})
 	}
-	site, hosts, err := s.insertSite(ctx, a, title, slug)
+	site, hosts, err := s.insertSite(ctx, a, title, slug, ws)
 	if err != nil {
 		return SiteView{}, err
 	}
@@ -204,7 +220,7 @@ func (s *Service) CreateSite(ctx context.Context, a Actor, title, slug string) (
 	return s.view(ctx, site)
 }
 
-func (s *Service) insertSite(ctx context.Context, a Actor, title, slug string) (domain.Site, []domain.Hostname, error) {
+func (s *Service) insertSite(ctx context.Context, a Actor, title, slug string, ws *int64) (domain.Site, []domain.Hostname, error) {
 	now := s.now()
 	for range maxSiteIDAttempts {
 		id := domain.NewSiteID()
@@ -215,7 +231,7 @@ func (s *Service) insertSite(ctx context.Context, a Actor, title, slug string) (
 		if used {
 			continue
 		}
-		site := domain.Site{ID: id, OwnerID: a.User.ID, Title: title, CreatedAt: now, UpdatedAt: now}
+		site := domain.Site{ID: id, OwnerID: a.User.ID, Title: title, CreatedAt: now, UpdatedAt: now, WorkspaceID: ws}
 		hosts := []domain.Hostname{{Hostname: s.host(id), SiteID: id, Kind: domain.HostDefault, Verified: true, CreatedAt: now}}
 		if slug != "" {
 			hosts = append(hosts, domain.Hostname{Hostname: s.host(slug), SiteID: id, Kind: domain.HostSlug, Verified: true, CreatedAt: now})

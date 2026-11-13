@@ -24,6 +24,7 @@ type sitesData struct {
 	Domain    string
 	Form      siteForm
 	Templates []service.TemplateInfo
+	Filter    sitesFilter
 }
 
 func (s *server) sitesPage(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
@@ -31,7 +32,13 @@ func (s *server) sitesPage(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 }
 
 func (s *server) renderSites(w http.ResponseWriter, r *http.Request, rc *reqCtx, status int, form siteForm) {
-	sites, _, err := s.svc.ListSites(r.Context(), rc.actor, service.Page{Limit: service.MaxPageSize})
+	scope, filter := parseSitesFilter(r.URL.Query().Get("workspace"))
+	sites, _, err := s.svc.ListSitesIn(r.Context(), rc.actor, scope, service.Page{Limit: service.MaxPageSize})
+	if err != nil {
+		s.failPage(w, r, rc, err)
+		return
+	}
+	workspaces, err := s.svc.ListWorkspaces(r.Context(), rc.actor, false)
 	if err != nil {
 		s.failPage(w, r, rc, err)
 		return
@@ -45,13 +52,14 @@ func (s *server) renderSites(w http.ResponseWriter, r *http.Request, rc *reqCtx,
 		Sites: sites, Soon: s.expiringSoon(sites), Count: count, Limit: lim.MaxSitesPerUser, AtLimit: count >= lim.MaxSitesPerUser,
 		Domain: s.svc.Config().BaseDomain, Form: form,
 		Templates: s.svc.ListTemplates(rc.loc.Lang),
+		Filter:    sitesFilter{Value: filter, Workspaces: workspaces},
 	}
 	s.page(w, r, rc, status, "sites", "sites", "sites.title", data)
 }
 
 func (s *server) createSite(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	form := siteForm{Title: r.PostFormValue("title"), Slug: normSlug(r.PostFormValue("slug"))}
-	v, err := s.svc.CreateSite(r.Context(), rc.actor, form.Title, form.Slug)
+	v, err := s.svc.CreateSiteIn(r.Context(), rc.actor, form.Title, form.Slug, formWorkspace(r))
 	if err != nil {
 		var status int
 		form.Error, status = s.describe(rc, err)
@@ -119,6 +127,7 @@ type siteData struct {
 	Access   accessView
 	Publish  service.PublishSettingsView
 	Workflow workflowView
+	Space    siteWorkspace
 }
 
 func (s *server) loadSite(r *http.Request, rc *reqCtx) (siteData, error) {
@@ -171,6 +180,9 @@ func (s *server) sitePage(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	}
 	if err == nil {
 		data.Workflow, err = s.workflowView(r, rc, data)
+	}
+	if err == nil {
+		data.Space, err = s.siteWorkspaceView(r, rc, data.V)
 	}
 	if err != nil {
 		s.failPage(w, r, rc, err)

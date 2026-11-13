@@ -72,7 +72,7 @@ func TestDemoteSkipsCodeFences(t *testing.T) {
 
 func TestGuideTopics(t *testing.T) {
 	want := []string{"overview", "create", "references", "update", "large_sites", "assets", "forms", "data", "sheets",
-		"proxy", "stats", "addresses", "protection", "publishing", "drafts", "rollback", "workflow", "account", "errors",
+		"proxy", "stats", "addresses", "protection", "publishing", "drafts", "rollback", "workflow", "workspaces", "account", "errors",
 		"external_backend",
 		"payments", "booking", "legal", "seo", "multilingual", "quiz", "embeds"}
 	if got := strings.Join(Topics(), ","); got != strings.Join(want, ",") {
@@ -122,6 +122,7 @@ func TestGuideNamesTheFixedTools(t *testing.T) {
 		"get_publish_settings", "set_publish_settings", "get_quality_report",
 		"list_templates", "create_site_from_template", "clone_site", "schedule_publish", "list_scheduled_publishes",
 		"cancel_scheduled_publish", "screenshot_site", "compare_versions", "inspect_reference",
+		"list_workspaces", "create_workspace", "add_workspace_member", "remove_workspace_member", "move_site",
 	} {
 		if !strings.Contains(all, tool) {
 			t.Errorf("guide does not mention %s", tool)

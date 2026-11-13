@@ -1,0 +1,52 @@
+{{define "sites_workspace_filter"}}
+{{if .D.Filter.Workspaces}}
+<nav class="flag-list" aria-label="{{.L.T "workspaces.filter"}}">
+  <a class="btn btn--small {{if eq .D.Filter.Value ""}}btn--primary{{else}}btn--ghost{{end}}" href="/" {{if eq .D.Filter.Value ""}}aria-current="page"{{end}}>{{.L.T "workspaces.filter.all"}}</a>
+  <a class="btn btn--small {{if eq .D.Filter.Value "personal"}}btn--primary{{else}}btn--ghost{{end}}" href="/?workspace=personal" {{if eq .D.Filter.Value "personal"}}aria-current="page"{{end}}>{{.L.T "workspaces.filter.personal"}}</a>
+  {{range .D.Filter.Workspaces}}{{$id := printf "%d" .ID}}
+  <a class="btn btn--small {{if eq $.D.Filter.Value $id}}btn--primary{{else}}btn--ghost{{end}}" href="/?workspace={{.ID}}" {{if eq $.D.Filter.Value $id}}aria-current="page"{{end}}>{{.Name}}</a>
+  {{end}}
+</nav>
+{{end}}
+{{end}}
+
+{{define "workspace_select"}}
+{{if .D.Filter.Workspaces}}
+<div class="field">
+  <label class="field__label" for="workspace">{{.L.T "workspaces.field"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+  <select class="input" id="workspace" name="workspace" aria-describedby="workspace-hint">
+    <option value="0">{{.L.T "workspaces.personal"}}</option>
+    {{range .D.Filter.Workspaces}}{{$id := printf "%d" .ID}}<option value="{{.ID}}" {{if eq $.D.Filter.Value $id}}selected{{end}}>{{.Name}}</option>{{end}}
+  </select>
+  <p class="hint" id="workspace-hint">{{.L.T "workspaces.field.hint"}}</p>
+</div>
+{{end}}
+{{end}}
+
+{{define "site_workspace"}}
+{{$v := .D.V}}{{$sp := .D.Space}}
+<section class="section site-block" aria-labelledby="workspace-h">
+  <h2 class="section-title" id="workspace-h">{{.L.T "workspaces.site.title"}}</h2>
+  {{if $sp.Name}}
+  <p>{{.L.T "workspaces.site.in" "name" $sp.Name}} <a href="/workspaces/{{$sp.ID}}">{{.L.T "workspaces.open"}}</a></p>
+  {{else}}
+  <p>{{.L.T "workspaces.site.personal"}}</p>
+  {{end}}
+  {{if $sp.CanMove}}{{if or $sp.Options $sp.Name}}
+  <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/move">
+    {{template "csrf" .}}
+    <div class="field">
+      <label class="field__label" for="move-workspace">{{.L.T "workspaces.move.to"}}</label>
+      <select class="input" id="move-workspace" name="workspace">
+        <option value="0" {{if not $sp.Name}}selected{{end}}>{{.L.T "workspaces.personal"}}</option>
+        {{range $sp.Options}}<option value="{{.ID}}" {{if eq .ID $sp.ID}}selected{{end}}>{{.Name}}</option>{{end}}
+      </select>
+    </div>
+    <label class="check"><input type="checkbox" name="confirm" value="yes" required> {{.L.T "workspaces.move.confirm"}}</label>
+    <div><button class="btn btn--ghost" type="submit">{{.L.T "workspaces.move"}}</button></div>
+  </form>
+  {{end}}{{else}}
+  <p class="hint">{{.L.T "workspaces.move.creator"}}</p>
+  {{end}}
+</section>
+{{end}}

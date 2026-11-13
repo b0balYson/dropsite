@@ -18,8 +18,10 @@ type deployOpts struct {
 	site    string
 	title   string
 	expires string
-	asJSON  bool
-	expiry  *client.Expiry // parsed --expires; nil leaves the expiry alone
+	// workspace is the shared workspace a newly created site goes into.
+	workspace string
+	asJSON    bool
+	expiry    *client.Expiry // parsed --expires; nil leaves the expiry alone
 	// sensitive decides about secret-looking files; sensitiveHints explain
 	// how to override a refusal in the caller's terms.
 	sensitive      sensitiveMode
@@ -40,7 +42,7 @@ type deployOutput struct {
 }
 
 func cmdDeploy(ctx context.Context, a *app, args []string) error {
-	fs := a.newFlagSet("deploy", "<dir> [--site <id|slug>] [--title <text>] [--expires <when>] [--draft] [--skip-sensitive|--include-sensitive] [--json]",
+	fs := a.newFlagSet("deploy", "<dir> [--site <id|slug>] [--title <text>] [--workspace <id>] [--expires <when>] [--draft] [--skip-sensitive|--include-sensitive] [--json]",
 		"Pack <dir> (it must contain index.html), publish it and print the site URL.\n"+
 			"Without --site the site is taken from "+brand.ProjectFile+" in <dir>; if there is\n"+
 			"none, a new site is created and remembered there. A folder with secret-looking\n"+
@@ -51,6 +53,7 @@ func cmdDeploy(ctx context.Context, a *app, args []string) error {
 	var o deployOpts
 	fs.StringVar(&o.site, "site", "", "publish to this site (ID or slug)")
 	fs.StringVar(&o.title, "title", "", "title of a newly created site (default: the directory name)")
+	fs.StringVar(&o.workspace, "workspace", "", "create a new site in this shared workspace (ID from 'dropsite workspaces')")
 	fs.StringVar(&o.expires, "expires", "", "take the site down after: 7d, 36h, 2026-12-31 (end of day, UTC), an RFC 3339 time, or never")
 	fs.BoolVar(&o.asJSON, "json", false, "print one JSON object {site_id, deploy_id, url, urls}")
 	fs.BoolVar(&o.draft, "draft", false, "save as the site's draft and print its preview address instead of going live")
@@ -234,7 +237,7 @@ func linkedSite(ctx context.Context, c *client.Client, dir string, p project, us
 	if err != nil {
 		return "", siteGoneError(p.SiteID, err)
 	}
-	if s.OwnerID != userID {
+	if s.OwnerID != userID && !sharedWith(ctx, c, s) {
 		return "", withHint(
 			fmt.Errorf("%s links this directory to site %s, which belongs to another user", projectPath(dir), s.ID),
 			"Nothing was published. If you really mean to publish to that site, pass it explicitly:",
@@ -249,7 +252,7 @@ func (a *app) createLinkedSite(ctx context.Context, c *client.Client, o deployOp
 	if title == "" {
 		title = dirTitle(o.dir)
 	}
-	s, err := c.CreateSite(ctx, client.CreateSiteRequest{Title: title})
+	s, err := c.CreateSite(ctx, client.CreateSiteRequest{Title: title, WorkspaceID: o.workspace})
 	if err != nil {
 		return "", fmt.Errorf("create site: %w", err)
 	}

@@ -82,13 +82,20 @@
     "/sites": {
       "get": {
         "operationId": "listSites",
-        "summary": "List own sites",
+        "summary": "List own sites and the sites of own workspaces",
         "parameters": [
           {
             "$ref": "#/components/parameters/Limit"
           },
           {
             "$ref": "#/components/parameters/Offset"
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "required": false,
+            "description": "personal: only personal sites; a workspace ID: only the sites of that workspace",
+            "schema": { "type": "string" }
           }
         ],
         "responses": {
@@ -743,6 +750,322 @@
           "404": { "$ref": "#/components/responses/NotFound" },
           "429": { "$ref": "#/components/responses/RateLimited" },
           "500": { "$ref": "#/components/responses/Internal" }
+        }
+      }
+    },
+    "/workspaces": {
+      "get": {
+        "operationId": "listWorkspaces",
+        "summary": "List own workspaces",
+        "description": "Shared workspaces the user belongs to. An administrator passes all=true to list every workspace.",
+        "parameters": [
+          {
+            "name": "all",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceList"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createWorkspace",
+        "summary": "Create a workspace with the user as its only member",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkspaceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "403": {
+            "$ref": "#/components/responses/LimitReached"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/workspaces/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ID"
+        }
+      ],
+      "get": {
+        "operationId": "getWorkspace",
+        "summary": "Get a workspace with its members",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "renameWorkspace",
+        "summary": "Rename a workspace",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkspaceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteWorkspace",
+        "summary": "Delete a workspace without sites",
+        "description": "Fails with workspace_not_empty while the workspace has sites.",
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/workspaces/{id}/members": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ID"
+        }
+      ],
+      "post": {
+        "operationId": "addWorkspaceMember",
+        "summary": "Add an existing user by e-mail",
+        "description": "Fails with workspace_user_not_found when no active user has the e-mail, workspace_member_exists for a member.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkspaceMemberRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "403": {
+            "$ref": "#/components/responses/LimitReached"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/workspaces/{id}/members/{user_id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ID"
+        },
+        {
+          "name": "user_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "delete": {
+        "operationId": "removeWorkspaceMember",
+        "summary": "Remove a member, or leave (own user ID)",
+        "description": "The last member of a workspace with sites cannot leave (workspace_last_member); the last member of an empty workspace deletes it.",
+        "responses": {
+          "200": {
+            "description": "Removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceMemberRemoval"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/sites/{ref}/move": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SiteRef"
+        }
+      ],
+      "post": {
+        "operationId": "moveSite",
+        "summary": "Move a site into a workspace or back to personal",
+        "description": "Only the creator of the site (a member of the target workspace) or an administrator. Addresses, releases, data and settings stay. Others get workspace_move_forbidden.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveSiteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Site"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
         }
       }
     },
@@ -3863,6 +4186,13 @@
           "owner_id": {
             "type": "string"
           },
+          "workspace_id": {
+            "type": ["string", "null"],
+            "description": "Shared workspace of the site; null for a personal site"
+          },
+          "workspace_name": {
+            "type": ["string", "null"]
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -3940,6 +4270,13 @@
           },
           "owner_id": {
             "type": "string"
+          },
+          "workspace_id": {
+            "type": ["string", "null"],
+            "description": "Shared workspace of the site; null for a personal site"
+          },
+          "workspace_name": {
+            "type": ["string", "null"]
           },
           "owner_email": {
             "type": "string"
@@ -4518,6 +4855,138 @@
           }
         }
       },
+      "WorkspaceMember": {
+        "type": "object",
+        "required": [
+          "user_id",
+          "email",
+          "added_at"
+        ],
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "added_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Workspace": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "member_count",
+          "site_count",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "member_count": {
+            "type": "integer"
+          },
+          "site_count": {
+            "type": "integer",
+            "description": "Active sites"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceMember"
+            },
+            "description": "Single-workspace responses only"
+          }
+        }
+      },
+      "WorkspaceList": {
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Workspace"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      },
+      "WorkspaceRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          }
+        }
+      },
+      "WorkspaceMemberRequest": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string"
+          }
+        }
+      },
+      "WorkspaceMemberRemoval": {
+        "type": "object",
+        "required": [
+          "workspace_deleted"
+        ],
+        "properties": {
+          "workspace_deleted": {
+            "type": "boolean",
+            "description": "True when the last member left an empty workspace, which is deleted with it"
+          }
+        }
+      },
+      "MoveSiteRequest": {
+        "type": "object",
+        "required": [
+          "workspace_id"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "workspace_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Target workspace; null moves the site back to the personal sites of its creator"
+          }
+        }
+      },
       "SiteItemList": {
         "type": "object",
         "required": [
@@ -4620,6 +5089,10 @@
           },
           "slug": {
             "type": "string"
+          },
+          "workspace_id": {
+            "type": "string",
+            "description": "Create the site in this workspace of the user"
           }
         }
       },
@@ -6250,7 +6723,8 @@
         "properties": {
           "title": { "type": "string", "maxLength": 120 },
           "slug": { "type": "string" },
-          "lang": { "type": "string", "enum": ["ru", "en"], "description": "Template language (templates only)" }
+          "lang": { "type": "string", "enum": ["ru", "en"], "description": "Template language (templates only)" },
+          "workspace_id": { "type": "string", "description": "Create the site in this workspace of the user" }
         }
       },
       "Template": {

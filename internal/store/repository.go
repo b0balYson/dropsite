@@ -43,6 +43,7 @@ type Repository interface {
 	ScheduleRepository
 	DraftRepository
 	SheetRepository
+	WorkspaceRepository
 	Ping(ctx context.Context) error
 }
 
@@ -256,20 +257,27 @@ type UserSummary struct {
 }
 
 // SiteFilter filters ListSites. OwnerID nil means all owners (admin view).
-// Query matches substrings of any hostname, the title and the owner email.
+// VisibleTo limits the list to the personal sites of a user plus the sites
+// of every workspace the user belongs to; Workspace narrows it to personal
+// sites (0) or one workspace. Query matches substrings of any hostname, the
+// title and the owner email.
 type SiteFilter struct {
-	OwnerID *int64
-	Query   string
+	OwnerID   *int64
+	VisibleTo *int64
+	Workspace *int64
+	Query     string
 	Page
 }
 
 // SiteSummary is a site with what list screens need, ordered by updated_at desc.
 type SiteSummary struct {
 	domain.Site
-	OwnerEmail   string
-	Hostnames    []domain.Hostname
-	LastDeployAt *time.Time
-	SizeBytes    int64 // size of the current deploy, 0 if none
+	OwnerEmail string
+	// WorkspaceName is the name of the site's workspace ("" for personal).
+	WorkspaceName string
+	Hostnames     []domain.Hostname
+	LastDeployAt  *time.Time
+	SizeBytes     int64 // size of the current deploy, 0 if none
 }
 
 // SiteLayout is the desired filesystem state of one active site.

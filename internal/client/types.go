@@ -83,26 +83,30 @@ type Site struct {
 	Protected     bool       `json:"protected"`
 	ExpiresAt     *time.Time `json:"expires_at"`
 	// Draft is the site's draft release, nil when it has none.
-	Draft *Draft `json:"draft"`
+	Draft         *Draft  `json:"draft"`
+	WorkspaceID   *string `json:"workspace_id"`
+	WorkspaceName *string `json:"workspace_name"`
 }
 
 // SiteItem is the compact site object used in lists.
 type SiteItem struct {
-	ID           string     `json:"id"`
-	Title        string     `json:"title"`
-	URL          string     `json:"url"`
-	URLs         []string   `json:"urls"`
-	Slug         *string    `json:"slug"`
-	OwnerID      string     `json:"owner_id"`
-	OwnerEmail   string     `json:"owner_email"`
-	Hostnames    []Hostname `json:"hostnames"`
-	LastDeployAt *time.Time `json:"last_deploy_at"`
-	SizeBytes    int64      `json:"size_bytes"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
-	Noindex      bool       `json:"noindex"`
-	Protected    bool       `json:"protected"`
-	ExpiresAt    *time.Time `json:"expires_at"`
+	ID            string     `json:"id"`
+	Title         string     `json:"title"`
+	URL           string     `json:"url"`
+	URLs          []string   `json:"urls"`
+	Slug          *string    `json:"slug"`
+	OwnerID       string     `json:"owner_id"`
+	OwnerEmail    string     `json:"owner_email"`
+	Hostnames     []Hostname `json:"hostnames"`
+	LastDeployAt  *time.Time `json:"last_deploy_at"`
+	SizeBytes     int64      `json:"size_bytes"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+	Noindex       bool       `json:"noindex"`
+	Protected     bool       `json:"protected"`
+	ExpiresAt     *time.Time `json:"expires_at"`
+	WorkspaceID   *string    `json:"workspace_id"`
+	WorkspaceName *string    `json:"workspace_name"`
 }
 
 // Token is an API token's metadata; the secret value is never listed.
@@ -130,8 +134,9 @@ type ListOptions struct {
 
 // CreateSiteRequest is the body of POST /sites.
 type CreateSiteRequest struct {
-	Title string `json:"title"`
-	Slug  string `json:"slug,omitempty"`
+	Title       string `json:"title"`
+	Slug        string `json:"slug,omitempty"`
+	WorkspaceID string `json:"workspace_id,omitempty"`
 }
 
 // UpdateSiteRequest is the body of PATCH /sites/{ref}. A nil field is left

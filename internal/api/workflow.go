@@ -28,9 +28,10 @@ func (a *api) workflowRoutes() []route {
 }
 
 type newSiteRequest struct {
-	Title string `json:"title"`
-	Slug  string `json:"slug"`
-	Lang  string `json:"lang"`
+	Title       string `json:"title"`
+	Slug        string `json:"slug"`
+	Lang        string `json:"lang"`
+	WorkspaceID string `json:"workspace_id"`
 }
 
 func (a *api) cloneSite(w http.ResponseWriter, r *http.Request) error {
@@ -38,7 +39,11 @@ func (a *api) cloneSite(w http.ResponseWriter, r *http.Request) error {
 	if err := decodeOptionalJSON(w, r, &req); err != nil {
 		return err
 	}
-	res, err := a.svc.CloneSite(r.Context(), actorFrom(r.Context()), r.PathValue("ref"), req.Title, req.Slug, deploySource(r))
+	ws, err := workspaceField(req.WorkspaceID)
+	if err != nil {
+		return err
+	}
+	res, err := a.svc.CloneSiteIn(r.Context(), actorFrom(r.Context()), r.PathValue("ref"), req.Title, req.Slug, ws, deploySource(r))
 	if err != nil {
 		return err
 	}
@@ -67,8 +72,12 @@ func (a *api) createFromTemplate(w http.ResponseWriter, r *http.Request) error {
 	if err := decodeOptionalJSON(w, r, &req); err != nil {
 		return err
 	}
-	res, err := a.svc.CreateSiteFromTemplate(r.Context(), actorFrom(r.Context()), r.PathValue("name"),
-		req.Title, req.Slug, req.Lang, deploySource(r))
+	ws, err := workspaceField(req.WorkspaceID)
+	if err != nil {
+		return err
+	}
+	res, err := a.svc.CreateSiteFromTemplateIn(r.Context(), actorFrom(r.Context()), r.PathValue("name"),
+		req.Title, req.Slug, req.Lang, ws, deploySource(r))
 	if err != nil {
 		return err
 	}

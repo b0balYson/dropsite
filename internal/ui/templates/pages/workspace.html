@@ -1,0 +1,72 @@
+{{define "title"}}{{.D.W.Name}}{{end}}
+
+{{define "content"}}
+{{$w := .D.W}}{{$base := printf "/workspaces/%d" $w.ID}}
+<nav class="crumbs" aria-label="{{.L.T "nav.breadcrumbs"}}"><a href="/workspaces">← {{.L.T "workspaces.title"}}</a></nav>
+<header class="page-head">
+  <div class="page-head__text">
+    <p class="eyebrow">{{.L.T "workspaces.eyebrow" "members" $w.MemberCount "sites" $w.SiteCount}}</p>
+    <h1 class="display">{{$w.Name}}</h1>
+    <p class="lede">{{.L.T "workspaces.equal"}}</p>
+  </div>
+  <a class="btn btn--primary page-head__action" href="/?workspace={{$w.ID}}">{{.L.T "workspaces.sites.open"}}</a>
+</header>
+
+<section class="section" aria-labelledby="members-h">
+  <h2 class="section-title" id="members-h">{{.L.T "workspaces.members"}}</h2>
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">{{.L.T "workspaces.email"}}</th>
+        <th scope="col">{{.L.T "workspaces.added"}}</th>
+        <th scope="col"><span class="sr-only">{{.L.T "table.actions"}}</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range $w.Members}}
+      <tr>
+        <td class="mono">{{.Email}}</td>
+        <td>{{$.L.Date .AddedAt}}</td>
+        <td class="table__actions">
+          <form method="post" action="{{$base}}/members/{{.UserID}}/remove">
+            {{template "csrf" $}}
+            <label class="check"><input type="checkbox" name="confirm" value="yes" required> {{if eq .UserID $.D.MeID}}{{$.L.T "workspaces.leave.confirm"}}{{else}}{{$.L.T "workspaces.remove.confirm" "email" .Email}}{{end}}</label>
+            <button class="btn btn--small btn--ghost" type="submit">{{if eq .UserID $.D.MeID}}{{$.L.T "workspaces.leave"}}{{else}}{{$.L.T "workspaces.remove"}}{{end}}</button>
+          </form>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  <form class="form-grid" method="post" action="{{$base}}/members">
+    {{template "csrf" .}}
+    <div class="field">
+      <label class="field__label" for="member-email">{{.L.T "workspaces.add"}}</label>
+      <input class="input mono" id="member-email" name="email" type="email" required autocomplete="off" aria-describedby="member-hint">
+      <p class="hint" id="member-hint">{{.L.T "workspaces.add.hint"}}</p>
+    </div>
+    <div class="form-grid__full"><button class="btn btn--primary" type="submit">{{.L.T "workspaces.add.submit"}}</button></div>
+  </form>
+</section>
+
+<section class="section" aria-labelledby="ws-settings-h">
+  <h2 class="section-title" id="ws-settings-h">{{.L.T "workspaces.settings"}}</h2>
+  <form class="form-grid" method="post" action="{{$base}}/rename">
+    {{template "csrf" .}}
+    <div class="field">
+      <label class="field__label" for="ws-name">{{.L.T "workspaces.name"}}</label>
+      <input class="input" id="ws-name" name="name" required maxlength="100" value="{{$w.Name}}">
+    </div>
+    <div class="form-grid__full"><button class="btn btn--ghost" type="submit">{{.L.T "workspaces.rename"}}</button></div>
+  </form>
+  {{if eq $w.SiteCount 0}}
+  <form class="stack danger" method="post" action="{{$base}}/delete">
+    {{template "csrf" .}}
+    <label class="check"><input type="checkbox" name="confirm" value="yes" required> {{.L.T "workspaces.delete.confirm" "name" $w.Name}}</label>
+    <div><button class="btn btn--danger" type="submit">{{.L.T "workspaces.delete"}}</button></div>
+  </form>
+  {{else}}
+  <p class="hint">{{.L.T "workspaces.delete.notempty"}}</p>
+  {{end}}
+</section>
+{{end}}

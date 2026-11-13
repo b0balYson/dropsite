@@ -12,8 +12,9 @@ type siteArgs struct {
 }
 
 type createArgs struct {
-	Title string `json:"title" jsonschema:"site name shown in the dropsite interface"`
-	Slug  string `json:"slug,omitempty" jsonschema:"optional memorable address label (a-z, 0-9, hyphens), e.g. promo-may"`
+	Title     string `json:"title" jsonschema:"site name shown in the dropsite interface"`
+	Slug      string `json:"slug,omitempty" jsonschema:"optional memorable address label (a-z, 0-9, hyphens), e.g. promo-may"`
+	Workspace string `json:"workspace,omitempty" jsonschema:"optional workspace_id from list_workspaces: create the site in that shared workspace"`
 }
 
 type slugArgs struct {
@@ -133,6 +134,7 @@ func (t tools) register(s *sdk.Server, o Options) {
 	t.registerWorkflow(s, o)
 	t.registerReferences(s, o)
 	t.registerDrafts(s, o)
+	t.registerWorkspaces(s, o)
 }
 
 func (t tools) listSites(ctx context.Context, req *sdk.CallToolRequest, _ struct{}) (*sdk.CallToolResult, sitesOut, error) {
@@ -151,6 +153,14 @@ func (t tools) createSite(ctx context.Context, req *sdk.CallToolRequest, in crea
 	b, err := t.resolve(ctx, req)
 	if err != nil {
 		return nil, Site{}, err
+	}
+	if in.Workspace != "" {
+		wb, err := t.inWorkspace(ctx, req)
+		if err != nil {
+			return nil, Site{}, err
+		}
+		s, err := wb.CreateSiteIn(ctx, in.Workspace, in.Title, in.Slug)
+		return nil, s, err
 	}
 	s, err := b.CreateSite(ctx, in.Title, in.Slug)
 	return nil, s, err

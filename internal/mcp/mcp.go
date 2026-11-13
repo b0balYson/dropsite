@@ -25,6 +25,9 @@ type Site struct {
 	CurrentDeploy *Deploy  `json:"current_deploy,omitempty" jsonschema:"the release being served, if any"`
 	LastDeployAt  string   `json:"last_deploy_at,omitempty"`
 	UpdatedAt     string   `json:"updated_at,omitempty"`
+	// WorkspaceID and Workspace name the shared workspace of the site.
+	WorkspaceID string `json:"workspace_id,omitempty" jsonschema:"shared workspace of the site; absent for the user's personal sites"`
+	Workspace   string `json:"workspace,omitempty" jsonschema:"name of the shared workspace: every member can change the site"`
 	SiteExtras
 	// Draft is the site's draft release (change staged-publish).
 	Draft *Draft `json:"draft,omitempty" jsonschema:"a new version visitors do not see yet: open preview_url to check it, publish_draft makes it live"`

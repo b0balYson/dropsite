@@ -199,6 +199,7 @@ func (s *Service) audit(ctx context.Context, a Actor, action, target string, met
 	if a.ViaMCP {
 		meta = withSource(meta, string(domain.SourceMCP))
 	}
+	meta = s.withSiteWorkspace(ctx, target, meta)
 	e := domain.AuditEntry{
 		ActorID:   a.id(),
 		Action:    action,

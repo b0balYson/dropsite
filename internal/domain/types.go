@@ -137,6 +137,9 @@ type Site struct {
 	Noindex   bool
 	Protected bool
 	ExpiresAt *time.Time
+	// WorkspaceID is the shared workspace the site belongs to; nil for a
+	// personal site of OwnerID (who is always the site's creator).
+	WorkspaceID *int64
 }
 
 // SiteAccess is the visitor password state of a site. Version grows on every

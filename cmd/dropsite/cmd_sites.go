@@ -54,9 +54,13 @@ func (a *app) printSites(sites []client.SiteItem) error {
 		return nil
 	}
 	tw := newTable(a.stdout)
-	fmt.Fprintln(tw, "ID\tURL\tTITLE\tLAST DEPLOY")
+	fmt.Fprintln(tw, "ID\tURL\tTITLE\tLAST DEPLOY\tWORKSPACE")
 	for _, s := range sites {
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", s.ID, s.URL, sanitizeCell(s.Title), formatTime(s.LastDeployAt))
+		ws := "-"
+		if s.WorkspaceName != nil {
+			ws = sanitizeCell(*s.WorkspaceName)
+		}
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", s.ID, s.URL, sanitizeCell(s.Title), formatTime(s.LastDeployAt), ws)
 	}
 	return tw.Flush()
 }

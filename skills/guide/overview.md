@@ -37,6 +37,7 @@ Call get_guide with one of these topics when you need details:
 - `publishing`: what the server adds to every version (WebP images, robots.txt, sitemap, icon), the quality check of every version and how to fix what it finds.
 - `rollback`: versions and restoring an earlier one.
 - `workflow`: templates, copies of a site, publishing at a given time, screenshots to check your work.
+- `workspaces`: sites shared by a team, adding colleagues, moving a site into a workspace.
 - `account`: limits, connected apps, what only the web interface or an administrator can do.
 - `errors`: what errors mean and what to tell the user.
 

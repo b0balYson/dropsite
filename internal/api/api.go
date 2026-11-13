@@ -139,7 +139,8 @@ func (a *api) routes() []route {
 		{Method: http.MethodPost, Path: "/admin/domains/{hostname}/dns-check", handle: adminOnly(a.checkDomainDNS)},
 		{Method: http.MethodGet, Path: "/admin/forms/settings", handle: adminOnly(a.getFormSettings)},
 		{Method: http.MethodPatch, Path: "/admin/forms/settings", handle: adminOnly(a.updateFormSettings)},
-	}, append(append(append(a.workflowRoutes(), a.referenceRoutes()...), a.draftRoutes()...), a.sheetsRoutes()...)...)
+	}, append(append(append(append(a.workflowRoutes(), a.referenceRoutes()...), a.draftRoutes()...),
+		a.sheetsRoutes()...), a.workspaceRoutes()...)...)
 }
 
 // register mounts every route plus, per path, a method-less fallback that
