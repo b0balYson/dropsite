@@ -15,6 +15,7 @@ Every publication tool (deploy_files, deploy_folder, update_site_files, commit_u
 - "Publish", "looks good", "yes": publish_draft. It is instant; the previous version stays available for rollback.
 - "Forget it", "delete the draft": discard_draft, after the user confirmed, with `confirm` = the site's slug or ID.
 - A direct publication does not touch the draft; mention a leftover draft only if it matters.
+- A draft waits for the user's "yes". To go live at a given time without asking again, prepare the version and schedule it instead (`workflow`).
 - The first opening of a preview link can take a few seconds (the server prepares its secure connection).
 
 ## Live data on the preview

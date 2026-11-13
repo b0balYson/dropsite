@@ -18,7 +18,7 @@ Conflicts: if the site changed after you read it (someone published from the web
 Typical requests:
 
 - "Change the photos": ask for the new photos (or links to them) if the user has them; use `fetch` for links, file content for uploads. Keep the same file names only if you also bump a version in the name or the URL (`hero-2.webp`), because images are cached for an hour.
-- "Change the prices", "fix the phone number": edit the HTML text only.
+- "Change the prices", "fix the phone number": if get_site lists a collection with these items under `attached`, change the documents (`data`; if the collection is linked to a Google Sheet, the user edits the sheet, see `sheets`); otherwise edit the HTML text only.
 - "Add a page": add the file and a link to it in the navigation of every page.
 - Bigger rework of many files or many photos: use an upload session in patch mode, see `large_sites`.
 

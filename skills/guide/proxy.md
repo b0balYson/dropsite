@@ -6,7 +6,7 @@ A static page cannot keep a secret: anything in its HTML or JavaScript is visibl
 - sending leads or orders to a CRM, a spreadsheet API or a Telegram bot from the page's own JavaScript;
 - maps, weather, delivery cost, currency rates, payment links and other APIs with a key.
 
-For plain contact forms use the forms of the site (topic `forms`), not the proxy.
+For plain contact forms use the forms of the site (topic `forms`), not the proxy. For sign-in or a database the page talks to the user's own backend with its public key (topic `external_backend`).
 
 ## How it works
 

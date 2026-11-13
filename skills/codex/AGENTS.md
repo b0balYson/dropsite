@@ -69,7 +69,7 @@ Generate forms like this, always with the honeypot and the Altcha widget (the wi
 
 ### Accounts, databases and logins (external backend)
 
-dropsite serves static files only. When the user needs sign-in, a database, a shared list or file uploads, connect the site to a backend service the user owns: Supabase, Firebase, PocketBase or Appwrite. Use it only when a form submission is not enough; a simple request form needs no backend (see "Forms on the site").
+dropsite serves static files only. When the user needs sign-in, a database, a shared list or file uploads, connect the site to a backend service the user owns: Supabase, Firebase, PocketBase or Appwrite. Use it only when a form submission is not enough; a simple request form needs no backend (see "Forms on the site"). A third-party API that needs a secret key (OpenAI, a CRM) needs no backend either: dropsite's API key proxy forwards the calls and keeps the key on the server.
 
 - Ask the user to create the project in that service themselves and to send you only the **public** values: the project URL and the public key (Supabase `anon` or `sb_publishable_…` key, Firebase web config with its `apiKey`, Appwrite project ID, PocketBase URL). These are designed to be shipped in a web page.
 - Never put a secret key into the site: no Supabase `service_role` or `sb_secret_…` key, no Firebase service account JSON or Admin SDK key, no Appwrite API key, no PocketBase admin password. Everything in the site is public. dropsite refuses to publish files that contain such keys. If the user pastes one into the chat, do not use it and tell them to rotate it in the service.
