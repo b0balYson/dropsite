@@ -304,7 +304,9 @@ write_env() {
 	domain=${DROPSITE_DOMAIN:-}
 	email=${DROPSITE_EMAIL:-}
 	if [ ! -f "$f" ]; then
-		[ -n "$domain" ] && [ -n "$email" ] || die "DROPSITE_DOMAIN and DROPSITE_EMAIL are required for a new installation"
+		if [ -z "$domain" ] || [ -z "$email" ]; then
+			die "DROPSITE_DOMAIN and DROPSITE_EMAIL are required for a new installation"
+		fi
 		step "Writing $f"
 		(umask 077 && cp "$APP_DIR/deploy/.env.example" "$f")
 		set_env ADMIN_EMAIL "$email"
