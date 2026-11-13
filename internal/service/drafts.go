@@ -407,3 +407,21 @@ func (s *Service) withDraftLayouts(ctx context.Context, layout []storage.SiteLay
 	}
 	return layout, nil
 }
+
+// dropDraftIfLive forgets the site's draft once its release went live
+// another way (a scheduled publish), so a later rollback does not bring it
+// back as a draft and the preview stops serving it.
+func (s *Service) dropDraftIfLive(ctx context.Context, siteID, deployID string) {
+	row, err := s.repo.GetSiteDraft(ctx, siteID)
+	if err != nil || row.DeployID == nil || *row.DeployID != deployID {
+		if err != nil && !errors.Is(err, domain.ErrNotFound) {
+			s.log.Error("draft: load after publish", "site", siteID, "err", err)
+		}
+		return
+	}
+	if err := s.repo.ClearSiteDraft(ctx, siteID, s.now()); err != nil {
+		s.log.Error("draft: clear after publish", "site", siteID, "err", err)
+		return
+	}
+	s.linkDraft(ctx, siteID, nil)
+}

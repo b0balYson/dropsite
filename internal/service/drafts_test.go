@@ -335,3 +335,37 @@ func TestLegacySlugShadowsDraftPreview(t *testing.T) {
 		t.Fatalf("publishing touched the slug, served %q", got)
 	}
 }
+
+// A draft that went live through a scheduled publish is no longer a draft:
+// a later rollback must not bring it back as one.
+func TestScheduledDraftIsNoLongerADraft(t *testing.T) {
+	e := newEnv(t)
+	ctx := context.Background()
+	u := e.user("u@pp.test")
+	id, _, live := e.published(u, shop)
+	draft := e.draft(u, id, "sale").Deploy.ID
+
+	if _, err := e.svc.ScheduleRelease(ctx, u, id, draft, e.clock.Now().Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	e.clock.Advance(time.Minute)
+	if err := e.svc.RunDueSchedules(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if e.current(u, id) != draft {
+		t.Fatal("the scheduled draft is not live")
+	}
+	if _, err := e.svc.Rollback(ctx, u, id, live); err != nil {
+		t.Fatal(err)
+	}
+	v, err := e.svc.GetSite(ctx, u, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.Draft != nil {
+		t.Fatalf("a published draft came back after a rollback: %+v", v.Draft)
+	}
+	if _, err := e.served(e.draftHost(id), "index.html"); err == nil {
+		t.Fatal("the preview must serve nothing once the draft went live")
+	}
+}

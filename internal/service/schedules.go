@@ -259,6 +259,7 @@ func (s *Service) runSchedule(ctx context.Context, sp domain.ScheduledPublish) e
 			s.log.Error("scheduled publish: activate release", "site", site.ID, "deploy", d.ID, "err", err)
 		}
 	}
+	s.dropDraftIfLive(ctx, site.ID, d.ID)
 	return s.finishSchedule(ctx, sp, domain.ScheduleDone, "", from)
 }
 
