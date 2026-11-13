@@ -1766,6 +1766,7 @@ a.xdomain__host { text-decoration: none; border-bottom: 2px solid var(--c-ink); 
 .proxy-advanced summary { cursor: pointer; font-weight: 700; }
 /* Abuse protection in the general settings. */
 .guard__form { max-width: 40rem; border: var(--hairline); box-shadow: var(--shadow-card); background: var(--c-surface); }
+.guard__lede { margin-bottom: var(--s-4); }
 .guard__hint { display: block; margin-top: var(--s-1); }
 .guard__sub { margin: var(--s-6) 0 var(--s-2); font-size: 1.05rem; }
 .guard__bans { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-2); max-width: 48rem; }
