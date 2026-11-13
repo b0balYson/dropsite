@@ -1,4 +1,10 @@
-# dropsite
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/logo-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset=".github/assets/logo.svg">
+    <img src=".github/assets/logo.svg" alt="dropsite" width="300">
+  </picture>
+</h1>
 
 [English](README.md) | [Русский](README.ru.md) | **简体中文**
 
