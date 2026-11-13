@@ -12,11 +12,14 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ### Changed
 
-- Brand identity: a logo (laughing browser window with a Fredoka wordmark),
-  favicons and the "friendly ink" look across the web interface, the
-  protected-site sign-in page and the form reply page: warm paper, 2px
-  rounded ink outlines, one sunny accent for primary actions and focus.
-  Interface text uses the self-hosted Nunito font; the README shows the logo.
+- Brand identity: the Dropsite logo (a laughing browser window with the
+  wordmark), favicons and the "friendly ink" look across the web interface,
+  the protected-site sign-in page and the form reply page: warm paper, ink
+  outlines on everything you can press, thin warm edges on cards and lists,
+  one sunny accent for primary actions and focus. Interface text uses the
+  self-hosted Nunito font; the README shows the logo.
+- Denser cards and lists, especially on phones, and one status badge for
+  every state (live, draft, pending, error, quality score, DNS checks).
 
 ## [0.1.0] - 2026-11-13
 
