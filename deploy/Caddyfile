@@ -119,7 +119,20 @@ http://127.0.0.1:8090 {
 
 {$API_HOST} {
 	import security_headers
-	log
+	# Upload links (/u/<token>) carry their secret in the path: the access
+	# log replaces it with REDACTED, also when the slash is percent-encoded.
+	log {
+		format filter {
+			request>uri regexp "(?i)^(/u(?:/|%2f))[^/?&#%]+" "${1}REDACTED"
+			wrap json
+		}
+	}
+	# Body cap of upload links: control enforces each owner's exact limits
+	# (50 MB per site by default); this bounds what reaches it at all.
+	# Raise it together with MAX_SITE_BYTES above 512 MB.
+	request_body /u/* {
+		max_size 512MB
+	}
 	# Its own, generous limit (deploys, MCP sessions of AI assistants): about
 	# 100 requests per second per client, IPv6 per /64. Signed-in traffic is
 	# not exempt: Caddy cannot verify a token, and a header any client can
