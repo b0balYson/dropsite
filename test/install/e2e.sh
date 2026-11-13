@@ -304,7 +304,8 @@ check "update watcher cron" REMOTE grep -q dropsite-update-watch /etc/cron.d/dro
 REMOTE dropsite-update-watch
 check "heartbeat written as control's user" test "$(REMOTE "stat -c %u $UPDATE_DIR/heartbeat")" = 65532
 put_request() { # put_request CONTENT: as control's user, like control writes it
-	REMOTE "printf '$1' | setpriv --reuid=65532 --regid=65532 --clear-groups -- tee $UPDATE_DIR/request >/dev/null"
+	# From inside the volume: control's user may not traverse /var/lib/docker.
+	REMOTE "cd $UPDATE_DIR && printf '$1' | setpriv --reuid=65532 --regid=65532 --clear-groups -- tee request >/dev/null"
 }
 update_state() { REMOTE "sed -n 's/^{\"state\":\"\([a-z]*\)\".*/\1/p' $UPDATE_DIR/status"; }
 put_request 'version=1.0.0;touch /tmp/pwned\nadmin=1\n'

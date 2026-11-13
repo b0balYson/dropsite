@@ -748,7 +748,11 @@ as_control() {
 
 data=$(docker volume inspect -f '{{.Mountpoint}}' "$VOLUME" 2>/dev/null) || exit 0
 [ -n "$data" ] && [ -d "$data" ] || exit 0
-dir=$data/update
+# Root enters the volume (control cannot replace that directory: its parent
+# belongs to Docker), and control's user then works with relative paths: it
+# may not traverse /var/lib/docker itself.
+cd "$data" || exit 0
+dir=update
 as_control mkdir -p -m 700 -- "$dir" 2>/dev/null || exit 0
 
 # put NAME: stdin becomes $dir/NAME, replaced atomically, as control.
