@@ -1,29 +1,211 @@
 name: release
 
+# A pushed tag vX.Y.Z (optionally vX.Y.Z-rc.N) is the only way to publish a
+# release (docs/releasing.md). It runs the checks again, publishes the
+# multi-arch images ghcr.io/b0balyson/dropsite-control and -caddy (tags X.Y.Z,
+# X.Y and, for a final release, latest) with SBOM and provenance attestations,
+# builds the CLI for every platform and creates the GitHub Release with the
+# binaries, SHA256SUMS and the CHANGELOG.md section as notes.
+
 on:
   push:
     tags: ["v*"]
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/b0balyson/dropsite
 
 jobs:
-  release:
+  verify:
     runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v7
+      - name: Version from the tag
+        id: version
+        run: |
+          tag="$GITHUB_REF_NAME"
+          if ! printf '%s\n' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::tag $tag is not vX.Y.Z"; exit 1
+          fi
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+          case "$tag" in *-*) pre=true ;; *) pre=false ;; esac
+          echo "prerelease=$pre" >> "$GITHUB_OUTPUT"
+      - name: Release consistency
+        run: sh scripts/release-check.sh "$GITHUB_REF_NAME"
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-      - name: Test
-        run: go test -race -count=1 ./...
-      - name: CLI binaries and checksums
-        run: make cli-release VERSION=${{ github.ref_name }}
-      - uses: softprops/action-gh-release@v3
+      - name: gofmt
+        run: |
+          out=$(gofmt -l cmd internal test deploy)
+          if [ -n "$out" ]; then echo "::error::not gofmt-formatted:"; echo "$out"; exit 1; fi
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
-          files: |
-            dist/dropsite-*
-            dist/SHA256SUMS
-          generate_release_notes: true
+          version: v2.15.0
+      - name: Tests
+        run: go test -race -count=1 ./...
+      - name: Release scripts
+        run: sh test/release/unit.sh
+
+  images:
+    needs: verify
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - image: control
+            context: .
+            file: deploy/Dockerfile
+            description: dropsite control server, API, web interface and publishing
+          - image: caddy
+            context: deploy/caddy
+            file: deploy/caddy/Dockerfile
+            description: Caddy with DNS provider plugins for dropsite wildcard TLS
+    env:
+      VERSION: ${{ needs.verify.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Both Dockerfiles cross-compile in a stage on the build platform and
+      # only copy files into the target stage, so no QEMU is needed.
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Tags and OCI labels
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+        with:
+          images: ${{ env.IMAGE_PREFIX }}-${{ matrix.image }}
+          # X.Y.Z, X.Y (not for pre-releases) and latest (final releases only).
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+          flavor: latest=auto
+          labels: |
+            org.opencontainers.image.title=dropsite-${{ matrix.image }}
+            org.opencontainers.image.description=${{ matrix.description }}
+          annotations: |
+            org.opencontainers.image.title=dropsite-${{ matrix.image }}
+            org.opencontainers.image.description=${{ matrix.description }}
+      - name: Build and push (amd64, arm64)
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: VERSION=${{ env.VERSION }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          sbom: true
+          provenance: mode=max
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+      # Signed by GitHub's Sigstore instance with the identity of this
+      # workflow; verify with: gh attestation verify oci://<image> --repo b0balYson/dropsite
+      - name: Provenance attestation
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE_PREFIX }}-${{ matrix.image }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+  cli:
+    needs: verify
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: CLI binaries and checksums
+        run: make cli-release VERSION='${{ needs.verify.outputs.version }}'
+      - name: Check the embedded version
+        run: |
+          got=$(./dist/dropsite-linux-amd64 version)
+          test "$got" = "dropsite ${{ needs.verify.outputs.version }}" || { echo "::error::got '$got'"; exit 1; }
+      - name: Provenance attestation
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/dropsite-*
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cli
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    needs: [verify, images, cli]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.verify.outputs.version }}
+      PRERELEASE: ${{ needs.verify.outputs.prerelease }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: cli
+          path: dist
+      - name: Verify checksums
+        run: cd dist && sha256sum -c SHA256SUMS
+      - name: Release notes
+        run: |
+          {
+            sh scripts/changelog.sh show "$VERSION"
+            echo
+            echo "### Install and verify"
+            echo
+            echo "Server images (linux/amd64, linux/arm64):"
+            echo
+            echo '```'
+            echo "$IMAGE_PREFIX-control:$VERSION"
+            echo "$IMAGE_PREFIX-caddy:$VERSION"
+            echo "gh attestation verify oci://$IMAGE_PREFIX-control:$VERSION --repo $GITHUB_REPOSITORY"
+            echo '```'
+            echo
+            echo "CLI: download the binary for your platform and SHA256SUMS, then"
+            echo "\`sha256sum -c SHA256SUMS --ignore-missing\` and"
+            echo "\`gh attestation verify <binary> --repo $GITHUB_REPOSITORY\`."
+          } > notes.md
+          cat notes.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Create the GitHub Release
+        run: |
+          flags=""
+          if [ "$PRERELEASE" = true ]; then flags="--prerelease --latest=false"; fi
+          # shellcheck disable=SC2086 # flags are intentionally split
+          gh release create "$GITHUB_REF_NAME" dist/dropsite-* dist/SHA256SUMS \
+            --verify-tag --title "$GITHUB_REF_NAME" --notes-file notes.md $flags

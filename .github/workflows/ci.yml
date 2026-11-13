@@ -1,7 +1,12 @@
 name: ci
 
+# Every push to main and every pull request into it. The end-to-end suite
+# (make e2e) and the installer run (make install-e2e) stay local: they need a
+# full Docker stack and several minutes.
+
 on:
   pull_request:
+    branches: [main]
   push:
     branches: [main]
 
@@ -16,59 +21,75 @@ jobs:
   lint:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-      - uses: golangci/golangci-lint-action@v9
+      - name: gofmt
+        run: |
+          out=$(gofmt -l cmd internal test deploy)
+          if [ -n "$out" ]; then echo "::error::not gofmt-formatted:"; echo "$out"; exit 1; fi
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: v2.15.0
+      - name: shellcheck
+        run: make lint-sh
+      - name: actionlint
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+
+  release-check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Version consistency
+        run: sh scripts/release-check.sh
+      - name: Release scripts
+        run: sh test/release/unit.sh
+      - name: Release notes preview (commits since the last tag)
+        run: sh scripts/release-notes.sh >> "$GITHUB_STEP_SUMMARY"
 
   test:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
       - name: Unit and integration tests
         run: go test -race -count=1 -coverprofile=coverage.out ./...
       - name: Coverage summary
         run: go tool cover -func=coverage.out | tail -1
+      - name: Installer checks
+        run: make install-test
 
   build:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+      - name: Source version
+        id: version
+        run: echo "version=dev+${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
       - name: CLI for all platforms
-        run: make cli-release
-      - uses: docker/setup-qemu-action@v4
-      - uses: docker/setup-buildx-action@v4
+        run: make cli-release VERSION='${{ steps.version.outputs.version }}'
+      # Both Dockerfiles cross-compile in a stage on the build platform and
+      # only copy files into the target stage, so no QEMU is needed.
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Control image (amd64, arm64)
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: deploy/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: false
-          build-args: VERSION=${{ github.sha }}
+          build-args: VERSION=${{ steps.version.outputs.version }}
       - name: Caddy image with DNS plugins (amd64, arm64)
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: deploy/caddy
           platforms: linux/amd64,linux/arm64
           push: false
-
-  e2e:
-    runs-on: ubuntu-24.04
-    needs: [test]
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
-      - name: End-to-end (docker compose, internal CA)
-        run: go test -count=1 -timeout 20m -tags e2e ./test/e2e/...

@@ -2,17 +2,25 @@ SHELL := /usr/bin/env bash
 .SHELLFLAGS := -euo pipefail -c
 
 ENV := source scripts/dev-env.sh &&
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+# X.Y.Z on a clean release tag, dev+<commit> otherwise (scripts/version.sh);
+# the release workflow passes VERSION=X.Y.Z explicitly.
+VERSION ?= $(shell sh scripts/version.sh)
 LDFLAGS := -s -w -X github.com/b0balYson/dropsite/internal/brand.Version=$(VERSION)
 CLI_PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64
 
-.PHONY: tools test cover lint lint-sh install-test install-e2e build cli-release e2e dev-up dev-down fmt
+.PHONY: tools test cover lint lint-sh lint-actions install-test install-e2e build cli-release e2e dev-up dev-down \
+	fmt fmt-check release-check release-test release-notes changelog
 
 tools:
 	./scripts/install-tools.sh
 
 fmt:
-	$(ENV) gofmt -w cmd internal test
+	$(ENV) gofmt -w cmd internal test deploy
+
+# Fails when a Go file is not gofmt-formatted (CI).
+fmt-check:
+	@$(ENV) out=$$(gofmt -l cmd internal test deploy); \
+	if [ -n "$$out" ]; then echo "not gofmt-formatted:"; echo "$$out"; exit 1; fi
 
 test:
 	$(ENV) go test -race -count=1 ./...
@@ -21,7 +29,8 @@ cover:
 	$(ENV) go test -count=1 -coverprofile=coverage.out ./... && go tool cover -func=coverage.out | tail -1
 
 SHELL_SCRIPTS := scripts/install.sh scripts/install-server.sh scripts/server-bootstrap.sh \
-	test/install/unit.sh test/install/e2e.sh test/install/entrypoint.sh
+	scripts/version.sh scripts/release-check.sh scripts/release-notes.sh scripts/changelog.sh \
+	test/install/unit.sh test/install/e2e.sh test/install/entrypoint.sh test/release/unit.sh
 
 lint: lint-sh
 	$(ENV) golangci-lint run ./...
@@ -33,6 +42,29 @@ lint-sh:
 	else \
 		echo "shellcheck not found: shell scripts not checked (put a shellcheck binary into .tools/bin)"; \
 	fi
+
+# GitHub Actions workflows: actionlint from .tools/bin (make tools), else the
+# pinned version through go run.
+ACTIONLINT_VERSION := v1.7.12
+lint-actions:
+	@$(ENV) if command -v actionlint >/dev/null 2>&1; then actionlint; \
+	else go run github.com/rhysd/actionlint/cmd/actionlint@$(ACTIONLINT_VERSION); fi
+	@echo "actionlint: ok"
+
+# Release consistency (docs/releasing.md). TAG=vX.Y.Z checks a release.
+release-check:
+	sh scripts/release-check.sh $(TAG)
+
+release-test:
+	sh test/release/unit.sh
+
+# Release notes of the commits since the previous tag (or between FROM and TO).
+release-notes:
+	@sh scripts/release-notes.sh $(FROM) $(TO)
+
+# Add the section of release X.Y.Z to CHANGELOG.md: make changelog V=1.4.2
+changelog:
+	sh scripts/changelog.sh add $(V)
 
 # Installer checks without a server: validation, languages, ~/.ssh/config editing.
 install-test:
@@ -61,7 +93,7 @@ e2e:
 	$(ENV) go test -count=1 -timeout 20m -tags e2e ./test/e2e/...
 
 dev-up:
-	docker compose -f deploy/docker-compose.yml -f deploy/compose.local.yml --env-file deploy/local.env up -d --build
+	DROPSITE_BUILD_VERSION=$(VERSION) docker compose -f deploy/docker-compose.yml -f deploy/compose.local.yml --env-file deploy/local.env up -d --build
 
 dev-down:
 	docker compose -f deploy/docker-compose.yml -f deploy/compose.local.yml --env-file deploy/local.env down

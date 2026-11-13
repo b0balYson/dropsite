@@ -4,6 +4,8 @@ set -euo pipefail
 
 GO_VERSION="${GO_VERSION:-go1.27.4}"
 GOLANGCI_LINT_VERSION="${GOLANGCI_LINT_VERSION:-v2.15.0}"
+# Keep in step with ACTIONLINT_VERSION in the Makefile.
+ACTIONLINT_VERSION="${ACTIONLINT_VERSION:-v1.7.12}"
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 tools="$root/.tools"
@@ -37,5 +39,11 @@ if ! golangci-lint version 2>/dev/null | grep -q "${GOLANGCI_LINT_VERSION#v}"; t
   GOBIN="$tools/bin" go install "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$GOLANGCI_LINT_VERSION"
 fi
 
+if ! actionlint -version 2>/dev/null | grep -q "${ACTIONLINT_VERSION#v}"; then
+  echo "installing actionlint $ACTIONLINT_VERSION into .tools/bin"
+  GOBIN="$tools/bin" go install "github.com/rhysd/actionlint/cmd/actionlint@$ACTIONLINT_VERSION"
+fi
+
 go version
 golangci-lint version
+actionlint -version | head -n 1
