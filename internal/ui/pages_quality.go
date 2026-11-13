@@ -18,5 +18,5 @@ func (s *server) qualityPage(w http.ResponseWriter, r *http.Request, rc *reqCtx)
 		s.failPage(w, r, rc, err)
 		return
 	}
-	s.page(w, r, rc, http.StatusOK, "quality", "sites", "quality.title", qualityData{V: v})
+	s.sitePageSub(w, r, rc, http.StatusOK, "quality", secVersions, "quality.title", v.Site, true, qualityData{V: v})
 }

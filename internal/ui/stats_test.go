@@ -110,7 +110,7 @@ func TestSitePageShowsStats(t *testing.T) {
 	alice := h.loginUser("alice@pp.test")
 	v := h.createSite(alice, "Promo", "promo")
 
-	empty := h.get("/sites/" + v.Site.ID)
+	empty := h.get("/sites/" + v.Site.ID + "/stats")
 	wantStatus(t, empty, http.StatusOK)
 	wantContains(t, empty.body, "Посещаемость", "Посещений пока нет")
 	wantNotContains(t, empty.body, "chart__svg")
@@ -124,7 +124,7 @@ func TestSitePageShowsStats(t *testing.T) {
 	if err := h.env.Svc.CollectStats(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	p := h.get("/sites/" + v.Site.ID)
+	p := h.get("/sites/" + v.Site.ID + "/stats")
 	wantStatus(t, p, http.StatusOK)
 	wantContains(t, p.body, `class="chart__svg"`, "Просмотры страниц за 30 дн.", "Показать данные таблицей",
 		"Популярные страницы", "t.<wbr>me", "Прямые заходы", "&lt;script&gt;", "12 ноя")

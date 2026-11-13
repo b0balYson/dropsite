@@ -34,7 +34,7 @@ func (s *server) saveCounters(w http.ResponseWriter, r *http.Request, rc *reqCtx
 	c := domain.Counters{MetrikaID: r.PostFormValue("metrika_id"), GA4ID: r.PostFormValue("ga4_id")}
 	d, err := s.svc.SetSiteCounters(r.Context(), rc.actor, ref, c, domain.SourceUI)
 	if err != nil {
-		s.fail(w, r, rc, err, sitePath(ref))
+		s.fail(w, r, rc, err, sectionPath(ref, secStats))
 		return
 	}
 	msg := rc.loc.T("counters.saved")
@@ -42,5 +42,5 @@ func (s *server) saveCounters(w http.ResponseWriter, r *http.Request, rc *reqCtx
 		msg = rc.loc.T("counters.released", "id", d.ID)
 	}
 	s.setFlash(w, r, flashOK, msg)
-	redirect(w, r, sitePath(ref))
+	redirect(w, r, sectionPath(ref, secStats))
 }

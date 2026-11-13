@@ -97,14 +97,14 @@ func (s *server) siteAccess(w http.ResponseWriter, r *http.Request, rc *reqCtx) 
 	upd, ok := accessUpdate(r, cur.Site)
 	if !ok {
 		s.setFlash(w, r, flashError, rc.loc.T("access.expires.bad"))
-		redirect(w, r, sitePath(cur.Site.ID))
+		redirect(w, r, sectionPath(cur.Site.ID, secAccess))
 		return
 	}
 	v, err := s.svc.UpdateSite(r.Context(), rc.actor, cur.Site.ID, upd)
 	if err != nil {
-		s.fail(w, r, rc, err, sitePath(cur.Site.ID))
+		s.fail(w, r, rc, err, sectionPath(cur.Site.ID, secAccess))
 		return
 	}
 	s.setFlash(w, r, flashOK, rc.loc.T("access.saved"))
-	redirect(w, r, sitePath(v.Site.ID)+"#access-h")
+	redirect(w, r, sectionPath(v.Site.ID, secAccess))
 }

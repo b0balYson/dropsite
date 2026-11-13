@@ -1,0 +1,47 @@
+{{define "title"}}{{.L.T "site.nav.settings"}} — {{.D.V.Site.Title}}{{end}}
+
+{{define "content"}}
+{{$v := .D.V}}
+{{template "section_intro" (bundle $ (dict "Title" "site.nav.settings" "Lede" "site.nav.settings.lede"))}}
+
+<section class="section site-block section--first" aria-labelledby="settings-h">
+  <h2 class="section-title" id="settings-h">{{.L.T "site.settings"}}</h2>
+  <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/settings">
+    {{template "csrf" .}}
+    <div class="site-block__row">
+      <div class="field">
+        <label class="field__label" for="title">{{.L.T "site.field.title"}}</label>
+        <input class="input" id="title" name="title" required maxlength="120" value="{{$v.Site.Title}}">
+      </div>
+      <div class="field">
+        <label class="field__label" for="slug">{{.L.T "site.field.slug"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
+        <input class="input mono" id="slug" name="slug" value="{{$v.Slug}}" maxlength="63" autocomplete="off" autocapitalize="off" spellcheck="false"
+          hx-get="/sites/{{$v.Site.ID}}/slug-check" hx-trigger="input changed delay:350ms" hx-target="#slug-status" hx-sync="this:replace" aria-describedby="slug-hint slug-status">
+        <p class="hint" id="slug-hint">{{.L.T "site.slug.hint" "domain" .D.Domain}} {{.L.T "site.slug.clear"}}</p>
+        <p class="slug-status" id="slug-status" aria-live="polite"></p>
+      </div>
+    </div>
+    <button class="btn btn--primary" type="submit">{{.L.T "form.save"}}</button>
+  </form>
+</section>
+
+{{template "site_workspace" .}}
+
+{{template "site_publish" .}}
+
+<section class="section danger" aria-labelledby="danger-h">
+  <h2 class="section-title danger__title" id="danger-h">{{.L.T "site.danger.title"}}</h2>
+  <details class="danger__box">
+    <summary><span id="delete-h">{{.L.T "site.delete.title"}}</span></summary>
+    <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/delete">
+      {{template "csrf" .}}
+      <p>{{.L.T "site.delete.text"}}</p>
+      <div class="field">
+        <label class="field__label" for="confirm">{{.L.T "site.delete.confirm" "title" $v.Site.Title}}</label>
+        <input class="input" id="confirm" name="confirm" required autocomplete="off" data-confirm-input>
+      </div>
+      <button class="btn btn--danger" type="submit">{{.L.T "site.delete.submit"}}</button>
+    </form>
+  </details>
+</section>
+{{end}}

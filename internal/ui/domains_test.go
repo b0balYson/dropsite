@@ -15,7 +15,7 @@ func TestOwnerDomainsBlock(t *testing.T) {
 	site := h.createSite(ann, "Promo", "")
 	path := "/sites/" + site.Site.ID
 
-	p := h.get(path)
+	p := h.get(path + "/access")
 	wantStatus(t, p, http.StatusOK)
 	wantContains(t, p.body, "Свои домены", "Своих доменов пока нет", site.Site.ID+".<wbr>pp.<wbr>test", testenv.ServerIP, "0 из 5")
 
@@ -95,7 +95,7 @@ func TestAdminDomainsPage(t *testing.T) {
 	// The owner sees the decision and the reason.
 	h.c = h.newClient()
 	h.login("ann@pp.test", testenv.UserPassword)
-	own := h.get("/sites/" + site.Site.ID)
+	own := h.get("/sites/" + site.Site.ID + "/access")
 	wantContains(t, own.body, "Подтверждён", "Отклонён", "&lt;script&gt;alert(1)&lt;/script&gt;", `href="https://promo.example.ru/"`)
 	wantStatus(t, h.get("/admin/domains"), http.StatusNotFound)
 	wantStatus(t, h.get("/admin/domains/promo.example.ru/dns"), http.StatusNotFound)

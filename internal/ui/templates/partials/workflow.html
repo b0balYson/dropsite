@@ -6,12 +6,14 @@
     {{template "csrf" .}}
     <fieldset class="form-grid__full template-pick">
       <legend class="field__label">{{.L.T "workflow.templates.pick"}}</legend>
+      <div class="template-pick__grid">
       {{range $i, $t := .D.Templates}}
       <label class="check template-pick__item">
         <input type="radio" name="template" value="{{$t.Name}}"{{if eq $i 0}} checked{{end}} required>
         <span><strong>{{$t.Title}}</strong><br><span class="muted small">{{$t.Description}}</span></span>
       </label>
       {{end}}
+      </div>
     </fieldset>
     <div class="field">
       <label class="field__label" for="tpl-title">{{.L.T "site.field.title"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
@@ -40,6 +42,7 @@
   <h2 class="section-title" id="workflow-h">{{.L.T "workflow.title"}}</h2>
 
   {{if and $w.Shots $v.Current}}
+  <h3 class="subhead">{{.L.T "workflow.shot.title"}}</h3>
   <figure class="shot">
     <a href="/sites/{{$v.Site.ID}}/screenshot.png" target="_blank" rel="noopener">
       <img class="shot__img" src="/sites/{{$v.Site.ID}}/screenshot.png" width="640" height="400" loading="lazy" alt="{{.L.T "workflow.shot.alt" "title" $v.Site.Title}}">
@@ -49,7 +52,7 @@
   {{end}}
 
   {{if and $w.Shots $w.Ready}}
-  <form class="stack" method="get" action="/sites/{{$v.Site.ID}}/compare.png" target="_blank">
+  <form class="stack workflow__form" method="get" action="/sites/{{$v.Site.ID}}/compare.png" target="_blank">
     <div class="field">
       <label class="field__label" for="compare-from">{{.L.T "workflow.compare.label"}}</label>
       <select class="input mono" id="compare-from" name="from" required>
@@ -60,7 +63,7 @@
   </form>
   {{end}}
 
-  <h3 class="field__label">{{.L.T "workflow.schedule.title"}}</h3>
+  <h3 class="subhead">{{.L.T "workflow.schedule.title"}}</h3>
   {{if $w.Schedules}}
   <ul class="schedules">
     {{range $w.Schedules}}
@@ -84,7 +87,7 @@
   {{end}}
 
   {{if $w.Ready}}
-  <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/schedules" data-tz-form>
+  <form class="stack workflow__form" method="post" action="/sites/{{$v.Site.ID}}/schedules" data-tz-form>
     {{template "csrf" .}}
     <input type="hidden" name="tz_offset" value="" data-tz-offset>
     <div class="site-block__row">
@@ -105,7 +108,8 @@
   {{end}}
 
   {{if $v.Current}}
-  <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/clone">
+  <h3 class="subhead">{{.L.T "workflow.clone.title"}}</h3>
+  <form class="stack workflow__form" method="post" action="/sites/{{$v.Site.ID}}/clone">
     {{template "csrf" .}}
     <div class="field">
       <label class="field__label" for="clone-title">{{.L.T "workflow.clone.label"}} <span class="optional">{{.L.T "form.optional"}}</span></label>

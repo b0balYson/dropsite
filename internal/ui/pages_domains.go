@@ -57,22 +57,22 @@ func (s *server) addDomain(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	ref := r.PathValue("ref")
 	h, err := s.svc.AddDomain(r.Context(), rc.actor, ref, r.PostFormValue("domain"))
 	if err != nil {
-		s.fail(w, r, rc, err, sitePath(ref)+"#domains-h")
+		s.fail(w, r, rc, err, sectionPath(ref, secAccess)+"#domains-h")
 		return
 	}
 	s.setFlash(w, r, flashOK, rc.loc.T("domains.added", "domain", h.Hostname))
-	redirect(w, r, sitePath(h.SiteID)+"#domains-h")
+	redirect(w, r, sectionPath(h.SiteID, secAccess)+"#domains-h")
 }
 
 func (s *server) removeDomain(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	ref := r.PathValue("ref")
 	name := strings.TrimSpace(r.PostFormValue("domain"))
 	if err := s.svc.RemoveDomain(r.Context(), rc.actor, ref, name); err != nil {
-		s.fail(w, r, rc, err, sitePath(ref)+"#domains-h")
+		s.fail(w, r, rc, err, sectionPath(ref, secAccess)+"#domains-h")
 		return
 	}
 	s.setFlash(w, r, flashOK, rc.loc.T("domains.removed", "domain", name))
-	redirect(w, r, sitePath(ref)+"#domains-h")
+	redirect(w, r, sectionPath(ref, secAccess)+"#domains-h")
 }
 
 // statusTabs are the filters of the admin screen, in display order.

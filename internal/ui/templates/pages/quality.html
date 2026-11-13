@@ -16,11 +16,11 @@
 
 {{define "content"}}
 {{$v := .D.V}}{{$r := $v.Report}}
-<nav class="crumbs" aria-label="{{.L.T "nav.breadcrumbs"}}"><a href="/sites/{{$v.Site.Site.ID}}">← {{$v.Site.Site.Title}}</a></nav>
-<header class="page-head">
+<header class="page-head section-intro">
   <div class="page-head__text">
+    <a class="section-intro__back" href="/sites/{{$v.Site.Site.ID}}/versions">← {{.L.T "versions.back"}}</a>
     <p class="eyebrow mono">{{$v.Deploy.ID}}{{if $v.Current}} · {{.L.T "history.current"}}{{end}}</p>
-    <h1 class="display">{{.L.T "quality.title"}}</h1>
+    <h1 class="display display--section">{{.L.T "quality.title"}}</h1>
     <p class="lede">{{.L.Date $v.Deploy.CreatedAt}} · {{.L.Size $v.Deploy.SizeBytes}} · {{.L.T "history.files" "n" $v.Deploy.FileCount}}</p>
   </div>
   {{if $r}}<p class="quality__score quality__score--{{$r.Grade}}" aria-label="{{.L.T "quality.score.label" "score" $r.Score "grade" $r.Grade}}"><span class="quality__grade">{{$r.Grade}}</span> <span class="mono">{{$r.Score}}/100</span></p>{{end}}

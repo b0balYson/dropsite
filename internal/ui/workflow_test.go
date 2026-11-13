@@ -50,12 +50,13 @@ func TestSiteWorkflowSection(t *testing.T) {
 	alice := h.loginUser("alice@pp.test")
 	v := h.createSite(alice, "Promo", "")
 	page := "/sites/" + v.Site.ID
-	wantNotContains(t, h.get(page).body, "Сделать копию", "data-tz-form")
+	versions := page + "/versions"
+	wantNotContains(t, h.get(versions).body, "Сделать копию", "data-tz-form")
 
 	first := h.deploy(alice, v.Site.ID, map[string]string{"index.html": "one"})
 	h.env.Clock.Advance(time.Second)
 	h.deploy(alice, v.Site.ID, map[string]string{"index.html": "two"})
-	body := h.get(page).body
+	body := h.get(versions).body
 	wantContains(t, body, "Копия, расписание и снимок", "Сделать копию", "data-tz-form", first.ID, "workflow.js")
 	wantNotContains(t, body, "screenshot.png", "compare.png")
 
@@ -64,11 +65,14 @@ func TestSiteWorkflowSection(t *testing.T) {
 		"deploy": {first.ID}, "publish_at": {at.Format(localTimeLayout)}, "tz_offset": {"-180"},
 	})
 	wantStatus(t, p, http.StatusSeeOther)
+	if p.location() != versions {
+		t.Fatalf("schedule redirect %q", p.location())
+	}
 	scheds, err := h.env.Svc.ListSchedules(context.Background(), alice, v.Site.ID)
 	if err != nil || len(scheds) != 1 || !scheds[0].PublishAt.Equal(at.Add(-3*time.Hour).Truncate(time.Minute)) {
 		t.Fatalf("schedules %+v %v", scheds, err)
 	}
-	body = h.get(page).body
+	body = h.get(versions).body
 	wantContains(t, body, "ждёт", "/schedules/")
 	p = h.follow(h.submit(page, page+"/schedules", url.Values{"deploy": {first.ID}, "publish_at": {"later"}}))
 	wantContains(t, p.body, "Выберите дату и время")
@@ -95,7 +99,7 @@ func TestSiteScreenshotWithRenderer(t *testing.T) {
 	h.env.Clock.Advance(time.Second)
 	h.deploy(alice, v.Site.ID, map[string]string{"index.html": "two"})
 	page := "/sites/" + v.Site.ID
-	wantContains(t, h.get(page).body, page+"/screenshot.png", page+"/compare.png")
+	wantContains(t, h.get(page+"/versions").body, page+"/screenshot.png", page+"/compare.png")
 	p := h.get(page + "/screenshot.png?device=mobile")
 	wantStatus(t, p, http.StatusOK)
 	if p.resp.Header.Get("Content-Type") != "image/png" {

@@ -94,7 +94,7 @@ func (s *server) renderProxy(w http.ResponseWriter, r *http.Request, rc *reqCtx,
 		s.failPage(w, r, rc, err)
 		return
 	}
-	s.page(w, r, rc, status, "proxy", "sites", "proxy.title", proxyPageData{
+	s.sitePageOf(w, r, rc, status, "proxy", secProxy, "proxy.title", v, proxyPageData{
 		V: v, Endpoints: eps, Methods: proxyMethods, Form: form, Error: errMsg, Limit: service.ProxyEndpointsPerSite,
 	})
 }
