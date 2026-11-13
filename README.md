@@ -1,50 +1,100 @@
 # dropsite
 
-[Русская версия](README.ru.md)
+**English** | [Русский](README.ru.md) | [简体中文](README.zh-CN.md)
 
-Self-hosted publishing of static sites. A marketer asks ChatGPT or Claude "make a coffee shop site and publish it", or drops a zip into the web interface, and gets an HTTPS link on a subdomain of your domain in seconds; later changes, visit statistics, form requests and passwords are plain requests in the same chat. No VPS per site, no git, no DevOps.
+dropsite publishes websites on your own server. You ask ChatGPT or Claude "make a site for my coffee shop and publish it", and a minute later the site is live at an HTTPS address on your own domain. Changes, form requests, visit numbers and passwords are just more requests in the same chat.
 
-- One server. Prebuilt multi-arch images per release: `docker compose pull && docker compose up -d --wait` (or build from source with `--build`).
-- Archive in, HTTPS link out. Every site gets a random address such as `k3f9x2m7qa.example.site` and an optional readable one such as `promo-may.example.site`.
-- Every publish is an immutable release: switch and roll back instantly, with zero failed requests during the switch.
-- Each user sees and changes only their own sites. Admins manage users, all sites, limits and the audit log.
-- Manage sites from a chat (ChatGPT, claude.ai, Claude Desktop, Claude Code) connected once, or from the web interface, the `dropsite` CLI and the HTTP API.
-- Sites keep working while the control service is stopped or being upgraded.
+dropsite serves finished static sites (HTML, CSS, JavaScript, images). It does not build projects or run server code.
 
-dropsite serves finished static files only (HTML, CSS, JS, images). It does not build projects or run server code.
+## What you need
 
-## How it works
+- **A rented server (VPS)** with Ubuntu 22.04, Ubuntu 24.04 or Debian 12 and 1 GB of memory or more. The hosting provider gives you its IP address and the root password (or lets you add an SSH key).
+- **A domain** that hosts nothing else, for example `sites.example.com`.
+- **ChatGPT or Claude** to make sites by asking. Without a chat you can still upload sites in the web interface.
 
-Two containers. **Caddy** serves files by host name and obtains TLS certificates on demand; its configuration is static and never reloads. **control** (one Go binary) owns the database, accounts, the API and the web interface, and publishes releases by atomically switching symlinks on a shared volume that Caddy reads.
+## Install in one command
 
-## Install from the repository
-
-**One command.** Rent a VPS with Ubuntu 22.04/24.04 or Debian 12, then run on your own computer and answer a few questions (server IP, root password, a name, your domain, your e-mail):
+Run this on **your own computer**, not on the server. On macOS and Linux open the Terminal app; on Windows use WSL (Ubuntu from the Microsoft Store) or Git Bash.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install-server.sh | sh
 ```
 
-On Windows run it in WSL or Git Bash. The installer sets up the server, shows the DNS records to create and ends with `ssh <name>` and `http://localhost:<port>` for the web interface. Details: [docs/install.md](docs/install.md#one-command-installer). The manual path follows.
+The installer asks for the server IP, the root password (or a key file), a short name for the server, your domain and your e-mail, in English, Russian or Chinese depending on your system language. Then it:
 
-Requirements: a Linux server (amd64 or arm64), Git, Docker Engine 24+ and Compose 2.24.4+, ports 80 and 443 open, and a domain. The server downloads prebuilt images of a release from ghcr.io; nothing is compiled on it. Building from source is the fallback: then provide 2 GB swap on a server with 1 CPU and 1 GB RAM, see [build memory](docs/install.md#build-memory).
+1. creates a key just for this server, so the password is used once and never saved;
+2. installs Docker and dropsite on the server, opens only ports 22, 80 and 443, turns on a daily backup and starts everything (10–20 minutes);
+3. adds the server to `~/.ssh/config` on your computer, so `ssh <name>` connects and opens a private tunnel to the admin interface;
+4. tells you which DNS records to create where you bought the domain: an `A` record for `@` and for `*` with the server IP (plus `AAAA` when the server has IPv6), and waits until the domain works;
+5. prints the admin login and a generated password, and how to connect ChatGPT or Claude.
 
-### 1. Choose a dedicated base domain
+If something fails, run the same command again: finished steps are skipped. Details and options: [docs/install.md](docs/install.md#one-command-installer).
 
-Use a domain (or a subdomain such as `sites.example.com`) that hosts **nothing else**. Published sites run arbitrary JavaScript on its subdomains; never put company services, logins or cookies on the base domain or share cookies with it. For public installations with untrusted users, consider adding the domain to the [Public Suffix List](https://publicsuffix.org/) so browsers isolate sites from each other.
+## First steps
 
-### 2. Point DNS at the server
+1. Run `ssh <name>`, keep that window open, and open `http://localhost:<port>` in the browser (the installer shows the port). Sign in with your e-mail and the generated password.
+2. The **Getting started** page is a checklist that checks the server for you: the domain points here, HTTPS works, a chat is connected, the first site exists. It shows the exact DNS records with copy buttons and what to fix if a step fails. Optional steps: invite a teammate and set up Telegram or e-mail for form requests.
+3. Open **Connect AI**, pick your chat and follow the numbered steps. You add the address `https://api.<your domain>/mcp` as a connector, then press **Connect** and type the one-time connect code into the dropsite page that opens. Your password is never asked for in a chat.
+4. Ask the chat: "Make a site for my coffee shop and publish it".
 
-| Record | Name | Value |
-| --- | --- | --- |
-| A (and AAAA if you have IPv6) | `example.site` | server IP |
-| A (and AAAA) | `*.example.site` | server IP |
+## What you can do
 
-The `*` record also covers `api.example.site` unless a separate record at `api` overrides it. With Cloudflare, the zone must be **Active** and the registrar must use the nameservers assigned by Cloudflare.
+### Make and change sites by asking
 
-Check `dig +short example.site` and `dig +short api.example.site`: both must return the server IP. `NXDOMAIN` means the DNS record does not exist. Until DNS works, Caddy cannot obtain a certificate and ChatGPT cannot discover OAuth settings. Use **DNS only** in Cloudflare during setup.
+- **Publish from a chat.** ChatGPT, claude.ai, Claude Desktop and Claude Code build the site, publish it and answer with a working link. Sites are self-contained (their own images and fonts, no third-party CDNs), made for phones first and quick to load.
+- **Change a site from any new chat.** The assistant reads the published files from the server, changes only what you asked for and publishes a new version.
+- **Or publish without a chat.** Drag a zip or tar.gz onto a site in the web interface, run `dropsite deploy ./folder`, or call the HTTP API.
+- **Show a site you like.** Give a link or a picture, and you get an original site in a similar style: palette, fonts, spacing and layout, never the other site's texts, images or logo ([docs/references.md](docs/references.md)).
+- **Start from a template when you ask for one.** Five starter sites (cafe, services, event, portfolio, links) in English or Russian; otherwise the assistant designs each site from scratch ([docs/screenshots.md](docs/screenshots.md#templates)).
+- **Copy a site** into a new one to try a different version without touching the original.
 
-### 3. Configure and start
+### Publish safely
+
+- **Drafts with preview.** Save a new version as a draft and check it at the site's private preview address; visitors keep seeing the current version until you press **Publish**. On a live site the assistant makes a draft and asks before publishing.
+- **Scheduled publishing.** Prepare a version now and let it go live at a given time, up to a year ahead.
+- **Versions and rollback.** Every publication is a separate version. Going back to a previous one is instant, and visitors never see a half-updated site.
+- **Quality report.** Every publication gets a score with broken links, missing files, files loaded from other servers, images without `alt`, pages without a title or description and the heaviest pages ([docs/quality.md](docs/quality.md)).
+- **Automatic optimization.** WebP copies of JPEG and PNG images for browsers that support them, plus `sitemap.xml`, `robots.txt` and a favicon when the site has none. Your own files are never changed ([docs/publishing.md](docs/publishing.md)).
+- **Screenshots and before/after comparison.** With the optional renderer the assistant can look at its own work on desktop and phone and compare two versions ([docs/screenshots.md](docs/screenshots.md)).
+
+### Collect requests and keep content live
+
+- **Forms without a third-party service.** Requests are stored on your server and delivered to Telegram, e-mail or a signed HTTPS webhook, with retries. Anti-bot protection: a hidden honeypot field, rate limits and an optional self-hosted Altcha check. Browse requests on the site page and export them to CSV ([docs/forms.md](docs/forms.md)).
+- **Site data you can edit from a chat.** Menus, prices, catalogs, schedules or reviews live in data collections that pages load. "Change the cappuccino price to 250" takes effect at once, without a new version. A collection is either public (only you write) or moderated (visitors propose entries, you approve them). Ready collection templates: menu, catalog, services, events, team, FAQ, reviews.
+- **Google Sheets.** Send form requests to a spreadsheet, or fill a data collection from one, manually or on a schedule ([docs/sheets.md](docs/sheets.md)).
+- **API keys stay secret.** A page can call a third-party API (OpenAI, a CRM, a Telegram bot) through your server, which adds the key. You paste the key only in the web interface; the chat and the API never accept or show it ([docs/proxy.md](docs/proxy.md)).
+
+### Control who sees what
+
+- **Password-protected sites**, hidden from search engines, or with a last day after which the site closes ([docs/site-access.md](docs/site-access.md)).
+- **Your own domains.** Open a site at `promo.example.com` in addition to its address on the base domain; the assistant tells you which DNS records to create, and an administrator approves the domain ([docs/external-domains.md](docs/external-domains.md)).
+- **Shared workspaces for teams.** Create a workspace, add colleagues, and everyone in it can manage its sites. Every user otherwise sees only their own sites.
+- **Statistics without scripts.** Page views and visitors per day, top pages and sources, counted from the server log. Add a Yandex Metrica or Google Analytics 4 counter by ID if you want more ([docs/statistics.md](docs/statistics.md)).
+
+### Run it with confidence
+
+- **Audit log.** Administrators see sign-ins, publications, rollbacks, user, domain, form and settings changes.
+- **Three interface languages:** English, Russian and Simplified Chinese.
+- **Prebuilt images and versioned releases** for amd64 and arm64 with signed build provenance; nothing is compiled on the server ([docs/releasing.md](docs/releasing.md)).
+- **Backups and one-command update and rollback:** a daily backup, `dropsite-update`, `dropsite-rollback`.
+- **Sites keep working** while the management service is stopped or being updated.
+
+## Details
+
+### Requirements
+
+- Linux server, amd64 or arm64; Git, Docker Engine 24+ and Compose 2.24.4+ (the one-command installer sets these up).
+- Ports 80 and 443 (TCP) open, and 443/UDP for HTTP/3. The admin port 8082 must stay closed to the internet.
+- 2 vCPU and 4 GB RAM serve up to 10 000 sites and 1000 users; 1 GB RAM is enough to run from prebuilt images. Building from source on 1 CPU and 1 GB needs 2 GB swap ([build memory](docs/install.md#build-memory)).
+- A dedicated base domain. Published sites run arbitrary JavaScript on its subdomains: never put company services, logins or cookies on it. For public installations with untrusted users consider adding it to the [Public Suffix List](https://publicsuffix.org/).
+
+How it works: two containers. **Caddy** serves the sites by host name and obtains HTTPS certificates; its configuration is static. **control** (one Go binary) holds the database, accounts, the API, the MCP server and the web interface, and publishes a version by atomically switching a link that Caddy reads.
+
+### Installation options
+
+**One-command installer** (above). Every answer can be passed as an option for automation (`--host`, `--name`, `--domain`, `--email`, `--key`, `--yes`, …), and `--check-dns --name <name>` checks DNS later: [docs/install.md](docs/install.md#one-command-installer). The installer signs in as `root`; providers that give only a sudo user are not supported yet.
+
+**Manual installation with Docker Compose.** Create DNS records `A`/`AAAA` for `example.site` and `*.example.site` pointing at the server (the `*` record also covers `api.example.site`), then:
 
 ```bash
 git clone https://github.com/b0balYson/dropsite.git
@@ -62,69 +112,26 @@ docker compose up -d --wait
 docker compose ps
 ```
 
-Run `docker compose` commands from `dropsite/deploy`. `DROPSITE_VERSION=latest` in `.env` runs the newest release; set `X.Y.Z` to pin one ([releasing](docs/releasing.md)). Without a release yet, or to run your own changes, build from the checkout: `docker compose up -d --build --wait` ([details](docs/install.md#building-from-source)). In `docker compose ps`, `control` must be `healthy` and `caddy` must be `running`. If startup fails, run `docker compose logs --tail=100 control caddy`.
+`control` must be `healthy` and `caddy` `running`; on failure see `docker compose logs --tail=100 control caddy`. The web interface listens on `127.0.0.1:8082` only: open it through `ssh -L 8082:127.0.0.1:8082 you@server`. For a team, bind it to the server's address in a private overlay network (Tailscale, WireGuard, NetBird) with `ADMIN_BIND_IP` and `UI_URL`. More: [docs/install.md](docs/install.md), [docs/production-checklist.md](docs/production-checklist.md).
 
-### 4. Open the web interface
+**Versions.** Every release is a Git tag `vX.Y.Z` with images `ghcr.io/b0balyson/dropsite-control` and `ghcr.io/b0balyson/dropsite-caddy`. `DROPSITE_VERSION=latest` in `.env` (the default) follows new releases; set `X.Y.Z` to stay on one. Without a release, or to run your own changes, build from the checkout: `docker compose up -d --build --wait` ([building from source](docs/install.md#building-from-source), [docs/releasing.md](docs/releasing.md)).
 
-The interface listens on `ADMIN_BIND_IP:8082`, by default `127.0.0.1:8082`, and is **never exposed to the internet**. Reach it through an SSH tunnel:
+**HTTPS certificates.** By default (`TLS_MODE=ondemand`) every address gets its own Let's Encrypt certificate on first visit. Let's Encrypt issues at most **50 new certificates per registered domain per 7 days**; a site with a random address and a readable one uses two, so plan for about **25 new sites a week**. A site's draft preview address costs one more, once. Renewals do not count. Beyond that, switch to **wildcard mode** (`TLS_MODE=wildcard`, `compose.wildcard.yml`): one certificate for `*.<BASE_DOMAIN>` through DNS-01, so new sites cost nothing; it needs DNS at Cloudflare and an API token with `Zone.DNS:Edit`, and gives every version its own preview address. Step by step: [docs/tls.md](docs/tls.md). All issued certificates appear in public Certificate Transparency logs, so site addresses are not secret.
 
-```bash
-ssh -L 8082:127.0.0.1:8082 you@server
-# then open http://127.0.0.1:8082 and sign in with ADMIN_EMAIL / ADMIN_PASSWORD
-```
+### Connecting AI clients
 
-For a team, set `ADMIN_BIND_IP` to the server address in a private overlay network (Tailscale, WireGuard, NetBird) and set `UI_URL` to the address people open, for example `http://100.64.0.10:8082`. The interface uses plain HTTP and must stay on a private network.
-
-Then: **Users → create user**, send them the invite link (valid 72 hours); they set a password and publish.
-
-## Sites from a chat
-
-The main way to use dropsite is a chat. Connect it once to ChatGPT, claude.ai, Claude Desktop or Claude Code, then ask in plain words; the assistant builds or changes the site, publishes it and answers with a working link. Nobody needs to know file formats, commands or server details.
-
-1. **Connect once.** On the **Connect AI** page of the web interface copy the address `https://api.<BASE_DOMAIN>/mcp` and follow the short steps for your chat (ChatGPT: developer mode → create an app; claude.ai and Claude Desktop: Settings → Connectors → Add custom connector; Claude Code: `claude mcp add --transport http dropsite <address>`). When the dropsite page opens, press **Connect** on the Connect AI page and enter the one-time code; the password is never asked for.
-2. **Ask.** For example:
-
-| English | Русский |
+| Client | How |
 | --- | --- |
-| "Make a coffee shop site and publish it" | «Сделай сайт кофейни и опубликуй» |
-| "Change the photos and prices on my site" | «Измени фотографии и цены на моём сайте» |
-| "Show visits for the week" | «Покажи посещаемость за неделю» |
-| "Show the latest requests" | «Покажи последние заявки» |
-| "Send requests to Telegram" | «Присылай заявки в Telegram» |
-| "Close the site with a password" | «Закрой сайт паролем» |
-| "Bring back the previous version" | «Верни предыдущую версию» |
-| Administrator: "Put this placeholder on the root domain" | Администратор: «Поставь эту заглушку на корневой домен» |
+| ChatGPT | Settings → Apps → Advanced settings → Developer mode, then create an app with `https://api.<BASE_DOMAIN>/mcp` and OAuth. Custom apps are not available on every plan; check [help.openai.com](https://help.openai.com/). |
+| claude.ai, Claude Desktop | Settings → Connectors → Add custom connector, paste the address, press Connect. |
+| Claude Code | `claude mcp add --transport http dropsite https://api.<BASE_DOMAIN>/mcp`, then `/mcp` to sign in. |
+| Claude Code, Codex, Cursor, Claude Desktop on your computer | **Connect** on the Connect AI page shows a one-line command that installs the CLI, signs in and runs `dropsite setup` (publish skill, or a local MCP server for Claude Desktop). |
 
-A change from a new chat works too: the assistant reads the current files of the site from the server, changes what was asked and publishes a new version (the previous one stays available for rollback). Sites it builds carry their own images and fonts (no CDNs or hotlinked photos), are sized for phones first and load fast. Before deleting or replacing anything it asks for confirmation.
+A connect code is valid for 10 minutes and works once. Through a chat even an administrator manages only their own sites; installation settings stay in the web interface, and the chat never creates tokens or connect codes. Connected apps are listed and disconnected on the Connect AI page. Tools, rules and limits: [docs/ai-clients.md](docs/ai-clients.md), [docs/mcp-tools.md](docs/mcp-tools.md).
 
-What stays with people:
+### CLI
 
-- connecting a chat the first time (the Connect AI page);
-- DNS records of an own domain, which the user creates at their domain provider with the values the assistant gives, and the administrator's approval of that domain;
-- confirming a delivery channel: pressing Start in Telegram or reading the code from the e-mail;
-- installation settings (Telegram bot, mail server, users, limits), which an administrator sets in the web interface. Through a chat even an administrator manages only their own sites; the only installation-level action is the root domain.
-
-A site can also start from one of five built-in templates, be copied into a new site, go live at a given time (a prepared version waits, then the site switches), and, when the optional renderer is enabled, be checked by the assistant with screenshots and a before/after comparison: [docs/screenshots.md](docs/screenshots.md).
-
-Give the assistant a link or a picture of a site you like and it builds an original site in a similar style, never a copy; for a link the server returns a design brief (palette, fonts, spacing, layout) without the page's texts or images: [docs/references.md](docs/references.md).
-
-Teams share sites through workspaces: any user creates one and adds colleagues who already have an account; every member has owner rights on every site of the workspace (there are no roles). A site is personal or belongs to one workspace; its creator can move it in and out without touching its addresses, releases or data, and it always counts against the creator's limits. Workspaces are available in the web interface (Workspaces), the API (`/api/v1/workspaces`), both MCP servers and the CLI (`dropsite workspaces`, `--workspace`).
-
-How the assistant learns the rules (server instructions, the `get_guide` tool, tool descriptions) and what each chat supports: [docs/ai-clients.md](docs/ai-clients.md).
-
-## Publishing
-
-- **Chat (main path):** see [Sites from a chat](#sites-from-a-chat). Each call of the chat tools carries up to 16 MB; bigger sites go up in an upload session that ends in one release.
-- **Web interface:** create a site, drag a zip or tar.gz onto it.
-- **AI assistants on a computer (one command, optional):** on the **Connect AI** page press **Connect**. It shows a one-time code (10 minutes) inside a ready command for macOS/Linux and for Windows. The command installs the CLI, signs in with the code and runs `dropsite setup`, which connects every assistant it finds: the publish skill for **Claude Code**, **Codex** and **Cursor**, and a local MCP server for **Claude Desktop** with the same chat tools as the connector. Then say "publish this site".
-- **Chat connector details:** the connector address is `https://api.<BASE_DOMAIN>/mcp`. When the dropsite page opens, enter a connect code from the **Connect AI** page; the password is never asked for. Custom MCP connectors in ChatGPT need developer mode and are not available on every plan; check the current terms at [help.openai.com](https://help.openai.com/). Connected apps are listed on the **Connect AI** page and can be disconnected there. Details: [docs/ai-clients.md](docs/ai-clients.md).
-- **Managing the account from chat:** besides publishing, a connected chat can rename sites and change their addresses, protect a site with a password, hide it from search engines or set its last day, attach own domains (it explains the DNS records to create), show visit statistics, set analytics counters and list or disconnect connected apps; an administrator can also put a site on the root domain. Destructive actions ask for confirmation, and the chat never creates tokens or connect codes. Tool list: [docs/ai-clients.md](docs/ai-clients.md#chats-chatgpt-claudeai-claude-desktop-claude-code).
-- **Changing a site from chat:** in any new chat say "change the prices on my coffee shop site": the assistant reads the published files, changes only what is needed and publishes a new version (the previous one stays available for rollback). Sites larger than 16 MB are sent in parts, and the server itself downloads images and fonts by link so they ship with the site. Details: [docs/ai-clients.md](docs/ai-clients.md#changing-a-site-from-a-new-chat).
-- **Drafts:** any publication (chat, web interface, `dropsite deploy --draft`, API `?draft=true`) can be saved as a draft: it is checked like a release but visitors keep seeing the current version. Each site has one stable preview address `https://p-<site>.<BASE_DOMAIN>/` that shows its draft (not indexed, password-protected like the site), in both TLS modes; **Publish** switches the site to the draft at once. On a site that is already live the assistant makes a draft and asks before publishing. Site data, forms and API keys on the preview are the live ones.
-- **CLI by hand:** `dropsite login --server https://api.<BASE_DOMAIN> --code <code>` (or `--token` with a key from the collapsed "Manual access keys" section), then `dropsite deploy ./dist`. The first run creates a site and remembers it in `.dropsite.json`; later runs update it. A folder with secret-looking files (`.env*`, keys, credentials) is refused with their list; `--skip-sensitive` leaves them out, `--include-sensitive` publishes them.
-- **HTTP API and MCP:** `https://api.<BASE_DOMAIN>/api/v1` with a bearer token ([docs/api-contract.md](docs/api-contract.md), `/api/v1/openapi.json`); the MCP endpoint `https://api.<BASE_DOMAIN>/mcp` accepts the same API tokens or OAuth tokens.
-
-The one command looks like this (the page fills in the server and the code):
+The installers download a binary from GitHub Releases and check its SHA-256 (`DROPSITE_VERSION=X.Y.Z` picks a release):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.sh | DROPSITE_SERVER=https://api.example.com DROPSITE_CODE=ABCD-EFGH-JKMNP sh
@@ -134,137 +141,56 @@ curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/ins
 $env:DROPSITE_SERVER='https://api.example.com'; $env:DROPSITE_CODE='ABCD-EFGH-JKMNP'; irm https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.ps1 | iex
 ```
 
-Without `--server` and `--code` the installers only install the CLI. `dropsite setup --remove` takes the integrations out again.
+Commands: `login`, `setup` (`--remove` undoes it), `deploy` (`--draft`, `--expires 7d`), `sites`, `deploys`, `rollback`, `draft publish|discard`, `clone`, `domains`, `workspaces`, `delete`, `mcp`, `version`. The first `dropsite deploy ./dist` creates a site and remembers it in `.dropsite.json`; later runs update it. A folder with secret-looking files (`.env*`, keys) is refused unless you pass `--skip-sensitive` or `--include-sensitive`. The CLI prints a hint when it and the server are a minor version or more apart. Without a release, [build it from source](docs/install.md#cli-from-source).
 
-The CLI installers download a binary from GitHub Releases and check its SHA-256 (`DROPSITE_VERSION=X.Y.Z` picks a release). The CLI prints a one-line hint when it and the server are a minor version or more apart. If no release is available, [build the CLI from source](docs/install.md#cli-from-source) on your computer. The server and web publishing do not need the CLI.
+### HTTP API
 
-### Own domains
+`https://api.<BASE_DOMAIN>/api/v1` with a bearer token created in the web interface; the OpenAPI document is at `/api/v1/openapi.json`. Contract: [docs/api-contract.md](docs/api-contract.md).
 
-A site can also open on the owner's domain, such as `promo.example.com`: add it in the **Own domains** block of the site page, with `dropsite domains add <site> <domain>` or `POST /sites/{id}/hostnames`. Point it at the server (a CNAME to the site's random address, or A/AAAA records for a root domain). The domain gets a certificate and serves the site only after an administrator approves it on the **Domains** screen, so nobody can make the server request certificates for arbitrary names. Details: [docs/external-domains.md](docs/external-domains.md).
+A site archive needs `index.html` at the root (a single top folder such as `dist/` is unwrapped); by default up to 50 MB unpacked, 20 MB per file, 2000 files. `/about` serves `about.html`, `404.html` is the not-found page and `200.html` turns on single-page-app mode. `/_form/` and `/_dropsite/` belong to the platform.
 
-### What a site archive may contain
+### Configuration
 
-`index.html` at the root (a single top-level folder such as `dist/` is unwrapped automatically). Up to 50 MB unpacked, 20 MB per file, 2000 files by default. Symlinks, absolute paths and `..` are rejected. `.git`, `node_modules`, `__MACOSX`, `.DS_Store`, `Thumbs.db` are skipped.
+Settings live in `deploy/.env` ([.env.example](deploy/.env.example)).
 
-### Serving rules
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `BASE_DOMAIN` | required | Base domain for sites |
+| `ACME_EMAIL` | required | E-mail for the certificate account |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | required | First administrator; the password is read only on the first start |
+| `DROPSITE_VERSION` | `latest` | Release images to run, or `X.Y.Z` |
+| `ADMIN_BIND_IP`, `UI_URL` | `127.0.0.1`, `http://<ADMIN_BIND_IP>:8082` | Where the web interface listens, and the address in invite links |
+| `API_HOST` | `api.<BASE_DOMAIN>` | Host of the API and MCP endpoint |
+| `TLS_MODE`, `CF_API_TOKEN` | `ondemand` | Certificate mode; the token only for wildcard |
+| `MAX_SITE_BYTES`, `MAX_FILE_BYTES`, `MAX_FILES`, `MAX_SITES_PER_USER`, `KEEP_RELEASES` | 50 MB, 20 MB, 2000, 10, 5 | Limits; administrators override them in Settings and per user |
+| `MAX_DOMAINS_PER_SITE` | `5` | Own domains per site |
+| `SERVER_IPS` | addresses of `BASE_DOMAIN` | Public IPs shown as the DNS target |
+| `PUBLISH_OPTIMIZE` | `on` | Publish-time optimization |
+| `COMPOSE_PROFILES`, `RENDERER_URL` | off | Optional screenshot renderer ([docs/screenshots.md](docs/screenshots.md)) |
 
-| Behaviour | Rule |
-| --- | --- |
-| Index | `/` and `/dir/` serve `index.html`; `/dir` redirects to `/dir/` |
-| Clean URLs | `/about` serves `about.html` |
-| Custom 404 | `404.html` at the root is served with status 404 |
-| Single-page apps | `200.html` at the root is served with status 200 for any unknown path |
-| Hidden files | any path segment starting with a dot is 404, except `/.well-known/` |
-| Reserved | `/_form/` and `/_dropsite/` belong to the platform (`/_dropsite/login` is the password page of protected sites, `/_dropsite/data/` serves site data) |
-| Caching | HTML `no-cache`; other files `public, max-age=3600` |
+Further variables: `RESERVED_SLUGS` (extra forbidden short addresses), `LOG_LEVEL`, `STATS_INTERVAL` and `STATS_LOG_FILE` (`off` disables statistics), `TELEGRAM_API_URL`, `FORM_WEBHOOK_ALLOW_CIDRS` (test stacks only). The Telegram bot, mail server, Google service account and limits are set by an administrator in **Settings** of the web interface.
 
-### Access: search engines, password, lifetime
+### Operations
 
-The **Access** block of a site (also `PATCH /api/v1/sites/{ref}`) controls who sees it and for how long. Changes apply at once, without restarting anything.
+| Task | Installed with the installer | By hand, from `dropsite/deploy` |
+| --- | --- | --- |
+| Update | `ssh <name> dropsite-update` | back up, check out the new tag, `docker compose pull && docker compose up -d --wait` |
+| Undo the last update | `ssh <name> dropsite-rollback` | previous tag plus the backup taken before the update |
+| Back up | daily automatically, or `ssh <name> dropsite-backup` | `docker compose exec -T control /control backup - > backup.tar.gz` |
+| Reset the admin password | `ssh <name> dropsite-admin-password` | `docker compose exec -T control /control reset-password [email]` |
+| Logs | `docker compose logs -f` | same |
 
-- **Hide from search engines** (`noindex`): every response of the site, including errors, carries `X-Robots-Tag: noindex, nofollow`.
-- **Password** (`protected`): visitors see a neutral sign-in page with the site title, enter the password and stay signed in on that address for 7 days. Changing the password or removing protection signs everybody out. The password is stored as an argon2id hash. Every sign-in also passes a self-hosted Altcha proof of work that the page solves on its own (about a second on a desktop) and that gets much harder after failed attempts; wrong passwords are limited to 10 per 15 minutes per IP, and a burst of failures on one site makes the check harder for everyone instead of locking the site. Details: [docs/site-access.md](docs/site-access.md). Open sites never contact `control`; protected ones are checked on every request, and while `control` is down they show a "temporarily unavailable" page instead of the content.
-- **Lifetime** (`expires_at`, CLI `--expires 7d`): after the last day the site stops opening within a minute and is deleted 7 days later, like a deleted site. The interface warns 3 days ahead.
+Migrations run automatically; downgrades are not supported, so roll back with the backup. The form secrets key `state/secrets.key` is not part of a backup: keep a copy. Never run `docker compose down -v`, it deletes the data. Details: [docs/backup.md](docs/backup.md), [docs/releasing.md](docs/releasing.md#on-a-server).
 
-Details: [docs/site-access.md](docs/site-access.md).
-## Forms and submissions
+### Security notes
 
-Any published site can receive form submissions without a third-party service: point a form at `/_form/<name>` on the same site.
+- The web interface is on a separate listener that is not reachable from the internet; passwords are typed only there.
+- Chat clients connect with OAuth 2.1 (PKCE, short-lived tokens, refresh rotation) confirmed by a one-time connect code. The API accepts only bearer tokens, stored as hashes.
+- Another user's site always answers "not found". Archives are checked before anything is written, and publications with secret keys in their files are refused.
+- Caddy reads the sites read-only and has no access to the database. Both containers run as non-root with read-only root filesystems.
+- Use a dedicated base domain (see Requirements).
 
-```html
-<form action="/_form/lead" method="post">
-  <input name="name" required> <input name="phone" type="tel" required>
-  <input name="_hp" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-10000px">
-  <input type="hidden" name="_next" value="/thanks.html">
-  <altcha-widget challenge="/_form/challenge"></altcha-widget>
-  <button>Send</button>
-</form>
-<script async defer src="/_dropsite/altcha.js" type="module"></script>
-```
-
-Every submission is stored first and then delivered in the background, with retries, to the channels the site owner adds on the site screen: a Telegram chat (one bot per installation, its token is set by an administrator), an e-mail address (SMTP set by an administrator) or an HTTPS webhook signed with HMAC-SHA256. Spam protection: the `_hp` honeypot, an optional fill-time check, rate limits per IP and per site, 64 KB body limit and, when the owner turns it on, a self-hosted [Altcha](https://altcha.org) proof of work whose difficulty grows for repeated attempts from one IP. Submissions are kept 90 days by default, can be browsed on the site screen and exported to CSV. Secrets (bot token, SMTP password, webhook secrets) are stored encrypted with `state/secrets.key`. Details: [docs/forms.md](docs/forms.md).
-
-### API keys for pages
-
-A page can call a third-party API with a key (OpenAI, a CRM, a Telegram bot) through `/_dropsite/proxy/<name>/<path>` on its own address: the server adds the key and forwards the request, the key never reaches the page. The owner pastes the key on the **API keys** screen of the site; the API and the chat never accept or show it. Allowed hosts, methods and paths, size and rate limits and private-network blocking apply; protected sites keep the proxy behind their password. Details: [docs/proxy.md](docs/proxy.md).
-
-### Google Sheets
-
-With a Google service account key pasted by an administrator in Settings, a site owner can send form submissions to a Google Sheet (one row per submission, new fields add columns) and fill a data collection from a sheet (manual or periodic synchronization, values typed by the collection schema, bad rows reported without changing data). Users share their spreadsheets with the service account address; the key is never shown by the API or the chat. Details: [docs/sheets.md](docs/sheets.md).
-
-From ChatGPT or claude.ai the owner manages the same in plain words ("show the latest submissions", "send submissions to Telegram", "export this week's submissions"): the MCP servers (the remote one and the local `dropsite mcp` of Claude Desktop) have tools for form settings, submissions with filters, a capped CSV export and delivery channels; confirmation codes and the Telegram link still go through the user.
-
-## Site data
-
-A site can keep small JSON data in collections (a menu with prices, a catalog, a schedule, reviews) that its pages load with `fetch('/_dropsite/data/<name>')`. The owner changes documents from the chat ("change the cappuccino price to 250"), the web interface (site screen, "Data") or the API, and the change is live at once: no new release, and rollbacks do not touch the data. A `public` collection is written only by the owner; a `moderated` one accepts visitor proposals with `POST /_dropsite/data/<name>` (JSON checked against the collection's JSON Schema, with the same protection as forms: Origin, rate limits, honeypot, Altcha by the site flag), and only documents the owner approved are shown. On a password-protected site the data is served only after sign-in. Limits: 20 collections per site, 5000 documents per collection, 16 KB per document. No server code runs: the pages render the data themselves and keep their HTML as fallback when it cannot be loaded.
-
-## Visit statistics and analytics counters
-
-The site screen shows page views per day for the last 30 days, totals, top pages and top referrers; administrators also see views over 7 days in "All sites". The numbers come from Caddy's access log, so sites need no scripts: robots and asset requests are not counted, and a visitor is recognised by IP address and browser within one UTC day without storing either. The same data is available at `GET /api/v1/sites/{ref}/stats?days=30`.
-
-Site owners may enter a Yandex Metrica counter number and/or a GA4 Measurement ID (administrators also global ones for every site). dropsite then inserts the standard tracking code before `</head>` in every HTML page of each new release; changing a site's IDs creates a new release with the updated code. Only IDs are accepted, never HTML. Details: [docs/statistics.md](docs/statistics.md).
-
-## TLS certificates and Let's Encrypt limits
-
-By default every address gets its own certificate on first visit (`TLS_MODE=ondemand`). Caddy only requests a certificate for addresses that exist.
-
-Let's Encrypt allows **50 new certificates per registered domain per 7 days** (as of August 2026, see [rate limits](https://letsencrypt.org/docs/rate-limits/)). A site with a slug uses two certificates (random address and slug), so plan for about **25 new sites per week**. The draft preview address of a site costs one more certificate, once in the site's lifetime and only when it is first opened. Renewals do not count. Caddy falls back to ZeroSSL when Let's Encrypt refuses. If you grow beyond that, switch to wildcard mode.
-
-Every issued certificate is published in public Certificate Transparency logs, so site addresses are not secret.
-
-**Wildcard mode** (`TLS_MODE=wildcard`) uses one certificate for `*.<BASE_DOMAIN>` and the root, obtained through the DNS-01 challenge, so new sites cost no certificates. It needs DNS hosted at Cloudflare (other providers can be added) and an API token with `Zone.DNS:Edit`:
-
-```sh
-# .env: CF_API_TOKEN=<token>
-docker compose -f docker-compose.yml -f compose.wildcard.yml pull
-docker compose -f docker-compose.yml -f compose.wildcard.yml up -d --wait
-```
-
-In this mode every release also gets its own preview address `https://p-<release>-<site>.<BASE_DOMAIN>/` (not indexed by search engines), shown in the release history. Step-by-step switch and rollback: [docs/tls.md](docs/tls.md).
-
-## Configuration
-
-| Variable | Required | Default | Purpose |
-| --- | --- | --- | --- |
-| `BASE_DOMAIN` | yes | | Base domain for sites |
-| `ACME_EMAIL` | yes | | ACME account email |
-| `ADMIN_EMAIL` | yes | | First administrator login |
-| `ADMIN_PASSWORD` | yes | | Their password; used only on the very first start |
-| `ADMIN_BIND_IP` | no | `127.0.0.1` | Address the web interface listens on |
-| `UI_URL` | no | `http://<ADMIN_BIND_IP>:8082` | Address used in invite links |
-| `API_HOST` | no | `api.<BASE_DOMAIN>` | Host of the public API |
-| `TLS_MODE` | no | `ondemand` | `ondemand` or `wildcard`; wildcard is set by `compose.wildcard.yml` |
-| `CF_API_TOKEN` | wildcard only | — | Cloudflare token with `Zone.DNS:Edit`, passed to Caddy only |
-| `MAX_SITE_BYTES`, `MAX_FILE_BYTES`, `MAX_FILES`, `MAX_SITES_PER_USER`, `KEEP_RELEASES` | no | 50 MB, 20 MB, 2000, 10, 5 | Limits; admins can override them globally (Settings) and per user (Users → Limits): user → admin setting → environment → default |
-| `RESERVED_SLUGS` | no | | Extra forbidden slugs, comma separated |
-| `MAX_DOMAINS_PER_SITE` | no | `5` | Own domains per site, 1–100 |
-| `SERVER_IPS` | no | addresses of `BASE_DOMAIN` | Public IPs of the server, comma separated: DNS target shown to owners and used by the domain DNS check |
-| `LOG_LEVEL` | no | `info` | `debug`, `info`, `warn`, `error` |
-| `STATS_INTERVAL` | no | `1m` | How often control reads the sites access log (1s to 1h) |
-| `STATS_LOG_FILE` | no | `/logs/sites-access.log` | Sites access log inside control; `off` disables statistics |
-| `TELEGRAM_API_URL` | no | `https://api.telegram.org` | Bot API address for form delivery (proxy or tests) |
-| `PUBLISH_OPTIMIZE` | no | `on` | Publish-time optimization: WebP copies of images and fallback `robots.txt`, `sitemap.xml`, `favicon.ico`; site files are never changed (docs/publishing.md) |
-| `FORM_WEBHOOK_ALLOW_CIDRS` | no | | Private networks form webhooks may reach — for every user (test stacks only; the control host itself is always refused) |
-
-## Operations
-
-- **Backup:** `docker compose exec -T control /control backup - > backup-$(date +%F).tar.gz`. See [docs/backup.md](docs/backup.md) for restore.
-- **Upgrade:** `dropsite-update` on servers set up by the installer; by hand, back up, check out the new release tag, then `docker compose pull` and `docker compose up -d --wait`. Your `.env` and data in Docker volumes are preserved. Migrations run automatically; downgrades are not supported. See [upgrade steps](docs/backup.md#upgrade) and [releasing](docs/releasing.md).
-- **Logs:** JSON on stdout of both containers: `docker compose logs -f`. Caddy also writes the sites access log to the `logs` volume for statistics (rotated at 50 MB, 5 old files kept).
-- **Health:** `docker compose ps` shows the `control` health check.
-
-More: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [docs/releasing.md](docs/releasing.md), [docs/tls.md](docs/tls.md), [docs/external-domains.md](docs/external-domains.md), [docs/production-checklist.md](docs/production-checklist.md), [docs/statistics.md](docs/statistics.md), [docs/forms.md](docs/forms.md).
-
-## Security model
-
-- The web interface is on a separate listener that is not reachable from the internet; its session cookie is bound to the interface host only.
-- The API accepts only bearer tokens (never cookies). Tokens are shown once, stored as hashes, can expire and be revoked.
-- Another user's site always answers "not found".
-- Passwords are typed only on the private interface. Chat clients are authorised on the public API host with OAuth 2.1 (PKCE, short-lived access tokens, rotating refresh tokens with reuse detection); the user confirms with a one-time connect code issued in the interface, not with a password.
-- Archives are validated before anything is written: no path traversal, links, devices or zip bombs.
-- Caddy mounts the sites volume read-only and has no access to the database or tokens. Both containers run as non-root with read-only root filesystems.
-
-## Development
+### Development
 
 ```bash
 make tools        # Go and golangci-lint into .tools/ (nothing system-wide)
@@ -272,8 +198,11 @@ make test lint
 scripts/dev-control.sh   # run control natively, UI on http://127.0.0.1:18082
 make dev-up       # full stack in Docker with a local CA: https://<site>.dropsite.localhost:18443
 make e2e
+make release-check
 ```
 
-## License
+Changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
-Apache-2.0
+### License
+
+[Apache-2.0](LICENSE)
