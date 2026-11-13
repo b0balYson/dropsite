@@ -1,6 +1,6 @@
 {
   "order": 3,
   "theme": "#1d1238",
-  "ru": {"title": "Событие", "description": "Дата и место, программа по времени, как добраться и запись.", "site_title": "Летний фестиваль"},
-  "en": {"title": "Event", "description": "Date and place, a timed programme, directions and sign-up.", "site_title": "Summer Festival"}
+  "ru": {"title": "Событие", "description": "Дата и место, программа по времени, как добраться и форма записи.", "site_title": "Летний фестиваль"},
+  "en": {"title": "Event", "description": "Date and place, a timed programme, directions and a sign-up form.", "site_title": "Summer Festival"}
 }

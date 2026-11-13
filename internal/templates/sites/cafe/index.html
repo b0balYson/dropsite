@@ -6,8 +6,8 @@
       <h1>{{.Title}}</h1>
       <p class="lead">{{.T.hero_text}}</p>
       <p class="actions">
-        <a class="btn" href="#menu">{{.T.cta_menu}}</a>
-        <a class="btn btn--ghost" href="tel:+70000000000">{{.T.cta_call}}</a>
+        <a class="btn" href="#booking">{{.T.cta_book}}</a>
+        <a class="btn btn--ghost" href="#menu">{{.T.cta_menu}}</a>
       </p>
     </div>
     <svg class="hero__art" viewBox="0 0 200 200" width="320" height="320" aria-hidden="true" focusable="false">
@@ -43,6 +43,45 @@
       </div>
     </div>
   </section>
+  <section class="section booking" id="booking" aria-labelledby="booking-h">
+    <div class="wrap booking__grid">
+      <div>
+        <h2 id="booking-h">{{.T.booking_title}}</h2>
+        <p class="lead">{{.T.booking_text}}</p>
+        <p class="actions"><a class="btn btn--ghost" href="tel:+70000000000">{{.T.cta_call}}</a></p>
+      </div>
+      <form class="form card" action="/_form/booking" method="post">
+        <p class="form-note">{{.T.form_required}}</p>
+        <div class="form__row">
+          <div class="field">
+            <label for="booking-name">{{.T.f_name}} <span class="req" aria-hidden="true">*</span></label>
+            <input id="booking-name" name="name" autocomplete="name" required maxlength="100">
+          </div>
+          <div class="field">
+            <label for="booking-phone">{{.T.f_phone}} <span class="req" aria-hidden="true">*</span></label>
+            <input id="booking-phone" name="phone" type="tel" autocomplete="tel" required maxlength="40">
+          </div>
+        </div>
+        <div class="form__row">
+          <div class="field">
+            <label for="booking-date">{{.T.f_date}} <span class="req" aria-hidden="true">*</span></label>
+            <input id="booking-date" name="date" type="date" required>
+          </div>
+          <div class="field">
+            <label for="booking-time">{{.T.f_time}} <span class="req" aria-hidden="true">*</span></label>
+            <input id="booking-time" name="time" type="time" min="08:00" max="21:30" step="900" required>
+          </div>
+          <div class="field">
+            <label for="booking-guests">{{.T.f_guests}} <span class="req" aria-hidden="true">*</span></label>
+            <input id="booking-guests" name="guests" type="number" inputmode="numeric" min="1" max="12" value="2" required>
+          </div>
+        </div>
+        {{template "form_guard" .}}
+        <button class="btn" type="submit">{{.T.f_submit}}</button>
+        <p class="form-note">{{.T.form_note}}</p>
+      </form>
+    </div>
+  </section>
   <section class="section section--alt" aria-labelledby="visit-h">
     <div class="wrap grid grid--2">
       <div>
@@ -57,4 +96,6 @@
     </div>
   </section>
 </main>
+<script>(function () { var d = document.getElementById('booking-date'); if (d) { d.min = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10); } })();</script>
+{{template "form_scripts" .}}
 {{template "foot" .}}

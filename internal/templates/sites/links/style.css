@@ -17,5 +17,11 @@ body { background: radial-gradient(120% 60% at 50% 0%, var(--card), var(--paper)
   font-weight: 700; text-decoration: none; transition: transform .15s ease, border-color .15s ease;
 }
 .link:hover { transform: translateY(-2px); border-color: var(--accent); }
+.link--main { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.link:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+.booking { margin-top: 2.5rem; padding: 1.5rem 1.25rem; border-radius: 14px; background: var(--card); border: 2px solid var(--line); text-align: left; scroll-margin-top: 1rem; }
+.booking h2 { font-size: 1.4rem; }
+.booking .form { margin-top: 1rem; --field: var(--paper); --radius-field: 12px; }
+.booking .btn { border-radius: 14px; }
 .site-foot { border: 0; text-align: center; }
 .site-foot .wrap { justify-content: center; }

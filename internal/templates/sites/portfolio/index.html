@@ -32,8 +32,30 @@
     <div class="wrap">
       <h2 id="contact-h">{{.T.contact_title}}</h2>
       <p class="lead">{{.T.contact_text}}</p>
-      <p class="actions"><a class="btn" href="mailto:hello@example.com">hello@example.com</a></p>
+      <form class="form" action="/_form/contact" method="post">
+        <p class="form-note">{{.T.form_required}}</p>
+        <div class="form__row">
+          <div class="field">
+            <label for="contact-name">{{.T.f_name}} <span class="req" aria-hidden="true">*</span></label>
+            <input id="contact-name" name="name" autocomplete="name" required maxlength="100">
+          </div>
+          <div class="field">
+            <label for="contact-email">{{.T.f_email}} <span class="req" aria-hidden="true">*</span></label>
+            <input id="contact-email" name="email" type="email" autocomplete="email" required maxlength="200">
+          </div>
+        </div>
+        <div class="field">
+          <label for="contact-message">{{.T.f_message}} <span class="req" aria-hidden="true">*</span></label>
+          <textarea id="contact-message" name="message" rows="6" required maxlength="4000" aria-describedby="contact-message-hint"></textarea>
+          <p class="form-note" id="contact-message-hint">{{.T.f_message_hint}}</p>
+        </div>
+        {{template "form_guard" .}}
+        <button class="btn" type="submit">{{.T.f_submit}}</button>
+        <p class="form-note">{{.T.form_note}}</p>
+      </form>
+      <p class="muted alt">{{.T.alt_mail}} <a href="mailto:hello@example.com">hello@example.com</a></p>
     </div>
   </section>
 </main>
+{{template "form_scripts" .}}
 {{template "foot" .}}

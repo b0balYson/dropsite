@@ -3,7 +3,8 @@
 // language), strings.json (page texts per language) and its files; *.html
 // files are rendered with html/template, so the site title is always
 // escaped. sites/base.css, sites/layout.html and sites/strings.json are
-// shared by every template, and every template gets a 404.html.
+// shared by every template, and every template gets a 404.html. Every
+// *.html file of a template is a page of the site (index.html, thanks.html).
 package templates
 
 import (
@@ -68,7 +69,17 @@ type page struct {
 	Lang     string
 	Theme    string
 	NotFound bool
-	T        map[string]string
+	// Heading names a secondary page (thanks.html) in its <title>; such a
+	// page is kept out of search results.
+	Heading string
+	T       map[string]string
+}
+
+// Secondary returns a copy of the page data for a secondary page titled
+// heading, e.g. {{template "head" (.Secondary .T.thanks_title)}}.
+func (p page) Secondary(heading string) page {
+	p.Heading = heading
+	return p
 }
 
 // Lang returns a supported language: l itself, or the default.

@@ -51,7 +51,7 @@ If something fails, run the same command again: finished steps are skipped. Deta
 - **Change a site from any new chat.** The assistant reads the published files from the server, changes only what you asked for and publishes a new version.
 - **Or publish without a chat.** Drag a zip or tar.gz onto a site in the web interface, run `dropsite deploy ./folder`, or call the HTTP API.
 - **Show a site you like.** Give a link or a picture, and you get an original site in a similar style: palette, fonts, spacing and layout, never the other site's texts, images or logo ([docs/references.md](docs/references.md)).
-- **Start from a template when you ask for one.** Five starter sites (cafe, services, event, portfolio, links) in English or Russian; otherwise the assistant designs each site from scratch ([docs/screenshots.md](docs/screenshots.md#templates)).
+- **Start from a template when you ask for one.** Five starter sites (cafe, services, event, portfolio, links) in English or Russian, each with a working request form; otherwise the assistant designs each site from scratch ([docs/screenshots.md](docs/screenshots.md#templates)).
 - **Copy a site** into a new one to try a different version without touching the original.
 
 ### Publish safely

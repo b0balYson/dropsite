@@ -8,6 +8,15 @@
     "l3": "Магазин принтов",
     "l4": "Записаться на съёмку",
     "l5": "Написать на почту",
+    "booking_title": "Запись на съёмку",
+    "booking_text": "Оставьте телефон — перезвоню, обсудим идею, место и время.",
+    "f_name": "Имя",
+    "f_phone": "Телефон",
+    "f_date": "Желаемая дата",
+    "f_submit": "Записаться",
+    "thanks_title": "Заявка отправлена",
+    "thanks_text": "Спасибо! Перезвоню в течение дня, и мы договоримся о съёмке.",
+    "thanks_back": "Вернуться к ссылкам",
     "footer": "Сайт опубликован с dropsite"
   },
   "en": {
@@ -19,6 +28,15 @@
     "l3": "Print shop",
     "l4": "Book a photo session",
     "l5": "Send an e-mail",
+    "booking_title": "Book a photo session",
+    "booking_text": "Leave your phone number and I will call you back to talk through the idea, place and time.",
+    "f_name": "Name",
+    "f_phone": "Phone",
+    "f_date": "Preferred date",
+    "f_submit": "Book a session",
+    "thanks_title": "Request sent",
+    "thanks_text": "Thank you! I will call you back within a day to arrange the session.",
+    "thanks_back": "Back to the links",
     "footer": "Published with dropsite"
   }
 }

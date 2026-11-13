@@ -1,6 +1,6 @@
 {
   "order": 1,
   "theme": "#2b1d14",
-  "ru": {"title": "Кафе или кофейня", "description": "Меню с ценами, часы работы, адрес с картой и телефон.", "site_title": "Кофейня у реки"},
-  "en": {"title": "Café or coffee shop", "description": "Menu with prices, opening hours, address with a map link and phone.", "site_title": "Riverside Coffee"}
+  "ru": {"title": "Кафе или кофейня", "description": "Меню с ценами, бронь стола через форму, часы работы и адрес с картой.", "site_title": "Кофейня у реки"},
+  "en": {"title": "Café or coffee shop", "description": "Menu with prices, table booking through a form, opening hours and address with a map link.", "site_title": "Riverside Coffee"}
 }

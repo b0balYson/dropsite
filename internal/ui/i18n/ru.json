@@ -127,7 +127,7 @@
   "workflow.templates.pick": "Шаблон",
   "workflow.templates.lang": "Язык шаблона",
   "workflow.templates.submit": "Создать и опубликовать",
-  "workflow.template.done": "Сайт создан из шаблона и опубликован.",
+  "workflow.template.done": "Сайт создан из шаблона и опубликован. Заявки с его формы появятся в разделе «Заявки» — подключите там Telegram или почту, чтобы получать их сразу.",
   "source.ui": "через интерфейс",
   "source.api": "через API",
   "source.cli": "через CLI",

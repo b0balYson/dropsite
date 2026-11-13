@@ -11,6 +11,10 @@
 .hero__art { width: min(100%, 320px); margin-inline: auto; }
 @media (min-width: 48rem) { .hero__grid { grid-template-columns: 1.3fr 1fr; } }
 .section--alt { background: var(--card); }
+.booking__grid { display: grid; gap: 2rem; align-items: start; }
+@media (min-width: 52rem) { .booking__grid { grid-template-columns: 1fr 1.4fr; } }
+.booking .form { margin-top: 0; max-width: none; --radius-field: 12px; border-style: dashed; }
+.booking .field input { font-variant-numeric: tabular-nums; }
 .menu { margin: 0; }
 .menu div { display: flex; justify-content: space-between; gap: 1rem; padding-block: .6rem; border-bottom: 1px dashed var(--line); }
 .menu dt { font-weight: 600; }

@@ -15,4 +15,11 @@
 .work__art--3 { background: repeating-linear-gradient(90deg, #2d3a8c 0 18px, #3e4fb8 18px 36px); }
 .work__art--4 { background: conic-gradient(from 45deg, #e2475a, #f2b134, #2fa58b, #e2475a); }
 .section--alt { background: var(--card); }
+/* Editorial form: underlined fields, square corners, ink button. */
+#contact .form { --form-width: 46rem; --radius-field: 0; }
+#contact .field input, #contact .field textarea { border-width: 0 0 2px; border-color: var(--ink); background: transparent; padding-inline: 0; }
+#contact .field input:focus-visible, #contact .field textarea:focus-visible { outline-offset: 4px; }
+#contact .field label { text-transform: uppercase; letter-spacing: .1em; font-size: .8rem; }
+.alt { margin-top: 2rem; }
+.hero--thanks { min-height: 75vh; display: grid; align-content: end; }
 .narrow { max-width: 46rem; }

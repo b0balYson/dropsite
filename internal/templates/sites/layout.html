@@ -3,12 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{if .NotFound}}{{.T.notfound_title}} · {{end}}{{.Title}}</title>
+<title>{{if .NotFound}}{{.T.notfound_title}} · {{else if .Heading}}{{.Heading}} · {{end}}{{.Title}}</title>
 <meta name="description" content="{{.T.description}}">
 <meta property="og:title" content="{{.Title}}">
 <meta property="og:description" content="{{.T.description}}">
 <meta property="og:type" content="website">
-<meta name="theme-color" content="{{.Theme}}">
+<meta name="theme-color" content="{{.Theme}}">{{if .Heading}}
+<meta name="robots" content="noindex">{{end}}
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/base.css">
 <link rel="stylesheet" href="/style.css">
@@ -26,6 +27,21 @@
 </footer>
 </body>
 </html>
+{{end}}
+
+{{/* Service fields of every form: honeypot, fill time, the page shown
+     after sending and the Altcha check (harmless until the owner turns it
+     on). "form_scripts" goes once at the end of a page with a form. */}}
+{{define "form_guard"}}
+<p class="hp" aria-hidden="true"><label>{{.T.form_hp}} <input name="_hp" tabindex="-1" autocomplete="off"></label></p>
+<input type="hidden" name="_t" value="">
+<input type="hidden" name="_next" value="/thanks.html">
+<altcha-widget challenge="/_form/challenge"></altcha-widget>
+{{end}}
+
+{{define "form_scripts"}}
+<script>document.querySelectorAll('input[name="_t"]').forEach(function (i) { i.value = Date.now(); });</script>
+<script async defer src="/_dropsite/altcha.js" type="module"></script>
 {{end}}
 
 {{define "notfound"}}{{template "head" .}}

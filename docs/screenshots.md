@@ -6,7 +6,17 @@
 
 ## Templates
 
-Five starter sites are built into the binary: `cafe`, `services`, `event`, `portfolio` and `links`. Each is a few kilobytes of HTML and CSS with SVG icons, works from 360 px wide, has Russian and English texts, `404.html` and a favicon, and loads nothing from other servers. `GET /api/v1/templates`, `POST /api/v1/templates/{name}/sites` (`title`, `slug`, `lang`), the MCP tools `list_templates` and `create_site_from_template` and the "Start from a template" panel create and publish such a site; the title is escaped into the pages. Change the sample texts afterwards like any site.
+Five starter sites are built into the binary: `cafe`, `services`, `event`, `portfolio` and `links`. Each is a few kilobytes of HTML and CSS with SVG icons, works from 360 px wide, has Russian and English texts, `404.html` and a favicon, and loads nothing from other servers. Each collects requests through the site's own [form](forms.md) (honeypot, fill time, Altcha widget) and shows its `thanks.html` after sending; the main button leads to the form, the phone and e-mail stay as secondary contacts:
+
+| Template | Form | Fields |
+| --- | --- | --- |
+| `cafe` | `booking` | name, phone, date, time, guests |
+| `services` | `lead` | name, phone, service (from the price list), task |
+| `event` | `signup` | name, e-mail or phone, number of people |
+| `portfolio` | `contact` | name, e-mail, message |
+| `links` | `booking` | name, phone, preferred date (the "book a session" link scrolls to it) |
+
+Submissions appear under the site's **Requests** and go on to the Telegram, e-mail or webhook channels the owner connects. `GET /api/v1/templates`, `POST /api/v1/templates/{name}/sites` (`title`, `slug`, `lang`), the MCP tools `list_templates` and `create_site_from_template` and the "Start from a template" panel create and publish such a site; the title is escaped into the pages. Change the sample texts afterwards like any site.
 
 ## Scheduled publishes
 

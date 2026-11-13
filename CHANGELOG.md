@@ -10,6 +10,12 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+### Added
+
+- Starter templates collect requests through the built-in forms (table
+  booking, request, sign-up, contact) with a thanks page instead of mailto:
+  and tel: buttons; the anti-robot check runs when the form is sent.
+
 ## [0.2.0] - 2026-11-13
 
 ### Changed

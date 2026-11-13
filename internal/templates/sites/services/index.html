@@ -48,11 +48,45 @@
     <div class="wrap">
       <h2 id="contact-h">{{.T.contact_title}}</h2>
       <p class="lead">{{.T.contact_text}}</p>
-      <p class="actions">
-        <a class="btn" href="tel:+70000000000">+7 000 000-00-00</a>
-        <a class="btn btn--ghost" href="mailto:hello@example.com">hello@example.com</a>
-      </p>
+      <div class="contact">
+        <form class="form" action="/_form/lead" method="post">
+          <p class="form-note">{{.T.form_required}}</p>
+          <div class="form__row">
+            <div class="field">
+              <label for="lead-name">{{.T.f_name}} <span class="req" aria-hidden="true">*</span></label>
+              <input id="lead-name" name="name" autocomplete="name" required maxlength="100">
+            </div>
+            <div class="field">
+              <label for="lead-phone">{{.T.f_phone}} <span class="req" aria-hidden="true">*</span></label>
+              <input id="lead-phone" name="phone" type="tel" autocomplete="tel" required maxlength="40">
+            </div>
+          </div>
+          <div class="field">
+            <label for="lead-service">{{.T.f_service}}</label>
+            <select id="lead-service" name="service">
+              <option value="">{{.T.f_service_any}}</option>
+              <option>{{.T.p1}}</option>
+              <option>{{.T.p2}}</option>
+              <option>{{.T.p3}}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="lead-message">{{.T.f_message}}</label>
+            <textarea id="lead-message" name="message" rows="4" maxlength="2000" aria-describedby="lead-message-hint"></textarea>
+            <p class="form-note" id="lead-message-hint">{{.T.f_message_hint}}</p>
+          </div>
+          {{template "form_guard" .}}
+          <button class="btn" type="submit">{{.T.f_submit}}</button>
+          <p class="form-note">{{.T.form_note}}</p>
+        </form>
+        <aside class="contact__alt" aria-labelledby="alt-h">
+          <h3 id="alt-h">{{.T.alt_title}}</h3>
+          <p><a href="tel:+70000000000">+7 000 000-00-00</a><br><a href="mailto:hello@example.com">hello@example.com</a></p>
+          <p class="muted">{{.T.alt_hours}}</p>
+        </aside>
+      </div>
     </div>
   </section>
 </main>
+{{template "form_scripts" .}}
 {{template "foot" .}}

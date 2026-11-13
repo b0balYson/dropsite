@@ -1,0 +1,20 @@
+{{template "head" (.Secondary .T.thanks_title)}}
+<main id="main" class="hero">
+  <div class="wrap hero__grid">
+    <div>
+      <p class="eyebrow">{{.Title}}</p>
+      <h1>{{.T.thanks_title}}</h1>
+      <p class="lead">{{.T.thanks_text}}</p>
+      <p>{{.T.address}}<br>{{.T.hours_weekdays}}<br>{{.T.hours_weekend}}</p>
+      <p class="actions"><a class="btn" href="/">{{.T.thanks_back}}</a></p>
+    </div>
+    <svg class="hero__art" viewBox="0 0 200 200" width="320" height="320" aria-hidden="true" focusable="false">
+      <circle cx="100" cy="100" r="96" style="fill: var(--card)"/>
+      <path d="M52 86h84v34a42 42 0 0 1-84 0z" style="fill: var(--accent)"/>
+      <path d="M136 94h10a16 16 0 0 1 0 32h-12" fill="none" stroke-width="8" style="stroke: var(--accent)"/>
+      <path d="M76 110l16 16 32-34" fill="none" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--on-accent)"/>
+      <ellipse cx="94" cy="166" rx="56" ry="8" style="fill: var(--line)"/>
+    </svg>
+  </div>
+</main>
+{{template "foot" .}}

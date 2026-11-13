@@ -8,7 +8,8 @@ body {
   color: var(--ink);
   background: var(--paper);
 }
-img, svg { display: block; max-width: 100%; height: auto; }
+/* The Altcha widget renders its own SVGs in the page: leave them alone. */
+:where(img, svg):not(altcha-widget *) { display: block; max-width: 100%; height: auto; }
 h1, h2, h3 { line-height: 1.15; margin: 0 0 .5em; font-family: var(--display, inherit); }
 h1 { font-size: clamp(2.2rem, 1.4rem + 4vw, 4rem); letter-spacing: -.02em; }
 h2 { font-size: clamp(1.5rem, 1.2rem + 1.5vw, 2.2rem); }
@@ -35,6 +36,36 @@ a:focus-visible, button:focus-visible { outline: 3px solid var(--focus, var(--ac
 .grid { display: grid; gap: 1rem; }
 @media (min-width: 40rem) { .grid--2 { grid-template-columns: repeat(2, 1fr); } .grid--3 { grid-template-columns: repeat(3, 1fr); } }
 .card { padding: 1.5rem; border-radius: var(--radius-card, 16px); background: var(--card); border: 1px solid var(--line); }
+button.btn { font: inherit; font-weight: 700; cursor: pointer; }
+/* Forms post to /_form/<name>; every control is at least 48px tall. */
+.form { display: grid; gap: 1rem; max-width: var(--form-width, 36rem); margin-top: 1.5rem; }
+.form__row { display: grid; gap: 1rem; }
+@media (min-width: 34rem) { .form__row { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); } }
+.field { display: grid; gap: .35rem; }
+.field label { font-weight: 700; }
+.field--short { max-width: 12rem; }
+.form + p { margin-top: 1.5rem; }
+.req { color: var(--accent-ink); }
+.field input, .field select, .field textarea {
+  width: 100%; min-height: 48px; padding: .7rem .9rem; font: inherit; color: var(--ink);
+  background: var(--field, var(--paper)); border: 2px solid var(--line); border-radius: var(--radius-field, 10px);
+  transition: border-color .15s ease;
+}
+.field textarea { min-height: 7.5rem; resize: vertical; }
+.field input:hover, .field select:hover, .field textarea:hover { border-color: var(--muted); }
+.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible {
+  outline: 3px solid var(--focus, var(--accent)); outline-offset: 2px; border-color: var(--accent);
+}
+@media (min-width: 34rem) { .form .btn { justify-self: start; min-width: 12rem; } }
+.form-note { font-size: .9rem; color: var(--muted); margin: 0; }
+.hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+altcha-widget {
+  display: block; color: var(--muted); font-size: .95rem;
+  --altcha-max-width: 100%; --altcha-border-radius: var(--radius-field, 10px); --altcha-border-width: 2px;
+  --altcha-border-color: var(--line); --altcha-color-base: var(--field, var(--paper)); --altcha-color-base-content: var(--ink);
+  --altcha-color-neutral: var(--line); --altcha-color-primary: var(--accent); --altcha-color-primary-content: var(--on-accent);
+  --altcha-spinner-color: var(--muted);
+}
 .site-foot { padding-block: 2rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .95rem; }
 .site-foot .wrap { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }

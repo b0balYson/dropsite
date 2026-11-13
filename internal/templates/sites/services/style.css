@@ -12,6 +12,13 @@
 .steps { counter-reset: step; list-style: none; padding: 0; display: grid; gap: .75rem; max-width: 40rem; }
 .steps li { counter-increment: step; display: flex; gap: 1rem; align-items: baseline; }
 .steps li::before { content: counter(step); font-weight: 800; color: var(--accent-ink); min-width: 1.5rem; }
+.contact { display: grid; gap: 2rem; align-items: start; }
+@media (min-width: 52rem) { .contact { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } }
+.contact .form { margin-top: 0; max-width: none; padding: 1.5rem; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); }
+.contact__alt { padding: 1.5rem; border-left: 4px solid var(--accent); }
+.contact__alt a { font-weight: 700; display: inline-block; padding-block: .6rem; }
+.hero--thanks { min-height: 70vh; display: grid; align-content: center; }
+.icon--done { width: 3.5rem; height: 3.5rem; font-size: 1.6rem; }
 .prices { width: 100%; max-width: 40rem; border-collapse: collapse; }
 .prices th, .prices td { padding: .85rem 0; border-bottom: 1px solid var(--line); text-align: left; }
 .prices td { text-align: right; font-weight: 700; }

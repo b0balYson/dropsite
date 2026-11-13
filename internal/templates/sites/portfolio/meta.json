@@ -1,6 +1,6 @@
 {
   "order": 4,
   "theme": "#111111",
-  "ru": {"title": "Портфолио", "description": "О себе, избранные работы и контакты для заказчиков.", "site_title": "Анна Смирнова — дизайн"},
-  "en": {"title": "Portfolio", "description": "About you, selected work and contacts for clients.", "site_title": "Anna Smith Design"}
+  "ru": {"title": "Портфолио", "description": "О себе, избранные работы и форма для заказчиков.", "site_title": "Анна Смирнова — дизайн"},
+  "en": {"title": "Portfolio", "description": "About you, selected work and a contact form for clients.", "site_title": "Anna Smith Design"}
 }

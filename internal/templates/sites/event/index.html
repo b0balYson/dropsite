@@ -34,8 +34,28 @@
     <div class="wrap">
       <h2 id="signup-h">{{.T.signup_title}}</h2>
       <p class="lead">{{.T.signup_text}}</p>
-      <p class="actions"><a class="btn" href="mailto:hello@example.com">hello@example.com</a></p>
+      <form class="form card" action="/_form/signup" method="post">
+        <p class="form-note">{{.T.form_required}}</p>
+        <div class="field">
+          <label for="signup-name">{{.T.f_name}} <span class="req" aria-hidden="true">*</span></label>
+          <input id="signup-name" name="name" autocomplete="name" required maxlength="100">
+        </div>
+        <div class="field">
+          <label for="signup-contact">{{.T.f_contact}} <span class="req" aria-hidden="true">*</span></label>
+          <input id="signup-contact" name="contact" autocomplete="email" required maxlength="100" aria-describedby="signup-contact-hint">
+          <p class="form-note" id="signup-contact-hint">{{.T.f_contact_hint}}</p>
+        </div>
+        <div class="field field--short">
+          <label for="signup-people">{{.T.f_people}} <span class="req" aria-hidden="true">*</span></label>
+          <input id="signup-people" name="people" type="number" inputmode="numeric" min="1" max="10" value="1" required>
+        </div>
+        {{template "form_guard" .}}
+        <button class="btn" type="submit">{{.T.f_submit}}</button>
+        <p class="form-note">{{.T.form_note}}</p>
+      </form>
+      <p class="muted">{{.T.signup_questions}} <a href="mailto:hello@example.com">hello@example.com</a></p>
     </div>
   </section>
 </main>
+{{template "form_scripts" .}}
 {{template "foot" .}}

@@ -14,9 +14,32 @@
       <li><a class="link" href="https://t.me/example">{{.T.l1}}</a></li>
       <li><a class="link" href="https://instagram.com/example">{{.T.l2}}</a></li>
       <li><a class="link" href="https://example.com/shop">{{.T.l3}}</a></li>
-      <li><a class="link" href="tel:+70000000000">{{.T.l4}}</a></li>
+      <li><a class="link link--main" href="#booking">{{.T.l4}}</a></li>
       <li><a class="link" href="mailto:hello@example.com">{{.T.l5}}</a></li>
     </ul>
   </nav>
+  <section class="booking" id="booking" aria-labelledby="booking-h">
+    <h2 id="booking-h">{{.T.booking_title}}</h2>
+    <p class="bio">{{.T.booking_text}}</p>
+    <form class="form" action="/_form/booking" method="post">
+      <p class="form-note">{{.T.form_required}}</p>
+      <div class="field">
+        <label for="booking-name">{{.T.f_name}} <span class="req" aria-hidden="true">*</span></label>
+        <input id="booking-name" name="name" autocomplete="name" required maxlength="100">
+      </div>
+      <div class="field">
+        <label for="booking-phone">{{.T.f_phone}} <span class="req" aria-hidden="true">*</span></label>
+        <input id="booking-phone" name="phone" type="tel" autocomplete="tel" required maxlength="40">
+      </div>
+      <div class="field">
+        <label for="booking-date">{{.T.f_date}}</label>
+        <input id="booking-date" name="date" type="date">
+      </div>
+      {{template "form_guard" .}}
+      <button class="btn" type="submit">{{.T.f_submit}}</button>
+      <p class="form-note">{{.T.form_note}}</p>
+    </form>
+  </section>
 </main>
+{{template "form_scripts" .}}
 {{template "foot" .}}

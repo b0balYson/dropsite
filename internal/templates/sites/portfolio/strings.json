@@ -14,6 +14,15 @@
     "about_text": "Десять лет в дизайне. Работаю напрямую с заказчиком, без посредников, и всегда показываю промежуточный результат.",
     "contact_title": "Контакты",
     "contact_text": "Расскажите о задаче — отвечу в течение дня.",
+    "f_name": "Имя",
+    "f_email": "Почта",
+    "f_message": "О проекте",
+    "f_message_hint": "Что нужно сделать, к какому сроку и есть ли ориентир по бюджету.",
+    "f_submit": "Отправить",
+    "alt_mail": "Или напишите на почту:",
+    "thanks_title": "Письмо получено",
+    "thanks_text": "Спасибо, что написали. Прочитаю и отвечу на указанную почту в течение дня.",
+    "thanks_back": "Смотреть работы",
     "footer": "Сайт опубликован с dropsite"
   },
   "en": {
@@ -31,6 +40,15 @@
     "about_text": "Ten years in design. I work directly with clients, without middlemen, and always show work in progress.",
     "contact_title": "Contact",
     "contact_text": "Tell me about your project: I reply within a day.",
+    "f_name": "Name",
+    "f_email": "E-mail",
+    "f_message": "About the project",
+    "f_message_hint": "What needs doing, by when, and a rough budget if you have one.",
+    "f_submit": "Send",
+    "alt_mail": "Or write directly:",
+    "thanks_title": "Message received",
+    "thanks_text": "Thank you for writing. I will read it and reply to your e-mail within a day.",
+    "thanks_back": "See the work",
     "footer": "Published with dropsite"
   }
 }

@@ -127,7 +127,7 @@
   "workflow.templates.pick": "模板",
   "workflow.templates.lang": "模板语言",
   "workflow.templates.submit": "创建并发布",
-  "workflow.template.done": "已用模板创建网站并发布。",
+  "workflow.template.done": "已用模板创建网站并发布。网站表单的提交会显示在“表单提交”中：在那里连接 Telegram 或邮箱即可及时收到。",
   "source.ui": "通过界面",
   "source.api": "通过 API",
   "source.cli": "通过命令行",

@@ -85,6 +85,106 @@ func checkPage(t *testing.T, p, body, lang string) {
 	}
 }
 
+// formNames is the form every template posts to (docs/forms.md).
+var formNames = map[string]string{
+	"cafe": "booking", "services": "lead", "event": "signup", "portfolio": "contact", "links": "booking",
+}
+
+var (
+	formAction = regexp.MustCompile(`<form [^>]*action="/_form/([a-z0-9_-]+)" method="post"`)
+	nextField  = regexp.MustCompile(`<input type="hidden" name="_next" value="([^"]*)">`)
+	fieldID    = regexp.MustCompile(`<(?:input|select|textarea) id="([^"]+)" name="([^"_][^"]*)"`)
+	firstBtn   = regexp.MustCompile(`<a class="btn" href="([^"]*)"`)
+)
+
+// Every template collects requests through the platform's forms: one form
+// with the honeypot, the fill time, the Altcha widget and a same-site
+// _next page that exists, every field labelled, and the main button
+// leading to the form instead of mailto: or tel:.
+func TestEveryTemplateHasAWorkingForm(t *testing.T) {
+	for _, info := range List("ru") {
+		for _, lang := range Languages {
+			t.Run(info.Name+"/"+lang, func(t *testing.T) {
+				files, err := Render(info.Name, lang, "")
+				if err != nil {
+					t.Fatal(err)
+				}
+				i := indexOf(files, "index.html")
+				if i < 0 {
+					t.Fatal("no index.html")
+				}
+				body := string(files[i].Data)
+				checkForm(t, info.Name, body)
+				m := nextField.FindStringSubmatch(body)
+				if m == nil || !strings.HasPrefix(m[1], "/") || strings.HasPrefix(m[1], "//") {
+					t.Fatalf("_next %v is not a same-site path", m)
+				}
+				thanks := indexOf(files, strings.TrimPrefix(m[1], "/"))
+				if thanks < 0 {
+					t.Fatalf("_next points to %s, which the template does not have", m[1])
+				}
+				page := string(files[thanks].Data)
+				if !strings.Contains(page, `href="/`) || !strings.Contains(page, `name="robots" content="noindex"`) ||
+					strings.Contains(page, "<form") {
+					t.Errorf("thanks page: no link back, indexable or has a form")
+				}
+				if b := firstBtn.FindStringSubmatch(body); b == nil || !strings.HasPrefix(b[1], "#") {
+					if info.Name != "links" {
+						t.Errorf("main button %v does not lead to the page", b)
+					}
+				}
+			})
+		}
+	}
+}
+
+func checkForm(t *testing.T, name, body string) {
+	t.Helper()
+	acts := formAction.FindAllStringSubmatch(body, -1)
+	if len(acts) != 1 || acts[0][1] != formNames[name] {
+		t.Fatalf("forms %v, want one /_form/%s", acts, formNames[name])
+	}
+	if s := sectionOf(body); s == "" || !strings.Contains(body, `href="#`+s+`"`) {
+		t.Errorf("nothing links to the form section")
+	}
+	for _, want := range []string{
+		`name="_hp" tabindex="-1" autocomplete="off"`, `class="hp" aria-hidden="true"`, `name="_t"`,
+		`<altcha-widget challenge="/_form/challenge"></altcha-widget>`,
+		`<script async defer src="/_dropsite/altcha.js" type="module"></script>`,
+		`input[name="_t"]`, `Date.now()`, `<button class="btn" type="submit">`, " required",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("form: missing %s", want)
+		}
+	}
+	if strings.Contains(body, `type="hidden" name="_hp"`) {
+		t.Error("honeypot must not be type=hidden")
+	}
+	fields := fieldID.FindAllStringSubmatch(body, -1)
+	if len(fields) < 3 {
+		t.Fatalf("form has %d fields", len(fields))
+	}
+	for _, f := range fields {
+		if !strings.Contains(body, `<label for="`+f[1]+`">`) {
+			t.Errorf("field %s has no label", f[2])
+		}
+	}
+}
+
+// sectionOf returns the id of the section that holds the form.
+func sectionOf(body string) string {
+	i := strings.Index(body, "<form ")
+	j := strings.LastIndex(body[:i], `<section class="`)
+	if j < 0 {
+		return ""
+	}
+	m := regexp.MustCompile(`id="([^"]+)"`).FindStringSubmatch(body[j:i])
+	if m == nil {
+		return ""
+	}
+	return m[1]
+}
+
 func TestRenderEscapesTitle(t *testing.T) {
 	files, err := Render("cafe", "en", `<script>alert(1)</script> & Co`)
 	if err != nil {

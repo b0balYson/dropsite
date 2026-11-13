@@ -1,0 +1,11 @@
+{{template "head" (.Secondary .T.thanks_title)}}
+<main id="main" class="hero hero--thanks">
+  <div class="wrap">
+    <p class="when"><span>{{.T.date}}</span> <span>{{.T.time}}</span></p>
+    <h1>{{.T.thanks_title}}</h1>
+    <p class="lead">{{.T.thanks_text}}</p>
+    <p class="place">{{.T.place}}</p>
+    <p class="actions"><a class="btn" href="/#program">{{.T.thanks_back}}</a></p>
+  </div>
+</main>
+{{template "foot" .}}

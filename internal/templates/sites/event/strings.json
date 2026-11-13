@@ -16,7 +16,16 @@
     "where_text": "Вход с главной аллеи. Ближайшая остановка — «Парк», 5 минут пешком.",
     "map_link": "Открыть на карте",
     "signup_title": "Запись",
-    "signup_text": "Вход свободный, но мест на мастер-классах мало. Напишите нам, чтобы занять место.",
+    "signup_text": "Вход свободный, но мест на мастер-классах мало. Оставьте заявку, и мы сохраним места за вами.",
+    "f_name": "Имя",
+    "f_contact": "Почта или телефон",
+    "f_contact_hint": "Пришлём подтверждение и напомним о событии накануне.",
+    "f_people": "Сколько вас будет",
+    "f_submit": "Записаться",
+    "signup_questions": "Остались вопросы? Пишите:",
+    "thanks_title": "Вы записаны!",
+    "thanks_text": "Спасибо, заявка у нас. Мы пришлём подтверждение, а накануне напомним о событии.",
+    "thanks_back": "Вернуться к программе",
     "footer": "Сайт опубликован с dropsite"
   },
   "en": {
@@ -36,7 +45,16 @@
     "where_text": "Enter from the main alley. The nearest stop is Park, a 5-minute walk.",
     "map_link": "Open in maps",
     "signup_title": "Sign up",
-    "signup_text": "Entry is free, but workshop seats are limited. Write to us to save a seat.",
+    "signup_text": "Entry is free, but workshop seats are limited. Sign up and we will keep seats for you.",
+    "f_name": "Name",
+    "f_contact": "E-mail or phone",
+    "f_contact_hint": "We will confirm your sign-up and remind you the day before.",
+    "f_people": "Number of people",
+    "f_submit": "Sign up",
+    "signup_questions": "Any questions? Write to us:",
+    "thanks_title": "You are signed up!",
+    "thanks_text": "Thank you, we have your request. We will confirm it and remind you the day before the event.",
+    "thanks_back": "Back to the programme",
     "footer": "Published with dropsite"
   }
 }

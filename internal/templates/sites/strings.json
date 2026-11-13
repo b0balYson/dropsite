@@ -3,12 +3,18 @@
     "skip": "Перейти к содержанию",
     "notfound_title": "Страница не найдена",
     "notfound_text": "Такой страницы здесь нет. Возможно, адрес изменился.",
-    "notfound_home": "На главную"
+    "notfound_home": "На главную",
+    "form_hp": "Оставьте это поле пустым",
+    "form_required": "Поля со звёздочкой обязательны.",
+    "form_note": "Отправляя форму, вы соглашаетесь, что мы используем эти данные только для ответа на заявку."
   },
   "en": {
     "skip": "Skip to content",
     "notfound_title": "Page not found",
     "notfound_text": "There is no such page here. The address may have changed.",
-    "notfound_home": "Back to the home page"
+    "notfound_home": "Back to the home page",
+    "form_hp": "Leave this field empty",
+    "form_required": "Fields marked with an asterisk are required.",
+    "form_note": "By sending the form you agree that we use these details only to reply to your request."
   }
 }

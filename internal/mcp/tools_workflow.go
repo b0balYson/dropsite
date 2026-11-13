@@ -90,7 +90,9 @@ func (t tools) registerWorkflow(s *sdk.Server, o Options) {
 	sdk.AddTool(s, &sdk.Tool{Name: "create_site_from_template", Annotations: writes("Create site from template", false, false),
 		Description: "Create and publish a new site from the starter site the user chose in list_templates, with " +
 			"their site name, then replace every sample text, price and contact with the user's own (list_site_files, " +
-			"read_site_files, update_site_files). Reply with the link."}, t.createFromTemplate)
+			"read_site_files, update_site_files). Reply with the link, and say in one line that requests from the " +
+			"site's form appear under the site's Requests and that connecting Telegram or e-mail (add_channel) sends " +
+			"them on."}, t.createFromTemplate)
 	sdk.AddTool(s, &sdk.Tool{Name: "schedule_publish", Annotations: writes("Schedule publish", false, false),
 		Description: "Make a version go live at a given time, e.g. \"publish the sale on Monday at 9\". Either pass " +
 			"upload_id of an upload (begin_upload, upload_files) instead of calling commit_upload: it becomes a " +

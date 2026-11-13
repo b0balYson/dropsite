@@ -51,7 +51,7 @@ curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/ins
 - **在任意新对话中修改网站。** 助手会从服务器读取已发布的文件，只修改您要求的部分，然后发布一个新版本。
 - **不用对话也能发布。** 在网页管理界面中把 zip 或 tar.gz 拖到网站上，运行 `dropsite deploy ./文件夹`，或调用 HTTP API。
 - **给出您喜欢的网站。** 提供链接或图片，就能得到风格相似的原创网站：配色、字体、间距和布局相近，但绝不会复制对方的文字、图片或标志（[docs/references.md](docs/references.md)）。
-- **仅在您要求时使用模板。** 五个起步网站（咖啡馆、服务、活动、作品集、链接页），提供英文或俄文内容；其他情况下，助手会为每个网站从头设计（[docs/screenshots.md](docs/screenshots.md#templates)）。
+- **仅在您要求时使用模板。** 五个起步网站（咖啡馆、服务、活动、作品集、链接页），提供英文或俄文内容，每个都带有可用的申请表单；其他情况下，助手会为每个网站从头设计（[docs/screenshots.md](docs/screenshots.md#templates)）。
 - **复制网站**，在不影响原网站的情况下尝试另一种方案。
 
 ### 放心发布

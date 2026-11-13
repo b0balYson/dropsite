@@ -143,7 +143,7 @@ Details: [screenshots.md](screenshots.md).
 
 | Tool | What it does |
 | --- | --- |
-| `list_templates`, `create_site_from_template` | five built-in starter sites (cafe, services, event, portfolio, links) in Russian or English, created and published in one call |
+| `list_templates`, `create_site_from_template` | five built-in starter sites (cafe, services, event, portfolio, links) in Russian or English with a working request form, created and published in one call |
 | `clone_site` | a new site from the served release of a site; only files are copied |
 | `schedule_publish` | `publish_at` (RFC 3339 with the user's zone) plus `upload_id` (the session becomes a prepared release) or `site` + `deploy_id` |
 | `list_scheduled_publishes`, `cancel_scheduled_publish` | waiting and recent publishes; cancel a waiting one |

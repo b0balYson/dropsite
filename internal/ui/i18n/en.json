@@ -127,7 +127,7 @@
   "workflow.templates.pick": "Template",
   "workflow.templates.lang": "Template language",
   "workflow.templates.submit": "Create and publish",
-  "workflow.template.done": "Site created from the template and published.",
+  "workflow.template.done": "Site created from the template and published. Requests from its form appear under Requests: connect Telegram or e-mail there to get them right away.",
   "source.ui": "via interface",
   "source.api": "via API",
   "source.cli": "via CLI",
