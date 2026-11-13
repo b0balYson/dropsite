@@ -21,7 +21,7 @@
   <li class="site-row">
     <span class="site-row__index mono" aria-hidden="true">{{printf "%02d" (inc $i)}}</span>
     <div class="site-row__main">
-      <h2 class="site-row__title"><a href="/sites/{{$s.ID}}">{{$s.Title}}</a>{{if $s.HasApex}} <span class="badge badge--current">{{$.L.T "allsites.apex.badge"}}</span>{{end}}</h2>
+      <h2 class="site-row__title"><a href="/sites/{{$s.ID}}">{{$s.Title}}</a>{{if $s.HasApex}} <span class="badge badge--info">{{$.L.T "allsites.apex.badge"}}</span>{{end}}</h2>
       <ul class="addr-list">
         {{range $j, $u := $s.URLs}}<li><a class="addr{{if eq $j 0}} addr--primary{{end}} mono" href="{{$u}}" title="{{$u}}" target="_blank" rel="noopener noreferrer">{{wbr (host $u)}}</a></li>{{end}}
       </ul>

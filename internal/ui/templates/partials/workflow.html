@@ -70,7 +70,7 @@
     <li class="schedule schedule--{{.Status}}">
       <span>{{$.L.Date .PublishAt}}</span>
       <span class="mono">{{.DeployID}}</span>
-      <span class="badge {{if eq .Status "pending"}}badge--current{{else if eq .Status "done"}}badge--ok{{else}}badge--muted{{end}}">{{$.L.T (printf "workflow.status.%s" .Status)}}</span>
+      <span class="badge {{if eq .Status "pending"}}badge--info{{else if eq .Status "done"}}badge--ok{{else}}badge--muted{{end}}">{{$.L.T (printf "workflow.status.%s" .Status)}}</span>
       {{if .PreviewURL}}<a href="{{.PreviewURL}}" target="_blank" rel="noopener noreferrer">{{$.L.T "history.preview"}}</a>{{end}}
       {{if .Error}}<span class="muted small">{{.Error}}</span>{{end}}
       {{if eq .Status "pending"}}

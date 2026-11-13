@@ -67,7 +67,7 @@
 
 {{define "dns_check"}}{{with .D}}
 <div class="dns-check dns-check--{{.Tone}}">
-  <p><span class="dns-check__title">{{$.L.T "dns.title"}}</span> <span class="status status--{{if eq .Tone "ok"}}ok{{else if eq .Tone "error"}}error{{else}}warn{{end}}">{{$.L.T (printf "dns.%s" .Verdict)}}</span></p>
+  <p><span class="dns-check__title">{{$.L.T "dns.title"}}</span> <span class="badge badge--{{if eq .Tone "ok"}}ok{{else if eq .Tone "error"}}error{{else}}warn{{end}}">{{$.L.T (printf "dns.%s" .Verdict)}}</span></p>
   <dl class="dns-check__facts">
     {{if .CNAME}}<div><dt>CNAME</dt><dd class="mono addr-break">{{wbr .CNAME}}</dd></div>{{end}}
     <div><dt>{{$.L.T "dns.found"}}</dt><dd class="mono addr-break">{{if .Found}}{{.Found}}{{else}}—{{end}}</dd></div>

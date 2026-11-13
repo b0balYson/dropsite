@@ -59,7 +59,7 @@
         <ul class="setup-now">
           {{range list "apex" "star"}}{{$n := $c.Domain.Apex}}{{if eq . "star"}}{{$n = $c.Domain.Star}}{{end}}
           <li><span class="mono addr-break">{{if eq . "star"}}*.{{$d.Domain}}{{else}}{{$d.Domain}}{{end}}</span> →
-            {{if $n.Result.Addresses}}<span class="mono">{{range $i, $a := $n.Result.Addresses}}{{if $i}}, {{end}}{{$a}}{{end}}</span>{{if eq (print $n.Result.Verdict) "points_elsewhere"}} <span class="status status--error">{{$.L.T "setup.domain.now.elsewhere"}}</span>{{else}} <span class="status status--ok">{{$.L.T "setup.domain.now.here"}}</span>{{end}}
+            {{if $n.Result.Addresses}}<span class="mono">{{range $i, $a := $n.Result.Addresses}}{{if $i}}, {{end}}{{$a}}{{end}}</span>{{if eq (print $n.Result.Verdict) "points_elsewhere"}} <span class="badge badge--error">{{$.L.T "setup.domain.now.elsewhere"}}</span>{{else}} <span class="badge badge--ok">{{$.L.T "setup.domain.now.here"}}</span>{{end}}
             {{else}}<span class="muted">{{$.L.T "setup.domain.now.none"}}</span>{{end}}</li>
           {{end}}
         </ul>

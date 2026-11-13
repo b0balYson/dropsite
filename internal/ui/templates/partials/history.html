@@ -15,7 +15,7 @@
       <span class="mono">{{$.L.Size .SizeBytes}}</span>
       <span>{{$.L.T "history.files" "n" .FileCount}}</span>
       <span>{{$.L.T (printf "source.%s" .Source)}}</span>
-      {{if .Quality}}<a class="release__quality release__quality--{{.Quality.Grade}}" href="/sites/{{.SiteID}}/deploys/{{.ID}}" aria-label="{{$.L.T "quality.badge.label" "id" .ID "score" .Quality.Score}}">{{$.L.T "quality.badge" "score" .Quality.Score "grade" .Quality.Grade}}</a>{{end}}
+      {{if .Quality}}<a class="badge badge--{{if eq .Quality.Grade "C"}}warn{{else if eq .Quality.Grade "D"}}error{{else}}ok{{end}} badge--link release__quality release__quality--{{.Quality.Grade}}" href="/sites/{{.SiteID}}/deploys/{{.ID}}" aria-label="{{$.L.T "quality.badge.label" "id" .ID "score" .Quality.Score}}">{{$.L.T "quality.badge" "score" .Quality.Score "grade" .Quality.Grade}}</a>{{end}}
     </p>
     <div class="release__action">
       {{if .PreviewURL}}<a class="release__preview" href="{{.PreviewURL}}" title="{{.PreviewURL}}" target="_blank" rel="noopener noreferrer" aria-label="{{$.L.T "history.preview.label" "id" .ID}}">{{$.L.T "history.preview"}}<span aria-hidden="true"> ↗</span></a>{{end}}

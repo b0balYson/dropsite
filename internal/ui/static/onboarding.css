@@ -236,17 +236,19 @@
 .setup-restore { margin-top: var(--s-3); }
 
 /* ---- friendly ink -------------------------------------------------------- */
-/* Rounded ink cards for the checklist, the card on the sites list and the
-   chat guides; the accent marks the step to do now. */
+/* Light cards for the checklist, the card on the sites list and the chat
+   guides: a thin warm edge and a soft shadow; ink stays on controls. */
 
-.side-start .side-link { box-shadow: none; background: var(--c-accent-soft); border-color: var(--c-ink); }
-.side-start .side-link[aria-current="page"] { background: var(--c-accent); box-shadow: 0 2px 0 var(--c-ink); }
+.side-start .side-link { box-shadow: none; background: var(--c-accent-soft); }
+.side-start .side-link[aria-current="page"] { background: var(--c-accent); border-color: var(--c-ink); }
 
 .setup-status {
-  border: var(--bw) solid var(--c-ink);
+  padding: var(--s-4) var(--card-pad);
+  border: var(--hairline);
   border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
 }
-.setup-status--ready { border-color: var(--c-ok); position: relative; }
+.setup-status--ready { border-color: color-mix(in srgb, var(--c-ok) 35%, var(--c-ok-bg)); position: relative; }
 .setup-status--ready::after {
   content: "";
   position: absolute;
@@ -259,42 +261,45 @@
 }
 .setup-status__count { font-weight: var(--w-heavy); }
 .setup-status__count .mono { font-family: var(--f-sans); }
-.setup-meter li { height: 10px; border: 1.5px solid var(--c-ink); border-radius: var(--r-pill); background: var(--c-surface); }
+.setup-meter li { height: 8px; border-radius: var(--r-pill); background: var(--c-hair); }
 .setup-meter li.is-done { background: var(--c-ok); }
 
-.setup-step__mark { border-width: var(--bw); font-weight: var(--w-heavy); }
-.setup-step--done .setup-step__mark,
-.setup-step--problem .setup-step__mark { border-color: var(--c-ink); }
+.setup-list { margin-top: var(--s-4); }
+.setup-step { padding-block: var(--s-4); }
+.setup-step__mark { border: 1.5px solid var(--c-edge-strong); font-weight: var(--w-heavy); }
+.setup-step--done .setup-step__mark { border-color: var(--c-ok); }
+.setup-step--problem .setup-step__mark { border-color: var(--c-error); }
 .setup-step__title { font-weight: var(--w-heavy); }
-.setup-now li { border-left-width: var(--bw); }
+.setup-now li { border-left: var(--hairline); }
+.setup-optional { margin-top: var(--s-6); }
 
-.setup-records { border-left: 0; border: 1.5px solid var(--c-line-soft); border-radius: var(--r-md); }
-.setup-records .table { border-width: 1.5px; }
+.setup-records { border-left: 0; border: var(--hairline); border-radius: var(--r-md); }
 
 .setup-card {
-  border: var(--bw) solid var(--c-ink);
+  margin-bottom: var(--s-5);
+  padding: var(--s-3) var(--card-pad);
+  min-height: 4.75rem;
+  border: var(--hairline);
   border-radius: var(--r-lg);
-  box-shadow: inset 8px 0 0 var(--c-accent);
-  padding-left: calc(var(--s-5) + 8px);
+  box-shadow: var(--shadow-card);
 }
-.setup-card--ready { box-shadow: inset 8px 0 0 var(--c-ok); }
-.setup-card--loading { box-shadow: inset 8px 0 0 var(--c-hair); }
 .setup-card__title { font-weight: var(--w-heavy); }
-.setup-dismiss { border-top: var(--bw) dashed var(--c-line-soft); }
+.setup-dismiss { border-top: var(--hairline); margin-top: var(--s-5); }
 
-.guide { border-top: var(--bw) dashed var(--c-line-soft); }
-.guide-steps > li::before { border-width: var(--bw); font-family: var(--f-sans); font-weight: var(--w-heavy); background: var(--c-accent-soft); }
+.guide { border-top: var(--hairline); }
+.guide-steps > li::before { border: 0; font-family: var(--f-sans); font-weight: var(--w-heavy); background: var(--c-accent-soft); }
 .guide-url { border-radius: var(--r-md); }
 
 .first-say {
-  border: var(--bw) solid var(--c-ink);
+  border: var(--rule-thin) solid color-mix(in srgb, var(--c-accent) 55%, var(--c-edge));
   border-radius: var(--r-lg);
   background: var(--c-accent-soft);
 }
 .first-say__label { color: var(--c-ink-2); }
 .first-say__phrase { font-weight: var(--w-heavy); }
 
-.trouble-list { border: var(--bw) solid var(--c-ink); border-radius: var(--r-lg); background: var(--c-surface); overflow: clip; }
-.trouble, .trouble:first-child { padding-inline: var(--card-pad); border-top: var(--rule-thin) solid var(--c-hair); }
+.trouble-list { border: var(--hairline); border-radius: var(--r-lg); background: var(--c-surface); box-shadow: var(--shadow-card); overflow: clip; }
+.trouble, .trouble:first-child { padding: var(--s-3) var(--card-pad); border-top: var(--rule-thin) solid var(--c-hair); }
 .trouble:first-child { border-top: 0; }
 .trouble dt { font-weight: var(--w-heavy); }
+.setup-group { font-family: var(--f-sans); font-weight: var(--w-heavy); letter-spacing: 0.05em; color: var(--c-ink-3); border-bottom: var(--hairline); }
