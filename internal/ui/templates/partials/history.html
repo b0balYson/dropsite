@@ -35,12 +35,12 @@
 {{end}}
 {{end}}{{end}}
 
-{{define "site_meta"}}<p class="site-head__meta" id="site-meta">{{template "site_meta_inner" .}}</p>{{end}}
+{{define "site_meta"}}{{/* .R = view, .V = service.SiteView */}}<p class="site-head__meta" id="site-meta">{{template "site_meta_inner" .}}</p>{{end}}
 
-{{define "site_meta_inner"}}{{with .D.V}}
-    {{if .Current}}<span class="badge badge--current">{{$.L.T "history.current"}}</span>
-    <span class="mono">{{.Current.ID}}</span> · {{$.L.Date .Current.CreatedAt}} · {{$.L.Size .Current.SizeBytes}}
-    {{else}}<span class="badge badge--muted">{{$.L.T "site.unpublished"}}</span> {{$.L.T "site.unpublished.hint"}}{{end}}
+{{define "site_meta_inner"}}{{$l := .R.L}}{{with .V}}
+    {{if .Current}}<span class="badge badge--current">{{$l.T "history.current"}}</span>
+    <span class="mono">{{.Current.ID}}</span> · {{$l.Date .Current.CreatedAt}} · {{$l.Size .Current.SizeBytes}}
+    {{else}}<span class="badge badge--muted">{{$l.T "site.unpublished"}}</span> {{$l.T "site.unpublished.hint"}}{{end}}
   {{end}}{{end}}
 
-{{define "history_fragment"}}{{template "history" .}}<p class="site-head__meta" id="site-meta" hx-swap-oob="true">{{template "site_meta_inner" .}}</p>{{end}}
+{{define "history_fragment"}}{{template "history" .}}<p class="site-head__meta" id="site-meta" hx-swap-oob="true">{{template "site_meta_inner" (bundle $ .D.V)}}</p>{{end}}

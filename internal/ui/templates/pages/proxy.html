@@ -2,14 +2,7 @@
 
 {{define "content"}}
 {{$v := .D.V}}{{$base := printf "/sites/%s/proxy" $v.Site.ID}}
-<nav class="crumbs" aria-label="{{.L.T "nav.breadcrumbs"}}"><a href="/sites/{{$v.Site.ID}}">← {{$v.Site.Title}}</a></nav>
-<header class="page-head">
-  <div class="page-head__text">
-    <p class="eyebrow mono addr-break">{{wbr (host $v.URL)}}</p>
-    <h1 class="display">{{.L.T "proxy.title"}}</h1>
-    <p class="lede">{{.L.T "proxy.lede"}}</p>
-  </div>
-</header>
+{{template "section_intro" (bundle $ (dict "Title" "proxy.title" "Lede" "proxy.lede"))}}
 
 <div class="notice notice--warn proxy-warning" role="note">
   <p class="notice__text"><strong>{{.L.T "proxy.warn.title"}}</strong> {{.L.T "proxy.warn.text"}}</p>

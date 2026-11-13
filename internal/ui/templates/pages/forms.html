@@ -2,14 +2,7 @@
 
 {{define "content"}}
 {{$v := .D.V}}{{$base := printf "/sites/%s/forms" $v.Site.ID}}
-<nav class="crumbs" aria-label="{{.L.T "nav.breadcrumbs"}}"><a href="/sites/{{$v.Site.ID}}">← {{$v.Site.Title}}</a></nav>
-<header class="page-head">
-  <div class="page-head__text">
-    <p class="eyebrow mono addr-break">{{wbr (host $v.URL)}}</p>
-    <h1 class="display">{{.L.T "forms.title"}}</h1>
-    <p class="lede">{{.L.T "forms.lede"}}</p>
-  </div>
-</header>
+{{template "section_intro" (bundle $ (dict "Title" "forms.title" "Lede" "forms.lede"))}}
 
 {{with .D.Issued}}
 <div class="notice notice--warn issued" role="status">

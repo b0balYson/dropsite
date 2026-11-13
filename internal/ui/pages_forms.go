@@ -113,7 +113,7 @@ func (s *server) renderForms(w http.ResponseWriter, r *http.Request, rc *reqCtx,
 		return
 	}
 	data.Issued, data.Error, data.ErrorKind, data.FormTarget = issued, errMsg, errKind, target
-	s.page(w, r, rc, status, "forms", "sites", "forms.title", data)
+	s.sitePageOf(w, r, rc, status, "forms", secForms, "forms.title", data.V, data)
 }
 
 func (s *server) addChannel(w http.ResponseWriter, r *http.Request, rc *reqCtx) {

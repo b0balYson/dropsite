@@ -1,0 +1,88 @@
+{{/* Application shell: sidebar navigation and the shared site header. */}}
+
+{{define "lang_switch"}}
+<form class="lang" method="post" action="/lang">
+  {{template "csrf" .}}
+  <input type="hidden" name="next" value="{{.Path}}">
+  <span class="sr-only">{{.L.T "nav.language"}}</span>
+  <button class="lang__btn" type="submit" name="lang" value="ru" lang="ru" aria-pressed="{{if eq .L.Lang "ru"}}true{{else}}false{{end}}">RU</button>
+  <button class="lang__btn" type="submit" name="lang" value="en" lang="en" aria-pressed="{{if eq .L.Lang "en"}}true{{else}}false{{end}}">EN</button>
+</form>
+{{end}}
+
+{{define "side_link"}}<a class="side-link" href="{{.Href}}"{{with .Current}} aria-current="{{.}}"{{end}}><span class="side-link__text">{{.Label}}</span></a>{{end}}
+
+{{define "sidebar"}}
+<aside class="sidebar" id="sidebar" data-menu>
+  <div class="sidebar__head">
+    <a class="wordmark" href="/"><span class="wordmark__mark" aria-hidden="true"></span>{{.Product}}</a>
+    <a class="sidebar__close" href="#" data-menu-close><span aria-hidden="true">✕</span><span class="sr-only">{{.L.T "nav.menu.close"}}</span></a>
+  </div>
+  <nav class="side-nav" aria-label="{{.L.T "nav.label"}}">
+    <ul class="side-nav__list">
+      {{range $i, $l := .MainLinks}}
+      <li class="side-nav__item{{if and (eq $i 0) $.Site}} is-open{{end}}">
+        {{template "side_link" $l}}
+        {{if and (eq $i 0) $.Site}}
+        <div class="side-site">
+          <p class="side-site__title" title="{{$.Site.V.Site.Title}}">{{$.Site.V.Site.Title}}</p>
+          <ul class="side-site__list" aria-label="{{$.L.T "nav.site" "title" $.Site.V.Site.Title}}">
+            {{range $.SiteLinks}}<li>{{template "side_link" .}}</li>{{end}}
+          </ul>
+        </div>
+        {{end}}
+      </li>
+      {{end}}
+    </ul>
+    {{with .AdminLinks}}
+    <div class="side-nav__group" role="group" aria-labelledby="side-admin">
+      <p class="side-nav__label" id="side-admin">{{$.L.T "nav.admin"}}</p>
+      <ul class="side-nav__list">
+        {{range .}}<li class="side-nav__item">{{template "side_link" .}}</li>{{end}}
+      </ul>
+    </div>
+    {{end}}
+  </nav>
+  <div class="sidebar__foot">
+    {{template "lang_switch" .}}
+    <p class="side-who mono" title="{{.Me.Email}}">{{.Me.Email}}</p>
+    <form method="post" action="/logout">
+      {{template "csrf" .}}
+      <button class="link-btn" type="submit">{{.L.T "nav.logout"}}</button>
+    </form>
+  </div>
+</aside>
+{{end}}
+
+{{define "site_header"}}{{$s := .Site}}{{$v := $s.V}}
+<header class="site-head{{if ne $s.Section "overview"}} site-head--compact{{end}}" data-site-base="/sites/{{$v.Site.ID}}"{{if eq $s.Section "overview"}} data-site-overview{{end}}>
+  <p class="eyebrow mono">{{.L.T "site.id"}} {{$v.Site.ID}}</p>
+  {{if eq $s.Section "overview"}}
+  <h1 class="display display--site">{{$v.Site.Title}}</h1>
+  {{else}}
+  <p class="site-head__title"><a href="/sites/{{$v.Site.ID}}">{{$v.Site.Title}}</a></p>
+  {{end}}
+  <div class="site-head__row">
+    <a class="addr addr--primary mono addr-break" href="{{$v.URL}}" title="{{$v.URL}}" target="_blank" rel="noopener noreferrer">{{wbr (host $v.URL)}}</a>
+    {{template "site_meta" (bundle $ $v)}}
+  </div>
+  {{if or $v.Draft $v.Site.Protected $v.Site.Noindex}}
+  <ul class="flag-list" aria-label="{{.L.T "access.title"}}">
+    {{if $v.Draft}}<li><a class="badge badge--draft badge--link" href="/sites/{{$v.Site.ID}}#draft-h">{{.L.T "draft.badge"}}</a></li>{{end}}
+    {{if $v.Site.Protected}}<li><span class="badge badge--ok">{{.L.T "access.badge.protected"}}</span></li>{{end}}
+    {{if $v.Site.Noindex}}<li><span class="badge badge--muted">{{.L.T "access.badge.noindex"}}</span></li>{{end}}
+  </ul>
+  {{end}}
+</header>
+{{if $s.Soon}}
+<p class="notice notice--warn expiry-notice" role="status">{{.L.T "access.expires.soon" "date" (.L.DatePtr $v.Site.ExpiresAt)}}</p>
+{{end}}
+{{end}}
+
+{{define "section_intro"}}{{/* .R = view, .V = map: Title, Lede (keys), Back, BackLabel */}}
+<header class="section-intro">
+  {{with .V.Back}}<a class="section-intro__back" href="{{.}}">← {{$.V.BackLabel}}</a>{{end}}
+  <h1 class="display display--section">{{if .V.Text}}{{.V.Text}}{{else}}{{.R.L.T .V.Title}}{{end}}</h1>
+  {{with .V.Lede}}<p class="lede">{{$.R.L.T .}}</p>{{end}}
+</header>
+{{end}}

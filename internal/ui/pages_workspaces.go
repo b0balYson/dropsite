@@ -204,7 +204,7 @@ func (s *server) deleteWorkspace(w http.ResponseWriter, r *http.Request, rc *req
 
 func (s *server) moveSite(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	ref := r.PathValue("ref")
-	back := sitePath(ref)
+	back := sectionPath(ref, secSettings)
 	if r.PostFormValue("confirm") != "yes" {
 		s.setFlash(w, r, flashError, rc.loc.T("workspaces.unconfirmed"))
 		redirect(w, r, back)
@@ -220,7 +220,7 @@ func (s *server) moveSite(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	} else {
 		s.setFlash(w, r, flashOK, rc.loc.T("workspaces.moved.personal"))
 	}
-	redirect(w, r, sitePath(v.Site.ID))
+	redirect(w, r, sectionPath(v.Site.ID, secSettings))
 }
 
 // siteWorkspaceView builds the workspace block of a site page.

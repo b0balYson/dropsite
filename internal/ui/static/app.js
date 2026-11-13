@@ -1,5 +1,6 @@
 // Progressive enhancements for the dropsite interface: archive upload with
-// progress and copy-to-clipboard buttons. Every page works without it.
+// progress, copy-to-clipboard buttons and the navigation drawer. Every page
+// works without it.
 (function () {
   'use strict';
 
@@ -239,6 +240,107 @@
     });
   };
 
+  // ---- navigation drawer ---------------------------------------------------
+  // Below 60rem the sidebar is an off-canvas drawer. Without this script the
+  // "Menu" link targets #sidebar and CSS (:target) opens it.
+
+  var DRAWER_QUERY = '(max-width: 59.99rem)';
+  var FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+  function initDrawer() {
+    var drawer = document.querySelector('[data-menu]');
+    var opener = document.querySelector('[data-menu-open]');
+    if (!drawer || !opener) { return; }
+    var root = document.documentElement;
+    var outside = document.querySelectorAll('.topbar, .shell__main');
+    var mq = window.matchMedia(DRAWER_QUERY);
+
+    function setOutsideInert(on) {
+      outside.forEach(function (el) {
+        if (on) { el.setAttribute('inert', ''); } else { el.removeAttribute('inert'); }
+      });
+    }
+
+    function isOpen() { return drawer.classList.contains('is-open'); }
+
+    function open() {
+      drawer.classList.add('is-open');
+      root.classList.add('menu-open');
+      opener.setAttribute('aria-expanded', 'true');
+      setOutsideInert(true);
+      var current = drawer.querySelector('[aria-current="page"]') || drawer.querySelector(FOCUSABLE);
+      if (current) { current.focus(); }
+    }
+
+    function close(returnFocus) {
+      if (!isOpen()) { return; }
+      drawer.classList.remove('is-open');
+      root.classList.remove('menu-open');
+      opener.setAttribute('aria-expanded', 'false');
+      setOutsideInert(false);
+      if (returnFocus) { opener.focus(); }
+    }
+
+    opener.setAttribute('role', 'button');
+    opener.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (isOpen()) { close(true); } else { open(); }
+    });
+    opener.addEventListener('keydown', function (e) {
+      if (e.key === ' ') { e.preventDefault(); opener.click(); }
+    });
+    document.querySelectorAll('[data-menu-close]').forEach(function (el) {
+      el.setAttribute('role', 'button');
+      el.addEventListener('click', function (e) {
+        e.preventDefault();
+        close(true);
+      });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && isOpen()) { close(true); }
+    });
+    // Keep Tab inside the open drawer.
+    drawer.addEventListener('keydown', function (e) {
+      if (e.key !== 'Tab' || !isOpen()) { return; }
+      var items = Array.prototype.filter.call(drawer.querySelectorAll(FOCUSABLE), function (el) {
+        return el.offsetParent !== null;
+      });
+      if (!items.length) { return; }
+      var first = items[0];
+      var last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+    // Widening the window turns the drawer back into the static sidebar.
+    var onChange = function () { if (!mq.matches) { close(false); } };
+    if (mq.addEventListener) { mq.addEventListener('change', onChange); } else { mq.addListener(onChange); }
+    // A no-JS "#sidebar" left in the address must not leave the drawer half open.
+    if (window.location.hash === '#sidebar' && window.history.replaceState) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  }
+
+  // ---- old anchors of the single site page ---------------------------------
+  // The site screen used to be one long page; links to its blocks now lead to
+  // the section that holds them.
+
+  var OLD_ANCHORS = {
+    'history-h': '/versions', 'workflow-h': '/versions',
+    'stats-h': '/stats', 'counters-h': '/stats',
+    'access-h': '/access', 'domains-h': '/access#domains-h',
+    'forms-h': '/forms', 'subs-h': '/forms#subs-h',
+    'data-h': '/data', 'proxy-h': '/proxy',
+    'settings-h': '/settings', 'workspace-h': '/settings#workspace-h',
+    'publish-h': '/settings#optimize-h', 'delete-h': '/settings#delete-h'
+  };
+
+  function followOldAnchor() {
+    var head = document.querySelector('[data-site-overview]');
+    var id = window.location.hash.slice(1);
+    if (!head || !id || document.getElementById(id) || !OLD_ANCHORS[id]) { return; }
+    window.location.replace(head.dataset.siteBase + OLD_ANCHORS[id]);
+  }
+
   // ---- wiring --------------------------------------------------------------
 
   function focusIssued(root) {
@@ -251,6 +353,8 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     document.documentElement.classList.add('js');
+    followOldAnchor();
+    initDrawer();
     initCopy(document);
     initCountdown(document);
     document.querySelectorAll('[data-upload]').forEach(function (form) {

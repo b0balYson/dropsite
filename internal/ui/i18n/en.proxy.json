@@ -1,8 +1,6 @@
 {
   "proxy.title": "API keys",
   "proxy.lede": "Pages of the site call third-party APIs (OpenAI, a CRM, a Telegram bot) through the site's own address. The key is stored encrypted on the server and never reaches the page's code.",
-  "proxy.manage": "Set up",
-  "proxy.site.hint": "Need an OpenAI, CRM or Telegram bot key for a page of the site? Add it here, not in the code: visitors will not see it.",
   "proxy.warn.title": "Any visitor of the site can call an endpoint.",
   "proxy.warn.text": "Limit paths and methods to what the page needs, and use a key with minimal rights and a spending limit at the API provider.",
   "proxy.endpoints": "Endpoints",

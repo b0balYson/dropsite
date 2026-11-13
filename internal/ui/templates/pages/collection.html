@@ -2,13 +2,11 @@
 
 {{define "content"}}
 {{$v := .D.V}}{{$c := .D.C}}{{$base := printf "/sites/%s/data/%s" $v.Site.ID $c.Name}}
-<nav class="crumbs" aria-label="{{.L.T "nav.breadcrumbs"}}"><a href="/sites/{{$v.Site.ID}}/data">← {{.L.T "data.title"}} · {{$v.Site.Title}}</a></nav>
-<header class="page-head">
-  <div class="page-head__text">
-    <p class="eyebrow mono addr-break">{{if $c.PublicURL}}{{wbr (host $c.PublicURL)}}{{end}}</p>
-    <h1 class="display">{{if $c.Title}}{{$c.Title}}{{else}}{{$c.Name}}{{end}}</h1>
-    <p class="lede">{{.L.T (printf "data.mode.%s" $c.Mode)}} · {{.L.T "data.documents.n" "n" $c.Documents}}{{if $c.Pending}} · {{.L.T "data.pending.n" "n" $c.Pending}}{{end}}</p>
-  </div>
+<header class="section-intro">
+  <a class="section-intro__back" href="/sites/{{$v.Site.ID}}/data">← {{.L.T "data.back"}}</a>
+  <h1 class="display display--section">{{if $c.Title}}{{$c.Title}}{{else}}{{$c.Name}}{{end}}</h1>
+  <p class="lede">{{.L.T (printf "data.mode.%s" $c.Mode)}} · {{.L.T "data.documents.n" "n" $c.Documents}}{{if $c.Pending}} · {{.L.T "data.pending.n" "n" $c.Pending}}{{end}}</p>
+  {{if $c.PublicURL}}<p class="section-intro__meta mono addr-break">{{wbr (host $c.PublicURL)}}</p>{{end}}
 </header>
 
 {{template "sheet_link" .}}

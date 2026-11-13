@@ -128,6 +128,8 @@ type siteData struct {
 	Publish  service.PublishSettingsView
 	Workflow workflowView
 	Space    siteWorkspace
+	Proxies  int  // number of API key endpoints (overview summary)
+	More     bool // the history shows only the latest releases
 }
 
 func (s *server) loadSite(r *http.Request, rc *reqCtx) (siteData, error) {
@@ -161,45 +163,6 @@ func (s *server) loadSite(r *http.Request, rc *reqCtx) (siteData, error) {
 	}, nil
 }
 
-func (s *server) sitePage(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
-	data, err := s.loadSite(r, rc)
-	if err == nil {
-		data.Stats, err = s.siteStatsView(r, rc, data.V.Site.ID)
-	}
-	if err == nil {
-		data.Counters, err = s.svc.GetSiteCounters(r.Context(), rc.actor, data.V.Site.ID)
-	}
-	if err == nil {
-		data.Forms, err = s.formsSummary(r, rc, data.V.Site.ID)
-	}
-	if err == nil {
-		_, data.Data, err = s.svc.ListCollections(r.Context(), rc.actor, data.V.Site.ID)
-	}
-	if err == nil {
-		data.Publish, err = s.svc.GetPublishSettings(r.Context(), rc.actor, data.V.Site.ID)
-	}
-	if err == nil {
-		data.Workflow, err = s.workflowView(r, rc, data)
-	}
-	if err == nil {
-		data.Space, err = s.siteWorkspaceView(r, rc, data.V)
-	}
-	if err != nil {
-		s.failPage(w, r, rc, err)
-		return
-	}
-	s.page(w, r, rc, http.StatusOK, "site", "sites", "", data)
-}
-
-func (s *server) historyFragment(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
-	data, err := s.loadSite(r, rc)
-	if err != nil {
-		s.failPage(w, r, rc, err)
-		return
-	}
-	s.fragment(w, r, rc, "history_fragment", data)
-}
-
 func (s *server) siteSettings(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	ref := r.PathValue("ref")
 	cur, err := s.svc.GetSite(r.Context(), rc.actor, ref)
@@ -217,22 +180,22 @@ func (s *server) siteSettings(w http.ResponseWriter, r *http.Request, rc *reqCtx
 	}
 	v, err := s.svc.UpdateSite(r.Context(), rc.actor, cur.Site.ID, upd)
 	if err != nil {
-		s.fail(w, r, rc, err, sitePath(ref))
+		s.fail(w, r, rc, err, sectionPath(ref, secSettings))
 		return
 	}
 	s.setFlash(w, r, flashOK, rc.loc.T("site.saved"))
-	redirect(w, r, sitePath(v.Site.ID))
+	redirect(w, r, sectionPath(v.Site.ID, secSettings))
 }
 
 func (s *server) rollback(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	ref := r.PathValue("ref")
 	res, err := s.svc.Rollback(r.Context(), rc.actor, ref, r.PostFormValue("deploy"))
 	if err != nil {
-		s.fail(w, r, rc, err, sitePath(ref))
+		s.fail(w, r, rc, err, sectionPath(ref, secVersions))
 		return
 	}
 	s.setFlash(w, r, flashOK, rc.loc.T("site.rolledback", "id", res.Deploy.ID))
-	redirect(w, r, sitePath(res.Site.Site.ID))
+	redirect(w, r, sectionPath(res.Site.Site.ID, secVersions))
 }
 
 func (s *server) deleteSite(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
@@ -244,11 +207,11 @@ func (s *server) deleteSite(w http.ResponseWriter, r *http.Request, rc *reqCtx) 
 	}
 	if !deleteConfirmed(v, r.PostFormValue("confirm")) {
 		s.setFlash(w, r, flashError, rc.loc.T("site.delete.mismatch"))
-		redirect(w, r, sitePath(v.Site.ID))
+		redirect(w, r, sectionPath(v.Site.ID, secSettings)+"#delete-h")
 		return
 	}
 	if err := s.svc.DeleteSite(r.Context(), rc.actor, v.Site.ID); err != nil {
-		s.fail(w, r, rc, err, sitePath(v.Site.ID))
+		s.fail(w, r, rc, err, sectionPath(v.Site.ID, secSettings))
 		return
 	}
 	s.setFlash(w, r, flashOK, rc.loc.T("site.deleted", "title", v.Site.Title))

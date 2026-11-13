@@ -98,8 +98,10 @@ type view struct {
 	Flash   *flash
 	Path    string
 	Product string
-	assets  map[string]string
-	D       any
+	// Site is set on the pages of one site (see sitePageOf).
+	Site   *siteNav
+	assets map[string]string
+	D      any
 }
 
 // Asset returns the cache-busting URL of a static file.

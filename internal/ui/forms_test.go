@@ -45,11 +45,11 @@ func TestSitePageShowsSubmissionsEscaped(t *testing.T) {
 	h := newHarness(t, testenv.WithFormSender(&nopSender{}))
 	alice := h.loginUser("alice@pp.test")
 	v := h.createSite(alice, "Promo", "")
-	empty := h.get("/sites/" + v.Site.ID)
+	empty := h.get("/sites/" + v.Site.ID + "/forms")
 	wantContains(t, empty.body, "Заявки", "Заявок пока нет", "/_form/lead")
 
 	submitTo(t, h, v.Site.ID, "name", `<script>alert(1)</script>`, "msg", "line1\nline2")
-	page := h.get("/sites/" + v.Site.ID)
+	page := h.get("/sites/" + v.Site.ID + "/forms")
 	wantStatus(t, page, http.StatusOK)
 	wantContains(t, page.body, "&lt;script&gt;alert(1)&lt;/script&gt;", "line1\nline2", "Каналы не подключены")
 	wantNotContains(t, page.body, "<script>alert(1)</script>")

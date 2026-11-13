@@ -12,11 +12,14 @@ func TestSitePublishSettingsForm(t *testing.T) {
 	alice := h.loginUser("alice@pp.test")
 	v := h.createSite(alice, "Docs", "docs")
 	site := "/sites/" + v.Site.ID
-	page := h.get(site)
+	page := h.get(site + "/settings")
 	wantContains(t, page.body, "Оптимизировать при публикации", `name="optimize" value="1" checked`)
 
 	p := h.submit(site, site+"/publish-settings", url.Values{})
 	wantStatus(t, p, http.StatusSeeOther)
+	if p.location() != site+"/settings#optimize-h" {
+		t.Fatalf("redirect %q", p.location())
+	}
 	got, err := h.env.Svc.GetPublishSettings(context.Background(), alice, v.Site.ID)
 	if err != nil || got.Optimize {
 		t.Fatalf("after untick %+v %v", got, err)

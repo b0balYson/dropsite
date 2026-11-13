@@ -50,7 +50,7 @@ func TestWorkspacePages(t *testing.T) {
 	wantNotContains(t, p.body, ">Общий<")
 
 	// Site page: workspace block, move needs confirmation.
-	p = h.get(sitePage)
+	p = h.get(sitePage + "/settings")
 	wantContains(t, p.body, "Сайт принадлежит пространству «Маркетинг»", "/move")
 	p = h.follow(h.submit(sitePage, sitePage+"/move", url.Values{"workspace": {"0"}}))
 	wantContains(t, p.body, "Сначала отметьте подтверждение")

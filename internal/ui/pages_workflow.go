@@ -60,7 +60,7 @@ func (s *server) cloneSite(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	res, err := s.svc.CloneSite(r.Context(), rc.actor, ref, r.PostFormValue("title"),
 		normSlug(r.PostFormValue("slug")), domain.SourceUI)
 	if err != nil {
-		s.fail(w, r, rc, err, sitePath(ref))
+		s.fail(w, r, rc, err, sectionPath(ref, secVersions))
 		return
 	}
 	s.setFlash(w, r, flashDeployed, rc.loc.T("workflow.clone.done"))
@@ -90,15 +90,15 @@ func (s *server) scheduleRelease(w http.ResponseWriter, r *http.Request, rc *req
 	at, ok := browserTime(r.PostFormValue("publish_at"), r.PostFormValue("tz_offset"))
 	if !ok {
 		s.setFlash(w, r, flashError, rc.loc.T("workflow.schedule.badtime"))
-		redirect(w, r, sitePath(ref)+"#workflow-h")
+		redirect(w, r, sectionPath(ref, secVersions))
 		return
 	}
 	if _, err := s.svc.ScheduleRelease(r.Context(), rc.actor, ref, r.PostFormValue("deploy"), at); err != nil {
-		s.fail(w, r, rc, err, sitePath(ref)+"#workflow-h")
+		s.fail(w, r, rc, err, sectionPath(ref, secVersions))
 		return
 	}
 	s.setFlash(w, r, flashOK, rc.loc.T("workflow.schedule.done"))
-	redirect(w, r, sitePath(ref)+"#workflow-h")
+	redirect(w, r, sectionPath(ref, secVersions))
 }
 
 func (s *server) cancelSchedule(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
@@ -109,11 +109,11 @@ func (s *server) cancelSchedule(w http.ResponseWriter, r *http.Request, rc *reqC
 		return
 	}
 	if _, err := s.svc.CancelSchedule(r.Context(), rc.actor, id); err != nil {
-		s.fail(w, r, rc, err, sitePath(ref)+"#workflow-h")
+		s.fail(w, r, rc, err, sectionPath(ref, secVersions))
 		return
 	}
 	s.setFlash(w, r, flashOK, rc.loc.T("workflow.schedule.cancelled"))
-	redirect(w, r, sitePath(ref)+"#workflow-h")
+	redirect(w, r, sectionPath(ref, secVersions))
 }
 
 func writePNG(w http.ResponseWriter, png []byte) {

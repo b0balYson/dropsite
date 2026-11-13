@@ -1,0 +1,12 @@
+{{define "title"}}{{.L.T "site.nav.versions"}} — {{.D.V.Site.Title}}{{end}}
+
+{{define "content"}}
+{{template "section_intro" (bundle $ (dict "Title" "site.nav.versions" "Lede" "site.nav.versions.lede"))}}
+
+<section class="section site-block section--first" aria-labelledby="history-h">
+  <h2 class="section-title" id="history-h">{{.L.T "history.title"}}</h2>
+  <div id="history">{{template "history" .}}</div>
+</section>
+
+{{template "site_workflow" .}}
+{{end}}

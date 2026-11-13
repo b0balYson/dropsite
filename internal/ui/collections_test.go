@@ -16,8 +16,8 @@ func TestCollectionsPages(t *testing.T) {
 	v := h.createSite(alice, "Cafe", "")
 	base := "/sites/" + v.Site.ID + "/data"
 
-	site := h.get("/sites/" + v.Site.ID)
-	wantContains(t, site.body, "Данные", "Коллекций пока нет")
+	site := h.get(base)
+	wantContains(t, site.body, "Данные", "Коллекций пока нет", `href="`+base+`" aria-current="page"`)
 
 	// Errors keep the typed values.
 	p := h.submit(base, base, url.Values{"name": {"reviews"}, "mode": {"moderated"}, "title": {"Отзывы"}})

@@ -1,18 +1,3 @@
-{{define "site_data"}}
-{{$v := .D.V}}
-<section class="section site-block" aria-labelledby="data-h">
-  <div class="section-head">
-    <h2 class="section-title" id="data-h">{{.L.T "data.title"}}{{if .D.Data}} <span class="muted">{{len .D.Data}}</span>{{end}}</h2>
-    <a class="btn btn--small btn--ghost" href="/sites/{{$v.Site.ID}}/data">{{.L.T "data.manage"}}</a>
-  </div>
-  {{if .D.Data}}
-  {{template "collection_rows" (bundle $ .D.Data)}}
-  {{else}}
-  <p class="empty-line">{{.L.T "data.empty"}}</p>
-  {{end}}
-</section>
-{{end}}
-
 {{define "collection_rows"}}{{$r := .R}}
 <ul class="domain-list">
   {{range .V}}

@@ -43,35 +43,3 @@
   <button class="btn btn--small" type="submit">{{.R.L.T "form.save"}}</button>
 </form>
 {{end}}
-
-{{define "site_forms"}}
-{{$v := .D.V}}{{$f := .D.Forms}}
-<section class="section forms-summary" aria-labelledby="forms-h">
-  <div class="section-head">
-    <h2 class="section-title" id="forms-h">{{.L.T "forms.title"}}{{if $f.Total}} <span class="muted">{{$f.Total}}</span>{{end}}</h2>
-    <a class="btn btn--small btn--ghost" href="/sites/{{$v.Site.ID}}/forms">{{.L.T "forms.manage"}}</a>
-  </div>
-  <div class="forms-summary__grid">
-    <div class="forms-summary__side">
-      <p class="field__label">{{.L.T "forms.channels"}}</p>
-      {{if $f.Channels}}
-      <ul class="channel-chips">
-        {{range $f.Channels}}<li class="channel-chip"><span class="channel-chip__kind">{{$.L.T (printf "forms.kind.%s" .Kind)}}</span> {{template "channel_target" (bundle $ .)}} {{template "channel_badge" (bundle $ .)}}</li>{{end}}
-      </ul>
-      {{else}}<p class="hint">{{.L.T "forms.channels.none"}}</p>{{end}}
-      {{template "altcha_toggle" (bundle $ (dict "Site" $v.Site.ID "On" $f.RequireAltcha "Back" "site"))}}
-    </div>
-    <div class="forms-summary__main">
-      {{if $f.Recent}}
-      {{template "submission_list" (bundle $ $f.Recent)}}
-      {{if gt $f.Total (len $f.Recent)}}<p class="small"><a href="/sites/{{$v.Site.ID}}/forms#subs-h">{{.L.T "forms.all" "n" $f.Total}}</a></p>{{end}}
-      {{else}}
-      <div class="empty-line forms-empty">
-        <p>{{.L.T "forms.empty"}}</p>
-        <p class="small">{{.L.T "forms.empty.how"}} <code class="mono">&lt;form action="/_form/lead" method="post"&gt;</code></p>
-      </div>
-      {{end}}
-    </div>
-  </div>
-</section>
-{{end}}

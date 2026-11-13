@@ -3,175 +3,102 @@
 {{define "flash_link"}}<p><a class="btn btn--small btn--ok" href="{{.D.V.URL}}" target="_blank" rel="noopener noreferrer">{{.L.T "deploy.open"}} <span class="mono addr-break">{{wbr (host .D.V.URL)}}</span> <span aria-hidden="true">↗</span></a></p>{{end}}
 
 {{define "content"}}
-{{$v := .D.V}}
-<div class="site-page">
-<nav class="crumbs" aria-label="{{.L.T "nav.breadcrumbs"}}"><a href="/">← {{.L.T "nav.sites"}}</a></nav>
-<header class="site-head">
-  <p class="eyebrow mono">{{.L.T "site.id"}} {{$v.Site.ID}}</p>
-  <h1 class="display display--site">{{$v.Site.Title}}</h1>
-  <ul class="addr-list addr-list--lg">
-    {{range $i, $u := $v.URLs}}
-    <li><a class="addr{{if eq $i 0}} addr--primary{{end}} mono" href="{{$u}}" title="{{$u}}" target="_blank" rel="noopener noreferrer">{{wbr (host $u)}}</a></li>
-    {{end}}
-  </ul>
-  {{template "site_meta" .}}
-  {{if or $v.Site.Protected $v.Site.Noindex}}
-  <ul class="flag-list" aria-label="{{.L.T "access.title"}}">
-    {{if $v.Site.Protected}}<li><span class="badge badge--ok">{{.L.T "access.badge.protected"}}</span></li>{{end}}
-    {{if $v.Site.Noindex}}<li><span class="badge badge--muted">{{.L.T "access.badge.noindex"}}</span></li>{{end}}
-  </ul>
-  {{end}}
-</header>
-
+{{$v := .D.V}}{{$base := printf "/sites/%s" $v.Site.ID}}
 {{template "site_draft" .}}
 
-{{if .D.Access.Soon}}
-<p class="notice notice--warn expiry-notice" role="status">{{.L.T "access.expires.soon" "date" (.L.DatePtr $v.Site.ExpiresAt)}}</p>
-{{end}}
+<div class="overview">
+  <div class="overview__main">
+    <section class="section site-block overview__first" aria-labelledby="deploy-h">
+      <h2 class="section-title" id="deploy-h">{{.L.T "deploy.title"}}</h2>
+      <form class="dropzone" method="post" action="{{$base}}/deploy" enctype="multipart/form-data"
+        data-upload data-history="{{$base}}/history?recent=1"
+        data-msg-uploading="{{.L.T "deploy.uploading"}}" data-msg-processing="{{.L.T "deploy.processing"}}"
+        data-msg-failed="{{.L.T "deploy.failed"}}" data-msg-open="{{.L.T "deploy.open"}}" data-msg-wrongtype="{{.L.T "deploy.wrongtype"}}">
+        <input type="hidden" name="_csrf" value="{{.CSRF}}">
+        {{template "draft_toggle" .}}
+        <div class="dropzone__body">
+          <p class="dropzone__title">{{.L.T "deploy.drop"}}</p>
+          <p class="hint">{{.L.T "deploy.hint" "size" (.L.Size .D.MaxSize)}}</p>
+          <div class="dropzone__actions">
+            <label class="btn btn--primary file-pick">
+              <input class="file-pick__input" type="file" name="archive" accept=".zip,.tar.gz,.tgz,application/zip,application/gzip" required data-file>
+              <span>{{.L.T "deploy.pick"}}</span>
+            </label>
+            <button class="btn btn--ghost" type="submit" data-nojs>{{.L.T "deploy.submit"}}</button>
+          </div>
+        </div>
+        <div class="progress" data-progress hidden>
+          <div class="progress__track" role="progressbar" aria-label="{{.L.T "deploy.progress"}}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-bar-wrap>
+            <div class="progress__bar" data-bar></div>
+          </div>
+          <span class="progress__pct mono" data-pct>0%</span>
+        </div>
+        <div class="upload-status" role="status" aria-live="polite" data-status></div>
+      </form>
+      <details class="howto">
+        <summary>{{.L.T "deploy.howto.title"}}</summary>
+        <ul class="bullets">
+          <li>{{.L.T "deploy.howto.1"}}</li>
+          <li>{{.L.T "deploy.howto.2"}}</li>
+          <li>{{.L.T "deploy.howto.3"}}</li>
+        </ul>
+      </details>
+    </section>
 
-  <section class="section site-block" aria-labelledby="publish-h">
-    <h2 class="section-title" id="publish-h">{{.L.T "deploy.title"}}</h2>
-    <form class="dropzone" method="post" action="/sites/{{$v.Site.ID}}/deploy" enctype="multipart/form-data"
-      data-upload data-history="/sites/{{$v.Site.ID}}/history"
-      data-msg-uploading="{{.L.T "deploy.uploading"}}" data-msg-processing="{{.L.T "deploy.processing"}}"
-      data-msg-failed="{{.L.T "deploy.failed"}}" data-msg-open="{{.L.T "deploy.open"}}" data-msg-wrongtype="{{.L.T "deploy.wrongtype"}}">
-      <input type="hidden" name="_csrf" value="{{.CSRF}}">
-      {{template "draft_toggle" .}}
-      <div class="dropzone__body">
-        <p class="dropzone__title">{{.L.T "deploy.drop"}}</p>
-        <p class="hint">{{.L.T "deploy.hint" "size" (.L.Size .D.MaxSize)}}</p>
-        <div class="dropzone__actions">
-          <label class="btn btn--primary file-pick">
-            <input class="file-pick__input" type="file" name="archive" accept=".zip,.tar.gz,.tgz,application/zip,application/gzip" required data-file>
-            <span>{{.L.T "deploy.pick"}}</span>
-          </label>
-          <button class="btn btn--ghost" type="submit" data-nojs>{{.L.T "deploy.submit"}}</button>
-        </div>
+    <section class="section site-block" aria-labelledby="recent-h">
+      <div class="section-head">
+        <h2 class="section-title" id="recent-h">{{.L.T "site.overview.recent"}}</h2>
+        <a class="btn btn--small btn--ghost" href="{{$base}}/versions">{{.L.T "site.overview.allversions"}} <span aria-hidden="true">→</span></a>
       </div>
-      <div class="progress" data-progress hidden>
-        <div class="progress__track" role="progressbar" aria-label="{{.L.T "deploy.progress"}}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-bar-wrap>
-          <div class="progress__bar" data-bar></div>
-        </div>
-        <span class="progress__pct mono" data-pct>0%</span>
-      </div>
-      <div class="upload-status" role="status" aria-live="polite" data-status></div>
-    </form>
-    <details class="howto">
-      <summary>{{.L.T "deploy.howto.title"}}</summary>
-      <ul class="bullets">
-        <li>{{.L.T "deploy.howto.1"}}</li>
-        <li>{{.L.T "deploy.howto.2"}}</li>
-        <li>{{.L.T "deploy.howto.3"}}</li>
+      <div id="history">{{template "history" .}}</div>
+    </section>
+  </div>
+
+  <aside class="overview__side">
+    {{if gt (len $v.URLs) 1}}
+    <section class="side-card" aria-labelledby="addr-h">
+      <h2 class="side-card__title" id="addr-h">{{.L.T "site.overview.addresses"}}</h2>
+      <ul class="addr-list">
+        {{range $i, $u := $v.URLs}}
+        <li><a class="addr{{if eq $i 0}} addr--strong{{end}} mono" href="{{$u}}" title="{{$u}}" target="_blank" rel="noopener noreferrer">{{wbr (host $u)}}</a></li>
+        {{end}}
       </ul>
-    </details>
-  </section>
+    </section>
+    {{end}}
 
-<section class="section site-block" aria-labelledby="history-h">
-  <h2 class="section-title" id="history-h">{{.L.T "history.title"}}</h2>
-  <div id="history">{{template "history" .}}</div>
-</section>
-
-{{template "site_workflow" .}}
-
-{{template "site_workspace" .}}
-
-{{template "site_stats" .}}
-
-{{template "site_forms" .}}
-
-{{template "site_data" .}}
-{{template "site_proxy" .}}
-
-<section class="section site-block" aria-labelledby="settings-h">
-  <h2 class="section-title" id="settings-h">{{.L.T "site.settings"}}</h2>
-    <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/settings">
-      {{template "csrf" .}}
-      <div class="site-block__row">
-      <div class="field">
-        <label class="field__label" for="title">{{.L.T "site.field.title"}}</label>
-        <input class="input" id="title" name="title" required maxlength="120" value="{{$v.Site.Title}}">
-      </div>
-      <div class="field">
-        <label class="field__label" for="slug">{{.L.T "site.field.slug"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
-        <input class="input mono" id="slug" name="slug" value="{{$v.Slug}}" maxlength="63" autocomplete="off" autocapitalize="off" spellcheck="false"
-          hx-get="/sites/{{$v.Site.ID}}/slug-check" hx-trigger="input changed delay:350ms" hx-target="#slug-status" hx-sync="this:replace" aria-describedby="slug-hint slug-status">
-        <p class="hint" id="slug-hint">{{.L.T "site.slug.hint" "domain" .D.Domain}} {{.L.T "site.slug.clear"}}</p>
-        <p class="slug-status" id="slug-status" aria-live="polite"></p>
-      </div>
-      </div>
-      <button class="btn btn--primary" type="submit">{{.L.T "form.save"}}</button>
-    </form>
-</section>
-
-{{template "site_domains" .}}
-
-  <section class="section site-block" aria-labelledby="access-h">
-    <h2 class="section-title" id="access-h">{{.L.T "access.title"}}</h2>
-    <form class="stack access" method="post" action="/sites/{{$v.Site.ID}}/access">
-      {{template "csrf" .}}
-      <fieldset class="access__group">
-        <legend class="field__label">{{.L.T "access.index.legend"}}</legend>
-        <label class="check"><input type="checkbox" name="noindex" value="1"{{if $v.Site.Noindex}} checked{{end}} aria-describedby="noindex-hint"> <span>{{.L.T "access.index.label"}}</span></label>
-        <p class="hint" id="noindex-hint">{{.L.T "access.index.hint"}}</p>
-      </fieldset>
-      <fieldset class="access__group">
-        <legend class="field__label">{{.L.T "access.pass.legend"}}</legend>
-        <label class="check"><input type="checkbox" name="protected" value="1"{{if $v.Site.Protected}} checked{{end}}> <span>{{.L.T "access.pass.label"}}</span></label>
-        <div class="field">
-          <label class="field__label field__label--sub" for="site-password">{{if $v.Site.Protected}}{{.L.T "access.pass.new"}}{{else}}{{.L.T "access.pass.field"}}{{end}}</label>
-          <input class="input" id="site-password" name="password" type="password" minlength="10" maxlength="256" autocomplete="new-password" aria-describedby="password-hint">
-          <p class="hint" id="password-hint">{{if $v.Site.Protected}}{{.L.T "access.pass.hint.change"}}{{else}}{{.L.T "access.pass.hint.new"}}{{end}}</p>
-        </div>
-      </fieldset>
-      <fieldset class="access__group">
-        <legend class="field__label">{{.L.T "access.expires.legend"}}</legend>
-        <div class="field">
-          <label class="field__label field__label--sub" for="expires">{{.L.T "access.expires.label"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
-          <input class="input mono" id="expires" name="expires" type="date" min="{{.D.Access.MinDay}}" value="{{.D.Access.ExpiresDay}}" aria-describedby="expires-hint">
-          <p class="hint" id="expires-hint">{{if $v.Site.ExpiresAt}}{{.L.T "access.expires.current" "date" (.L.DatePtr $v.Site.ExpiresAt)}} {{end}}{{.L.T "access.expires.hint"}}</p>
-        </div>
-      </fieldset>
-      <button class="btn btn--primary" type="submit">{{.L.T "form.save"}}</button>
-    </form>
-  </section>
-
-{{template "site_publish" .}}
-
-<section class="section site-block" aria-labelledby="counters-h">
-  <h2 class="section-title" id="counters-h">{{.L.T "counters.title"}}</h2>
-    <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/counters">
-      {{template "csrf" .}}
-      <div class="site-block__row">
-      <div class="field">
-        <label class="field__label" for="metrika_id">{{.L.T "counters.metrika"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
-        <input class="input mono" id="metrika_id" name="metrika_id" value="{{.D.Counters.Own.MetrikaID}}" inputmode="numeric" pattern="[1-9][0-9]{3,11}" maxlength="12" autocomplete="off" spellcheck="false" placeholder="12345678">
-      </div>
-      <div class="field">
-        <label class="field__label" for="ga4_id">{{.L.T "counters.ga4"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
-        <input class="input mono" id="ga4_id" name="ga4_id" value="{{.D.Counters.Own.GA4ID}}" pattern="[Gg]-[A-Za-z0-9]{4,16}" maxlength="18" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="G-XXXXXXXXXX" aria-describedby="counters-hint">
-        <p class="hint" id="counters-hint">{{.L.T "counters.hint"}}{{if $v.Current}} {{.L.T "counters.hint.release"}}{{end}}</p>
-        {{with .D.Counters.Global}}{{if or .MetrikaID .GA4ID}}
-        <p class="hint">{{$.L.T "counters.global"}} <span class="mono">{{if .MetrikaID}}{{.MetrikaID}}{{end}}{{if and .MetrikaID .GA4ID}}, {{end}}{{if .GA4ID}}{{.GA4ID}}{{end}}</span></p>
-        {{end}}{{end}}
-      </div>
-      </div>
-      <button class="btn btn--ghost" type="submit">{{.L.T "counters.save"}}</button>
-    </form>
-</section>
-
-<section class="section danger" aria-labelledby="delete-h">
-  <details class="danger__box">
-    <summary><span id="delete-h">{{.L.T "site.delete.title"}}</span></summary>
-    <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/delete">
-      {{template "csrf" .}}
-      <p>{{.L.T "site.delete.text"}}</p>
-      <div class="field">
-        <label class="field__label" for="confirm">{{.L.T "site.delete.confirm" "title" $v.Site.Title}}</label>
-        <input class="input" id="confirm" name="confirm" required autocomplete="off" data-confirm-input>
-      </div>
-      <button class="btn btn--danger" type="submit">{{.L.T "site.delete.submit"}}</button>
-    </form>
-  </details>
-</section>
+    <section class="side-card" aria-labelledby="attached-h">
+      <h2 class="side-card__title" id="attached-h">{{.L.T "site.overview.attached"}}</h2>
+      <ul class="tally">
+        <li><a class="tally__row" href="{{$base}}/forms">
+          <span class="tally__label">{{.L.T "site.nav.forms"}}</span>
+          <span class="tally__value mono">{{.D.Forms.Total}}</span>
+          <span class="tally__note">{{.L.T "site.overview.forms.note" "n" (len .D.Forms.Channels)}}</span>
+        </a></li>
+        <li><a class="tally__row" href="{{$base}}/data">
+          <span class="tally__label">{{.L.T "site.nav.data"}}</span>
+          <span class="tally__value mono">{{len .D.Data}}</span>
+          <span class="tally__note">{{.L.T "site.overview.data.note"}}</span>
+        </a></li>
+        <li><a class="tally__row" href="{{$base}}/proxy">
+          <span class="tally__label">{{.L.T "site.nav.proxy"}}</span>
+          <span class="tally__value mono">{{.D.Proxies}}</span>
+          <span class="tally__note">{{.L.T "site.overview.proxy.note"}}</span>
+        </a></li>
+        <li><a class="tally__row" href="{{$base}}/access#domains-h">
+          <span class="tally__label">{{.L.T "domains.title"}}</span>
+          <span class="tally__value mono">{{.D.Domains.Count}}</span>
+          <span class="tally__note">{{.L.T "site.overview.domains.note"}}</span>
+        </a></li>
+        <li><a class="tally__row tally__row--text" href="{{$base}}/access">
+          <span class="tally__label">{{.L.T "access.title"}}</span>
+          <span class="tally__note">
+            {{if $v.Site.Protected}}{{.L.T "access.badge.protected"}}{{else}}{{.L.T "site.overview.access.open"}}{{end}} ·
+            {{if $v.Site.Noindex}}{{.L.T "access.badge.noindex"}}{{else}}{{.L.T "site.overview.access.indexed"}}{{end}} ·
+            {{if $v.Site.ExpiresAt}}{{.L.T "access.badge.expires" "date" (.L.DatePtr $v.Site.ExpiresAt)}}{{else}}{{.L.T "site.overview.access.forever"}}{{end}}
+          </span>
+        </a></li>
+      </ul>
+    </section>
+  </aside>
 </div>
 {{end}}

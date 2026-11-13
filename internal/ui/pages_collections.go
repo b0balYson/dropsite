@@ -54,7 +54,7 @@ func (s *server) renderCollections(w http.ResponseWriter, r *http.Request, rc *r
 	if newForm.Mode == "" {
 		newForm.Mode = string(domain.CollectionPublic)
 	}
-	s.page(w, r, rc, status, "collections", "sites", "data.title",
+	s.sitePageOf(w, r, rc, status, "collections", secData, "data.title", v,
 		collectionsPageData{V: v, Collections: cs, New: newForm, Edit: edit, Templates: s.svc.CollectionTemplates()})
 }
 
@@ -209,7 +209,7 @@ func (s *server) renderCollection(w http.ResponseWriter, r *http.Request, rc *re
 	default:
 		data.Form = documentForm{Data: "{\n  \n}"}
 	}
-	s.page(w, r, rc, status, "collection", "sites", "data.collection.title", data)
+	s.sitePageSub(w, r, rc, status, "collection", secData, "data.collection.title", v, true, data)
 }
 
 func (s *server) collectionPage(w http.ResponseWriter, r *http.Request, rc *reqCtx) {

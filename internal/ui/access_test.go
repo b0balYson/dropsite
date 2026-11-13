@@ -14,7 +14,7 @@ func TestSiteAccessForm(t *testing.T) {
 	alice := h.loginUser("alice@pp.test")
 	v := h.createSite(alice, "Docs", "docs")
 	site := "/sites/" + v.Site.ID
-	page := h.get(site)
+	page := h.get(site + "/access")
 	wantContains(t, page.body, "Доступ", `name="noindex"`, `name="protected"`, `name="expires"`)
 
 	// Protect, hide and expire in one go.
@@ -23,6 +23,9 @@ func TestSiteAccessForm(t *testing.T) {
 		"noindex": {"1"}, "protected": {"1"}, "password": {"visitor-pass-1"}, "expires": {day},
 	})
 	wantStatus(t, p, http.StatusSeeOther)
+	if p.location() != site+"/access" {
+		t.Fatalf("redirect %q, want the access section", p.location())
+	}
 	got, err := h.env.Svc.GetSite(context.Background(), alice, v.Site.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -31,7 +34,7 @@ func TestSiteAccessForm(t *testing.T) {
 		got.Site.ExpiresAt.Format("2006-01-02") != h.env.Clock.Now().Add(72*time.Hour).Format("2006-01-02") {
 		t.Fatalf("site %+v", got.Site)
 	}
-	page = h.get(site)
+	page = h.get(site + "/access")
 	wantContains(t, page.body, "Настройки доступа сохранены", "пароль", "скрыт от поиска",
 		`value="`+day+`"`, "notice--warn", "Новый пароль")
 	wantNotContains(t, page.body, "visitor-pass-1")
