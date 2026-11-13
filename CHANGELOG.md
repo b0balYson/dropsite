@@ -10,37 +10,42 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
-### Breaking changes
+## [0.1.0] - 2026-11-13
 
-- `control` refuses to start when the admin UI would be reachable on a public
-  address: a public `ADMIN_BIND_IP` (or `0.0.0.0`) in compose, or a public or
-  empty host in `ADMIN_ADDR` outside Docker. Keep `ADMIN_BIND_IP=127.0.0.1`
-  and use an SSH tunnel, or a private network address (RFC 1918, Tailscale
-  `100.64.0.0/10`, IPv6 ULA); to accept the risk set `ALLOW_PUBLIC_ADMIN=1`.
-  Check `.env` before updating ([docs/security.md](docs/security.md)).
-- `ADMIN_ADDR` outside Docker now defaults to `127.0.0.1:8082` instead of
-  `:8082`; the compose file sets `:8082` inside the container explicitly.
+First public release.
+
+### Added
+
+- Publishing of static sites on `<slug>.<base-domain>` with automatic HTTPS
+  (on-demand or wildcard certificates), served by Caddy from read-only
+  releases; the sites stay up while `control` is down.
+- Remote MCP server with OAuth 2.1 for ChatGPT and Claude, a local stdio MCP
+  server, an HTTP API with OpenAPI and the `dropsite` CLI.
+- Drafts with a preview address, scheduled publishing, versions and rollback,
+  clone, screenshots (optional renderer) and a quality report for each
+  release with WebP, sitemap, robots and favicon optimization.
+- Site forms with Telegram, e-mail and webhook delivery, Altcha anti-bot and
+  CSV export; site data collections (public or moderated) with schema
+  templates; Google Sheets sync; a secret proxy for third-party API keys.
+- Password-protected sites, noindex, expiry, own domains with administrator
+  approval, statistics and counters, shared workspaces and an audit log.
+- Web interface in English, Russian and Simplified Chinese with a getting
+  started checklist and step-by-step chat connection guides.
+- One-command server installer for macOS and Linux, daily backups,
+  `dropsite-update`, `dropsite-rollback` and `dropsite-admin-password`.
+- Prebuilt multi-arch images on GHCR and CLI binaries with checksums and
+  attestations, published from version tags.
 
 ### Security
 
-- Every answer of a password-protected site, files, 404 pages,
-  `/_dropsite/data` and `/_dropsite/proxy` included, carries
-  `Cache-Control: private, no-store`, so a CDN or shared cache never stores it.
-- Behind a trusted proxy only the rightmost `X-Forwarded-For` address is used
-  as the client IP: a client in a trusted network can no longer forge its rate
-  limit key or audit address. The admin listener never reads the header.
-- Adding a workspace member answers alike for every e-mail without an active
-  user and is limited to 20 attempts an hour per user (`429 rate_limited`);
-  the reason is recorded in the audit log only.
-- Site forms refuse posts a browser marks `Sec-Fetch-Site: cross-site`.
-- The server installer removes `ADMIN_PASSWORD` from `.env` once the first
-  administrator exists and recreates `control` without it; the password is
-  shown once and reset with `dropsite-admin-password`. `ADMIN_PASSWORD` is no
-  longer required by the compose file, and `control` warns when it is still
-  set although users exist.
+- The admin interface refuses to start on a public address unless
+  `ALLOW_PUBLIC_ADMIN=1` is set; outside Docker it listens on `127.0.0.1`.
+- Password-protected sites answer with `Cache-Control: private, no-store`.
+- Only the rightmost `X-Forwarded-For` hop is trusted behind the proxy.
+- Workspace member additions do not reveal whether an account exists and are
+  rate limited; forms refuse browser posts marked cross-site.
+- The installer does not keep the first administrator password on the server.
+- Threat model and operator guidance in [docs/security.md](docs/security.md).
 
-### Documentation
-
-- Threat model and operator guidance in [docs/security.md](docs/security.md);
-  a checklist for the Google Sheets service account in
-  [docs/sheets.md](docs/sheets.md).
+[Unreleased]: https://github.com/b0balYson/dropsite/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/b0balYson/dropsite/releases/tag/v0.1.0
