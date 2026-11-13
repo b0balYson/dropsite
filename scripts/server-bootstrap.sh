@@ -582,7 +582,7 @@ if ! git symbolic-ref -q HEAD >/dev/null; then
 	# After dropsite-rollback the checkout is detached: back to the branch.
 	git checkout -q "$(cat "$STATE_DIR/branch" 2>/dev/null || echo main)"
 fi
-git pull --ff-only
+git pull -q --ff-only
 echo "==> Starting the new version (a few minutes)"
 bash "$APP_DIR/scripts/server-bootstrap.sh" --up
 cd deploy
@@ -591,7 +591,7 @@ if [ "$(sha256sum Caddyfile | cut -d' ' -f1)" != "$before" ]; then
 	docker compose restart caddy
 fi
 bash "$APP_DIR/scripts/server-bootstrap.sh" --install-helpers
-docker compose ps
+docker compose ps --format "    {{.Service}}: {{.Status}}"
 echo "==> dropsite is up to date. To go back: dropsite-rollback"
 EOF
 	} | write_file "$BIN_DIR/dropsite-update" 0755
@@ -648,7 +648,7 @@ if [ "$(sha256sum Caddyfile | cut -d' ' -f1)" != "$before" ]; then
 	docker compose restart caddy
 fi
 mv -f "$STATE" "$STATE.done"
-docker compose ps
+docker compose ps --format "    {{.Service}}: {{.Status}}"
 echo "==> Rolled back. dropsite-update brings the new version again."
 EOF
 	} | write_file "$BIN_DIR/dropsite-rollback" 0755

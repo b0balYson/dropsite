@@ -10,6 +10,11 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+### Changed
+
+- `dropsite-update` and `dropsite-rollback` print a short status per service
+  instead of the list of changed files and the full container table.
+
 ## [0.3.0] - 2026-11-13
 
 ### Added
