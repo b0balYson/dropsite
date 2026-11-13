@@ -52,6 +52,9 @@ type ProxyEndpointView struct {
 	CallURL string
 	// SecretURL is the web interface screen where the key is pasted.
 	SecretURL string
+	// Effective are the limits in force: the owner overrides or the class
+	// defaults.
+	Effective domain.ProxyLimits
 }
 
 var errProxyNotUI = domain.E(domain.KindInvalid, domain.CodeProxySecretUIOnly,
@@ -79,7 +82,8 @@ func (s *Service) proxyView(siteURL string, e domain.ProxyEndpoint) ProxyEndpoin
 	if siteURL != "" {
 		call = strings.TrimSuffix(siteURL, "/") + ProxyPathPrefix + e.Name + "/"
 	}
-	return ProxyEndpointView{Endpoint: e, SecretSet: set, CallURL: call, SecretURL: s.ProxyPageURL(e.SiteID, e.Name)}
+	return ProxyEndpointView{Endpoint: e, SecretSet: set, CallURL: call, SecretURL: s.ProxyPageURL(e.SiteID, e.Name),
+		Effective: ProxyEffectiveLimits(e.ProxyConfig)}
 }
 
 func (s *Service) siteURL(ctx context.Context, site domain.Site) (string, error) {
@@ -105,6 +109,7 @@ func (s *Service) ListProxyEndpoints(ctx context.Context, a Actor, ref string) (
 	if err != nil {
 		return nil, err
 	}
+	eps = s.withTodayUsage(ctx, site.ID, eps)
 	out := make([]ProxyEndpointView, 0, len(eps))
 	for _, e := range eps {
 		out = append(out, s.proxyView(base, e))
@@ -122,7 +127,7 @@ func (s *Service) GetProxyEndpoint(ctx context.Context, a Actor, ref, name strin
 	if err != nil {
 		return ProxyEndpointView{}, err
 	}
-	return s.proxyView(base, e), nil
+	return s.proxyView(base, s.withTodayUsage(ctx, site.ID, []domain.ProxyEndpoint{e})[0]), nil
 }
 
 func (s *Service) proxyEndpointOf(ctx context.Context, a Actor, ref, name string) (domain.Site, domain.ProxyEndpoint, error) {
@@ -155,16 +160,20 @@ func (s *Service) PutProxyEndpoint(ctx context.Context, a Actor, ref, name strin
 	if err != nil {
 		return ProxyEndpointView{}, false, err
 	}
-	cfg, err := s.normalizeProxyConfig(c)
-	if err != nil {
+	old, err := s.repo.GetProxyEndpoint(ctx, site.ID, n)
+	if err != nil && !errors.Is(err, domain.ErrNotFound) {
 		return ProxyEndpointView{}, false, err
 	}
-	base, err := s.siteURL(ctx, site)
-	if err != nil {
-		return ProxyEndpointView{}, false, err
+	c = withProxyClassDefault(c, old, err == nil)
+	cfg, cerr := s.normalizeProxyConfig(c)
+	if cerr != nil {
+		return ProxyEndpointView{}, false, cerr
+	}
+	base, berr := s.siteURL(ctx, site)
+	if berr != nil {
+		return ProxyEndpointView{}, false, berr
 	}
 	now := s.now()
-	old, err := s.repo.GetProxyEndpoint(ctx, site.ID, n)
 	switch {
 	case errors.Is(err, domain.ErrNotFound):
 		e, err := s.createProxyEndpoint(ctx, a, site, n, cfg, now)
@@ -172,8 +181,6 @@ func (s *Service) PutProxyEndpoint(ctx context.Context, a Actor, ref, name strin
 			return ProxyEndpointView{}, false, err
 		}
 		return s.proxyView(base, e), true, nil
-	case err != nil:
-		return ProxyEndpointView{}, false, err
 	}
 	e := old
 	e.ProxyConfig, e.UpdatedAt = cfg, now
@@ -185,9 +192,27 @@ func (s *Service) PutProxyEndpoint(ctx context.Context, a Actor, ref, name strin
 		return ProxyEndpointView{}, false, err
 	}
 	s.audit(ctx, a, "proxy.endpoint.update", siteTarget(site.ID), map[string]any{
-		"name": n, "host": cfg.AllowedHosts[0], "enabled": cfg.Enabled, "secret_cleared": cleared,
+		"name": n, "host": cfg.AllowedHosts[0], "enabled": cfg.Enabled, "secret_cleared": cleared, "class": string(cfg.Class),
 	})
 	return s.proxyView(base, e), false, nil
+}
+
+// withProxyClassDefault fills an omitted class: an existing endpoint keeps
+// its class (and template), a new one becomes "ai", so the unprotected
+// transparent class is never chosen silently.
+func withProxyClassDefault(c domain.ProxyConfig, old domain.ProxyEndpoint, exists bool) domain.ProxyConfig {
+	if strings.TrimSpace(string(c.Class)) != "" {
+		return c
+	}
+	if !exists {
+		c.Class = domain.ProxyClassAI
+		return c
+	}
+	c.Class = old.Class
+	if c.Template == nil && old.Class.Templated() {
+		c.Template = old.Template
+	}
+	return c
 }
 
 func (s *Service) createProxyEndpoint(ctx context.Context, a Actor, site domain.Site, name string, cfg domain.ProxyConfig, now time.Time) (domain.ProxyEndpoint, error) {
@@ -205,7 +230,7 @@ func (s *Service) createProxyEndpoint(ctx context.Context, a Actor, site domain.
 		return domain.ProxyEndpoint{}, err
 	}
 	s.audit(ctx, a, "proxy.endpoint.create", siteTarget(site.ID), map[string]any{
-		"name": name, "host": cfg.AllowedHosts[0], "auth": string(cfg.Auth),
+		"name": name, "host": cfg.AllowedHosts[0], "auth": string(cfg.Auth), "class": string(cfg.Class),
 	})
 	return e, nil
 }

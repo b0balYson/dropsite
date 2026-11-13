@@ -1,0 +1,36 @@
+{{define "admin_guard"}}{{$g := .D.Guard}}
+<section class="section guard" aria-labelledby="guard-h">
+  <h2 class="section-title" id="guard-h">{{.L.T "guard.title"}}</h2>
+  <p class="lede guard__lede">{{.L.T "guard.lede"}}</p>
+  {{template "section_flash" (bundle $ "guard-h")}}
+  <form method="post" action="/admin/settings/guard" class="panel--tight stack guard__form">
+    {{template "csrf" .}}{{template "section_field" "guard-h"}}
+    <label class="check"><input type="checkbox" name="defender" value="1" {{if $g.Defender.Enabled}}checked{{end}}>
+      <span><strong>{{.L.T "guard.defender"}}</strong><span class="hint guard__hint">{{.L.T "guard.defender.hint"}}</span></span></label>
+    <label class="check"><input type="checkbox" name="strict" value="1" {{if $g.Defender.Strict}}checked{{end}}>
+      <span><strong>{{.L.T "guard.strict"}}</strong><span class="hint guard__hint">{{.L.T "guard.strict.hint"}}</span></span></label>
+    <div class="form-actions">
+      <button class="btn btn--primary" type="submit">{{.L.T "guard.save"}}</button>
+    </div>
+  </form>
+
+  <h3 class="guard__sub" id="bans-h">{{.L.T "guard.bans"}} <span class="muted">{{len $g.Bans}}</span></h3>
+  <p class="hint">{{.L.T "guard.bans.hint"}}</p>
+  {{if $g.Bans}}
+  <ul class="guard__bans">
+    {{range $g.Bans}}
+    <li class="guard__ban">
+      <span class="mono guard__ip">{{.Key}}</span>
+      <span class="badge badge--warn">{{$.L.T (printf "guard.ban.reason.%s" .Reason)}}</span>
+      <span class="small muted">{{$.L.T "guard.ban.level" "n" .Level}} · {{$.L.T "guard.ban.until" "at" ($.L.Date .ExpiresAt)}}</span>
+      <form method="post" action="/admin/settings/bans/clear" class="guard__unban">
+        {{template "csrf" $}}{{template "section_field" "guard-h"}}
+        <input type="hidden" name="key" value="{{.Key}}">
+        <button class="btn btn--small btn--ghost" type="submit">{{$.L.T "guard.unban"}}</button>
+      </form>
+    </li>
+    {{end}}
+  </ul>
+  {{else}}<p class="empty-line">{{.L.T "guard.bans.none"}}</p>{{end}}
+</section>
+{{end}}

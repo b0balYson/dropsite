@@ -179,6 +179,9 @@ func (s *Service) normalizeProxyConfig(c domain.ProxyConfig) (domain.ProxyConfig
 	if out.AuthName, err = normalizeProxyAuthName(out.Auth, c.AuthName); err != nil {
 		return domain.ProxyConfig{}, err
 	}
+	if err := applyProxyClass(&out, c); err != nil {
+		return domain.ProxyConfig{}, err
+	}
 	return out, nil
 }
 

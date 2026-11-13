@@ -42,7 +42,10 @@ func (s *Service) Start(ctx context.Context) error {
 	if err := s.Reconcile(ctx); err != nil {
 		return err
 	}
-	return s.reconcilePublicAdmin(ctx)
+	if err := s.reconcilePublicAdmin(ctx); err != nil {
+		return err
+	}
+	return s.reconcileGuard(ctx)
 }
 
 // Reconcile brings the sites volume in line with the database.
@@ -104,6 +107,9 @@ func (s *Service) Housekeeping(ctx context.Context) error {
 	s.purgeUploads(now)
 	if err := s.housekeepConnect(ctx, now); err != nil {
 		return err
+	}
+	if err := s.purgeProxyDaily(ctx); err != nil {
+		return fmt.Errorf("purge proxy daily usage: %w", err)
 	}
 	if err := s.purgeProxy(ctx); err != nil {
 		return fmt.Errorf("purge proxy endpoints: %w", err)

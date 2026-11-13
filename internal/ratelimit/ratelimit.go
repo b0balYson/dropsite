@@ -96,6 +96,25 @@ func (w *Window) Allow(key string) (bool, time.Duration) {
 	return true, 0
 }
 
+// AllowMax is Allow with a per-key limit of max events per period instead
+// of the limiter's own (per-endpoint limits in one limiter). max ≤ 0 uses
+// the limiter's limit.
+func (w *Window) AllowMax(key string, max int) (bool, time.Duration) {
+	if max <= 0 {
+		return w.Allow(key)
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	now := w.now()
+	w.maybeSweep(now)
+	evs := w.prune(key, now)
+	if len(evs) >= max {
+		return false, w.retryAfter(evs[len(evs)-max:], now)
+	}
+	w.events[key] = append(evs, now)
+	return true, 0
+}
+
 // Record adds an event for key unconditionally (e.g. a failed login).
 func (w *Window) Record(key string) {
 	w.mu.Lock()

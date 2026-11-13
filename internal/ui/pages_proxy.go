@@ -1,7 +1,9 @@
 package ui
 
 import (
+	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/b0balYson/dropsite/internal/domain"
@@ -26,15 +28,41 @@ type proxyForm struct {
 	AuthName     string
 	Enabled      bool
 	Editing      bool
+	Class        string
+	// Template is the request template as JSON text (classes ai and send).
+	Template     string
+	PerMinute    string
+	DailyBudget  string
+	SessionQuota string
 }
 
 type proxyPageData struct {
 	V         service.SiteView
 	Endpoints []service.ProxyEndpointView
 	Methods   []string
+	Classes   []domain.ProxyClass
 	Form      proxyForm
 	Error     string
 	Limit     int
+	Example   string
+}
+
+var errTemplateJSON = domain.E(domain.KindInvalid, domain.CodeProxyInvalid,
+	"the request template is not valid JSON")
+
+func formInt(s string) int {
+	n, err := strconv.Atoi(strings.TrimSpace(s))
+	if err != nil || n < 0 {
+		return 0
+	}
+	return n
+}
+
+func limitText(n int) string {
+	if n <= 0 {
+		return ""
+	}
+	return strconv.Itoa(n)
 }
 
 func proxyPath(siteID string) string { return sitePath(siteID) + "/proxy" }
@@ -50,7 +78,8 @@ func lines(s string) []string {
 }
 
 func newProxyForm() proxyForm {
-	return proxyForm{Methods: map[string]bool{"GET": true, "POST": true}, Auth: string(domain.ProxyAuthBearer), Enabled: true}
+	return proxyForm{Methods: map[string]bool{"GET": true, "POST": true}, Auth: string(domain.ProxyAuthBearer), Enabled: true,
+		Class: string(domain.ProxyClassAI)}
 }
 
 func readProxyForm(r *http.Request) proxyForm {
@@ -59,6 +88,9 @@ func readProxyForm(r *http.Request) proxyForm {
 		AllowedHosts: r.PostFormValue("allowed_hosts"), Paths: r.PostFormValue("paths"), Auth: r.PostFormValue("auth"),
 		AuthName: strings.TrimSpace(r.PostFormValue("auth_name")), Enabled: r.PostFormValue("enabled") == "1",
 		Editing: r.PostFormValue("editing") == "1", Methods: map[string]bool{},
+		Class: r.PostFormValue("class"), Template: r.PostFormValue("template"),
+		PerMinute: r.PostFormValue("per_minute"), DailyBudget: r.PostFormValue("daily_budget"),
+		SessionQuota: r.PostFormValue("session_quota"),
 	}
 	for _, m := range r.PostForm["methods"] {
 		f.Methods[m] = true
@@ -66,17 +98,30 @@ func readProxyForm(r *http.Request) proxyForm {
 	return f
 }
 
-func (f proxyForm) config() domain.ProxyConfig {
+// config turns the form into a configuration. The template field is used
+// only by the templated classes; methods and paths only by the others.
+func (f proxyForm) config() (domain.ProxyConfig, error) {
 	var methods []string
 	for _, m := range proxyMethods {
 		if f.Methods[m] {
 			methods = append(methods, m)
 		}
 	}
-	return domain.ProxyConfig{
+	c := domain.ProxyConfig{
 		UpstreamURL: f.UpstreamURL, AllowedHosts: lines(f.AllowedHosts), Methods: methods, Paths: lines(f.Paths),
 		Auth: domain.ProxyAuth(f.Auth), AuthName: f.AuthName, Enabled: f.Enabled,
+		Class: domain.ProxyClass(f.Class),
+		Limits: domain.ProxyLimits{PerMinute: formInt(f.PerMinute), DailyBudget: formInt(f.DailyBudget),
+			SessionQuota: formInt(f.SessionQuota)},
 	}
+	if c.Class.Templated() && strings.TrimSpace(f.Template) != "" {
+		var t domain.ProxyTemplate
+		if err := json.Unmarshal([]byte(f.Template), &t); err != nil {
+			return c, errTemplateJSON
+		}
+		c.Template = &t
+	}
+	return c, nil
 }
 
 func (s *server) proxyPage(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
@@ -95,13 +140,19 @@ func (s *server) renderProxy(w http.ResponseWriter, r *http.Request, rc *reqCtx,
 		return
 	}
 	s.sitePageOf(w, r, rc, status, "proxy", secProxy, "proxy.title", v, proxyPageData{
-		V: v, Endpoints: eps, Methods: proxyMethods, Form: form, Error: errMsg, Limit: service.ProxyEndpointsPerSite,
+		V: v, Endpoints: eps, Methods: proxyMethods, Classes: domain.ProxyClasses, Form: form, Error: errMsg,
+		Limit: service.ProxyEndpointsPerSite, Example: service.ProxyTemplateExample,
 	})
 }
 
 func (s *server) saveProxy(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	form := readProxyForm(r)
-	view, created, err := s.svc.PutProxyEndpoint(r.Context(), rc.actor, r.PathValue("ref"), form.Name, form.config())
+	cfg, err := form.config()
+	var view service.ProxyEndpointView
+	var created bool
+	if err == nil {
+		view, created, err = s.svc.PutProxyEndpoint(r.Context(), rc.actor, r.PathValue("ref"), form.Name, cfg)
+	}
 	if err != nil {
 		if isNotFound(err) {
 			s.notFound(w, r, rc)
@@ -171,7 +222,14 @@ func (s *server) editProxy(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	f := proxyForm{
 		Name: e.Name, UpstreamURL: e.UpstreamURL, AllowedHosts: strings.Join(extraHosts(e.AllowedHosts), "\n"),
 		Paths: strings.Join(e.Paths, "\n"), Auth: string(e.Auth), AuthName: e.AuthName, Enabled: e.Enabled,
-		Editing: true, Methods: map[string]bool{},
+		Editing: true, Methods: map[string]bool{}, Class: string(e.Class),
+		PerMinute: limitText(e.Limits.PerMinute), DailyBudget: limitText(e.Limits.DailyBudget),
+		SessionQuota: limitText(e.Limits.SessionQuota),
+	}
+	if e.Template != nil {
+		if b, err := json.MarshalIndent(e.Template, "", "  "); err == nil {
+			f.Template = string(b)
+		}
 	}
 	for _, m := range e.Methods {
 		f.Methods[m] = true

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -77,6 +78,14 @@ func ProxyErrorStatus(code string) (int, bool) {
 		return http.StatusBadGateway, true
 	case domain.CodeProxyTimeout:
 		return http.StatusGatewayTimeout, true
+	case domain.CodeProxySession, domain.CodeProxyPow:
+		return http.StatusUnauthorized, true
+	case domain.CodeProxyField:
+		return http.StatusBadRequest, true
+	case domain.CodeProxyBudget:
+		return http.StatusTooManyRequests, true
+	case domain.CodeProxyStatus:
+		return http.StatusBadGateway, true
 	}
 	return 0, false
 }
@@ -110,12 +119,27 @@ func (s *Service) OpenProxy(ctx context.Context, c ProxyCall) (*ProxyResponse, e
 	if !e.Enabled {
 		return nil, domain.ErrNotFound
 	}
+	if err := s.checkNotBanned(ctx, c.IP); err != nil {
+		s.recordProxyRejected(ctx, e.ID, proxyStatusOf(err))
+		return nil, err
+	}
+	if e.Class.Templated() {
+		return s.openTemplated(ctx, site, host, e, c)
+	}
 	segs, err := s.checkProxyCall(e, site.ID, c)
+	if err == nil {
+		err = s.spendBudget(ctx, site, e)
+	}
 	if err != nil {
 		s.recordProxyRejected(ctx, e.ID, proxyStatusOf(err))
 		return nil, err
 	}
 	resp, err := s.forwardProxy(ctx, e, host, segs, c)
+	return s.finishProxy(ctx, e, resp, err)
+}
+
+// finishProxy records the outcome of a forwarded call.
+func (s *Service) finishProxy(ctx context.Context, e domain.ProxyEndpoint, resp *ProxyResponse, err error) (*ProxyResponse, error) {
 	if err != nil {
 		if code := domain.AsError(err).Code; code == domain.CodeProxySecretMissing || code == domain.CodeProxyTooLarge {
 			s.recordProxyRejected(ctx, e.ID, proxyStatusOf(err))
@@ -152,16 +176,26 @@ func (s *Service) checkProxyCall(e domain.ProxyEndpoint, siteID string, c ProxyC
 	if !ok || !proxyPathAllowed(e.Paths, segs) {
 		return nil, errProxyPath
 	}
-	if ok, retry := s.proxyIPLimit.Allow(siteID + "|" + ipKey(c.IP)); !ok {
-		return nil, domain.ErrRateLimited.WithRetryAfter(retry)
-	}
-	if ok, retry := s.proxySiteLimit.Allow(siteID); !ok {
-		return nil, domain.ErrRateLimited.WithRetryAfter(retry)
+	if err := s.proxyRateLimits(e, siteID, c.IP); err != nil {
+		return nil, err
 	}
 	if !e.SecretSet() {
 		return nil, errProxyNoKey
 	}
 	return segs, nil
+}
+
+// proxyRateLimits applies the per-minute limit of the endpoint per client
+// network and the hourly limit of the site.
+func (s *Service) proxyRateLimits(e domain.ProxyEndpoint, siteID, ip string) error {
+	key := siteID + "|" + strconv.FormatInt(e.ID, 10) + "|" + ipKey(ip)
+	if ok, retry := s.proxyIPLimit.AllowMax(key, ProxyEffectiveLimits(e.ProxyConfig).PerMinute); !ok {
+		return domain.ErrRateLimited.WithRetryAfter(retry)
+	}
+	if ok, retry := s.proxySiteLimit.Allow(siteID); !ok {
+		return domain.ErrRateLimited.WithRetryAfter(retry)
+	}
+	return nil
 }
 
 // proxySegments decodes an escaped path. Dot segments, encoded slashes and
@@ -214,6 +248,8 @@ var proxyDropRequest = map[string]bool{
 	// the endpoint allows.
 	"X-Http-Method-Override": true, "X-Http-Method": true, "X-Method-Override": true, "X-Original-Method": true,
 	"X-Original-Url": true, "X-Rewrite-Url": true,
+	// The visitor session stays on this server.
+	SessionHeader: true, PowHeader: true,
 }
 
 // proxyPassResponse lists upstream headers returned to the visitor.

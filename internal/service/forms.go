@@ -214,6 +214,10 @@ func (s *Service) SubmitForm(ctx context.Context, p FormPost) (FormPostResult, e
 	// here and recorded once the post passed the anti-robot checks, so
 	// rejected posts from elsewhere cannot use up a site's quota.
 	src := ipKey(p.IP)
+	if err := s.checkNotBanned(ctx, p.IP); err != nil {
+		return FormPostResult{}, err
+	}
+	s.observeCall(ctx, p.IP, "form:"+site.ID+"/"+form)
 	if ok, retry := s.postIPLimit.Allow(src); !ok {
 		return FormPostResult{}, domain.ErrRateLimited.WithRetryAfter(retry)
 	}
@@ -264,7 +268,15 @@ func (s *Service) AltchaChallenge(ctx context.Context, rawHost, ip string) (altc
 	if err != nil {
 		return altcha.Challenge{}, err
 	}
-	return s.issueAltcha(ctx, forms.PurposeForm, site.ID, host, ipKey(ip), 0)
+	if err := s.checkNotBanned(ctx, ip); err != nil {
+		return altcha.Challenge{}, err
+	}
+	// A network flagged as a bot starts higher up the escalation ladder.
+	floor := 0
+	if l := s.suspicionLevel(ip); l > 0 {
+		floor = l + 1
+	}
+	return s.issueAltcha(ctx, forms.PurposeForm, site.ID, host, ipKey(ip), floor)
 }
 
 func (s *Service) wakeDelivery() {

@@ -1751,6 +1751,28 @@ a.xdomain__host { text-decoration: none; border-bottom: 2px solid var(--c-ink); 
 .proxy-methods { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4); }
 .proxy-form { max-width: 40rem; background: var(--c-surface); }
 .proxy-form fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+/* Endpoint classes: one card per class; the risky one stays visibly apart. */
+.proxy-classes { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: var(--s-2); }
+.proxy-classes > legend { grid-column: 1 / -1; }
+.proxy-class { display: flex; gap: var(--s-2); align-items: flex-start; padding: var(--s-3); border: var(--hairline); border-radius: var(--r-sm); background: var(--c-paper); cursor: pointer; transition: border-color 150ms ease, box-shadow 150ms ease; }
+.proxy-class:hover { border-color: var(--c-edge-strong); }
+.proxy-class:has(input:checked) { border-color: var(--c-ink); box-shadow: var(--shadow-card); background: var(--c-surface); }
+.proxy-class:has(input:focus-visible) { outline: 3px solid var(--c-accent); outline-offset: 2px; }
+.proxy-class input { margin-top: 0.25em; accent-color: var(--c-ink); flex: none; }
+.proxy-class__body { display: grid; gap: var(--s-1); }
+.proxy-class__body .hint { margin: 0; }
+.proxy-class--risky:has(input:checked) { border-color: var(--c-warn); background: var(--c-warn-bg); }
+.proxy__class-warn { grid-column: 1 / -1; margin: 0; }
+.proxy-advanced summary { cursor: pointer; font-weight: 700; }
+/* Abuse protection in the general settings. */
+.guard__form { max-width: 40rem; border: var(--hairline); box-shadow: var(--shadow-card); background: var(--c-surface); }
+.guard__hint { display: block; margin-top: var(--s-1); }
+.guard__sub { margin: var(--s-6) 0 var(--s-2); font-size: 1.05rem; }
+.guard__bans { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-2); max-width: 48rem; }
+.guard__ban { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); padding: var(--s-2) var(--s-3); border: var(--hairline); border-radius: var(--r-sm); background: var(--c-surface); }
+.guard__ip { font-weight: 700; overflow-wrap: anywhere; }
+.guard__unban { margin-left: auto; }
+.proxy-limits { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: var(--s-3); }
 /* Release quality: the score badge in the history and the report screen. */
 .release__quality { font-variant-numeric: tabular-nums; }
 .release__quality::before { display: none; }

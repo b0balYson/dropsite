@@ -133,7 +133,7 @@ func (r *proxyRig) call(c ProxyCall) (*ProxyResponse, string, error) {
 
 func TestProxyForwardsWithBearer(t *testing.T) {
 	r := newProxyRig(t)
-	cfg := domain.ProxyConfig{UpstreamURL: "https://api.example.com/v1?mode=x", Auth: domain.ProxyAuthBearer,
+	cfg := domain.ProxyConfig{Class: domain.ProxyClassTransparent, UpstreamURL: "https://api.example.com/v1?mode=x", Auth: domain.ProxyAuthBearer,
 		Methods: []string{"POST"}, Paths: []string{"/chat"}, Enabled: true}
 	r.endpoint("ai", cfg, "sk-secret-1")
 	hdr := http.Header{
@@ -179,11 +179,11 @@ func TestProxyForwardsWithBearer(t *testing.T) {
 
 func TestProxyPlacements(t *testing.T) {
 	r := newProxyRig(t)
-	r.endpoint("q", domain.ProxyConfig{UpstreamURL: "https://maps.example.com/api", Auth: domain.ProxyAuthQuery,
+	r.endpoint("q", domain.ProxyConfig{Class: domain.ProxyClassTransparent, UpstreamURL: "https://maps.example.com/api", Auth: domain.ProxyAuthQuery,
 		AuthName: "apikey", Methods: []string{"GET"}, Enabled: true}, "k1")
-	r.endpoint("h", domain.ProxyConfig{UpstreamURL: "https://crm.example.com", Auth: domain.ProxyAuthHeader,
+	r.endpoint("h", domain.ProxyConfig{Class: domain.ProxyClassTransparent, UpstreamURL: "https://crm.example.com", Auth: domain.ProxyAuthHeader,
 		AuthName: "X-Api-Key", Enabled: true}, "k2")
-	r.endpoint("tg", domain.ProxyConfig{UpstreamURL: "https://api.telegram.example.com/bot{secret}", Auth: domain.ProxyAuthPath,
+	r.endpoint("tg", domain.ProxyConfig{Class: domain.ProxyClassTransparent, UpstreamURL: "https://api.telegram.example.com/bot{secret}", Auth: domain.ProxyAuthPath,
 		Paths: []string{"/sendMessage"}, Enabled: true}, "123:AB/C")
 
 	if _, _, err := r.call(ProxyCall{Name: "q", Method: "GET", Path: "/geo", RawQuery: "apikey=visitor&city=Kazan"}); err != nil {
@@ -208,10 +208,10 @@ func TestProxyPlacements(t *testing.T) {
 
 func TestProxyRefusals(t *testing.T) {
 	r := newProxyRig(t)
-	r.endpoint("ai", domain.ProxyConfig{UpstreamURL: "https://api.example.com/v1", Auth: domain.ProxyAuthBearer,
+	r.endpoint("ai", domain.ProxyConfig{Class: domain.ProxyClassTransparent, UpstreamURL: "https://api.example.com/v1", Auth: domain.ProxyAuthBearer,
 		Methods: []string{"POST"}, Paths: []string{"/chat"}, Enabled: true}, "sk")
-	r.endpoint("nokey", domain.ProxyConfig{UpstreamURL: "https://api.example.com/v1", Auth: domain.ProxyAuthBearer, Enabled: true}, "")
-	r.endpoint("off", domain.ProxyConfig{UpstreamURL: "https://api.example.com/v1", Auth: domain.ProxyAuthBearer}, "sk")
+	r.endpoint("nokey", domain.ProxyConfig{Class: domain.ProxyClassTransparent, UpstreamURL: "https://api.example.com/v1", Auth: domain.ProxyAuthBearer, Enabled: true}, "")
+	r.endpoint("off", domain.ProxyConfig{Class: domain.ProxyClassTransparent, UpstreamURL: "https://api.example.com/v1", Auth: domain.ProxyAuthBearer}, "sk")
 	cases := []struct {
 		name string
 		c    ProxyCall
@@ -251,7 +251,7 @@ func TestProxyRefusals(t *testing.T) {
 
 func TestProxyRateLimits(t *testing.T) {
 	r := newProxyRig(t)
-	r.endpoint("ai", domain.ProxyConfig{UpstreamURL: "https://api.example.com", Auth: domain.ProxyAuthBearer, Enabled: true}, "sk")
+	r.endpoint("ai", domain.ProxyConfig{Class: domain.ProxyClassTransparent, UpstreamURL: "https://api.example.com", Auth: domain.ProxyAuthBearer, Enabled: true}, "sk")
 	for i := range ProxyCallsPerIP {
 		if _, _, err := r.call(ProxyCall{Name: "ai"}); err != nil {
 			t.Fatalf("call %d: %v", i, err)
@@ -272,7 +272,7 @@ func TestProxyRateLimits(t *testing.T) {
 
 func TestProxyRedirects(t *testing.T) {
 	r := newProxyRig(t)
-	r.endpoint("ai", domain.ProxyConfig{UpstreamURL: "https://api.example.com", Auth: domain.ProxyAuthHeader, AuthName: "X-Key",
+	r.endpoint("ai", domain.ProxyConfig{Class: domain.ProxyClassTransparent, UpstreamURL: "https://api.example.com", Auth: domain.ProxyAuthHeader, AuthName: "X-Key",
 		AllowedHosts: []string{"files.example.com"}, Enabled: true}, "sk")
 	r.up.handler = func(w http.ResponseWriter, req *http.Request) {
 		switch {
@@ -310,7 +310,7 @@ func TestProxyRedirects(t *testing.T) {
 
 func TestProxyResponseLimits(t *testing.T) {
 	r := newProxyRig(t)
-	r.endpoint("ai", domain.ProxyConfig{UpstreamURL: "https://api.example.com", Auth: domain.ProxyAuthBearer, Enabled: true}, "sk")
+	r.endpoint("ai", domain.ProxyConfig{Class: domain.ProxyClassTransparent, UpstreamURL: "https://api.example.com", Auth: domain.ProxyAuthBearer, Enabled: true}, "sk")
 	big := bytes.Repeat([]byte("a"), ProxyMaxResponseBytes+10)
 	r.up.handler = func(w http.ResponseWriter, req *http.Request) {
 		if req.URL.Path == "/declared" {
@@ -359,7 +359,7 @@ func TestProxyTransportRefusesInternalAddresses(t *testing.T) {
 // endpoint does not allow on upstreams that honour them.
 func TestProxyDropsMethodAndURLOverrides(t *testing.T) {
 	r := newProxyRig(t)
-	cfg := domain.ProxyConfig{UpstreamURL: "https://api.example.com/v1", Auth: domain.ProxyAuthBearer,
+	cfg := domain.ProxyConfig{Class: domain.ProxyClassTransparent, UpstreamURL: "https://api.example.com/v1", Auth: domain.ProxyAuthBearer,
 		Methods: []string{"POST"}, Paths: []string{"/chat"}, Enabled: true}
 	r.endpoint("ai", cfg, "sk-secret-1")
 	overrides := []string{"X-Http-Method-Override", "X-Http-Method", "X-Method-Override", "X-Original-Method",

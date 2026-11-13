@@ -23,12 +23,12 @@ func TestProxyScreen(t *testing.T) {
 	wantContains(t, empty.body, "Эндпоинтов пока нет", "любой посетитель")
 
 	bad := h.submit(base, base, url.Values{"name": {"ai"}, "upstream_url": {"https://10.0.0.1/v1"}, "auth": {"bearer"},
-		"methods": {"POST"}, "enabled": {"1"}})
+		"methods": {"POST"}, "enabled": {"1"}, "class": {"transparent"}})
 	wantStatus(t, bad, http.StatusUnprocessableEntity)
 	wantContains(t, bad.body, "Эндпоинт не сохранён", "https://10.0.0.1/v1")
 
 	p := h.submit(base, base, url.Values{"name": {"ai"}, "upstream_url": {"https://api.openai.com/v1"}, "auth": {"bearer"},
-		"methods": {"POST"}, "paths": {"/chat/completions\n/models"}, "enabled": {"1"}})
+		"methods": {"POST"}, "paths": {"/chat/completions\n/models"}, "enabled": {"1"}, "class": {"transparent"}})
 	wantStatus(t, p, http.StatusSeeOther)
 	list := h.follow(p)
 	wantContains(t, list.body, `id="proxy-ai"`, "Нет ключа", "/_dropsite/proxy/ai/", "/chat/completions, /models", `type="password"`)

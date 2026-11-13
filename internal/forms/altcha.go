@@ -122,17 +122,41 @@ func (a Altcha) Challenge(host, purpose string, maxN int, now time.Time) (altcha
 	}
 	counter := maxN/2 + int(r.Int64())
 	expires := now.Add(AltchaTTL)
+	k := kdfFor(purpose)
 	return altcha.CreateChallenge(altcha.CreateChallengeOptions{
-		Algorithm:              altchaAlgorithm,
-		Cost:                   AltchaCost,
+		Algorithm:              k.algorithm,
+		Cost:                   k.cost,
 		KeyLength:              32,
 		Counter:                &counter,
-		DeriveKey:              altcha.DeriveKeyPBKDF2(),
+		DeriveKey:              k.derive,
 		ExpiresAt:              &expires,
 		Data:                   map[string]any{"host": host, "purpose": purpose},
 		HMACSignatureSecret:    a.SignatureSecret,
 		HMACKeySignatureSecret: a.KeySecret,
 	})
+}
+
+// Purposes of the invisible visitor session of the secret proxy: a session
+// token, and the fresh proof of work every call of a "send" endpoint needs.
+// Their challenges use plain iterated SHA-256 (one hash per attempt), which
+// the small session script solves with crypto.subtle in a Web Worker;
+// widgets keep PBKDF2.
+const (
+	PurposeSession = "session"
+	PurposeSend    = "send"
+)
+
+type kdf struct {
+	algorithm string
+	cost      int
+	derive    altcha.DeriveKeyFunc
+}
+
+func kdfFor(purpose string) kdf {
+	if purpose == PurposeSession || purpose == PurposeSend {
+		return kdf{algorithm: "SHA-256", cost: 1, derive: altcha.DeriveKeySHA()}
+	}
+	return kdf{algorithm: altchaAlgorithm, cost: AltchaCost, derive: altcha.DeriveKeyPBKDF2()}
 }
 
 // Verified identifies an accepted solution for replay protection.
@@ -158,13 +182,14 @@ func (a Altcha) Verify(payload, host, purpose string) (Verified, error) {
 	if h, _ := p.Challenge.Parameters.Data["host"].(string); h != host {
 		return Verified{}, ErrAltcha
 	}
-	if challengePurpose(p.Challenge.Parameters.Data) != purpose {
+	k := kdfFor(purpose)
+	if challengePurpose(p.Challenge.Parameters.Data) != purpose || p.Challenge.Parameters.Algorithm != k.algorithm {
 		return Verified{}, ErrAltcha
 	}
 	res, err := altcha.VerifySolution(altcha.VerifySolutionOptions{
 		Challenge:              p.Challenge,
 		Solution:               p.Solution,
-		DeriveKey:              altcha.DeriveKeyPBKDF2(),
+		DeriveKey:              k.derive,
 		HMACSignatureSecret:    a.SignatureSecret,
 		HMACKeySignatureSecret: a.KeySecret,
 	})

@@ -120,6 +120,7 @@ type Service struct {
 	siteFilesState
 	collectionState
 	proxyState
+	guardState
 	shotState
 	referenceState
 	sheetsState
@@ -167,6 +168,7 @@ func New(d Deps) *Service {
 		siteFilesState:   newSiteFilesState(d, now),
 		collectionState:  newCollectionState(now),
 		proxyState:       newProxyState(d, now),
+		guardState:       newGuardState(d),
 		shotState:        newShotState(d, now),
 		referenceState:   newReferenceState(d, now),
 		sheetsState:      newSheetsState(d, now),

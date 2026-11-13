@@ -18,26 +18,41 @@ type ProxyUsage struct {
 	Rejected   int64      `json:"rejected"`
 	LastUsedAt *time.Time `json:"last_used_at"`
 	LastStatus *int       `json:"last_status"`
+	Today      int        `json:"today"`
+	Paused     bool       `json:"paused"`
+}
+
+// ProxyLimits are per-endpoint limits; 0 keeps the class default.
+type ProxyLimits struct {
+	PerMinute    int `json:"per_minute"`
+	DailyBudget  int `json:"daily_budget"`
+	SessionQuota int `json:"session_quota"`
 }
 
 // ProxyEndpoint is a secret proxy endpoint of a site; the key is never
-// returned by the API.
+// returned by the API. Template is the request template (classes ai and
+// send) as JSON.
 type ProxyEndpoint struct {
-	Name            string     `json:"name"`
-	UpstreamURL     string     `json:"upstream_url"`
-	AllowedHosts    []string   `json:"allowed_hosts"`
-	Methods         []string   `json:"methods"`
-	Paths           []string   `json:"paths"`
-	Auth            string     `json:"auth"`
-	AuthName        *string    `json:"auth_name"`
-	Enabled         bool       `json:"enabled"`
-	SecretSet       bool       `json:"secret_set"`
-	SecretUpdatedAt *time.Time `json:"secret_updated_at"`
-	SecretURL       string     `json:"secret_url"`
-	CallURL         string     `json:"call_url"`
-	Usage           ProxyUsage `json:"usage"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
+	Class           string          `json:"class"`
+	Template        json.RawMessage `json:"template"`
+	Limits          ProxyLimits     `json:"limits"`
+	EffectiveLimits ProxyLimits     `json:"effective_limits"`
+	Warning         *string         `json:"warning"`
+	Name            string          `json:"name"`
+	UpstreamURL     string          `json:"upstream_url"`
+	AllowedHosts    []string        `json:"allowed_hosts"`
+	Methods         []string        `json:"methods"`
+	Paths           []string        `json:"paths"`
+	Auth            string          `json:"auth"`
+	AuthName        *string         `json:"auth_name"`
+	Enabled         bool            `json:"enabled"`
+	SecretSet       bool            `json:"secret_set"`
+	SecretUpdatedAt *time.Time      `json:"secret_updated_at"`
+	SecretURL       string          `json:"secret_url"`
+	CallURL         string          `json:"call_url"`
+	Usage           ProxyUsage      `json:"usage"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
 // ProxyEndpointConfig is the body of PUT .../proxy/endpoints/{name}. It has
@@ -50,6 +65,10 @@ type ProxyEndpointConfig struct {
 	Auth         string   `json:"auth"`
 	AuthName     string   `json:"auth_name,omitempty"`
 	Enabled      bool     `json:"enabled"`
+	// Class "" keeps the class of an existing endpoint (a new one is ai).
+	Class    string          `json:"class,omitempty"`
+	Template json.RawMessage `json:"template,omitempty"`
+	Limits   *ProxyLimits    `json:"limits,omitempty"`
 }
 
 func proxyPath(ref string) string { return "/sites/" + url.PathEscape(ref) + "/proxy/endpoints" }

@@ -24,7 +24,7 @@ func (r *proxyRig) storedRejected(name string) int64 {
 
 func TestProxyRejectedCallsAreBatched(t *testing.T) {
 	r := newProxyRig(t)
-	r.endpoint("ai", domain.ProxyConfig{UpstreamURL: "https://api.example.com", Auth: domain.ProxyAuthBearer,
+	r.endpoint("ai", domain.ProxyConfig{Class: domain.ProxyClassTransparent, UpstreamURL: "https://api.example.com", Auth: domain.ProxyAuthBearer,
 		Methods: []string{"POST"}, Enabled: true}, "sk")
 	evil := ProxyCall{Name: "ai", Origin: "https://evil.example"}
 

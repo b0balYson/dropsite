@@ -55,6 +55,7 @@ func New(svc *service.Service, log *slog.Logger, mounts ...Mount) http.Handler {
 		return r.RemoteAddr
 	}))
 	a.registerSitePaths(mux)
+	a.registerSessionPaths(mux)
 	a.registerDataPaths(mux)
 	a.registerProxyPath(mux)
 	return a.middleware(mux)
