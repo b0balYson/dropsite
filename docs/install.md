@@ -15,12 +15,32 @@ The easiest way: one command on **your own computer**. It connects to a freshly 
 **macOS or Linux:** open the Terminal app and paste:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install-server.sh | sh
+curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install-server.sh | sh -s -- --lang en
 ```
 
 **Windows:** run the same command in WSL (Ubuntu from the Microsoft Store) or Git Bash.
 
-Answer the questions. The questions are in English, Russian or Chinese depending on your system language. When ssh asks for the password, type the root password: it stays invisible while you type. The password is used **once** to add a dedicated key and is never saved anywhere. Installing takes 10-20 minutes.
+`--lang` switches the language of the installer: `en`, `ru` or `zh`. Without it the language follows your system.
+
+Answer four questions: the server IP, how you sign in (root password or a key file), the domain and your e-mail. The short name of the server comes from the domain (`sites.example.com` gives `sites`); the installer asks for it only when another server in `~/.ssh/config` already uses that name. When ssh asks for the password, type the root password: it stays invisible while you type. The password is used **once** to add a dedicated key and is never saved anywhere. Installing takes 10-20 minutes.
+
+The output stays short: a check mark for each step (connected to the server, installed dropsite, the domain works, HTTPS is on), the two DNS records to create, and at the end the command to run, the address to open, the login and the generated password:
+
+```text
+Installing dropsite. It takes 10-20 minutes, keep this window open.
+  ✓ Connected to the server
+  ✓ Installed dropsite
+  …
+Done!
+
+1. Run: ssh sites   (keep that window open)
+2. Open: http://localhost:8082
+   Login: me@example.com   Password: …   (save the password)
+```
+
+Every detail goes to the log file `~/.dropsite/install-<name>.log` on your computer (mode 600, readable by you only): each step, the whole output of the server and the commands it ran. The log never contains the root password, your keys or the generated administrator password. To see all of it on the screen as well, add `--verbose` (or set `DROPSITE_VERBOSE=1`): every server step, the summary before the start, the full DNS explanation with `AAAA` records and the commands installed on the server.
+
+If a step fails, the installer says what failed in one sentence, shows the last 15 lines of the log and where the log is. Run the same command again: finished steps are skipped.
 
 What the installer does:
 
@@ -28,7 +48,7 @@ What the installer does:
 2. Checks the server system. Other systems are refused with a clear message.
 3. On the server: installs Docker from Docker's official repository, adds swap on servers with less than 2 GB of memory, opens only ports 22, 80 and 443 in the firewall (ufw), downloads dropsite to `/opt/dropsite` and switches it to the newest release, writes the settings with a **generated administrator password**, downloads the prebuilt images of that release (nothing is compiled on the server), starts everything and checks that it answers. It also sets up a daily backup (the last 7 copies in `/var/backups/dropsite`; the form secrets key is copied once to `/root/dropsite-secrets.key`) and the commands below.
 4. On your computer: adds a short entry `<name>` to `~/.ssh/config`, so `ssh <name>` connects to the server and opens a tunnel to the admin interface. The local port is the first free one starting from 8082 (another server may already use 8082).
-5. Shows the **DNS records** to create where you bought the domain: `A` for `@` and for `*` with the server IPv4 address, and `AAAA` too when the server has IPv6. Then it can wait (up to 30 minutes, checking every 10 seconds) until the domain points to the server and HTTPS works.
+5. Shows the **DNS records** to create where you bought the domain: `A` for `@` and for `*` with the server IPv4 address (`--verbose` also lists `AAAA` when the server has IPv6; the **Getting started** page shows them too). Then it waits (up to 30 minutes, checking every 10 seconds) until the domain points to the server and HTTPS works.
 
 Ctrl+C while waiting for DNS changes nothing: the server is installed. Check later with:
 
@@ -36,7 +56,7 @@ Ctrl+C while waiting for DNS changes nothing: the server is installed. Check lat
 curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install-server.sh | sh -s -- --check-dns --name <name>
 ```
 
-If anything fails, run the same command again: finished steps are skipped. The server log is `/var/log/dropsite-install.log`.
+If anything fails, run the same command again: finished steps are skipped. The log on your computer is `~/.dropsite/install-<name>.log`; the server keeps its own in `/var/log/dropsite-install.log`.
 
 ### Afterwards
 
@@ -54,7 +74,7 @@ If anything fails, run the same command again: finished steps are skipped. The s
 
 ### Automation
 
-Every answer can also be passed as an option or an environment variable, for example `curl ... | sh -s -- --host 203.0.113.7 --name sites --domain sites.example.com --email me@example.com --yes`. Options: `--host`, `--port`, `--key` (a private key file instead of the password), `--name`, `--domain`, `--email`, `--skip-dns`, `--check-dns`, `--yes`; the matching variables are `DROPSITE_HOST`, `DROPSITE_SSH_PORT`, `DROPSITE_SSH_KEY`, `DROPSITE_NAME`, `DROPSITE_DOMAIN`, `DROPSITE_EMAIL`, `DROPSITE_SKIP_DNS=1`, `DROPSITE_CHECK_DNS=1`, `DROPSITE_YES=1`. `DROPSITE_LANG` (`en`, `ru`, `zh`) overrides the language. The server part, [`scripts/server-bootstrap.sh`](../scripts/server-bootstrap.sh), can also be run by hand as root on the server.
+Every answer can also be passed as an option or an environment variable, for example `curl ... | sh -s -- --host 203.0.113.7 --name sites --domain sites.example.com --email me@example.com --yes`. Options: `--host`, `--port`, `--key` (a private key file instead of the password), `--name`, `--domain`, `--email`, `--skip-dns`, `--check-dns`, `--yes`, `--verbose`, `--lang`; the matching variables are `DROPSITE_HOST`, `DROPSITE_SSH_PORT`, `DROPSITE_SSH_KEY`, `DROPSITE_NAME`, `DROPSITE_DOMAIN`, `DROPSITE_EMAIL`, `DROPSITE_SKIP_DNS=1`, `DROPSITE_CHECK_DNS=1`, `DROPSITE_YES=1`, `DROPSITE_VERBOSE=1`, `DROPSITE_LANG`. The language comes from `--lang`, then `DROPSITE_LANG`, then the system locale. Without a terminal the server name comes from the domain, or `dropsite-<name>` when that one is taken. The server part, [`scripts/server-bootstrap.sh`](../scripts/server-bootstrap.sh), can also be run by hand as root on the server.
 
 Limits: the installer signs in as `root` (providers that give a sudo user instead are not supported yet); only `~/.ssh/config` itself is read when choosing the name and the port, not files it includes.
 

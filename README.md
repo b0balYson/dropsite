@@ -23,18 +23,17 @@ dropsite serves finished static sites (HTML, CSS, JavaScript, images). It does n
 Run this on **your own computer**, not on the server. On macOS and Linux open the Terminal app; on Windows use WSL (Ubuntu from the Microsoft Store) or Git Bash.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install-server.sh | sh
+curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install-server.sh | sh -s -- --lang en
 ```
 
-The installer asks for the server IP, the root password (or a key file), a short name for the server, your domain and your e-mail, in English, Russian or Chinese depending on your system language. Then it:
+The installer asks for the server IP, the root password (or a key file), your domain and your e-mail. Then it:
 
-1. creates a key just for this server, so the password is used once and never saved;
-2. installs Docker and dropsite on the server, opens only ports 22, 80 and 443, turns on a daily backup and starts everything (10–20 minutes);
-3. adds the server to `~/.ssh/config` on your computer, so `ssh <name>` connects and opens a private tunnel to the admin interface;
-4. tells you which DNS records to create where you bought the domain: an `A` record for `@` and for `*` with the server IP (plus `AAAA` when the server has IPv6), and waits until the domain works;
-5. prints the admin login and a generated password, and how to connect ChatGPT or Claude.
+1. connects to the server; the password is used once and never saved;
+2. installs dropsite there and turns on a daily backup (10–20 minutes);
+3. shows the two DNS records to create where you bought the domain and waits until the domain works;
+4. tells you the command to run, the address to open, the login and the password.
 
-If something fails, run the same command again: finished steps are skipped. Details and options: [docs/install.md](docs/install.md#one-command-installer).
+You only see a check mark per step. The details are in `~/.dropsite/install-<name>.log`; add `--verbose` to see them on the screen. If something fails, run the same command again: finished steps are skipped. Details and options: [docs/install.md](docs/install.md#one-command-installer).
 
 ## First steps
 

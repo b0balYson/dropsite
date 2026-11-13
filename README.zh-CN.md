@@ -23,18 +23,17 @@ dropsite 只托管已经做好的静态网站（HTML、CSS、JavaScript、图片
 请在**您自己的电脑**上运行，而不是在服务器上。macOS 和 Linux 请打开“终端”应用；Windows 请使用 WSL（Microsoft Store 中的 Ubuntu）或 Git Bash。
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install-server.sh | sh
+curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install-server.sh | sh -s -- --lang zh
 ```
 
-安装程序会询问服务器 IP、root 密码（或密钥文件）、服务器的简短名称、域名和电子邮箱；提问语言会根据系统语言自动选择中文、英文或俄文。随后它会：
+安装程序会询问服务器 IP、root 密码（或密钥文件）、域名和电子邮箱。随后它会：
 
-1. 为这台服务器单独创建一个密钥，因此密码只使用一次，不会被保存；
-2. 在服务器上安装 Docker 和 dropsite，只开放 22、80、443 端口，开启每日自动备份并启动所有服务（约 10–20 分钟）；
-3. 在您电脑的 `~/.ssh/config` 中添加这台服务器，之后运行 `ssh <名称>` 即可连接，并打开通往管理界面的私有隧道；
-4. 告诉您需要在域名注册商处添加哪些 DNS 记录：`@` 和 `*` 两条 `A` 记录，值为服务器 IP（服务器有 IPv6 时还需添加 `AAAA` 记录），并等待域名生效；
-5. 显示管理员账号、自动生成的密码，以及连接 ChatGPT 或 Claude 的方法。
+1. 连接服务器；密码只使用一次，不会被保存；
+2. 在服务器上安装 dropsite 并开启每日自动备份（约 10–20 分钟）；
+3. 列出需要在域名注册商处添加的两条 DNS 记录，并等待域名生效；
+4. 告诉您要运行的命令、要打开的地址、登录名和密码。
 
-如果中途出错，再次运行同一条命令即可，已完成的步骤会自动跳过。详细说明和参数：[docs/install.md](docs/install.md#one-command-installer)。
+屏幕上每一步只显示一个勾号。详细信息写入 `~/.dropsite/install-<名称>.log`；加上 `--verbose` 可以在屏幕上查看。如果中途出错，再次运行同一条命令即可，已完成的步骤会自动跳过。详细说明和参数：[docs/install.md](docs/install.md#one-command-installer)。
 
 ## 开始使用
 

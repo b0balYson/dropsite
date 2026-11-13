@@ -24,6 +24,11 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 - A form's result (saved or an error) now shows right above that form and the
   page returns to it; results from another page appear as a toast, and the
   create-site form no longer leaves a gap under the address hint.
+- The server installer is quiet by default: four questions (the server name
+  comes from the domain), a check mark per step, two DNS records and a short
+  final block; the details go to `~/.dropsite/install-<name>.log` (mode 600),
+  `--verbose` shows them on screen, and `--lang en|ru|zh` picks the language
+  (each README starts it in its own language).
 
 ## [0.2.0] - 2026-11-13
 
