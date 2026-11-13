@@ -40,6 +40,7 @@ var topics = []struct {
 }{
 	{"overview", []string{"overview.md"}},
 	{"create", []string{"create.md"}},
+	{"references", []string{"references.md"}},
 	{"update", []string{"update.md"}},
 	{"large_sites", []string{"large_sites.md"}},
 	{"assets", []string{"assets.md"}},
