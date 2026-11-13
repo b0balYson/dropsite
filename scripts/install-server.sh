@@ -25,6 +25,10 @@
 #                                              when that name is taken or invalid)
 #   --domain DOMAIN     DROPSITE_DOMAIN        base domain for sites
 #   --email EMAIL       DROPSITE_EMAIL         administrator login and certificate e-mail
+#   --public-admin      DROPSITE_PUBLIC_ADMIN=1  also open the admin interface from the
+#                                              internet at https://admin.DOMAIN (a potential
+#                                              threat: anyone can find it; asked, default No)
+#   --no-public-admin   DROPSITE_PUBLIC_ADMIN=0  keep it reachable through the SSH tunnel only
 #   --skip-dns          DROPSITE_SKIP_DNS=1    do not wait for DNS and HTTPS
 #   --check-dns         DROPSITE_CHECK_DNS=1   only wait for DNS/HTTPS of an installed
 #                                              server (needs --name)
@@ -68,6 +72,7 @@ It takes 10-20 minutes. Press Ctrl+C to stop at any time.'
 	M_q_name='A short name for this server (later you type "ssh NAME" to reach it)'
 	M_q_domain='Domain for your sites'
 	M_q_email='Your e-mail'
+	M_q_public_admin='Open the admin panel from the internet at https://admin.%s? It is handier but less safe: anyone will be able to find the panel. [y/N]'
 	M_bad_host='This does not look like an IP address or a server name: %s'
 	M_bad_port='The SSH port must be a number from 1 to 65535: %s'
 	M_bad_key='Key file not found or not readable: %s'
@@ -142,12 +147,15 @@ Save the password in your password manager and change it after you sign in (Acco
 	M_login_old='Login:     %s
 Password:  the one from the first installation. Forgot it? Run:  ssh %s dropsite-admin-password'
 	M_connect_ai='Connect ChatGPT or Claude: in the admin interface open "Connect AI" and follow the steps there.'
+	M_open_public='The admin interface is also open to the internet: %s
+This is a potential threat: use a strong, unique password and turn it off in Settings when you do not need it.'
 	M_update='Update dropsite later:   ssh %s dropsite-update'
 	M_sites_at='Your sites will be at https://<name>.%s'
 	M_no_install='No dropsite server named "%s" in %s. Run the installer without --check-dns first.'
 	M_done_short='Done!'
 	M_final_ssh='1. Run: ssh %s   (keep that window open)'
 	M_final_open='2. Open: http://localhost:%s'
+	M_final_public='   Or from anywhere: %s   (open to the internet: use a strong password; turn it off in Settings when not needed)'
 	M_final_login='   Login: %s   Password: %s   (save the password)'
 	M_final_login_old='   Login: %s   Password: the one from the first installation (forgot it? ssh %s dropsite-admin-password)'
 	M_final_next='Next, open "Getting started": it walks you through the rest.'
@@ -164,6 +172,7 @@ msgs_ru() {
 	M_q_name='Короткое имя сервера (потом вы будете набирать "ssh ИМЯ")'
 	M_q_domain='Домен для сайтов'
 	M_q_email='Ваша почта'
+	M_q_public_admin='Открыть панель управления из интернета по адресу https://admin.%s? Это удобнее, но менее безопасно: панель сможет найти кто угодно. [y/N]'
 	M_bad_host='Это не похоже на IP-адрес или имя сервера: %s'
 	M_bad_port='Порт SSH должен быть числом от 1 до 65535: %s'
 	M_bad_key='Файл ключа не найден или недоступен: %s'
@@ -238,12 +247,15 @@ msgs_ru() {
 	M_login_old='Логин:   %s
 Пароль:  тот, что был при первой установке. Забыли? Выполните:  ssh %s dropsite-admin-password'
 	M_connect_ai='Подключить ChatGPT или Claude: в веб-интерфейсе откройте "Подключить ИИ" и следуйте шагам.'
+	M_open_public='Веб-интерфейс также открыт из интернета: %s
+Это потенциальная угроза: используйте надёжный уникальный пароль и выключите доступ в настройках, когда он не нужен.'
 	M_update='Обновить dropsite потом:   ssh %s dropsite-update'
 	M_sites_at='Ваши сайты будут по адресам https://<имя>.%s'
 	M_no_install='Сервер dropsite с именем "%s" не найден в %s. Сначала запустите установку без --check-dns.'
 	M_done_short='Готово!'
 	M_final_ssh='1. Выполните: ssh %s   (окно не закрывайте)'
 	M_final_open='2. Откройте: http://localhost:%s'
+	M_final_public='   Или откуда угодно: %s   (открыта из интернета: нужен надёжный пароль; выключите в настройках, когда не нужно)'
 	M_final_login='   Логин: %s   Пароль: %s   (сохраните пароль)'
 	M_final_login_old='   Логин: %s   Пароль: прежний (забыли? ssh %s dropsite-admin-password)'
 	M_final_next='Дальше откройте «Начало работы» — там всё по шагам.'
@@ -260,6 +272,7 @@ msgs_zh() {
 	M_q_name='服务器的简短名称（之后输入 "ssh 名称" 即可连接）'
 	M_q_domain='网站使用的域名'
 	M_q_email='您的电子邮箱'
+	M_q_public_admin='是否通过 https://admin.%s 从互联网打开管理面板？这样更方便，但安全性更低：任何人都能找到该面板。[y/N]'
 	M_bad_host='这看起来不像 IP 地址或服务器名称：%s'
 	M_bad_port='SSH 端口必须是 1 到 65535 之间的数字：%s'
 	M_bad_key='找不到私钥文件或无法读取：%s'
@@ -334,12 +347,15 @@ DNS 更改需要几分钟到一小时生效。使用 Cloudflare 时请选择 "DN
 	M_login_old='登录名：%s
 密码：  首次安装时的密码。忘记了？运行：  ssh %s dropsite-admin-password'
 	M_connect_ai='连接 ChatGPT 或 Claude：在管理界面中打开 "Connect AI" 页面并按步骤操作。'
+	M_open_public='管理界面也已向互联网开放：%s
+这是一个潜在的威胁：请使用强且唯一的密码，不需要时在设置中关闭。'
 	M_update='以后更新 dropsite：   ssh %s dropsite-update'
 	M_sites_at='您的网站地址将是 https://<名称>.%s'
 	M_no_install='找不到名为 "%s" 的 dropsite 服务器（%s）。请先在不带 --check-dns 的情况下运行安装程序。'
 	M_done_short='完成！'
 	M_final_ssh='1. 运行：ssh %s   （保持该窗口打开）'
 	M_final_open='2. 打开：http://localhost:%s'
+	M_final_public='   或在任何地方打开：%s   （已向互联网开放：请使用强密码；不需要时在设置中关闭）'
 	M_final_login='   登录名：%s   密码：%s   （请保存密码）'
 	M_final_login_old='   登录名：%s   密码：首次安装时的密码（忘记了？ssh %s dropsite-admin-password）'
 	M_final_next='接下来打开“入门指南”页面，按步骤完成剩余设置。'
@@ -546,6 +562,21 @@ yes_no() {
 	IFS= read -r ans </dev/tty || ans=""
 	case "$ans" in
 	"" | y | Y | yes | YES | Yes | д | Д | да | Да | 是 | 好) return 0 ;;
+	*) return 1 ;;
+	esac
+}
+
+# no_yes PROMPT: true for yes; the default (Enter, no terminal, --yes) is no.
+no_yes() {
+	if [ "${ASSUME_YES:-0}" = 1 ] || [ "$HAVE_TTY" != 1 ]; then
+		return 1
+	fi
+	break_line
+	printf '%s ' "$1" >&2
+	ans=""
+	IFS= read -r ans </dev/tty || ans=""
+	case "$ans" in
+	y | Y | yes | YES | Yes | д | Д | да | Да | 是 | 好) return 0 ;;
 	*) return 1 ;;
 	esac
 }
@@ -836,6 +867,7 @@ parse_args() {
 	CHECK_DNS=${DROPSITE_CHECK_DNS:-0}
 	ASSUME_YES=${DROPSITE_YES:-0}
 	VERBOSE=${DROPSITE_VERBOSE:-0}
+	PUBLIC_ADMIN=${DROPSITE_PUBLIC_ADMIN:-}
 	LANG_OPT=""
 	WANT_HELP=0
 	while [ $# -gt 0 ]; do
@@ -850,6 +882,8 @@ parse_args() {
 			shift
 			;;
 		--skip-dns) SKIP_DNS=1 && shift && continue ;;
+		--public-admin) PUBLIC_ADMIN=1 && shift && continue ;;
+		--no-public-admin) PUBLIC_ADMIN=0 && shift && continue ;;
 		--check-dns) CHECK_DNS=1 && shift && continue ;;
 		--yes | -y) ASSUME_YES=1 && shift && continue ;;
 		--verbose | -v) VERBOSE=1 && shift && continue ;;
@@ -872,6 +906,10 @@ parse_args() {
 		esac
 	done
 	[ "$VERBOSE" = 1 ] || VERBOSE=0
+	case "$PUBLIC_ADMIN" in
+	"" | 0 | 1) ;;
+	*) bad_input 'DROPSITE_PUBLIC_ADMIN must be 1 or 0: %s' "$PUBLIC_ADMIN" ;;
+	esac
 }
 
 # pick_lang: --lang, else DROPSITE_LANG, else the locale.
@@ -920,6 +958,21 @@ collect_inputs() {
 		EMAIL=$(printf '%s' "$EMAIL" | tr -d ' ')
 	done
 	EMAIL="${EMAIL%@*}@$(lower "${EMAIL##*@}")"
+	ask_public_admin
+}
+
+# ask_public_admin: open the admin interface to the internet? One short
+# question, default No. --public-admin / --no-public-admin (or
+# DROPSITE_PUBLIC_ADMIN) answer it; without a terminal or with --yes it is
+# not asked and the server keeps its current choice (off on a new server).
+ask_public_admin() {
+	[ -z "$PUBLIC_ADMIN" ] || return 0
+	[ "$HAVE_TTY" = 1 ] && [ "$ASSUME_YES" != 1 ] || return 0
+	if no_yes "$(msgf "$M_q_public_admin" "$DOMAIN")"; then
+		PUBLIC_ADMIN=1
+	else
+		PUBLIC_ADMIN=0
+	fi
 }
 
 # name_from_domain: the first label of the domain (may be an invalid name).
@@ -1032,6 +1085,7 @@ run_bootstrap() {
 	kssh 'umask 077 && cat >/root/dropsite-bootstrap.sh' <"$script" 2>>"${LOG_FILE:-/dev/null}" ||
 		fail_with_log "$M_download_failed" "server-bootstrap.sh"
 	envs="DROPSITE_DOMAIN=$(q "$DOMAIN") DROPSITE_EMAIL=$(q "$EMAIL") DROPSITE_LOCAL_PORT=$(q "$LOCAL_PORT")"
+	[ -z "${PUBLIC_ADMIN:-}" ] || envs="$envs DROPSITE_PUBLIC_ADMIN=$(q "$PUBLIC_ADMIN")"
 	for v in DROPSITE_REPO_URL DROPSITE_REF DROPSITE_VERSION DROPSITE_BUILD DROPSITE_SKIP_SWAP DROPSITE_SKIP_FIREWALL; do
 		eval "val=\${$v:-}"
 		# shellcheck disable=SC2154 # set by eval
@@ -1229,6 +1283,7 @@ final_screen() {
 	say ""
 	sayf "$M_final_ssh" "$NAME"
 	sayf "$M_final_open" "$LOCAL_PORT"
+	[ -z "${PUBLIC_ADMIN_URL:-}" ] || sayf "$M_final_public" "$PUBLIC_ADMIN_URL"
 	if [ "${ADMIN_PASSWORD_NEW:-0}" = 1 ] && [ -n "${ADMIN_PASSWORD:-}" ]; then
 		sayf "$M_final_login" "$ADMIN_EMAIL" "$ADMIN_PASSWORD"
 	else
@@ -1244,6 +1299,10 @@ final_screen_full() {
 	sayf "$M_done"
 	say ""
 	sayf "$M_open_admin" "$NAME" "$LOCAL_PORT"
+	if [ -n "${PUBLIC_ADMIN_URL:-}" ]; then
+		say ""
+		sayf "$M_open_public" "$PUBLIC_ADMIN_URL"
+	fi
 	say ""
 	if [ "${ADMIN_PASSWORD_NEW:-0}" = 1 ] && [ -n "${ADMIN_PASSWORD:-}" ]; then
 		sayf "$M_login" "$ADMIN_EMAIL" "$ADMIN_PASSWORD"
@@ -1266,6 +1325,7 @@ load_facts() {
 	ADMIN_PASSWORD=$(result admin_password)
 	ADMIN_PASSWORD_NEW=$(result admin_password_new)
 	IPV6=$(result ipv6)
+	PUBLIC_ADMIN_URL=$(result public_admin_url)
 	# The address the user typed is the public one; the server may only see
 	# a private address behind NAT.
 	if is_ipv4 "$HOST"; then IPV4=$HOST; else IPV4=$(result ipv4); fi

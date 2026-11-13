@@ -93,6 +93,36 @@ check "--verbose flag" test "$( (parse_args --verbose && echo "$VERBOSE"))" = 1
 check "DROPSITE_VERBOSE=1" test "$( (DROPSITE_VERBOSE=1 parse_args && echo "$VERBOSE"))" = 1
 check "quiet by default" test "$( (DROPSITE_VERBOSE='' parse_args && echo "$VERBOSE"))" = 0
 
+# --- admin interface from the internet ----------------------------------------
+pa_of() { (parse_args "$@" && printf '%s' "$PUBLIC_ADMIN") 2>/dev/null; }
+check "public admin: not decided by default" test "$(DROPSITE_PUBLIC_ADMIN='' pa_of)" = ""
+check "public admin: --public-admin" test "$(DROPSITE_PUBLIC_ADMIN='' pa_of --public-admin)" = 1
+check "public admin: --no-public-admin" test "$(DROPSITE_PUBLIC_ADMIN='' pa_of --no-public-admin)" = 0
+check "public admin: DROPSITE_PUBLIC_ADMIN=1" test "$(DROPSITE_PUBLIC_ADMIN=1 pa_of)" = 1
+check "public admin: DROPSITE_PUBLIC_ADMIN=0" test "$(DROPSITE_PUBLIC_ADMIN=0 pa_of)" = 0
+check "public admin: the flag wins over the variable" test "$(DROPSITE_PUBLIC_ADMIN=1 pa_of --no-public-admin)" = 0
+rc=0
+(DROPSITE_PUBLIC_ADMIN=yes parse_args) >/dev/null 2>&1 || rc=$?
+check "public admin: DROPSITE_PUBLIC_ADMIN=yes exits 2" test "$rc" = 2
+# The question: default No; never asked without a terminal or with --yes.
+check "public admin: no answer without a terminal" test "$( (HAVE_TTY=0 ASSUME_YES=0 PUBLIC_ADMIN='' DOMAIN=r3100.com &&
+	ask_public_admin && printf '%s' "$PUBLIC_ADMIN"))" = ""
+check "public admin: no question with --yes" test "$( (HAVE_TTY=1 ASSUME_YES=1 PUBLIC_ADMIN='' DOMAIN=r3100.com &&
+	ask_public_admin && printf '%s' "$PUBLIC_ADMIN"))" = ""
+check "public admin: Enter means No" test "$( (HAVE_TTY=1 ASSUME_YES=0 PUBLIC_ADMIN='' DOMAIN=r3100.com &&
+	no_yes() { return 1; } && ask_public_admin && printf '%s' "$PUBLIC_ADMIN"))" = 0
+check "public admin: y means Yes" test "$( (HAVE_TTY=1 ASSUME_YES=0 PUBLIC_ADMIN='' DOMAIN=r3100.com &&
+	no_yes() { return 0; } && ask_public_admin && printf '%s' "$PUBLIC_ADMIN"))" = 1
+check "public admin: a flag skips the question" test "$( (HAVE_TTY=1 ASSUME_YES=0 PUBLIC_ADMIN=0 DOMAIN=r3100.com &&
+	no_yes() { return 0; } && ask_public_admin && printf '%s' "$PUBLIC_ADMIN"))" = 0
+check_not "no_yes: no terminal answers No" sh -c 'HAVE_TTY=0; . "$1"; no_yes q' _ "$ROOT/scripts/install-server.sh"
+for l in en ru zh; do
+	q=$( ("msgs_$l" && msgf "$M_q_public_admin" r3100.com))
+	check "public admin: $l question names the address and defaults to No" sh -c \
+		'printf "%s" "$1" | grep -qF "https://admin.r3100.com" && printf "%s" "$1" | grep -qF "[y/N]"' _ "$q"
+done
+msgs_en
+
 # --- ~/.ssh/config ----------------------------------------------------------
 cfg="$HOME/.ssh/config"
 check_not "no config yet" test -e "$cfg"
@@ -200,7 +230,7 @@ sim() {
 	l=$1 mode=$2
 	shift 2
 	h="$WORK/sim-$l-$mode.home"
-	rm -rf "$h"
+	rm -rf "$h" "$WORK/sim-$l-$mode.kssh"
 	mkdir -p "$h"
 	rc=0
 	(
@@ -213,6 +243,7 @@ sim() {
 		resolve() { :; }
 		https_works() { true; }
 		kssh() {
+			printf '%s\n' "$*" >>"$WORK/sim-$l-$mode.kssh"
 			case "$*" in
 			*"cat >/root/dropsite-bootstrap.sh"*) cat >/dev/null ;;
 			*"bash /root/dropsite-bootstrap.sh"*)
@@ -227,6 +258,10 @@ sim() {
 				printf 'DROPSITE_RESULT domain=r3100.com\nDROPSITE_RESULT api_host=api.r3100.com\n'
 				printf 'DROPSITE_RESULT admin_email=me@example.com\nDROPSITE_RESULT ipv4=186.243.218.235\nDROPSITE_RESULT ipv6=\n'
 				printf 'DROPSITE_RESULT admin_password=%s\nDROPSITE_RESULT admin_password_new=1\n' "$SIM_PW"
+				case "$*" in
+				*"DROPSITE_PUBLIC_ADMIN='1'"*) printf 'DROPSITE_RESULT public_admin_url=https://admin.r3100.com\n' ;;
+				*) printf 'DROPSITE_RESULT public_admin_url=\n' ;;
+				esac
 				;;
 			*os-release*) printf 'ubuntu 24.04' ;;
 			*) : ;;
@@ -261,6 +296,19 @@ if command -v ssh-keygen >/dev/null 2>&1; then
 	check "log: has the technical lines" grep -q 'admin interface on local port' "$lg"
 	check "log: never the admin password" sh -c '! grep -q "$1" "$2"' _ "$SIM_PW" "$lg"
 	check "log: no private key" sh -c '! grep -q "PRIVATE KEY" "$1"' _ "$lg"
+	check "run: no public admin choice passed by default" sh -c '! grep -q DROPSITE_PUBLIC_ADMIN "$1"' _ "$WORK/sim-en-ok.kssh"
+	check "run: no public address by default" hasnt en-ok 'admin\.r3100\.com'
+
+	sim en public --public-admin
+	check "public: exits 0" test "$(cat "$WORK/sim-en-public.rc")" = 0
+	check "public: the choice reaches the server" grep -qF "DROPSITE_PUBLIC_ADMIN='1'" "$WORK/sim-en-public.kssh"
+	check "public: the final block shows the HTTPS address" has en-public "Or from anywhere: https://admin.r3100.com"
+	check "public: the SSH tunnel stays" has en-public "1. Run: ssh r3100 "
+	check "public: the tunnel is configured" grep -q 'LocalForward' "$WORK/sim-en-public.home/.ssh/config"
+	sim en private --no-public-admin
+	check "private: the choice reaches the server" grep -qF "DROPSITE_PUBLIC_ADMIN='0'" "$WORK/sim-en-private.kssh"
+	check "private: output as without the question" test "$(grep -vc 'Log\|log' "$WORK/sim-en-private.out")" = "$(grep -vc 'Log\|log' "$WORK/sim-en-ok.out")"
+	check "private: no public address" hasnt en-private 'admin\.r3100\.com'
 
 	sim en verbose --verbose
 	check "verbose: exits 0" test "$(cat "$WORK/sim-en-verbose.rc")" = 0
@@ -315,6 +363,38 @@ if command -v bash >/dev/null 2>&1; then
 	check "bootstrap: .env stays 600" test "$(ls -l "$envf" | cut -c1-10)" = -rw-------
 	check "bootstrap: control recreated once" test "$(grep -c 'up -d --no-build --wait .* control$' "$WORK/compose.calls")" = 1
 	check "bootstrap: the password is not logged" sh -c '! grep -q Secret123456789abcdef "$1" 2>/dev/null' _ "$WORK/bootstrap.log"
+
+	# The public admin answer is applied once through control, never via .env.
+	pa_calls() { # pa_calls VALUE: the compose calls apply_public_admin makes
+		rm -f "$WORK/pa.calls"
+		DROPSITE_BOOTSTRAP_LIB=1 DROPSITE_DIR="$app" DROPSITE_PUBLIC_ADMIN="$1" bash -c '
+			. "$1"
+			WORK=$2
+			LOG=$WORK/bootstrap.log
+			compose() { printf "compose %s\n" "$*" >>"$WORK/pa.calls"; }
+			apply_public_admin 2>/dev/null
+		' _ "$ROOT/scripts/server-bootstrap.sh" "$WORK"
+		cat "$WORK/pa.calls" 2>/dev/null || true
+	}
+	check "bootstrap: public admin on" test "$(pa_calls 1)" = "compose exec -T control /control public-admin on"
+	check "bootstrap: public admin off" test "$(pa_calls 0)" = "compose exec -T control /control public-admin off"
+	check "bootstrap: no answer, no change" test -z "$(pa_calls '')"
+	check "bootstrap: the answer is not stored in .env" sh -c '! grep -q PUBLIC_ADMIN "$1"' _ "$envf"
+	rc=0
+	DROPSITE_BOOTSTRAP_LIB=1 DROPSITE_PUBLIC_ADMIN=yes bash -c '. "$1"; validate_inputs' _ "$ROOT/scripts/server-bootstrap.sh" >/dev/null 2>&1 || rc=$?
+	check "bootstrap: invalid DROPSITE_PUBLIC_ADMIN refused" test "$rc" != 0
+	url=$(DROPSITE_BOOTSTRAP_LIB=1 DROPSITE_DIR="$app" bash -c '
+		. "$1"
+		compose() { echo on; }
+		public_admin_url
+	' _ "$ROOT/scripts/server-bootstrap.sh")
+	check "bootstrap: public address reported while on" test "$url" = https://admin.example.com
+	url=$(DROPSITE_BOOTSTRAP_LIB=1 DROPSITE_DIR="$app" bash -c '
+		. "$1"
+		compose() { echo off; }
+		public_admin_url
+	' _ "$ROOT/scripts/server-bootstrap.sh")
+	check "bootstrap: no public address while off" test -z "$url"
 fi
 
 if [ "$FAILS" != 0 ]; then

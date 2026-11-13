@@ -32,6 +32,11 @@
 #   DROPSITE_DOMAIN       base domain for sites (required for a new .env)
 #   DROPSITE_EMAIL        administrator login and ACME e-mail (required for a new .env)
 #   DROPSITE_LOCAL_PORT   local port of the admin SSH tunnel, used for UI_URL
+#   DROPSITE_PUBLIC_ADMIN 1: also open the admin interface from the internet at
+#                         https://admin.<domain>; 0: SSH tunnel only. Applied
+#                         once with "control public-admin on|off" (the choice
+#                         lives in the database, not in .env); unset keeps the
+#                         current choice (off on a new server)
 #   DROPSITE_REPO_URL     repository to clone (default: the public GitHub repository)
 #   DROPSITE_REF          branch to clone (default: main)
 #   DROPSITE_DIR          checkout directory (default: /opt/dropsite)
@@ -44,7 +49,7 @@
 #
 # Output: progress on stderr; on success the last lines on stdout are
 # "DROPSITE_RESULT key=value" (domain, api_host, admin_email, admin_password,
-# admin_password_new, ipv4, ipv6) for the local installer. admin_password is
+# admin_password_new, ipv4, ipv6, public_admin_url) for the local installer. admin_password is
 # printed only by the run that generated it; the password line goes to stdout
 # only and never into the log file.
 set -euo pipefail
@@ -679,6 +684,28 @@ EOF
 		write_file "$CRON_FILE" 0644
 }
 
+# apply_public_admin passes the owner's answer to control once. The setting
+# lives in the database (Settings in the web interface can change it later);
+# nothing is written to .env, so it never becomes a permanent override.
+apply_public_admin() {
+	case "${DROPSITE_PUBLIC_ADMIN:-}" in
+	1) state=on ;;
+	0) state=off ;;
+	*) return 0 ;;
+	esac
+	step "Admin interface from the internet: $state"
+	if ! compose exec -T control /control public-admin "$state" >>"$LOG" 2>&1 </dev/null; then
+		warn "could not turn $state the admin interface from the internet (see $LOG); change it in Settings"
+	fi
+}
+
+# public_admin_url prints https://admin.<domain> while public access is on.
+public_admin_url() {
+	state=$(compose exec -T control /control public-admin status 2>/dev/null </dev/null) || return 0
+	[ "$state" = on ] || return 0
+	printf 'https://admin.%s' "$(get_env BASE_DOMAIN)"
+}
+
 first_backup() {
 	step "Making the first backup"
 	if ! "$BIN_DIR/dropsite-backup" >>"$LOG" 2>&1 </dev/null; then
@@ -696,6 +723,7 @@ print_info() {
 	printf 'DROPSITE_RESULT admin_email=%s\n' "$(get_env ADMIN_EMAIL)"
 	printf 'DROPSITE_RESULT ipv4=%s\n' "$(public_ipv4)"
 	printf 'DROPSITE_RESULT ipv6=%s\n' "$(public_ipv6)"
+	printf 'DROPSITE_RESULT public_admin_url=%s\n' "$(public_admin_url)"
 }
 
 validate_inputs() {
@@ -709,6 +737,10 @@ validate_inputs() {
 	if [ -n "${DROPSITE_EMAIL:-}" ] && ! printf '%s' "$DROPSITE_EMAIL" | grep -Eq "$EMAIL_RE"; then
 		die "invalid e-mail: $DROPSITE_EMAIL"
 	fi
+	case "${DROPSITE_PUBLIC_ADMIN:-}" in
+	"" | 0 | 1) ;;
+	*) die "invalid DROPSITE_PUBLIC_ADMIN: $DROPSITE_PUBLIC_ADMIN (1 or 0)" ;;
+	esac
 	case "${DROPSITE_LOCAL_PORT:-}" in
 	"" | [1-9] | [1-9][0-9] | [1-9][0-9][0-9] | [1-9][0-9][0-9][0-9] | [1-9][0-9][0-9][0-9][0-9]) ;;
 	*) die "invalid DROPSITE_LOCAL_PORT: $DROPSITE_LOCAL_PORT" ;;
@@ -755,6 +787,7 @@ main() {
 	start_stack
 	forget_admin_password
 	check_stack
+	apply_public_admin
 	install_helpers
 	first_backup
 	step "dropsite is running"
