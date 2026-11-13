@@ -277,6 +277,7 @@
   "audit.action.user.create": "Создан пользователь",
   "audit.action.user.invite": "Выпущено приглашение",
   "audit.action.user.activate": "Установлен пароль",
+  "audit.action.user.password_reset": "Пароль сброшен на сервере",
   "audit.action.user.block": "Пользователь заблокирован",
   "audit.action.user.unblock": "Пользователь разблокирован",
   "audit.action.token.create": "Выпущен ключ",

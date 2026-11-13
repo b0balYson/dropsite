@@ -277,6 +277,7 @@
   "audit.action.user.create": "User created",
   "audit.action.user.invite": "Invite issued",
   "audit.action.user.activate": "Password set",
+  "audit.action.user.password_reset": "Password reset on the server",
   "audit.action.user.block": "User blocked",
   "audit.action.user.unblock": "User unblocked",
   "audit.action.token.create": "Key issued",
