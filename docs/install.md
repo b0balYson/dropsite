@@ -6,7 +6,7 @@ The easiest way: one command on **your own computer**. It connects to a freshly 
 
 ### What you need
 
-- A rented server (VPS) with **Ubuntu 22.04**, **Ubuntu 24.04** or **Debian 12**, 1 GB of memory or more. Your hosting provider sends you its **IP address** and the **root password** (or lets you upload an SSH key).
+- A rented server (VPS) with **Ubuntu 22.04 or newer** or **Debian 12 or newer**, 1 GB of memory or more. Your hosting provider sends you its **IP address** and the **root password** (or lets you upload an SSH key).
 - A **domain** for your sites, for example `sites.example.com`. It must not host anything else (see the security note in the README).
 - Your **e-mail**: it becomes the administrator login and is used for the HTTPS certificates.
 

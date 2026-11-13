@@ -16,6 +16,12 @@ pushed; see [docs/releasing.md](docs/releasing.md).
   booking, request, sign-up, contact) with a thanks page instead of mailto:
   and tel: buttons; the anti-robot check runs when the form is sent.
 
+### Changed
+
+- The server installer accepts Ubuntu 22.04 or newer and Debian 12 or newer
+  (for example Ubuntu 26.04) instead of three fixed releases; a release Docker
+  does not package yet is refused with a clear message.
+
 ## [0.2.0] - 2026-11-13
 
 ### Changed

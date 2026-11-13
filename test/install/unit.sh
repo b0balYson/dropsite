@@ -44,6 +44,14 @@ for v in me@ "@example.com" "me@@example.com" "me example@x.com" "me@x" "m'e@exa
 for v in sites vps-1 a; do check "name $v" valid_name "$v"; done
 for v in 1vps Sites "my vps" "" -x aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; do check_not "bad name '$v'" valid_name "$v"; done
 check "port 22" valid_port 22
+for v in "ubuntu 22.04" "ubuntu 24.04" "ubuntu 26.04" "ubuntu 24.10" "debian 12" "debian 13"; do
+	# shellcheck disable=SC2086 # "ID VERSION" as two arguments
+	check "os $v" os_supported $v
+done
+for v in "ubuntu 20.04" "ubuntu 21.10" "debian 11" "centos 9" "ubuntu" "ubuntu x.y" "debian 12.5"; do
+	# shellcheck disable=SC2086
+	check_not "os $v" os_supported $v
+done
 check_not "port 0" valid_port 0
 check_not "port 70000" valid_port 70000
 check "normalize domain" test "$(normalize_domain 'HTTPS://Sites.Example.COM./x')" = sites.example.com

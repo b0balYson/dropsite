@@ -14,7 +14,7 @@ dropsite 只托管已经做好的静态网站（HTML、CSS、JavaScript、图片
 
 ## 准备工作
 
-- **一台租用的服务器（VPS）**：Ubuntu 22.04、Ubuntu 24.04 或 Debian 12，内存 1 GB 及以上。服务商会提供服务器的 IP 地址和 root 密码（或允许您添加 SSH 密钥）。
+- **一台租用的服务器（VPS）**：Ubuntu 22.04 及以上或 Debian 12 及以上，内存 1 GB 及以上。服务商会提供服务器的 IP 地址和 root 密码（或允许您添加 SSH 密钥）。
 - **一个域名**，且不用于其他任何服务，例如 `sites.example.com`。
 - **ChatGPT 或 Claude**，用对话来制作网站。不使用对话时，也可以在网页管理界面中上传网站。
 

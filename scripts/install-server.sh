@@ -51,7 +51,7 @@ DNS_INTERVAL=10
 
 msgs_en() {
 	M_title='dropsite: your own server for publishing sites'
-	M_intro='This installs dropsite on a fresh rented server (VPS) with Ubuntu 22.04, Ubuntu 24.04 or Debian 12.
+	M_intro='This installs dropsite on a fresh rented server (VPS) with Ubuntu 22.04 or newer, or Debian 12 or newer.
 You will need: the server IP address and root password (from your hosting provider), a domain and an e-mail.
 It takes 10-20 minutes. Press Ctrl+C to stop at any time.'
 	M_q_host='Server IP address'
@@ -84,7 +84,7 @@ It takes 10-20 minutes. Press Ctrl+C to stop at any time.'
   ssh-keygen -R %s
 and run the command again.'
 	M_step_check='Checking the server system'
-	M_os_bad='The server runs "%s". Supported: Ubuntu 22.04, Ubuntu 24.04, Debian 12. Reinstall the server with one of them in your provider'"'"'s control panel and run the command again.'
+	M_os_bad='The server runs "%s". Supported: Ubuntu 22.04 or newer, Debian 12 or newer. Reinstall the server with one of them in your provider'"'"'s control panel and run the command again.'
 	M_step_sshcfg='Saved the connection as "%s" in %s (admin interface on local port %s)'
 	M_step_bootstrap='Installing dropsite on the server: 10-20 minutes. Keep this window open.'
 	M_bootstrap_failed='The installation on the server stopped with an error (see above).
@@ -127,7 +127,7 @@ Password:  the one from the first installation. Forgot it? Run:  ssh %s dropsite
 
 msgs_ru() {
 	M_title='dropsite: свой сервер для публикации сайтов'
-	M_intro='Скрипт установит dropsite на новый арендованный сервер (VPS) с Ubuntu 22.04, Ubuntu 24.04 или Debian 12.
+	M_intro='Скрипт установит dropsite на новый арендованный сервер (VPS) с Ubuntu 22.04 или новее либо Debian 12 или новее.
 Понадобятся: IP-адрес сервера и пароль root (из письма хостинга), домен и e-mail.
 Займёт 10-20 минут. Остановить можно в любой момент клавишами Ctrl+C.'
 	M_q_host='IP-адрес сервера'
@@ -160,7 +160,7 @@ msgs_ru() {
   ssh-keygen -R %s
 и запустите команду ещё раз.'
 	M_step_check='Проверяю систему сервера'
-	M_os_bad='На сервере "%s". Поддерживаются: Ubuntu 22.04, Ubuntu 24.04, Debian 12. Переустановите сервер с одной из них в панели хостинга и запустите команду ещё раз.'
+	M_os_bad='На сервере "%s". Поддерживаются: Ubuntu 22.04 и новее, Debian 12 и новее. Переустановите сервер с одной из этих систем в панели хостинга и запустите команду ещё раз.'
 	M_step_sshcfg='Подключение сохранено как "%s" в %s (веб-интерфейс на локальном порту %s)'
 	M_step_bootstrap='Устанавливаю dropsite на сервер: 10-20 минут. Не закрывайте это окно.'
 	M_bootstrap_failed='Установка на сервере остановилась с ошибкой (см. выше).
@@ -203,7 +203,7 @@ msgs_ru() {
 
 msgs_zh() {
 	M_title='dropsite：用于发布网站的自有服务器'
-	M_intro='此脚本会在一台全新租用的服务器（VPS，Ubuntu 22.04、Ubuntu 24.04 或 Debian 12）上安装 dropsite。
+	M_intro='此脚本会在一台全新租用的服务器（VPS，Ubuntu 22.04 及以上或 Debian 12 及以上）上安装 dropsite。
 需要准备：服务器 IP 地址和 root 密码（来自主机商的邮件）、一个域名和一个电子邮箱。
 大约需要 10-20 分钟。随时可以按 Ctrl+C 停止。'
 	M_q_host='服务器 IP 地址'
@@ -236,7 +236,7 @@ msgs_zh() {
   ssh-keygen -R %s
 然后重新运行命令。'
 	M_step_check='正在检查服务器系统'
-	M_os_bad='服务器运行的是 "%s"。支持的系统：Ubuntu 22.04、Ubuntu 24.04、Debian 12。请在主机商控制面板中重装为其中之一，然后重新运行命令。'
+	M_os_bad='服务器运行的是 "%s"。支持的系统：Ubuntu 22.04 及以上、Debian 12 及以上。请在主机商控制面板中重装为其中之一，然后重新运行命令。'
 	M_step_sshcfg='连接已保存为 "%s"，位于 %s（管理界面使用本地端口 %s）'
 	M_step_bootstrap='正在服务器上安装 dropsite：需要 10-20 分钟，请不要关闭此窗口。'
 	M_bootstrap_failed='服务器上的安装因错误而停止（见上文）。
@@ -722,14 +722,34 @@ ensure_key() {
 	[ -f "$KEY.pub" ] || ssh-keygen -y -f "$KEY" >"$KEY.pub"
 }
 
+# os_supported ID VERSION_ID: Ubuntu 22.04 or newer, Debian 12 or newer.
+# Newer releases are accepted as long as Docker publishes packages for them
+# (checked on the server before Docker is installed).
+os_supported() {
+	v=${2:-}
+	case "${1:-}" in
+	ubuntu)
+		major=${v%%.*}
+		minor=${v#*.}
+		[ "$minor" != "$v" ] || minor=0
+		case "$major" in '' | *[!0-9]*) return 1 ;; esac
+		case "$minor" in '' | *[!0-9]*) return 1 ;; esac
+		[ $((major * 100 + ${minor#0})) -ge 2204 ]
+		;;
+	debian)
+		case "$v" in '' | *[!0-9]*) return 1 ;; esac
+		[ "$v" -ge 12 ]
+		;;
+	*) return 1 ;;
+	esac
+}
+
 check_remote_os() {
 	sayf "$M_step_check"
 	# shellcheck disable=SC2016 # expanded by the remote shell
 	os=$(kssh '. /etc/os-release && printf "%s %s" "$ID" "$VERSION_ID"' </dev/null 2>/dev/null) || os="unknown"
-	case "$os" in
-	"ubuntu 22.04" | "ubuntu 24.04" | "debian 12") ;;
-	*) die "$M_os_bad" "$os" ;;
-	esac
+	# shellcheck disable=SC2086 # split "ID VERSION" into two arguments
+	os_supported ${os} || die "$M_os_bad" "$os"
 }
 
 # fetch_bootstrap prints the path of server-bootstrap.sh to upload.

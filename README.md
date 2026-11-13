@@ -14,7 +14,7 @@ dropsite serves finished static sites (HTML, CSS, JavaScript, images). It does n
 
 ## What you need
 
-- **A rented server (VPS)** with Ubuntu 22.04, Ubuntu 24.04 or Debian 12 and 1 GB of memory or more. The hosting provider gives you its IP address and the root password (or lets you add an SSH key).
+- **A rented server (VPS)** with Ubuntu 22.04 or newer, or Debian 12 or newer, and 1 GB of memory or more. The hosting provider gives you its IP address and the root password (or lets you add an SSH key).
 - **A domain** that hosts nothing else, for example `sites.example.com`.
 - **ChatGPT or Claude** to make sites by asking. Without a chat you can still upload sites in the web interface.
 

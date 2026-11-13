@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prepare a fresh Ubuntu 22.04/24.04 or Debian 12 server for dropsite and
+# Prepare a fresh Ubuntu (22.04 or newer) or Debian (12 or newer) server for dropsite and
 # start it. Runs on the server as root; install-server.sh uploads
 # and runs it over ssh, but it also works on its own:
 #
@@ -90,15 +90,35 @@ apt_get() { run apt-get -o DPkg::Lock::Timeout=600 -y "$@"; }
 
 check_root() { [ "$(id -u)" = 0 ] || die "run this script as root"; }
 
+# os_supported ID VERSION_ID: Ubuntu 22.04 or newer, Debian 12 or newer.
+# Newer releases are accepted as long as Docker publishes packages for them
+# (checked on the server before Docker is installed).
+os_supported() {
+	v=${2:-}
+	case "${1:-}" in
+	ubuntu)
+		major=${v%%.*}
+		minor=${v#*.}
+		[ "$minor" != "$v" ] || minor=0
+		case "$major" in '' | *[!0-9]*) return 1 ;; esac
+		case "$minor" in '' | *[!0-9]*) return 1 ;; esac
+		[ $((major * 100 + ${minor#0})) -ge 2204 ]
+		;;
+	debian)
+		case "$v" in '' | *[!0-9]*) return 1 ;; esac
+		[ "$v" -ge 12 ]
+		;;
+	*) return 1 ;;
+	esac
+}
+
 # check_os sets OS_ID and OS_CODENAME, refusing unsupported systems.
 check_os() {
 	[ -r /etc/os-release ] || die "unknown operating system: /etc/os-release is missing"
 	# shellcheck disable=SC1091
 	read -r OS_ID OS_VERSION OS_CODENAME < <(. /etc/os-release && printf '%s %s %s\n' "$ID" "${VERSION_ID:-}" "${VERSION_CODENAME:-}")
-	case "$OS_ID $OS_VERSION" in
-	"ubuntu 22.04" | "ubuntu 24.04" | "debian 12") ;;
-	*) die "unsupported system: $OS_ID $OS_VERSION (supported: Ubuntu 22.04, Ubuntu 24.04, Debian 12)" ;;
-	esac
+	os_supported "$OS_ID" "$OS_VERSION" ||
+		die "unsupported system: $OS_ID $OS_VERSION (supported: Ubuntu 22.04 or newer, Debian 12 or newer)"
 	case "$(uname -m)" in
 	x86_64 | aarch64) ;;
 	*) die "unsupported architecture: $(uname -m) (supported: x86-64, arm64)" ;;
@@ -150,6 +170,9 @@ install_docker() {
 		return
 	fi
 	step "Installing Docker Engine and the compose plugin from download.docker.com"
+	# A release newer than the ones tested is fine once Docker ships packages for it.
+	curl -fsSIL --max-time 20 -o /dev/null "https://download.docker.com/linux/$OS_ID/dists/$OS_CODENAME/Release" ||
+		die "Docker does not publish packages for $OS_ID $OS_VERSION ($OS_CODENAME) yet: reinstall the server with an earlier release (Ubuntu 24.04 or Debian 12) and run the installer again"
 	install -m 0755 -d /etc/apt/keyrings
 	run curl -fsSL "https://download.docker.com/linux/$OS_ID/gpg" -o /etc/apt/keyrings/docker.asc
 	chmod a+r /etc/apt/keyrings/docker.asc
