@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/b0balYson/dropsite/internal/domain"
 	"github.com/b0balYson/dropsite/internal/service"
@@ -78,7 +79,7 @@ func (s *server) streamDeploy(r *http.Request, rc *reqCtx, ref string) (service.
 			rc.csrfChecked = rc.csrfChecked || tokensEqual(rc.csrf, string(b))
 		case draftField:
 			b, _ := io.ReadAll(io.LimitReader(part, maxFieldBytes))
-			opts.Draft = len(b) > 0
+			opts.Draft = isTruthy(string(b))
 		case "archive":
 			if !rc.csrfChecked {
 				return service.DeployResult{}, errForbidden
@@ -134,4 +135,14 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+// isTruthy reads a checkbox-like form value: "0", "false", "off", "no" and
+// an empty value mean false.
+func isTruthy(v string) bool {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "", "0", "false", "off", "no":
+		return false
+	}
+	return true
 }
