@@ -240,3 +240,27 @@ func TestAuthorizeOAuthValidation(t *testing.T) {
 	}
 	_ = time.Second
 }
+
+func TestRedirectURIMatches(t *testing.T) {
+	for _, tc := range []struct {
+		reg, req string
+		want     bool
+	}{
+		{"https://a.example/cb", "https://a.example/cb", true},
+		{"https://a.example/cb", "https://a.example:8443/cb", false},
+		{"http://localhost/callback", "http://localhost:52508/callback", true},
+		{"http://127.0.0.1/callback", "http://127.0.0.1:1/callback", true},
+		{"http://[::1]/cb", "http://[::1]:9000/cb", true},
+		{"http://localhost:8080/callback", "http://localhost:9090/callback", true},
+		{"http://localhost/callback", "http://localhost:52508/callback?x=1", false},
+		{"http://localhost/callback", "http://localhost:52508/other", false},
+		{"http://localhost/callback", "http://127.0.0.1:52508/callback", false},
+		{"http://localhost/callback", "https://localhost:52508/callback", false},
+		{"http://localhost/callback", "http://user@localhost:52508/callback", false},
+		{"http://localhost/callback", "http://localhost:52508/callback#f", false},
+	} {
+		if got := RedirectURIMatches(tc.reg, tc.req); got != tc.want {
+			t.Errorf("%s vs %s: %v", tc.reg, tc.req, got)
+		}
+	}
+}

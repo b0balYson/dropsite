@@ -120,6 +120,26 @@ func RedirectOrigin(u string) string {
 	return p.Scheme + "://" + p.Host
 }
 
+// RedirectURIMatches reports whether the redirect URI of an authorization
+// request matches a registered one. URIs must be equal, except that an http
+// loopback redirect may use any port (RFC 8252, section 7.3): native clients
+// such as command-line tools listen on a port chosen at run time.
+func RedirectURIMatches(registered, requested string) bool {
+	if registered == requested {
+		return true
+	}
+	r, err1 := url.Parse(registered)
+	q, err2 := url.Parse(requested)
+	if err1 != nil || err2 != nil || r.Scheme != "http" || q.Scheme != "http" {
+		return false
+	}
+	if !isLoopbackHost(r.Hostname()) || !strings.EqualFold(r.Hostname(), q.Hostname()) {
+		return false
+	}
+	return ValidRedirectURI(requested) && r.EscapedPath() == q.EscapedPath() &&
+		r.RawQuery == q.RawQuery && q.Fragment == ""
+}
+
 func isLoopbackHost(h string) bool {
 	if strings.EqualFold(h, "localhost") {
 		return true

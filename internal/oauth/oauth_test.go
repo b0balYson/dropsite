@@ -488,3 +488,45 @@ func TestResolveMetadataClient(t *testing.T) {
 	}
 	_ = fmt.Sprint
 }
+
+func TestKnownClientFallback(t *testing.T) {
+	const id = "https://claude.ai/oauth/claude-code-client-metadata"
+	// A fetch that cannot succeed (blocked address) falls back to the built-in copy.
+	f := newFetcher(fakeResolver{addrs: addrs("127.0.0.1")}, nil, func(netip.Addr) bool { return false }, "")
+	got, err := f.get(context.Background(), id, "1.1.1.1")
+	if err != nil || got.Name != "Claude Code" || !got.Metadata || len(got.RedirectURIs) != 2 {
+		t.Fatalf("fallback: %+v %v", got, err)
+	}
+	// The copy is not shared: changing it does not change the table.
+	got.RedirectURIs[0] = "https://evil.example/cb"
+	if again, _ := knownClient(id); again.RedirectURIs[0] != "http://localhost/callback" {
+		t.Fatal("built-in metadata mutated")
+	}
+	// Unknown documents still fail.
+	if _, err := f.get(context.Background(), "https://example.com/client.json", "1.1.1.1"); err == nil {
+		t.Fatal("unknown client accepted")
+	}
+}
+
+func TestValidateAuthorizeLoopbackPort(t *testing.T) {
+	r := newRig(t, Options{})
+	ctx := context.Background()
+	c, err := r.env.Svc.RegisterOAuthClient(ctx, "CLI", []string{"http://localhost/callback"}, "1.1.1.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	q := url.Values{"client_id": {c.ID}, "response_type": {"code"}, "state": {"s"},
+		"code_challenge": {service.PKCEChallenge(strings.Repeat("v", 43))}, "code_challenge_method": {"S256"},
+		"redirect_uri": {"http://localhost:52508/callback"}}
+	p, err := r.s.ValidateAuthorize(ctx, q, "1.1.1.1")
+	if err != nil || p.Request.RedirectURI != "http://localhost:52508/callback" {
+		t.Fatalf("loopback port: %+v %v", p, err)
+	}
+	var pe *PageError
+	for _, bad := range []string{"http://localhost:52508/other", "http://127.0.0.1:52508/callback", "http://evil.example:52508/callback"} {
+		q.Set("redirect_uri", bad)
+		if _, err := r.s.ValidateAuthorize(ctx, q, "1.1.1.1"); !errors.As(err, &pe) {
+			t.Errorf("%s accepted: %v", bad, err)
+		}
+	}
+}

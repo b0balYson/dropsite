@@ -185,7 +185,7 @@ func (s *Server) ValidateAuthorize(ctx context.Context, q url.Values, ip string)
 	if redirect == "" && len(c.RedirectURIs) == 1 {
 		redirect = c.RedirectURIs[0]
 	}
-	if !slices.Contains(c.RedirectURIs, redirect) {
+	if !slices.ContainsFunc(c.RedirectURIs, func(r string) bool { return service.RedirectURIMatches(r, redirect) }) {
 		return Pending{}, &PageError{Reason: "the redirect address does not match the application's registration"}
 	}
 	state := q.Get("state")
