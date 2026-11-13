@@ -2,6 +2,8 @@
 
 A backup is one `tar.gz` with a consistent snapshot of the database (`VACUUM INTO`) and the whole sites volume, including releases and the symlinks that route host names. Secrets (password and token hashes) are inside: store backups as carefully as the server.
 
+Servers set up by the [one-command installer](install.md#one-command-installer) already have `dropsite-backup` (daily at 03:15 from `/etc/cron.d/dropsite-backup`, the last 7 archives in `/var/backups/dropsite`, the secrets key copied once to `/root/dropsite-secrets.key`), `dropsite-update` and `dropsite-rollback`. Copy the archives and the key off the server yourself.
+
 ## Back up
 
 The service keeps running:

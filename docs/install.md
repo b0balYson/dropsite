@@ -1,6 +1,66 @@
 # Installation details
 
-The [README](../README.md) has the clone, configure and build path. This page covers the choices behind it.
+## One-command installer
+
+The easiest way: one command on **your own computer**. It connects to a freshly rented server, installs everything there and prepares your computer to open the admin interface.
+
+### What you need
+
+- A rented server (VPS) with **Ubuntu 22.04**, **Ubuntu 24.04** or **Debian 12**, 1 GB of memory or more. Your hosting provider sends you its **IP address** and the **root password** (or lets you upload an SSH key).
+- A **domain** for your sites, for example `sites.example.com`. It must not host anything else (see the security note in the README).
+- Your **e-mail**: it becomes the administrator login and is used for the HTTPS certificates.
+
+### Run it
+
+**macOS or Linux:** open the Terminal app and paste:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install-server.sh | sh
+```
+
+**Windows:** run the same command in WSL (Ubuntu from the Microsoft Store) or Git Bash.
+
+Answer the questions. The questions are in English, Russian or Chinese depending on your system language. When ssh asks for the password, type the root password: it stays invisible while you type. The password is used **once** to add a dedicated key and is never saved anywhere. Installing takes 10-20 minutes.
+
+What the installer does:
+
+1. Creates a key just for this server, `~/.ssh/dropsite_<name>`, and adds it to the server. From then on only this key is used.
+2. Checks the server system. Other systems are refused with a clear message.
+3. On the server: installs Docker from Docker's official repository, adds swap on servers with less than 2 GB of memory, opens only ports 22, 80 and 443 in the firewall (ufw), downloads dropsite to `/opt/dropsite`, writes the settings with a **generated administrator password**, starts everything and checks that it answers. It also sets up a daily backup (the last 7 copies in `/var/backups/dropsite`; the form secrets key is copied once to `/root/dropsite-secrets.key`) and the commands below.
+4. On your computer: adds a short entry `<name>` to `~/.ssh/config`, so `ssh <name>` connects to the server and opens a tunnel to the admin interface. The local port is the first free one starting from 8082 (another server may already use 8082).
+5. Shows the **DNS records** to create where you bought the domain: `A` for `@` and for `*` with the server IPv4 address, and `AAAA` too when the server has IPv6. Then it can wait (up to 30 minutes, checking every 10 seconds) until the domain points to the server and HTTPS works.
+
+Ctrl+C while waiting for DNS changes nothing: the server is installed. Check later with:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install-server.sh | sh -s -- --check-dns --name <name>
+```
+
+If anything fails, run the same command again: finished steps are skipped. The server log is `/var/log/dropsite-install.log`.
+
+### Afterwards
+
+| Task | How |
+| --- | --- |
+| Open the admin interface | run `ssh <name>`, keep the window open, open `http://localhost:<port>` (the port is shown at the end of the installation) |
+| Sign in | the e-mail you entered and the generated password shown once at the end; change it on the Account page |
+| Connect ChatGPT or Claude | the **Connect AI** page of the admin interface |
+| Update | `ssh <name> dropsite-update` (backup, download, restart) |
+| Undo the last update | `ssh <name> dropsite-rollback` (restores the backup taken right before the update) |
+| Forgot the admin password | `ssh <name> dropsite-admin-password` prints a new one |
+| Back up now | `ssh <name> dropsite-backup` |
+
+### Automation
+
+Every answer can also be passed as an option or an environment variable, for example `curl ... | sh -s -- --host 203.0.113.7 --name sites --domain sites.example.com --email me@example.com --yes`. Options: `--host`, `--port`, `--key` (a private key file instead of the password), `--name`, `--domain`, `--email`, `--skip-dns`, `--check-dns`, `--yes`; the matching variables are `DROPSITE_HOST`, `DROPSITE_SSH_PORT`, `DROPSITE_SSH_KEY`, `DROPSITE_NAME`, `DROPSITE_DOMAIN`, `DROPSITE_EMAIL`, `DROPSITE_SKIP_DNS=1`, `DROPSITE_CHECK_DNS=1`, `DROPSITE_YES=1`. `DROPSITE_LANG` (`en`, `ru`, `zh`) overrides the language. The server part, [`scripts/server-bootstrap.sh`](../scripts/server-bootstrap.sh), can also be run by hand as root on the server.
+
+Limits: the installer signs in as `root` (providers that give a sudo user instead are not supported yet); only `~/.ssh/config` itself is read when choosing the name and the port, not files it includes.
+
+For developers: `make install-test` checks the installer logic and the `~/.ssh/config` editing against a temporary home directory; `make install-e2e` runs the whole installer against a disposable Ubuntu 24.04 container on the local Docker engine. `make lint` runs shellcheck on the shell scripts when a `shellcheck` binary is in `.tools/bin` or on `PATH`.
+
+## Manual installation
+
+The [README](../README.md) has the clone, configure and build path. The sections below cover the choices behind it.
 
 ## Server
 
@@ -80,7 +140,7 @@ Invite links use `UI_URL`; make sure it is the address your colleagues can open.
 
 ## First steps
 
-1. Sign in with `ADMIN_EMAIL` and `ADMIN_PASSWORD`. The password variable is only read on the first start; change it later by issuing yourself a new invite (Users → reissue invite).
+1. Sign in with `ADMIN_EMAIL` and `ADMIN_PASSWORD`. The password variable is only read on the first start; change it later by issuing yourself a new invite (Users → reissue invite). Locked out? On the server run `docker compose exec -T control /control reset-password [email]` (default: `ADMIN_EMAIL`): it prints a new random password and ends that user's sessions.
 2. Create users and send them invite links.
 3. Optionally bind a site to the base domain root (All sites → bind root).
 4. Review limits in Settings.

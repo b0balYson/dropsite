@@ -19,6 +19,14 @@ Two containers. **Caddy** serves files by host name and obtains TLS certificates
 
 ## Install from the repository
 
+**One command.** Rent a VPS with Ubuntu 22.04/24.04 or Debian 12, then run on your own computer and answer a few questions (server IP, root password, a name, your domain, your e-mail):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install-server.sh | sh
+```
+
+On Windows run it in WSL or Git Bash. The installer sets up the server, shows the DNS records to create and ends with `ssh <name>` and `http://localhost:<port>` for the web interface. Details: [docs/install.md](docs/install.md#one-command-installer). The manual path follows.
+
 Requirements: a Linux server (amd64 or arm64), Git, Docker Engine 24+ and Compose 2.24.4+, ports 80 and 443 open, and a domain. For a server with 1 CPU and 1 GB RAM, provide 2 GB swap for building; see [build memory](docs/install.md#build-memory). Go is not needed on the host: Docker downloads the toolchain and builds the application inside a container. Internet access is needed for base images and dependencies. The first build can take several minutes.
 
 ### 1. Choose a dedicated base domain
