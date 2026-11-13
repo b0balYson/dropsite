@@ -10,9 +10,20 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-13
+
 ### Fixed
 
 - Claude Code could not connect: claude.ai refuses to serve its client metadata document to data-centre servers, and its OAuth redirect on `localhost` with a run-time port did not match the registered `http://localhost/callback`. The server no longer advertises client metadata documents, so every client registers dynamically, and loopback redirects match with any port (RFC 8252).
+
+### Documentation
+
+- The README explains where to get a server and a domain and how to point DNS at the server; the Russian README lists providers and registrars that work from Russia and recommends a server outside Russia.
+- The product name is written as Dropsite throughout.
+
+### Changed
+
+- CI skips lint, tests and builds when only documentation changes.
 
 ## [0.5.0] - 2026-11-13
 
@@ -108,7 +119,8 @@ First public release.
 - The installer does not keep the first administrator password on the server.
 - Threat model and operator guidance in [docs/security.md](docs/security.md).
 
-[Unreleased]: https://github.com/b0balYson/dropsite/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/b0balYson/dropsite/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/b0balYson/dropsite/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/b0balYson/dropsite/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/b0balYson/dropsite/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/b0balYson/dropsite/compare/v0.2.0...v0.3.0
