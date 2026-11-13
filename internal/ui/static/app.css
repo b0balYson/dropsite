@@ -1631,6 +1631,9 @@ a.xdomain__host { text-decoration: none; border-bottom: 2px solid var(--c-ink); 
 .sheets-settings { margin-top: var(--s-8); }
 .sheets-settings .lede { margin-bottom: var(--s-5); }
 .sheets-settings .notice { margin-bottom: var(--s-4); }
+.sheets-scope { max-width: 60rem; }
+.sheets-scope__list { margin: 0; padding-left: var(--s-5); list-style: disc; }
+.sheets-scope__list > li + li { margin-top: var(--s-1); }
 .sheets-settings #sheets-state { margin-bottom: var(--s-4); }
 .sheets-settings .howto { margin-top: var(--s-5); }
 

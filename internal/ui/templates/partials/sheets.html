@@ -5,6 +5,14 @@
   <section class="section" aria-labelledby="sheets-h">
     <h2 class="section-title" id="sheets-h">{{.L.T "sheets.admin.title"}}</h2>
     <p class="lede">{{.L.T "sheets.admin.lede"}}</p>
+    <div class="notice notice--warn sheets-scope" role="note" aria-labelledby="sheets-scope-h">
+      <p class="notice__text"><strong id="sheets-scope-h">{{.L.T "sheets.admin.scope.title"}}</strong> {{.L.T "sheets.admin.scope.text"}}</p>
+      <ul class="sheets-scope__list small">
+        <li>{{.L.T "sheets.admin.scope.1"}}</li>
+        <li>{{.L.T "sheets.admin.scope.2"}}</li>
+        <li>{{.L.T "sheets.admin.scope.3"}}</li>
+      </ul>
+    </div>
     {{if $s.Unreadable}}<p class="notice notice--error" role="alert">{{.L.T "sheets.admin.unreadable"}}</p>{{end}}
     <p class="hint" id="sheets-state">
       {{if $s.Configured}}<span class="badge badge--ok">{{.L.T "sheets.admin.state.set"}}</span> <span class="mono">{{$s.Email}}</span>

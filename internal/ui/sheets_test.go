@@ -20,6 +20,8 @@ func TestSheetsAdminSettings(t *testing.T) {
 	page := h.get("/admin/settings")
 	wantStatus(t, page, http.StatusOK)
 	wantContains(t, page.body, `id="sheets-h"`, "Google Таблицы", "Не подключено", `name="service_account_json"`)
+	// The operator is warned about the reach of the shared service account.
+	wantContains(t, page.body, `id="sheets-scope-h"`, "Аккаунт действует от имени всех пользователей", "общие диски")
 
 	p := h.submit("/admin/settings", "/admin/settings/sheets", url.Values{"service_account_json": {`{"type":"user"}`}})
 	wantStatus(t, p, http.StatusSeeOther)

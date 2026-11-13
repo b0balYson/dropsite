@@ -16,6 +16,18 @@ Both work through one Google **service account** of the installation. Users shar
 
 dropsite checks the key by asking Google for an access token, stores it encrypted with `state/secrets.key` (like the form secrets) and shows only the service account address afterwards. The key is never returned by the web interface, the API or the MCP tools, and it cannot be set through the API or the chat. Removing the key turns every Google Sheets feature off; channels and links stay and report that Google Sheets is not configured.
 
+### Checklist: what the service account may reach
+
+The service account acts for every user of the installation: anyone who can name a spreadsheet the account can open is able to link it and read its rows through their own site, without having Google access to it themselves. Keep its reach as small as the feature needs:
+
+- Create a **dedicated** service account in a **dedicated** Google Cloud project for this installation; do not reuse an account of other services.
+- Give it **no IAM roles**, no domain-wide delegation and no Google Workspace admin roles; enable only the Google Sheets API in its project.
+- Do not add it to **shared drives**, groups or folders: it should see only the spreadsheets users share with it one by one.
+- Never share confidential spreadsheets with it, and ask users to share only the spreadsheets meant for their sites (Viewer for site data, Editor for forms).
+- From time to time open *Shared with me* of the account (or the Drive audit log of your Workspace) and remove access to spreadsheets nobody uses any more; rotate the key if it may have leaked, and delete the old one in Google Cloud.
+
+The same warning is shown next to the key in *Settings → Google Sheets*. Separate Google access per user is not available; see [security.md](security.md).
+
 Google limits the Sheets API requests per minute of the project (see *APIs & Services → Google Sheets API → Quotas*); the quota is shared by the whole installation.
 
 ## Users: share a spreadsheet

@@ -1,6 +1,11 @@
 {
   "sheets.admin.title": "Google 表格",
   "sheets.admin.lede": "用户可以把表单提交发送到 Google 表格，也可以用表格填充网站数据。dropsite 以一个 Google 服务账号的身份工作：用户需要把表格共享给该账号的地址。",
+  "sheets.admin.scope.title": "该账号代表所有用户执行操作。",
+  "sheets.admin.scope.text": "任何人只要知道该账号能打开的表格，就能在自己的网站上显示其中的行。请尽量缩小它的访问范围：",
+  "sheets.admin.scope.1": "使用独立 Google Cloud 项目中的专用服务账号，不授予 IAM 角色，也不启用全网域委派；",
+  "sheets.admin.scope.2": "不要把它加入共享云端硬盘、群组或文件夹，也不要把机密表格共享给它；",
+  "sheets.admin.scope.3": "定期检查共享给它的内容；如果密钥可能已泄露，请更换密钥。",
   "sheets.admin.unreadable": "无法解密已保存的密钥（恢复时是否缺少密钥文件？）。请重新粘贴。",
   "sheets.admin.state.set": "已连接",
   "sheets.admin.state.unset": "未连接",

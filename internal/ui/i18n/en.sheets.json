@@ -1,6 +1,11 @@
 {
   "sheets.admin.title": "Google Sheets",
   "sheets.admin.lede": "Users can send form submissions to a Google Sheet and fill site data from a sheet. dropsite works as one Google service account: users share their spreadsheets with its address.",
+  "sheets.admin.scope.title": "The account acts for every user.",
+  "sheets.admin.scope.text": "Anyone who can name a spreadsheet this account can open is able to show its rows on their site. Keep its reach small:",
+  "sheets.admin.scope.1": "use a dedicated service account in its own Google Cloud project, without IAM roles or domain-wide delegation;",
+  "sheets.admin.scope.2": "do not add it to shared drives, groups or folders, and never share confidential spreadsheets with it;",
+  "sheets.admin.scope.3": "review what is shared with it from time to time and rotate the key if it may have leaked.",
   "sheets.admin.unreadable": "The stored key cannot be decrypted (restored without the key file?). Paste it again.",
   "sheets.admin.state.set": "Connected",
   "sheets.admin.state.unset": "Not connected",
