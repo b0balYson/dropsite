@@ -20,6 +20,7 @@
 </form>
 
 {{if .D.Rows}}
+<div id="xdomains">{{template "section_flash" (bundle $ "xdomains")}}</div>
 <ol class="xdomain-list">
   {{range $i, $r := .D.Rows}}{{$h := $r.Hostname}}{{$row := $r.Row}}
   <li class="xdomain xdomain--{{$h.Status}}">
@@ -43,7 +44,7 @@
     <div class="xdomain__actions">
       {{if ne $h.Status "active"}}
       <form method="post" action="/admin/domains/{{$h.Hostname}}/approve">
-        {{template "csrf" $}}<input type="hidden" name="back" value="{{$.D.Back}}">
+        {{template "csrf" $}}{{template "section_field" "xdomains"}}<input type="hidden" name="back" value="{{$.D.Back}}">
         <button class="btn btn--small btn--primary" type="submit" aria-label="{{$.L.T "xdomains.approve"}} {{$h.Hostname}}">{{$.L.T "xdomains.approve"}}</button>
       </form>
       {{end}}
@@ -51,7 +52,7 @@
       <details class="xdomain__reject">
         <summary class="btn btn--small btn--ghost">{{if eq $h.Status "active"}}{{$.L.T "xdomains.revoke"}}{{else}}{{$.L.T "xdomains.reject"}}{{end}}</summary>
         <form class="stack xdomain__reject-form" method="post" action="/admin/domains/{{$h.Hostname}}/reject">
-          {{template "csrf" $}}<input type="hidden" name="back" value="{{$.D.Back}}">
+          {{template "csrf" $}}{{template "section_field" "xdomains"}}<input type="hidden" name="back" value="{{$.D.Back}}">
           <div class="field">
             <label class="field__label" for="reason-{{$i}}">{{$.L.T "xdomains.reason.label"}}</label>
             <input class="input" id="reason-{{$i}}" name="reason" required maxlength="200" autocomplete="off">

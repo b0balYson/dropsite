@@ -182,6 +182,5 @@ func (s *server) sitePageSub(w http.ResponseWriter, r *http.Request, rc *reqCtx,
 	name, section, title string, sv service.SiteView, sub bool, data any) {
 	v := s.newView(r, rc, "sites", title, data)
 	v.Site = &siteNav{V: sv, Section: section, Sub: sub, Soon: s.accessView(sv.Site).Soon}
-	v.Flash = s.takeFlash(w, r)
-	s.execute(w, status, s.pages[name], "layout.html", v)
+	s.layout(w, r, status, name, v)
 }

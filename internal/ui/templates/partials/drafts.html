@@ -12,6 +12,7 @@
   <h2 class="section-title" id="draft-h">{{$.L.T "draft.title"}} <span class="badge badge--draft">{{$.L.T "draft.badge"}}</span></h2>
   <p>{{$.L.T "draft.lede" "date" ($.L.Date .CreatedAt)}} <span class="mono muted small">{{.Deploy.ID}}</span></p>
   <p class="hint">{{$.L.T "draft.data_note"}}</p>
+  {{template "section_flash" (bundle $ "draft-h")}}
   <div class="draft-block__actions">
     {{if .PreviewURL}}
     <a class="btn btn--ghost" href="{{.PreviewURL}}" title="{{.PreviewURL}}" target="_blank" rel="noopener noreferrer">{{$.L.T "draft.open"}} <span aria-hidden="true">↗</span></a>
@@ -19,13 +20,13 @@
     <p class="muted small">{{$.L.T "draft.no_preview"}}</p>
     {{end}}
     <form method="post" action="/sites/{{$v.Site.ID}}/draft/publish">
-      {{template "csrf" $}}
+      {{template "csrf" $}}{{template "section_field" "draft-h"}}
       <button class="btn btn--primary" type="submit">{{$.L.T "draft.publish"}}</button>
     </form>
     <details class="draft-block__discard">
       <summary class="btn btn--danger-ghost">{{$.L.T "draft.discard"}}</summary>
       <form class="draft-block__confirm" method="post" action="/sites/{{$v.Site.ID}}/draft/discard">
-        {{template "csrf" $}}
+        {{template "csrf" $}}{{template "section_field" "draft-h"}}
         <p class="small">{{$.L.T "draft.discard.confirm"}}</p>
         <button class="btn btn--small btn--danger" type="submit">{{$.L.T "draft.discard"}}</button>
       </form>

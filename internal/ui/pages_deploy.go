@@ -94,6 +94,10 @@ func (s *server) streamDeploy(r *http.Request, rc *reqCtx, ref string) (service.
 	}
 }
 
+// deploySection is the id of the upload block on the site overview, where a
+// form upload's result is shown.
+const deploySection = "deploy-h"
+
 func (s *server) deployDone(w http.ResponseWriter, r *http.Request, rc *reqCtx, res service.DeployResult) {
 	if res.Site.Draft != nil && res.Site.Draft.Deploy.ID == res.Deploy.ID {
 		s.draftSaved(w, r, rc, res)
@@ -106,7 +110,8 @@ func (s *server) deployDone(w http.ResponseWriter, r *http.Request, rc *reqCtx, 
 		})
 		return
 	}
-	s.setFlash(w, r, flashDeployed, rc.loc.T("deploy.done"))
+	// The upload form streams its body, so the section is set here.
+	s.setFlashIn(w, r, flashDeployed, rc.loc.T("deploy.done"), deploySection)
 	redirect(w, r, sitePath(res.Site.Site.ID))
 }
 
@@ -126,7 +131,7 @@ func (s *server) deployFailed(w http.ResponseWriter, r *http.Request, rc *reqCtx
 		writeJSON(w, status, deployReply{Message: msg})
 		return
 	}
-	s.setFlash(w, r, flashError, msg)
+	s.setFlashIn(w, r, flashError, msg, deploySection)
 	redirect(w, r, sitePath(ref))
 }
 

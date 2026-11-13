@@ -831,6 +831,13 @@ legend.field__label { float: left; width: 100%; }
 .status--error { color: var(--c-error); }
 .status__icon { font-weight: var(--w-heavy); }
 .slug-status { min-height: 1.5em; }
+/* An empty status takes no room (and no flex gap) until a check answers. */
+.slug-status:empty { min-height: 0; margin-top: calc(-1 * var(--s-2)); }
+/* The slug field with its long hint spans two rows of a two-column form, so
+   the next field sits right under the title instead of below the hint. */
+@media (min-width: 48rem) {
+  .form-grid > .field--tall { grid-row: span 2; }
+}
 
 /* ---- addresses ----------------------------------------------------------- */
 
@@ -2112,3 +2119,77 @@ a.chip[aria-current="page"] { background: var(--c-ink); color: var(--c-paper); b
 :lang(zh) .dropzone__title,
 :lang(zh) .section-title { line-height: 1.3; }
 :lang(zh) .lede { max-width: 40em; }
+
+/* ---- form results -------------------------------------------------------- */
+/* A form's result shows right above it (.notice--result); the page comes
+   back to that section, below the sticky top bar. A result without a
+   section is a toast pinned to the viewport while scripts run; without
+   them it stays a plain notice at the top of the page. */
+
+:target,
+.notice--result { scroll-margin-top: calc(var(--topbar-h) + var(--s-4)); }
+@media (min-width: 60rem) {
+  :target,
+  .notice--result { scroll-margin-top: var(--s-5); }
+}
+.notice--result.notice--flash { margin: 0 0 var(--s-4); }
+/* A message takes focus only to be read out: no ring, it is not a control. */
+.notice[data-flash]:focus-visible { outline: none; box-shadow: none; border-radius: var(--r-md); }
+
+.toast { display: flex; align-items: flex-start; gap: var(--s-3); }
+.toast__body { flex: 1; min-width: 0; }
+.toast__body > * + * { margin-top: var(--s-2); }
+.toast__close { display: none; }
+
+@media (scripting: enabled) {
+  .toast.notice--flash {
+    position: fixed;
+    z-index: 60;
+    top: var(--s-4);
+    right: var(--s-4);
+    width: min(26rem, calc(100vw - 2 * var(--s-4)));
+    margin: 0;
+    padding-right: var(--s-3);
+    box-shadow: var(--shadow-pop);
+  }
+  .toast__close {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    width: 2.25rem;
+    height: 2.25rem;
+    margin: -0.25rem 0 -0.25rem 0;
+    padding: 0;
+    border: var(--bw) solid var(--c-ink);
+    border-radius: var(--r-pill);
+    background: var(--c-surface);
+    color: var(--c-ink);
+    font: inherit;
+    font-size: 1.25rem;
+    font-weight: var(--w-bold);
+    line-height: 1;
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+  }
+  .notice.toast[data-flash]:focus-visible { box-shadow: var(--shadow-pop); }
+  .toast__close:hover { background: var(--c-accent-soft); }
+  .toast__close:active { transform: translateY(1px); }
+  .toast__close:focus-visible { outline: var(--bw) solid var(--c-focus); outline-offset: 2px; }
+  .toast.is-leaving {
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+  }
+}
+@media (scripting: enabled) and (max-width: 47.99rem) {
+  .toast.notice--flash {
+    top: auto;
+    bottom: var(--s-4);
+    left: var(--s-4);
+    right: var(--s-4);
+    width: auto;
+  }
+  .toast.is-leaving { transform: translateY(6px); }
+}
+/* The open drawer and its scrim stay above a toast. */
+.menu-open .toast { visibility: hidden; }

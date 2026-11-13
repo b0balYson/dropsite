@@ -1,10 +1,11 @@
 {{define "admin_forms"}}
 {{$f := .D.Forms}}
 <form method="post" action="/admin/settings/forms" class="settings forms-settings" autocomplete="off">
-  {{template "csrf" .}}
+  {{template "csrf" .}}{{template "section_field" "forms-h"}}
   <section class="section" aria-labelledby="forms-h">
     <h2 class="section-title" id="forms-h">{{.L.T "forms.admin.title"}}</h2>
     <p class="lede">{{.L.T "forms.admin.lede"}}</p>
+    {{template "section_flash" (bundle $ "forms-h")}}
     {{if $f.SecretsUnreadable}}<p class="notice notice--error" role="alert">{{.L.T "forms.admin.unreadable"}}</p>{{end}}
 
     <div class="forms-settings__grid">

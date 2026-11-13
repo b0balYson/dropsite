@@ -2,8 +2,9 @@
 {{$v := .D.V}}{{$p := .D.Publish}}
 <section class="section site-block" aria-labelledby="optimize-h">
   <h2 class="section-title" id="optimize-h">{{.L.T "publish.title"}}</h2>
+  {{template "section_flash" (bundle $ "optimize-h")}}
   <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/publish-settings">
-    {{template "csrf" .}}
+    {{template "csrf" .}}{{template "section_field" "optimize-h"}}
     <label class="check"><input type="checkbox" name="optimize" value="1"{{if $p.Optimize}} checked{{end}}{{if not $p.InstallationEnabled}} disabled{{end}} aria-describedby="publish-hint"> <span>{{.L.T "publish.optimize.label"}}</span></label>
     <p class="hint" id="publish-hint">{{if $p.InstallationEnabled}}{{.L.T "publish.optimize.hint"}}{{else}}{{.L.T "publish.optimize.off"}}{{end}}</p>
     {{if $p.InstallationEnabled}}<button class="btn btn--primary" type="submit">{{.L.T "form.save"}}</button>{{end}}

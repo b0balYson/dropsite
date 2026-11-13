@@ -9,11 +9,12 @@
   <div class="domains__grid">
     <div class="domains__main">
       <p class="hint">{{.L.T "domains.lede"}}</p>
+      {{template "section_flash" (bundle $ "domains-h")}}
       {{if $d.AtLimit}}
       <p class="notice notice--warn">{{.L.T "domains.atlimit" "max" $d.Setup.MaxDomains}}</p>
       {{else}}
       <form class="domain-add" method="post" action="/sites/{{$v.Site.ID}}/domains">
-        {{template "csrf" .}}
+        {{template "csrf" .}}{{template "section_field" "domains-h"}}
         <label class="sr-only" for="domain-new">{{.L.T "domains.field"}}</label>
         <input class="input mono" id="domain-new" name="domain" required maxlength="253" placeholder="promo.example.com"
           autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="url">
@@ -35,7 +36,7 @@
           <details class="domain-row__remove">
             <summary class="btn btn--small btn--ghost" aria-label="{{$.L.T "domains.remove"}} {{$h.Hostname}}">{{$.L.T "domains.remove"}}</summary>
             <form class="domain-row__confirm" method="post" action="/sites/{{$v.Site.ID}}/domains/remove">
-              {{template "csrf" $}}
+              {{template "csrf" $}}{{template "section_field" "domains-h"}}
               <input type="hidden" name="domain" value="{{$h.Hostname}}">
               <p class="small">{{$.L.T "domains.remove.confirm" "domain" $h.Hostname}}</p>
               <button class="btn btn--small btn--danger" type="submit">{{$.L.T "domains.remove.submit"}}</button>

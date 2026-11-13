@@ -8,8 +8,9 @@
 
 <section class="section site-block" aria-labelledby="counters-h">
   <h2 class="section-title" id="counters-h">{{.L.T "counters.title"}}</h2>
+  {{template "section_flash" (bundle $ "counters-h")}}
   <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/counters">
-    {{template "csrf" .}}
+    {{template "csrf" .}}{{template "section_field" "counters-h"}}
     <div class="site-block__row">
       <div class="field">
         <label class="field__label" for="metrika_id">{{.L.T "counters.metrika"}} <span class="optional">{{.L.T "form.optional"}}</span></label>

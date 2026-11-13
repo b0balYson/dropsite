@@ -21,6 +21,9 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 - The server installer accepts Ubuntu 22.04 or newer and Debian 12 or newer
   (for example Ubuntu 26.04) instead of three fixed releases; a release Docker
   does not package yet is refused with a clear message.
+- A form's result (saved or an error) now shows right above that form and the
+  page returns to it; results from another page appear as a toast, and the
+  create-site form no longer leaves a gap under the address hint.
 
 ## [0.2.0] - 2026-11-13
 

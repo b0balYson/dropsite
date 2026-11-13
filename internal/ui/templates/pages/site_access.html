@@ -6,8 +6,9 @@
 
 <section class="section site-block section--first" aria-labelledby="access-h">
   <h2 class="section-title" id="access-h">{{.L.T "access.title"}}</h2>
+  {{template "section_flash" (bundle $ "access-h")}}
   <form class="stack access" method="post" action="/sites/{{$v.Site.ID}}/access">
-    {{template "csrf" .}}
+    {{template "csrf" .}}{{template "section_field" "access-h"}}
     <fieldset class="access__group">
       <legend class="field__label">{{.L.T "access.pass.legend"}}</legend>
       <label class="check"><input type="checkbox" name="protected" value="1"{{if $v.Site.Protected}} checked{{end}}> <span>{{.L.T "access.pass.label"}}</span></label>

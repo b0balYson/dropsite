@@ -10,6 +10,7 @@
 
 <section class="section" aria-labelledby="endpoints-h">
   <h2 class="section-title" id="endpoints-h">{{.L.T "proxy.endpoints"}} <span class="muted">{{len .D.Endpoints}} / {{.D.Limit}}</span></h2>
+  {{template "section_flash" (bundle $ "endpoints-h")}}
   {{if .D.Endpoints}}
   <ul class="channel-list">
     {{range .D.Endpoints}}{{$e := .Endpoint}}
@@ -21,6 +22,7 @@
         {{else if .SecretSet}}<span class="badge badge--ok">{{$.L.T "proxy.key.set"}}</span>
         {{else}}<span class="badge badge--warn">{{$.L.T "proxy.key.missing"}}</span>{{end}}
       </div>
+      {{template "section_flash" (bundle $ (printf "proxy-%s" $e.Name))}}
       <dl class="fields proxy__facts">
         <div class="fields__row"><dt class="fields__name">{{$.L.T "proxy.call"}}</dt><dd class="fields__value mono">{{.CallURL}}</dd></div>
         <div class="fields__row"><dt class="fields__name">{{$.L.T "proxy.methods"}}</dt><dd class="fields__value mono">{{join $e.Methods ", "}}</dd></div>
@@ -31,7 +33,7 @@
         {{if .SecretSet}}<div class="fields__row"><dt class="fields__name">{{$.L.T "proxy.key"}}</dt><dd class="fields__value">{{$.L.T "proxy.key.since" "at" ($.L.DatePtr $e.SecretUpdatedAt)}}</dd></div>{{end}}
       </dl>
       <form class="channel__verify proxy__key" method="post" action="{{$base}}/{{$e.Name}}/secret" autocomplete="off">
-        {{template "csrf" $}}
+        {{template "csrf" $}}{{template "section_field" (printf "proxy-%s" $e.Name)}}
         <label class="field__label" for="key-{{$e.Name}}">{{if .SecretSet}}{{$.L.T "proxy.key.replace"}}{{else}}{{$.L.T "proxy.key.paste"}}{{end}}</label>
         <div class="inline-input">
           <input class="input mono" id="key-{{$e.Name}}" name="secret" type="password" autocomplete="off" spellcheck="false" maxlength="4096" required>
@@ -43,12 +45,12 @@
         <a class="btn btn--small btn--ghost" href="{{$base}}/{{$e.Name}}/edit#proxy-form">{{$.L.T "proxy.edit"}}</a>
         {{if .SecretSet}}
         <form method="post" action="{{$base}}/{{$e.Name}}/secret/delete">
-          {{template "csrf" $}}
+          {{template "csrf" $}}{{template "section_field" (printf "proxy-%s" $e.Name)}}
           <button class="btn btn--small btn--ghost" type="submit">{{$.L.T "proxy.key.clear"}}</button>
         </form>
         {{end}}
         <form method="post" action="{{$base}}/{{$e.Name}}/delete">
-          {{template "csrf" $}}
+          {{template "csrf" $}}{{template "section_field" "endpoints-h"}}
           <button class="btn btn--small btn--danger-ghost" type="submit">{{$.L.T "proxy.delete"}}</button>
         </form>
       </div>

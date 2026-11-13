@@ -42,9 +42,12 @@ type issuedCode struct {
 }
 
 type connectData struct {
-	Code   *issuedCode
-	Apps   []domain.OAuthGrant
-	MCPURL string
+	Code *issuedCode
+	// CodeError is why a connect code was not issued; it shows inside the
+	// connect block, where the button was pressed.
+	CodeError string
+	Apps      []domain.OAuthGrant
+	MCPURL    string
 	// MetaURL is the OAuth metadata address people open when a connector fails.
 	MetaURL  string
 	Tokens   []tokenRow
@@ -108,7 +111,7 @@ func (s *server) connectPage(w http.ResponseWriter, r *http.Request, rc *reqCtx)
 func (s *server) createCode(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	res, err := s.svc.CreateConnectCode(r.Context(), rc.actor)
 	if err != nil {
-		s.fail(w, r, rc, err, "/connect")
+		s.codeFailed(w, r, rc, err)
 		return
 	}
 	data, err := s.connectData(r, rc)
@@ -126,6 +129,25 @@ func (s *server) createCode(w http.ResponseWriter, r *http.Request, rc *reqCtx) 
 		return
 	}
 	s.page(w, r, rc, http.StatusOK, "connect", "connect", "connect.title", data)
+}
+
+// codeFailed answers a connect code request that failed. htmx swaps the
+// answer into the connect block, so the error is rendered there (a redirect
+// would put a whole page into the block); without htmx the page comes back to
+// the block with the message (see section_flash).
+func (s *server) codeFailed(w http.ResponseWriter, r *http.Request, rc *reqCtx, err error) {
+	if !isHTMX(r) {
+		s.fail(w, r, rc, err, "/connect")
+		return
+	}
+	data, derr := s.connectData(r, rc)
+	if derr != nil {
+		s.failPage(w, r, rc, derr)
+		return
+	}
+	data.CodeError, _ = s.describe(rc, err)
+	// htmx swaps only successful answers by default: the error is content.
+	s.fragment(w, r, rc, "connect_block", data)
 }
 
 // revokeApp disconnects an OAuth application.

@@ -341,6 +341,89 @@
     window.location.replace(head.dataset.siteBase + OLD_ANCHORS[id]);
   }
 
+  // ---- form results --------------------------------------------------------
+  // After a form is sent the page comes back to the form's section, which
+  // shows the result right above the form: it gets focus and is scrolled
+  // into view. A result without a section is a toast: errors and the
+  // deploy result (with its link) stay until closed, the rest fade out.
+
+  var TOAST_MS = 5000;
+  var LEAVE_MS = 260;
+
+  function reducedMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
+  function isVisible(el) {
+    var r = el.getBoundingClientRect();
+    return r.top >= 0 && r.bottom <= (window.innerHeight || document.documentElement.clientHeight);
+  }
+
+  function focusResult(el) {
+    try {
+      el.focus({ preventScroll: true });
+    } catch (e) {
+      el.focus();
+    }
+    if (!isVisible(el)) {
+      el.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' });
+    }
+  }
+
+  function closeToast(toast) {
+    if (!toast.parentNode) { return; }
+    var hadFocus = toast.contains(document.activeElement);
+    var remove = function () {
+      if (toast.parentNode) { toast.parentNode.removeChild(toast); }
+    };
+    if (reducedMotion()) {
+      remove();
+    } else {
+      toast.classList.add('is-leaving');
+      window.setTimeout(remove, LEAVE_MS);
+    }
+    if (hadFocus) {
+      var main = document.getElementById('main');
+      if (main) { main.focus({ preventScroll: true }); }
+    }
+  }
+
+  function initToast(toast) {
+    var close = toast.querySelector('[data-toast-close]');
+    if (close) {
+      close.addEventListener('click', function () { closeToast(toast); });
+    }
+    toast.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { closeToast(toast); }
+    });
+    if (toast.hasAttribute('data-sticky')) {
+      // After the browser has landed on a #fragment, which can move focus.
+      window.requestAnimationFrame(function () { focusResult(toast); });
+      return;
+    }
+    // A passing message pauses while the pointer or focus is on it.
+    var timer = null;
+    var start = function () {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(function () { closeToast(toast); }, TOAST_MS);
+    };
+    var stop = function () { window.clearTimeout(timer); };
+    toast.addEventListener('mouseenter', stop);
+    toast.addEventListener('mouseleave', start);
+    toast.addEventListener('focusin', stop);
+    toast.addEventListener('focusout', start);
+    start();
+  }
+
+  function initResults() {
+    var section = document.querySelector('[data-flash="section"]');
+    if (section) {
+      // Let the browser land on the #section anchor first.
+      window.requestAnimationFrame(function () { focusResult(section); });
+    }
+    document.querySelectorAll('[data-flash="toast"]').forEach(initToast);
+  }
+
   // ---- wiring --------------------------------------------------------------
 
   function focusIssued(root) {
@@ -357,6 +440,7 @@
     initDrawer();
     initCopy(document);
     initCountdown(document);
+    initResults();
     document.querySelectorAll('[data-upload]').forEach(function (form) {
       new Uploader(form).bind();
     });
@@ -364,6 +448,9 @@
       initCopy(e.detail.elt);
       initCountdown(e.detail.elt);
       focusIssued(e.detail.elt);
+      // An htmx form's error comes back inside the form's own area.
+      var result = e.detail.elt.querySelector && e.detail.elt.querySelector('[data-flash="section"]');
+      if (result) { focusResult(result); }
     });
   });
 }());

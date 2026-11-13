@@ -6,8 +6,9 @@
 
 <section class="section site-block section--first" aria-labelledby="settings-h">
   <h2 class="section-title" id="settings-h">{{.L.T "site.settings"}}</h2>
+  {{template "section_flash" (bundle $ "settings-h")}}
   <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/settings">
-    {{template "csrf" .}}
+    {{template "csrf" .}}{{template "section_field" "settings-h"}}
     <div class="site-block__row">
       <div class="field">
         <label class="field__label" for="title">{{.L.T "site.field.title"}}</label>
@@ -31,10 +32,12 @@
 
 <section class="section danger" aria-labelledby="danger-h">
   <h2 class="section-title danger__title" id="danger-h">{{.L.T "site.danger.title"}}</h2>
-  <details class="danger__box">
+  {{$deleteResult := .FlashAt "danger-h"}}
+  <details class="danger__box"{{if $deleteResult}} open{{end}}>
     <summary><span id="delete-h">{{.L.T "site.delete.title"}}</span></summary>
+    {{template "section_flash" (bundle $ "danger-h")}}
     <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/delete">
-      {{template "csrf" .}}
+      {{template "csrf" .}}{{template "section_field" "danger-h"}}
       <p>{{.L.T "site.delete.text"}}</p>
       <div class="field">
         <label class="field__label" for="confirm">{{.L.T "site.delete.confirm" "title" $v.Site.Title}}</label>

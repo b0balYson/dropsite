@@ -121,7 +121,8 @@ func (s *server) saveProxy(w http.ResponseWriter, r *http.Request, rc *reqCtx) {
 	case !view.SecretSet:
 		key = "proxy.saved.nokey"
 	}
-	s.setFlash(w, r, flashOK, rc.loc.T(key, "name", view.Endpoint.Name))
+	// The result shows on the endpoint's card, where the page comes back to.
+	s.setFlashIn(w, r, flashOK, rc.loc.T(key, "name", view.Endpoint.Name), "proxy-"+view.Endpoint.Name)
 	redirect(w, r, proxyPath(view.Endpoint.SiteID)+"#proxy-"+view.Endpoint.Name)
 }
 

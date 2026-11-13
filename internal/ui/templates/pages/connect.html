@@ -138,6 +138,7 @@
 
 <section class="section" id="apps" aria-labelledby="apps-h">
   <h2 class="section-title" id="apps-h">{{.L.T "connect.apps.title"}}</h2>
+  {{template "section_flash" (bundle $ "apps")}}
   {{if .D.Apps}}
   <table class="table">
     <thead><tr>
@@ -156,7 +157,7 @@
       <td data-label="{{$.L.T "connect.apps.used"}}">{{if .LastUsedAt}}{{$.L.DatePtr .LastUsedAt}}{{else}}{{$.L.T "connect.tokens.never"}}{{end}}</td>
       <td class="table__actions">
         <form method="post" action="/connect/apps/{{.ID}}/revoke">
-          {{template "csrf" $}}
+          {{template "csrf" $}}{{template "section_field" "apps"}}
           <button class="btn btn--small btn--danger-ghost" type="submit" aria-label="{{$.L.T "connect.apps.revoke"}}: {{.ClientName}}">{{$.L.T "connect.apps.revoke"}}</button>
         </form>
       </td>
@@ -169,11 +170,12 @@
   {{end}}
 </section>
 
-<details class="howto section" id="tokens" {{if .D.TokensOpen}}open{{end}}>
+<details class="howto section" id="tokens" {{if or .D.TokensOpen (.FlashAt "tokens")}}open{{end}}>
   <summary>{{.L.T "connect.tokens.manual"}}</summary>
   <p>{{.L.T "connect.tokens.manual.text"}}</p>
   {{template "token_block" .}}
   <h3 class="chat-steps__title">{{.L.T "connect.tokens.title"}}</h3>
+  {{template "section_flash" (bundle $ "tokens")}}
   {{template "token_list" .}}
 </details>
 {{end}}

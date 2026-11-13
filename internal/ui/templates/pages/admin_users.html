@@ -17,8 +17,9 @@
 
 <section class="panel panel--flat" aria-labelledby="new-user-h">
   <h2 class="section-title" id="new-user-h">{{.L.T "users.create"}}</h2>
+  {{template "section_flash" (bundle $ "new-user-h")}}
   <form class="form-grid form-grid--inline" method="post" action="/admin/users">
-    {{template "csrf" .}}
+    {{template "csrf" .}}{{template "section_field" "new-user-h"}}
     {{with .D.Form.Error}}<p class="notice notice--error form-grid__full" role="alert">{{.}}</p>{{end}}
     <div class="field">
       <label class="field__label" for="new-email">{{.L.T "login.email"}}</label>
@@ -40,6 +41,7 @@
 
 <section class="section" aria-labelledby="users-h">
     <h2 class="sr-only" id="users-h">{{.L.T "users.title"}}</h2>
+    {{template "section_flash" (bundle $ "users-h")}}
     <form class="search" method="get" action="/admin/users" role="search">
       <label class="sr-only" for="q">{{.L.T "search.label"}}</label>
       <input class="input" id="q" name="q" type="search" value="{{.D.Query}}" placeholder="{{.L.T "users.search"}}">
@@ -68,14 +70,14 @@
             <a class="btn btn--small btn--ghost" href="/admin/users/{{.ID}}/limits" aria-label="{{$.L.T "users.limits"}}: {{.Email}}">{{$.L.T "users.limits"}}</a>
             {{if ne .ID $.D.MeID}}
             {{if ne .Status "blocked"}}
-            <form method="post" action="/admin/users/{{.ID}}/invite">{{template "csrf" $}}
+            <form method="post" action="/admin/users/{{.ID}}/invite">{{template "csrf" $}}{{template "section_field" "users-h"}}
               <button class="btn btn--small btn--ghost" type="submit">{{if eq .Status "active"}}{{$.L.T "users.reset"}}{{else}}{{$.L.T "users.reinvite"}}{{end}}</button></form>
-            <form method="post" action="/admin/users/{{.ID}}/revoke-tokens">{{template "csrf" $}}
+            <form method="post" action="/admin/users/{{.ID}}/revoke-tokens">{{template "csrf" $}}{{template "section_field" "users-h"}}
               <button class="btn btn--small btn--ghost" type="submit" aria-label="{{$.L.T "users.revoke_tokens"}}: {{.Email}}">{{$.L.T "users.revoke_tokens"}}</button></form>
-            <form method="post" action="/admin/users/{{.ID}}/block">{{template "csrf" $}}
+            <form method="post" action="/admin/users/{{.ID}}/block">{{template "csrf" $}}{{template "section_field" "users-h"}}
               <button class="btn btn--small btn--danger-ghost" type="submit" aria-label="{{$.L.T "users.block"}}: {{.Email}}">{{$.L.T "users.block"}}</button></form>
             {{else}}
-            <form method="post" action="/admin/users/{{.ID}}/unblock">{{template "csrf" $}}
+            <form method="post" action="/admin/users/{{.ID}}/unblock">{{template "csrf" $}}{{template "section_field" "users-h"}}
               <button class="btn btn--small btn--ghost" type="submit" aria-label="{{$.L.T "users.unblock"}}: {{.Email}}">{{$.L.T "users.unblock"}}</button></form>
             {{end}}
             {{else}}<span class="muted small">{{$.L.T "users.you"}}</span>{{end}}

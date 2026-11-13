@@ -36,7 +36,7 @@
 
 {{define "altcha_toggle"}}{{/* .R = view, .V = map: Site, On, Back */}}
 <form class="altcha-toggle" method="post" action="/sites/{{.V.Site}}/forms/settings">
-  {{template "csrf" .R}}
+  {{template "csrf" .R}}{{with .V.Section}}{{template "section_field" .}}{{end}}
   <input type="hidden" name="back" value="{{.V.Back}}">
   <label class="check"><input type="checkbox" name="require_altcha" value="1" {{if .V.On}}checked{{end}}>
     <span><strong>{{.R.L.T "forms.altcha.label"}}</strong><br><span class="small muted">{{.R.L.T "forms.altcha.hint"}}</span></span></label>

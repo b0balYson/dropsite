@@ -13,12 +13,13 @@
 
 <section class="section" aria-labelledby="docs-h">
   <h2 class="section-title" id="docs-h">{{.L.T "data.documents"}}</h2>
+  {{template "section_flash" (bundle $ "docs-h")}}
   <nav class="chips" aria-label="{{.L.T "data.filter"}}">
     {{range .D.Statuses}}<a class="chip" href="{{$base}}?status={{.}}" {{if eq . $.D.Status}}aria-current="page"{{end}}>{{$.L.T (printf "data.status.%s" .)}}</a>{{end}}
   </nav>
   {{if .D.Docs}}
   <form method="post" action="{{$base}}/moderate" id="moderate-form">
-    {{template "csrf" .}}
+    {{template "csrf" .}}{{template "section_field" "docs-h"}}
   </form>
   <ul class="domain-list">
     {{range .D.Docs}}
@@ -32,7 +33,7 @@
       <div class="row-actions">
         {{if eq (printf "%s" .Status) "pending"}}
         <form method="post" action="{{$base}}/moderate">
-          {{template "csrf" $}}<input type="hidden" name="ids" value="{{.ID}}">
+          {{template "csrf" $}}{{template "section_field" "docs-h"}}<input type="hidden" name="ids" value="{{.ID}}">
           <button class="btn btn--small btn--ok" type="submit" name="action" value="approve">{{$.L.T "data.approve"}}</button>
           <button class="btn btn--small btn--danger-ghost" type="submit" name="action" value="reject">{{$.L.T "data.reject"}}</button>
         </form>
@@ -40,7 +41,7 @@
         <a class="btn btn--small btn--ghost" href="{{$base}}?edit={{.ID}}#doc-form">{{$.L.T "data.doc.edit"}}</a>
         {{if ne (printf "%s" .Status) "pending"}}
         <form method="post" action="{{$base}}/documents/delete">
-          {{template "csrf" $}}<input type="hidden" name="id" value="{{.ID}}">
+          {{template "csrf" $}}{{template "section_field" "docs-h"}}<input type="hidden" name="id" value="{{.ID}}">
           <button class="btn btn--small btn--danger-ghost" type="submit">{{$.L.T "data.doc.delete"}}</button>
         </form>
         {{end}}
@@ -66,8 +67,9 @@
 
 <section class="section" aria-labelledby="doc-form">
   <h2 class="section-title" id="doc-form">{{if .D.Form.Editing}}{{.L.T "data.doc.editing" "id" .D.Form.ID}}{{else}}{{.L.T "data.doc.new"}}{{end}}</h2>
+  {{template "section_flash" (bundle $ "doc-form")}}
   <form class="panel--tight stack" method="post" action="{{$base}}/documents">
-    {{template "csrf" .}}
+    {{template "csrf" .}}{{template "section_field" "doc-form"}}
     {{if .D.Form.Editing}}<input type="hidden" name="editing" value="1">{{end}}
     <div class="form-grid">
       <div class="field">

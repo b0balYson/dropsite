@@ -9,9 +9,10 @@
 </header>
 
 <form method="post" action="/admin/users/{{.D.User.ID}}/limits" class="settings">
-  {{template "csrf" .}}
+  {{template "csrf" .}}{{template "section_field" "limits-h"}}
   <section class="section" aria-labelledby="limits-h">
     <h2 class="sr-only" id="limits-h">{{.L.T "limits.title"}}</h2>
+    {{template "section_flash" (bundle $ "limits-h")}}
     <div class="setting-list">
     {{range .D.Fields}}
       <div class="setting{{if .Overridden}} setting--over{{end}}">

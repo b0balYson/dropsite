@@ -1,9 +1,25 @@
 {{define "csrf"}}<input type="hidden" name="_csrf" value="{{.CSRF}}">{{end}}
 
-{{define "flash"}}{{with .Flash}}
-<div class="notice notice--{{if eq .Kind "error"}}error{{else}}ok{{end}} notice--flash" role="{{if eq .Kind "error"}}alert{{else}}status{{end}}">
-  <p class="notice__text">{{.Msg}}</p>
-  {{if eq .Kind "deployed"}}{{block "flash_link" $}}{{end}}{{end}}
+{{/* Form results. A form names its section with "section_field"; the
+     section shows the message with "section_flash" right above the form. A
+     message without a section is a toast ("toast", in the layout). */}}
+{{define "section_field"}}<input type="hidden" name="_section" value="{{.}}">{{end}}
+
+{{define "flash_link"}}{{end}}
+
+{{define "flash_body"}}{{/* .R = view, .V = flash */}}<p class="notice__text">{{.V.Msg}}</p>
+  {{if eq .V.Kind "deployed"}}{{template "flash_link" .R}}{{end}}{{end}}
+
+{{define "section_flash"}}{{/* .R = view, .V = section id */}}{{with .R.FlashAt .V}}
+<div class="notice notice--{{.Tone}} notice--flash notice--result" role="{{.Role}}" tabindex="-1" data-flash="section">
+  {{template "flash_body" (bundle $.R .)}}
+</div>
+{{end}}{{end}}
+
+{{define "toast"}}{{with .ToastFlash}}
+<div class="toast notice notice--{{.Tone}} notice--flash" role="{{.Role}}" tabindex="-1" data-flash="toast"{{if .Sticky}} data-sticky{{end}}>
+  <div class="toast__body">{{template "flash_body" (bundle $ .)}}</div>
+  <button class="toast__close" type="button" data-toast-close aria-label="{{$.L.T "flash.close"}}" title="{{$.L.T "flash.close"}}"><span aria-hidden="true">×</span></button>
 </div>
 {{end}}{{end}}
 

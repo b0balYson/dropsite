@@ -214,6 +214,7 @@
   "connect.revoked": "密钥已吊销：使用它的程序无法再发布。",
   "copy.button": "复制",
   "copy.done": "已复制",
+  "flash.close": "关闭消息",
   "table.actions": "操作",
   "users.title": "用户",
   "users.invite.title": "{email} 的链接",

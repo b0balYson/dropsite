@@ -2,6 +2,7 @@ package ui
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -128,11 +129,37 @@ type view struct {
 	// it is dismissed).
 	ShowStart bool
 	assets    map[string]string
-	D         any
+	// placed records whether a section rendered the flash (see FlashAt).
+	placed *flashPlacement
+	D      any
 }
+
+// flashPlacement is shared by the copies of one view during a render.
+type flashPlacement struct{ inSection bool }
 
 // Asset returns the cache-busting URL of a static file.
 func (v view) Asset(name string) string { return v.assets[name] }
+
+// FlashAt returns the flash when it belongs to the section with this id, so
+// the section shows it right above its form.
+func (v view) FlashAt(id string) *flash {
+	if v.Flash == nil || id == "" || v.Flash.Section != id {
+		return nil
+	}
+	if v.placed != nil {
+		v.placed.inSection = true
+	}
+	return v.Flash
+}
+
+// ToastFlash returns the flash that belongs to no section: it is shown as a
+// toast (a notice at the top of the page without JavaScript).
+func (v view) ToastFlash() *flash {
+	if v.Flash == nil || v.Flash.Section != "" {
+		return nil
+	}
+	return v.Flash
+}
 
 func (s *server) newView(r *http.Request, rc *reqCtx, nav, title string, data any) view {
 	v := view{
@@ -149,9 +176,25 @@ func (s *server) newView(r *http.Request, rc *reqCtx, nav, title string, data an
 
 // page renders a full page with the layout.
 func (s *server) page(w http.ResponseWriter, r *http.Request, rc *reqCtx, status int, name, nav, title string, data any) {
-	v := s.newView(r, rc, nav, title, data)
+	s.layout(w, r, status, name, s.newView(r, rc, nav, title, data))
+}
+
+// layout renders page name in the layout with the pending flash: in the
+// section it names, or as a toast when the page has no such section.
+func (s *server) layout(w http.ResponseWriter, r *http.Request, status int, name string, v view) {
 	v.Flash = s.takeFlash(w, r)
-	s.execute(w, status, s.pages[name], "layout.html", v)
+	v.placed = &flashPlacement{}
+	t := s.pages[name]
+	buf, err := s.render(t, "layout.html", v)
+	if err == nil && v.Flash != nil && v.Flash.Section != "" && !v.placed.inSection {
+		// The page has no such section (the form led elsewhere, or the
+		// section is not shown now): the message becomes a toast.
+		f := *v.Flash
+		f.Section = ""
+		v.Flash, v.placed = &f, &flashPlacement{}
+		buf, err = s.render(t, "layout.html", v)
+	}
+	s.write(w, status, buf, err)
 }
 
 // fragment renders a partial template for htmx requests.
@@ -160,14 +203,28 @@ func (s *server) fragment(w http.ResponseWriter, r *http.Request, rc *reqCtx, na
 }
 
 func (s *server) execute(w http.ResponseWriter, status int, t *pageTemplate, name string, v view) {
+	buf, err := s.render(t, name, v)
+	s.write(w, status, buf, err)
+}
+
+// errRender marks a failed render; the details are logged by render.
+var errRender = errors.New("render failed")
+
+func (s *server) render(t *pageTemplate, name string, v view) (*bytes.Buffer, error) {
 	var buf bytes.Buffer
 	if t == nil {
 		s.log.Error("template set missing", "template", name)
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
+		return nil, errRender
 	}
 	if err := t.ExecuteTemplate(&buf, name, v); err != nil {
 		s.log.Error("render template", "template", name, "err", err)
+		return nil, errRender
+	}
+	return &buf, nil
+}
+
+func (s *server) write(w http.ResponseWriter, status int, buf *bytes.Buffer, err error) {
+	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -201,6 +258,8 @@ type errorPage struct {
 
 // redirect sends the browser to target after a POST (post/redirect/get).
 // Targets are fixed paths or user input that passed safeNext.
+// A form that names its section comes back to it (see withSection).
 func redirect(w http.ResponseWriter, r *http.Request, target string) {
+	target = withSection(r, target)
 	http.Redirect(w, r, target, http.StatusSeeOther) //nolint:gosec // G710: callers pass only same-site paths (see safeNext)
 }

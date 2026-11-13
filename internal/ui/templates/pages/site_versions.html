@@ -5,6 +5,7 @@
 
 <section class="section site-block section--first" aria-labelledby="history-h">
   <h2 class="section-title" id="history-h">{{.L.T "history.title"}}</h2>
+  {{template "section_flash" (bundle $ "history-h")}}
   <div id="history">{{template "history" .}}</div>
 </section>
 

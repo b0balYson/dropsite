@@ -6,6 +6,7 @@
 
 <section class="section" aria-labelledby="colls-h">
   <h2 class="section-title" id="colls-h">{{.L.T "data.collections"}}</h2>
+  {{template "section_flash" (bundle $ "colls-h")}}
   {{if .D.Collections}}
   {{template "collection_rows" (bundle $ .D.Collections)}}
   {{range .D.Collections}}
@@ -14,7 +15,7 @@
     <summary>{{$.L.T "data.edit" "name" .Name}}</summary>
     {{if eq $edit.Name .Name}}{{with $edit.Error}}<p class="notice notice--error" role="alert">{{.}}</p>{{end}}{{end}}
     <form class="stack" method="post" action="{{$base}}/{{.Name}}">
-      {{template "csrf" $}}
+      {{template "csrf" $}}{{template "section_field" "colls-h"}}
       {{if eq $edit.Name .Name}}
       {{template "collection_fields" (bundle $ $edit)}}
       {{else}}
@@ -24,7 +25,7 @@
       <button class="btn btn--primary" type="submit">{{$.L.T "data.save"}}</button>
     </form>
     <form class="stack danger" method="post" action="{{$base}}/{{.Name}}/delete">
-      {{template "csrf" $}}
+      {{template "csrf" $}}{{template "section_field" "colls-h"}}
       <div class="field">
         <label class="field__label" for="confirm-{{.Name}}">{{$.L.T "data.delete.confirm" "name" .Name "n" .Documents}}</label>
         <input class="input mono" id="confirm-{{.Name}}" name="confirm" required autocomplete="off">
@@ -38,9 +39,10 @@
 
 <section class="section" aria-labelledby="new-coll-h">
   <h2 class="section-title" id="new-coll-h">{{.L.T "data.new"}}</h2>
+  {{template "section_flash" (bundle $ "new-coll-h")}}
   {{with .D.New.Error}}<p class="notice notice--error" role="alert">{{.}}</p>{{end}}
   <form class="panel--tight stack" method="post" action="{{$base}}">
-    {{template "csrf" .}}
+    {{template "csrf" .}}{{template "section_field" "new-coll-h"}}
     <div class="field">
       <label class="field__label" for="new-name">{{.L.T "data.field.name"}}</label>
       <input class="input mono" id="new-name" name="name" required maxlength="64" pattern="[a-zA-Z0-9][a-zA-Z0-9_\-]*" value="{{.D.New.Name}}" placeholder="menu">

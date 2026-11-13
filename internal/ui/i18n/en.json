@@ -214,6 +214,7 @@
   "connect.revoked": "Key revoked: programs using it can no longer publish.",
   "copy.button": "Copy",
   "copy.done": "Copied",
+  "flash.close": "Close the message",
   "table.actions": "Actions",
   "users.title": "Users",
   "users.invite.title": "Link for {email}",

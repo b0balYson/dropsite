@@ -66,7 +66,7 @@
       <label class="field__label" for="title">{{.L.T "site.field.title"}}</label>
       <input class="input" id="title" name="title" required maxlength="120" value="{{.D.Form.Title}}" placeholder="{{.L.T "site.field.title.placeholder"}}">
     </div>
-    <div class="field">
+    <div class="field field--tall">
       <label class="field__label" for="slug">{{.L.T "site.field.slug"}} <span class="optional">{{.L.T "form.optional"}}</span></label>
       <input class="input mono" id="slug" name="slug" value="{{.D.Form.Slug}}" maxlength="63" autocomplete="off" autocapitalize="off" spellcheck="false"
         hx-get="/slug-check" hx-trigger="input changed delay:350ms" hx-target="#slug-status" hx-sync="this:replace" aria-describedby="slug-hint slug-status">

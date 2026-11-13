@@ -23,8 +23,10 @@
     <p class="hint">{{$.L.T "connect.cmd.after"}}</p>
   </div>
   {{end}}
+  {{template "section_flash" (bundle $ "connect-block")}}
+  {{with .D.CodeError}}<p class="notice notice--error notice--flash notice--result" role="alert" tabindex="-1" data-flash="section">{{.}}</p>{{end}}
   <form class="connect-block__form" method="post" action="/connect/code" hx-post="/connect/code" hx-target="#connect-block" hx-swap="outerHTML">
-    {{template "csrf" .}}
+    {{template "csrf" .}}{{template "section_field" "connect-block"}}
     <button class="btn {{if .D.Code}}btn--ghost{{else}}btn--primary btn--hero{{end}}" type="submit">{{if .D.Code}}{{.L.T "connect.code.again"}}{{else}}{{.L.T "connect.code.submit"}}{{end}}</button>
     {{if not .D.Code}}<p class="hint">{{.L.T "connect.code.hint"}}</p>{{end}}
   </form>

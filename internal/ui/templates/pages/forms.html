@@ -20,6 +20,7 @@
 
 <section class="section" aria-labelledby="channels-h">
   <h2 class="section-title" id="channels-h">{{.L.T "forms.channels"}}</h2>
+  {{template "section_flash" (bundle $ "channels-h")}}
   {{if .D.Summary.Channels}}
   <ul class="channel-list">
     {{range .D.Summary.Channels}}
@@ -31,7 +32,7 @@
       </div>
       {{if and (eq (printf "%s" .Status) "pending") .Target}}
       <form class="channel__verify" method="post" action="{{$base}}/channels/{{.ID}}/verify">
-        {{template "csrf" $}}
+        {{template "csrf" $}}{{template "section_field" "channels-h"}}
         <label class="field__label" for="code-{{.ID}}">{{$.L.T "forms.verify.label"}}</label>
         <div class="inline-input">
           <input class="input mono" id="code-{{.ID}}" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
@@ -47,24 +48,24 @@
       <div class="channel__actions">
         {{if and .Enabled .PausedAt}}
         <form method="post" action="{{$base}}/channels/{{.ID}}/toggle">
-          {{template "csrf" $}}<input type="hidden" name="enabled" value="1"><input type="hidden" name="resume" value="1">
+          {{template "csrf" $}}{{template "section_field" "channels-h"}}<input type="hidden" name="enabled" value="1"><input type="hidden" name="resume" value="1">
           <button class="btn btn--small btn--primary" type="submit">{{$.L.T "forms.channel.resume"}}</button>
         </form>
         {{end}}
         {{if eq (printf "%s" .Status) "active"}}
         <form method="post" action="{{$base}}/channels/{{.ID}}/toggle">
-          {{template "csrf" $}}<input type="hidden" name="enabled" value="{{if .Enabled}}0{{else}}1{{end}}">
+          {{template "csrf" $}}{{template "section_field" "channels-h"}}<input type="hidden" name="enabled" value="{{if .Enabled}}0{{else}}1{{end}}">
           <button class="btn btn--small btn--ghost" type="submit">{{if .Enabled}}{{$.L.T "forms.channel.disable"}}{{else}}{{$.L.T "forms.channel.enable"}}{{end}}</button>
         </form>
         {{end}}
         {{if eq (printf "%s" .Kind) "webhook"}}
         <form method="post" action="{{$base}}/channels/{{.ID}}/secret">
-          {{template "csrf" $}}
+          {{template "csrf" $}}{{template "section_field" "channels-h"}}
           <button class="btn btn--small btn--ghost" type="submit">{{$.L.T "forms.channel.rotate"}}</button>
         </form>
         {{end}}
         <form method="post" action="{{$base}}/channels/{{.ID}}/delete">
-          {{template "csrf" $}}
+          {{template "csrf" $}}{{template "section_field" "channels-h"}}
           <button class="btn btn--small btn--danger-ghost" type="submit">{{$.L.T "forms.channel.delete"}}</button>
         </form>
       </div>
@@ -78,7 +79,7 @@
   <h3 class="subhead">{{.L.T "forms.add"}}</h3>
   <div class="channel-add">
     <form class="panel--tight stack" method="post" action="{{$base}}/channels">
-      {{template "csrf" .}}<input type="hidden" name="kind" value="telegram">
+      {{template "csrf" .}}{{template "section_field" "channels-h"}}<input type="hidden" name="kind" value="telegram">
       <h4 class="channel-add__title">{{.L.T "forms.kind.telegram"}}</h4>
       {{if .D.Available.Telegram}}
       <p class="hint">{{.L.T "forms.add.telegram.hint" "bot" .D.Available.Bot}}</p>
@@ -90,7 +91,7 @@
       {{else}}<p class="hint">{{.L.T "forms.add.telegram.off"}}</p>{{end}}
     </form>
     <form class="panel--tight stack" method="post" action="{{$base}}/channels">
-      {{template "csrf" .}}<input type="hidden" name="kind" value="email">
+      {{template "csrf" .}}{{template "section_field" "channels-h"}}<input type="hidden" name="kind" value="email">
       <h4 class="channel-add__title">{{.L.T "forms.kind.email"}}</h4>
       {{if .D.Available.Email}}
       <div class="field">
@@ -102,7 +103,7 @@
       {{else}}<p class="hint">{{.L.T "forms.add.email.off"}}</p>{{end}}
     </form>
     <form class="panel--tight stack" method="post" action="{{$base}}/channels">
-      {{template "csrf" .}}<input type="hidden" name="kind" value="webhook">
+      {{template "csrf" .}}{{template "section_field" "channels-h"}}<input type="hidden" name="kind" value="webhook">
       <h4 class="channel-add__title">{{.L.T "forms.kind.webhook"}}</h4>
       <div class="field">
         <label class="field__label" for="wh-url">{{.L.T "forms.add.webhook.url"}}</label>
@@ -117,7 +118,8 @@
 
 <section class="section" aria-labelledby="protect-h">
   <h2 class="section-title" id="protect-h">{{.L.T "forms.protect"}}</h2>
-  {{template "altcha_toggle" (bundle $ (dict "Site" $v.Site.ID "On" .D.Summary.RequireAltcha "Back" "forms"))}}
+  {{template "section_flash" (bundle $ "protect-h")}}
+  {{template "altcha_toggle" (bundle $ (dict "Site" $v.Site.ID "On" .D.Summary.RequireAltcha "Back" "forms" "Section" "protect-h"))}}
   <details class="howto">
     <summary>{{.L.T "forms.howto"}}</summary>
     <p class="small">{{.L.T "forms.howto.text"}}</p>

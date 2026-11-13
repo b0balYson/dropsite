@@ -214,6 +214,7 @@
   "connect.revoked": "Ключ отозван: программы с ним больше не смогут публиковать.",
   "copy.button": "Скопировать",
   "copy.done": "Скопировано",
+  "flash.close": "Закрыть сообщение",
   "table.actions": "Действия",
   "users.title": "Пользователи",
   "users.invite.title": "Ссылка для {email}",

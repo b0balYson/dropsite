@@ -10,7 +10,7 @@
   {{end}}
   <form class="form-grid form-grid--token" method="post" action="/connect/tokens" hx-post="/connect/tokens" hx-target="#token-block" hx-swap="outerHTML">
     {{template "csrf" .}}
-    {{with .D.Error}}<p class="notice notice--error form-grid__full" role="alert">{{.}}</p>{{end}}
+    {{with .D.Error}}<p class="notice notice--error form-grid__full" role="alert" tabindex="-1" data-flash="section">{{.}}</p>{{end}}
     <div class="field">
       <label class="field__label" for="token-name">{{.L.T "connect.token.name"}}</label>
       <input class="input" id="token-name" name="name" required maxlength="60" value="{{.D.FormName}}" placeholder="{{.L.T "connect.token.name.placeholder"}}">
@@ -56,7 +56,7 @@
     <td data-label="{{$.L.T "connect.tokens.state"}}"><span class="badge badge--{{if eq .State "active"}}ok{{else}}muted{{end}}">{{$.L.T (printf "connect.state.%s" .State)}}</span></td>
     <td class="table__actions">{{if eq .State "active"}}
       <form method="post" action="/connect/tokens/{{.ID}}/revoke">
-        {{template "csrf" $}}
+        {{template "csrf" $}}{{template "section_field" "tokens"}}
         <button class="btn btn--small btn--danger-ghost" type="submit" aria-label="{{$.L.T "connect.tokens.revoke"}}: {{.Name}}">{{$.L.T "connect.tokens.revoke"}}</button>
       </form>{{end}}
     </td>

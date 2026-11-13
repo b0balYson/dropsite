@@ -21,7 +21,7 @@
       {{if .PreviewURL}}<a class="release__preview" href="{{.PreviewURL}}" title="{{.PreviewURL}}" target="_blank" rel="noopener noreferrer" aria-label="{{$.L.T "history.preview.label" "id" .ID}}">{{$.L.T "history.preview"}}<span aria-hidden="true"> ↗</span></a>{{end}}
       {{if and (not .Current) (eq .Status "ready")}}
       <form method="post" action="/sites/{{.SiteID}}/rollback">
-        {{template "csrf" $}}
+        {{template "csrf" $}}{{template "section_field" "history-h"}}
         <input type="hidden" name="deploy" value="{{.ID}}">
         <button class="btn btn--small btn--ghost" type="submit" aria-label="{{$.L.T "history.rollback"}} {{.ID}}">{{$.L.T "history.rollback"}}</button>
       </form>

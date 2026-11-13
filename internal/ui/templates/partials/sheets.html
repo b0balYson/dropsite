@@ -1,10 +1,11 @@
 {{define "admin_sheets"}}
 {{$s := .D.Sheets}}
 <form method="post" action="/admin/settings/sheets" class="settings sheets-settings" autocomplete="off">
-  {{template "csrf" .}}
+  {{template "csrf" .}}{{template "section_field" "sheets-h"}}
   <section class="section" aria-labelledby="sheets-h">
     <h2 class="section-title" id="sheets-h">{{.L.T "sheets.admin.title"}}</h2>
     <p class="lede">{{.L.T "sheets.admin.lede"}}</p>
+    {{template "section_flash" (bundle $ "sheets-h")}}
     <div class="notice notice--warn sheets-scope" role="note" aria-labelledby="sheets-scope-h">
       <p class="notice__text"><strong id="sheets-scope-h">{{.L.T "sheets.admin.scope.title"}}</strong> {{.L.T "sheets.admin.scope.text"}}</p>
       <ul class="sheets-scope__list small">
@@ -46,6 +47,7 @@
 {{if $b}}
 <section class="section" aria-labelledby="sheet-h">
   <h2 class="section-title" id="sheet-h">{{.L.T "sheets.title"}}</h2>
+  {{template "section_flash" (bundle $ "sheet-h")}}
   {{if not $b.Public}}<p class="hint">{{.L.T "sheets.moderated"}}</p>
   {{else if and (not $b.Status.Configured) (not $b.Link)}}<p class="hint">{{.L.T "sheets.off"}}</p>
   {{else}}
@@ -70,13 +72,13 @@
   </table>
   {{end}}
   <div class="channel__actions">
-    <form method="post" action="{{$base}}/sync">{{template "csrf" $}}<button class="btn btn--small btn--primary" type="submit">{{$.L.T "sheets.sync"}}</button></form>
-    <form method="post" action="{{$base}}/delete">{{template "csrf" $}}<button class="btn btn--small btn--danger-ghost" type="submit">{{$.L.T "sheets.unlink"}}</button></form>
+    <form method="post" action="{{$base}}/sync">{{template "csrf" $}}{{template "section_field" "sheet-h"}}<button class="btn btn--small btn--primary" type="submit">{{$.L.T "sheets.sync"}}</button></form>
+    <form method="post" action="{{$base}}/delete">{{template "csrf" $}}{{template "section_field" "sheet-h"}}<button class="btn btn--small btn--danger-ghost" type="submit">{{$.L.T "sheets.unlink"}}</button></form>
   </div>
   {{end}}
   {{if $b.Status.Configured}}
   <form class="panel--tight stack" method="post" action="{{$base}}">
-    {{template "csrf" .}}
+    {{template "csrf" .}}{{template "section_field" "sheet-h"}}
     <div class="field">
       <label class="field__label" for="sheet-url">{{.L.T "sheets.url"}}</label>
       <input class="input mono" id="sheet-url" name="url" type="url" required maxlength="2048" placeholder="https://docs.google.com/spreadsheets/d/…" value="{{with $b.Link}}{{.URL}}{{end}}" aria-describedby="sheet-url-hint">
@@ -98,7 +100,7 @@
 
 {{define "sheets_channel_add"}}
 <form class="panel--tight stack" method="post" action="/sites/{{.D.V.Site.ID}}/forms/channels">
-  {{template "csrf" .}}<input type="hidden" name="kind" value="sheets">
+  {{template "csrf" .}}{{template "section_field" "channels-h"}}<input type="hidden" name="kind" value="sheets">
   <h4 class="channel-add__title">{{.L.T "forms.kind.sheets"}}</h4>
   {{if .D.Available.Sheets}}
   <p class="hint">{{.L.T "forms.add.sheets.hint" "email" .D.Available.SheetsEmail}}</p>

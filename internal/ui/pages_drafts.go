@@ -16,7 +16,7 @@ const draftField = "draft"
 // its own block, so a script reloads the page.
 func (s *server) draftSaved(w http.ResponseWriter, r *http.Request, rc *reqCtx, res service.DeployResult) {
 	msg := rc.loc.T("draft.saved")
-	s.setFlash(w, r, flashOK, msg)
+	s.setFlashIn(w, r, flashOK, msg, "draft-h")
 	if wantsJSON(r) {
 		writeJSON(w, http.StatusOK, deployReply{OK: true, URL: res.Site.Draft.PreviewURL, DeployID: res.Deploy.ID,
 			Message: msg, Reload: true})

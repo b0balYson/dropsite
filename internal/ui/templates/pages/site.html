@@ -10,6 +10,7 @@
   <div class="overview__main">
     <section class="section site-block overview__first" aria-labelledby="deploy-h">
       <h2 class="section-title" id="deploy-h">{{.L.T "deploy.title"}}</h2>
+      {{template "section_flash" (bundle $ "deploy-h")}}
       <form class="dropzone" method="post" action="{{$base}}/deploy" enctype="multipart/form-data"
         data-upload data-history="{{$base}}/history?recent=1"
         data-msg-uploading="{{.L.T "deploy.uploading"}}" data-msg-processing="{{.L.T "deploy.processing"}}"

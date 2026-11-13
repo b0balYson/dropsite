@@ -14,6 +14,7 @@
 
 <section class="section" aria-labelledby="members-h">
   <h2 class="section-title" id="members-h">{{.L.T "workspaces.members"}}</h2>
+  {{template "section_flash" (bundle $ "members-h")}}
   <table class="table">
     <thead>
       <tr>
@@ -29,7 +30,7 @@
         <td data-label="{{$.L.T "workspaces.added"}}">{{$.L.Date .AddedAt}}</td>
         <td class="table__actions">
           <form method="post" action="{{$base}}/members/{{.UserID}}/remove">
-            {{template "csrf" $}}
+            {{template "csrf" $}}{{template "section_field" "members-h"}}
             <label class="check"><input type="checkbox" name="confirm" value="yes" required> {{if eq .UserID $.D.MeID}}{{$.L.T "workspaces.leave.confirm"}}{{else}}{{$.L.T "workspaces.remove.confirm" "email" .Email}}{{end}}</label>
             <button class="btn btn--small btn--ghost" type="submit">{{if eq .UserID $.D.MeID}}{{$.L.T "workspaces.leave"}}{{else}}{{$.L.T "workspaces.remove"}}{{end}}</button>
           </form>
@@ -39,7 +40,7 @@
     </tbody>
   </table>
   <form class="form-grid" method="post" action="{{$base}}/members">
-    {{template "csrf" .}}
+    {{template "csrf" .}}{{template "section_field" "members-h"}}
     <div class="field">
       <label class="field__label" for="member-email">{{.L.T "workspaces.add"}}</label>
       <input class="input mono" id="member-email" name="email" type="email" required autocomplete="off" aria-describedby="member-hint">
@@ -51,8 +52,9 @@
 
 <section class="section" aria-labelledby="ws-settings-h">
   <h2 class="section-title" id="ws-settings-h">{{.L.T "workspaces.settings"}}</h2>
+  {{template "section_flash" (bundle $ "ws-settings-h")}}
   <form class="form-grid" method="post" action="{{$base}}/rename">
-    {{template "csrf" .}}
+    {{template "csrf" .}}{{template "section_field" "ws-settings-h"}}
     <div class="field">
       <label class="field__label" for="ws-name">{{.L.T "workspaces.name"}}</label>
       <input class="input" id="ws-name" name="name" required maxlength="100" value="{{$w.Name}}">
@@ -61,7 +63,7 @@
   </form>
   {{if eq $w.SiteCount 0}}
   <form class="stack danger" method="post" action="{{$base}}/delete">
-    {{template "csrf" .}}
+    {{template "csrf" .}}{{template "section_field" "ws-settings-h"}}
     <label class="check"><input type="checkbox" name="confirm" value="yes" required> {{.L.T "workspaces.delete.confirm" "name" $w.Name}}</label>
     <div><button class="btn btn--danger" type="submit">{{.L.T "workspaces.delete"}}</button></div>
   </form>

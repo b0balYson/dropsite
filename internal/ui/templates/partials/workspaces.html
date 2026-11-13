@@ -33,8 +33,9 @@
   <p>{{.L.T "workspaces.site.personal"}}</p>
   {{end}}
   {{if $sp.CanMove}}{{if or $sp.Options $sp.Name}}
+  {{template "section_flash" (bundle $ "workspace-h")}}
   <form class="stack" method="post" action="/sites/{{$v.Site.ID}}/move">
-    {{template "csrf" .}}
+    {{template "csrf" .}}{{template "section_field" "workspace-h"}}
     <div class="field">
       <label class="field__label" for="move-workspace">{{.L.T "workspaces.move.to"}}</label>
       <select class="input" id="move-workspace" name="workspace">
