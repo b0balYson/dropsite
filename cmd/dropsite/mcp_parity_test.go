@@ -64,10 +64,10 @@ type parityRig struct {
 	hooks  *hookSender
 }
 
-func newParityRig(t *testing.T) *parityRig {
+func newParityRig(t *testing.T, opts ...testenv.Option) *parityRig {
 	t.Helper()
 	hooks := &hookSender{}
-	env := testenv.New(t, testenv.WithFormSender(hooks))
+	env := testenv.New(t, append([]testenv.Option{testenv.WithFormSender(hooks)}, opts...)...)
 	r := &parityRig{t: t, env: env, hooks: hooks}
 	r.api = httptest.NewServer(api.New(env.Svc, nil))
 	t.Cleanup(r.api.Close)

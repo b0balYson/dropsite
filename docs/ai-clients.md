@@ -52,6 +52,8 @@ So dropsite delivers its rules three ways, from one source:
 2. **`get_guide`**, a read-only tool that works even before the user has connected. `topic` is one of `overview`, `create`, `update`, `large_sites`, `assets`, `forms`, `stats`, `addresses`, `protection`, `rollback`, `workflow`, `account`, `errors`, or `all` (default).
 3. **Tool descriptions** say when to call each tool and what to tell the user, and point to `get_guide`.
 
+One of these rules is about updates: when `get_account` or `check_updates` shows `update_available` and the user is an administrator, the assistant mentions it once per conversation, in one sentence with the version and the what's-new link, and says that the administrator updates in the web interface. It never repeats it or holds up the task, and it calls `check_updates` when the user asks about the version. No tool can start an update (see [security.md](security.md#updates)).
+
 The guide lives in `skills/guide/*.md` and is embedded into both binaries. Its sections on self-contained sites and on forms are also part of the `dropsite-publish` skill and the Codex snippet: `skills/dropsite-publish/SKILL.md` and `skills/codex/AGENTS.md` are generated from `skills/parts/*.md` and those sections. After editing any of them run `go test ./skills -update`; the tests fail while the files are out of date.
 
 ## Connect codes
@@ -113,7 +115,8 @@ Both servers also cover the account and site settings of the web interface, so a
 
 | Tool | What it does |
 | --- | --- |
-| `get_account` | email, role, sites used of the limit, size limits, web interface address; for administrators the site on the root domain |
+| `get_account` | email, role, sites used of the limit, size limits, web interface address; for administrators the site on the root domain; `update_available` (with `latest_version` and `release_notes_url` when true) |
+| `check_updates` | read-only: the server's version, the newest release, `update_available`, the what's-new link, the last check time and how to update (administrators: the Updates section of Settings, or `ssh <server> dropsite-update` without the update helper; others: ask the administrator). Administrators may pass `refresh: true` to check now, under the same limit as **Check now** in Settings |
 | `update_site` | rename a site and/or change its slug (`set_slug` still works) |
 | `set_site_access` | hide from search engines, set/change/remove the visitor password, set (`expires_on`, last day, UTC) or remove the expiry; with only `site` it reports the current state |
 | `list_domains`, `add_domain`, `remove_domain` | own domains with their status (pending, active, rejected with the reason) and the DNS records the user creates at the domain provider; `remove_domain` takes the domain again in `confirm` |

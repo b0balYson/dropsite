@@ -73,6 +73,8 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 | --- | --- | --- |
 | `POST /connect/exchange` | `{code, name?}`, no token | `201 {token: Token, value, user: User}`; `value` is shown once |
 | `GET /me` | | `{user: User, limits: Limits, site_count, max_domains_per_site, max_inline_bytes, ui_url, server_version, root_site: Site\|null}`; `root_site` only for administrators; `server_version` is the release (`1.2.3`) or `dev+<commit>` for a source build |
+| `GET /updates` | | `{current_version, latest_version?, update_available, release_notes_url?, checked_at?, check_enabled, is_admin, helper_installed?, update_panel_url?}`; the last two only for administrators. Read-only: no API call can start an update |
+| `POST /updates/check` | | the same object after a fresh release check; administrators only run the check (5 per 10 minutes together with the web interface, `429 rate_limited`), others get the stored facts |
 | `GET /sites` | `?limit&offset&workspace` (`personal` or a workspace ID) | `List<SiteItem>` (own sites and sites of own workspaces) |
 | `POST /sites` | `{title, slug?, workspace_id?}` | `201 Site` |
 | `POST /sites/{ref}/move` | `{workspace_id: string\|null}` | `Site` (creator or administrator; `409 workspace_move_forbidden` otherwise) |

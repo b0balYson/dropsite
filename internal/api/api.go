@@ -67,6 +67,8 @@ func (a *api) routes() []route {
 		{Method: http.MethodGet, Path: "/openapi.json", Public: true, handle: a.openAPI},
 		{Method: http.MethodPost, Path: "/connect/exchange", Public: true, handle: a.exchangeConnect},
 		{Method: http.MethodGet, Path: "/me", handle: a.me},
+		{Method: http.MethodGet, Path: "/updates", handle: a.getUpdates},
+		{Method: http.MethodPost, Path: "/updates/check", handle: a.checkUpdates},
 		{Method: http.MethodGet, Path: "/sites", handle: a.listSites},
 		{Method: http.MethodPost, Path: "/sites", handle: a.createSite},
 		{Method: http.MethodGet, Path: "/sites/{ref}", handle: a.getSite},

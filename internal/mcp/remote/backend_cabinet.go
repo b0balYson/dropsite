@@ -3,6 +3,7 @@ package remote
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/b0balYson/dropsite/internal/domain"
 	"github.com/b0balYson/dropsite/internal/mcp"
@@ -32,6 +33,9 @@ func (b backend) GetAccount(ctx context.Context) (mcp.Account, error) {
 		MaxFileBytes: lim.MaxFileBytes, MaxFileSize: mcp.HumanBytes(lim.MaxFileBytes), MaxFiles: lim.MaxFiles,
 		KeepReleases: lim.KeepReleases, MaxDomainsPerSite: cfg.MaxDomainsPerSite,
 		DeployFilesMaxBytes: service.MaxInlineBytes, CabinetURL: b.svc.CabinetURL(ctx),
+	}
+	if f, err := b.svc.GetUpdateFacts(ctx, b.actor, false); err == nil && f.Available {
+		a.UpdateAvailable, a.LatestVersion, a.ReleaseNotesURL = true, f.Latest, f.ReleaseURL
 	}
 	if u.IsAdmin() {
 		v, ok, err := b.svc.RootSite(ctx, b.actor)
@@ -257,4 +261,20 @@ func (b backend) ClearRootSite(ctx context.Context, confirm string) (mcp.RootSit
 		return mcp.RootSite{}, b.toolError(err)
 	}
 	return mcp.RootSite{RootURL: b.rootURL(), Site: toSite(v)}, nil
+}
+
+// CheckUpdates reports the version facts; it never requests an update.
+func (b backend) CheckUpdates(ctx context.Context, refresh bool) (mcp.UpdateFacts, error) {
+	f, err := b.svc.GetUpdateFacts(ctx, b.actor, refresh)
+	if err != nil {
+		return mcp.UpdateFacts{}, b.toolError(err)
+	}
+	out := mcp.UpdateFacts{
+		Current: f.Current, Latest: f.Latest, Available: f.Available, ReleaseURL: f.ReleaseURL,
+		CheckEnabled: f.CheckEnabled, IsAdmin: f.IsAdmin, HelperPresent: f.HelperPresent, PanelURL: f.PanelURL,
+	}
+	if !f.CheckedAt.IsZero() {
+		out.CheckedAt = f.CheckedAt.UTC().Format(time.RFC3339)
+	}
+	return out, nil
 }

@@ -38,6 +38,9 @@ type Account struct {
 	DeployFilesMaxBytes int64  `json:"deploy_files_max_bytes" jsonschema:"largest total size of one deploy_files call"`
 	CabinetURL          string `json:"cabinet_url" jsonschema:"address of the dropsite web interface: https://admin.<domain> while the administrator keeps it open to the internet; otherwise an address reached through the SSH tunnel or a private network (for example http://localhost:8082), so tell the user to open the tunnel first"`
 	RootSite            *Site  `json:"root_site,omitempty" jsonschema:"administrators only: the site on the root domain, if any"`
+	UpdateAvailable     bool   `json:"update_available" jsonschema:"a newer dropsite release exists; for an administrator mention it once per chat (check_updates says how to update)"`
+	LatestVersion       string `json:"latest_version,omitempty" jsonschema:"set when update_available: the newer release"`
+	ReleaseNotesURL     string `json:"release_notes_url,omitempty" jsonschema:"set when update_available: what's new in it"`
 	Summary             string `json:"summary" jsonschema:"short summary to show the user"`
 }
 
@@ -181,6 +184,7 @@ type Cabinet interface {
 	RevokeConnection(ctx context.Context, kind string, id int64) error
 	SetRootSite(ctx context.Context, ref, confirm string) (RootSite, error)
 	ClearRootSite(ctx context.Context, confirm string) (RootSite, error)
+	UpdatesBackend
 }
 
 // RootSite is the outcome of set_root_site or clear_root_site.

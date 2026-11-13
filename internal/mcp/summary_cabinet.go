@@ -40,6 +40,10 @@ func accountSummary(a Account) string {
 			s += "; it shows nothing now"
 		}
 		s += ". Other administration is done in the web interface."
+		if a.UpdateAvailable {
+			s += fmt.Sprintf(" dropsite %s is available (what's new: %s); an administrator updates in the web "+
+				"interface (Settings, Updates), see check_updates.", a.LatestVersion, a.ReleaseNotesURL)
+		}
 	}
 	return s
 }

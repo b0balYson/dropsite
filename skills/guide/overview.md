@@ -39,7 +39,7 @@ Call get_guide with one of these topics when you need details:
 - `rollback`: versions and restoring an earlier one.
 - `workflow`: templates, copies of a site, publishing at a given time, screenshots to check your work.
 - `workspaces`: sites shared by a team, adding colleagues, moving a site into a workspace.
-- `account`: limits, connected apps, what only the web interface or an administrator can do.
+- `account`: limits, connected apps, updates of the dropsite server, what only the web interface or an administrator can do.
 - `errors`: what errors mean and what to tell the user.
 
 Common requests have their own topics; read the one that fits before building:

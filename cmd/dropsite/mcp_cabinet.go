@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/b0balYson/dropsite/internal/client"
 	"github.com/b0balYson/dropsite/internal/mcp"
@@ -32,7 +33,32 @@ func (b localBackend) GetAccount(ctx context.Context) (mcp.Account, error) {
 		s := fromSite(*me.RootSite)
 		a.RootSite = &s
 	}
+	// Servers before the release check have no /updates: the account is
+	// reported without it.
+	if u, err := b.c.Updates(ctx, false); err == nil && u.UpdateAvailable {
+		a.UpdateAvailable, a.LatestVersion, a.ReleaseNotesURL = true, u.LatestVersion, u.ReleaseNotesURL
+	}
 	return a, nil
+}
+
+// CheckUpdates reports the version facts through the API; it never
+// requests an update.
+func (b localBackend) CheckUpdates(ctx context.Context, refresh bool) (mcp.UpdateFacts, error) {
+	u, err := b.c.Updates(ctx, refresh)
+	if err != nil {
+		return mcp.UpdateFacts{}, toolError(err)
+	}
+	out := mcp.UpdateFacts{
+		Current: u.CurrentVersion, Latest: u.LatestVersion, Available: u.UpdateAvailable,
+		ReleaseURL: u.ReleaseNotesURL, CheckEnabled: u.CheckEnabled, IsAdmin: u.IsAdmin, PanelURL: u.UpdatePanelURL,
+	}
+	if u.HelperInstalled != nil {
+		out.HelperPresent = *u.HelperInstalled
+	}
+	if u.CheckedAt != nil {
+		out.CheckedAt = u.CheckedAt.UTC().Format(time.RFC3339)
+	}
+	return out, nil
 }
 
 func (b localBackend) UpdateSite(ctx context.Context, ref string, title, slug *string) (mcp.Site, error) {

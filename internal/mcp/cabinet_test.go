@@ -22,9 +22,11 @@ type fakeCabinet struct {
 	counters  [2]*string
 	rootRef   string
 	rootClear string
+	updates   UpdateFacts
+	refreshed int
 }
 
-var cabinetTools = []string{"add_domain", "clear_root_site", "get_account", "get_counters", "get_site_stats",
+var cabinetTools = []string{"add_domain", "check_updates", "clear_root_site", "get_account", "get_counters", "get_site_stats",
 	"list_connections", "list_domains", "remove_domain", "revoke_connection", "set_counters", "set_root_site",
 	"set_site_access", "update_site"}
 
@@ -33,6 +35,13 @@ func (f *fakeCabinet) GetAccount(context.Context) (Account, error) {
 	return Account{Email: "a@x.io", Role: "admin", IsAdmin: true, SitesUsed: 3, SitesLimit: 10,
 		MaxSiteSize: "50 MB", MaxFileSize: "10 MB", MaxFiles: 1000, KeepReleases: 5, DeployFilesMaxBytes: 1 << 20,
 		RootSite: &root}, nil
+}
+
+func (f *fakeCabinet) CheckUpdates(_ context.Context, refresh bool) (UpdateFacts, error) {
+	if refresh {
+		f.refreshed++
+	}
+	return f.updates, nil
 }
 
 func (f *fakeCabinet) UpdateSite(_ context.Context, ref string, title, slug *string) (Site, error) {
@@ -120,7 +129,7 @@ func toolNames(t *testing.T, cs *sdk.ClientSession) []string {
 		ro := tool.Annotations.ReadOnlyHint
 		destructive := tool.Annotations.DestructiveHint != nil && *tool.Annotations.DestructiveHint
 		switch tool.Name {
-		case "get_account", "list_domains", "get_site_stats", "get_counters", "list_connections":
+		case "get_account", "list_domains", "get_site_stats", "get_counters", "list_connections", "check_updates":
 			if !ro {
 				t.Errorf("%s must be read-only", tool.Name)
 			}

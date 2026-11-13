@@ -79,6 +79,63 @@
         }
       }
     },
+    "/updates": {
+      "get": {
+        "operationId": "getUpdates",
+        "summary": "The running version and the newest release found by the release check, read-only. Administrators also get where to update. No API call can start an update",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Updates"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/updates/check": {
+      "post": {
+        "operationId": "checkUpdates",
+        "summary": "Administrators: run the release check now (rate limited together with Check now in the web interface) and return the facts; others get the stored facts. It never starts an update",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Updates"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalid"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
     "/sites": {
       "get": {
         "operationId": "listSites",
@@ -6300,6 +6357,53 @@
           "confirm": {
             "type": "string",
             "description": "The same ID or slug again, after the user confirmed"
+          }
+        }
+      },
+      "Updates": {
+        "type": "object",
+        "required": [
+          "current_version",
+          "update_available",
+          "check_enabled",
+          "is_admin"
+        ],
+        "properties": {
+          "current_version": {
+            "type": "string",
+            "description": "version of the running server: X.Y.Z, or dev+<commit> for a development build"
+          },
+          "latest_version": {
+            "type": "string",
+            "description": "newest stable release found by the last check"
+          },
+          "update_available": {
+            "type": "boolean"
+          },
+          "release_notes_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "what's new: the GitHub release page"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "check_enabled": {
+            "type": "boolean",
+            "description": "false with UPDATE_CHECK=0 or on a development build"
+          },
+          "is_admin": {
+            "type": "boolean"
+          },
+          "helper_installed": {
+            "type": "boolean",
+            "description": "administrators only: the server helper that runs updates from the web interface is installed"
+          },
+          "update_panel_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "administrators only: the Updates section of the web interface settings"
           }
         }
       },
