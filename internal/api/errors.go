@@ -102,7 +102,7 @@ func (a *api) logInternal(r *http.Request, err error) {
 	if info := infoFrom(r.Context()); info != nil {
 		id = info.id
 	}
-	a.log.Error("api internal error", "request_id", id, "method", r.Method, "path", r.URL.Path, "err", err)
+	a.log.Error("api internal error", "request_id", id, "method", r.Method, "path", redactPath(r.URL.Path), "err", err)
 }
 
 // retryAfterSeconds rounds the hint up to whole seconds, at least one.

@@ -58,6 +58,7 @@ func New(svc *service.Service, log *slog.Logger, mounts ...Mount) http.Handler {
 	a.registerSessionPaths(mux)
 	a.registerDataPaths(mux)
 	a.registerProxyPath(mux)
+	a.registerUploadLinks(mux)
 	return a.middleware(mux)
 }
 

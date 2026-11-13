@@ -99,10 +99,11 @@ func publicHandler(svc *service.Service, log *slog.Logger) http.Handler {
 	for _, rt := range az.Routes() {
 		mounts = append(mounts, api.Mount{Pattern: rt.Pattern, Handler: rt.Handler})
 	}
-	consent := ui.NewAuthorize(svc, az, reqIP, log)
+	consent := ui.NewAPIHostPages(svc, az, reqIP, log)
 	mounts = append(mounts,
 		api.Mount{Pattern: oauth.AuthorizePath, Handler: consent},
-		api.Mount{Pattern: "/oauth/static/", Handler: consent})
+		api.Mount{Pattern: "/oauth/static/", Handler: consent},
+		api.Mount{Pattern: ui.UploadLinkPattern, Handler: consent})
 	return api.New(svc, log, mounts...)
 }
 

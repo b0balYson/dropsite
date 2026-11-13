@@ -22,25 +22,37 @@ const authorizeStatic = "/oauth/static/"
 // interface, on its own listeners): the user proves their identity with a connect code issued in
 // the interface. clientIP returns the address resolved by the API middleware.
 func NewAuthorize(svc *service.Service, az *oauth.Server, clientIP func(*http.Request) string, log *slog.Logger) http.Handler {
+	return NewAPIHostPages(svc, az, clientIP, log)
+}
+
+// NewAPIHostPages returns the pages of the public API host sharing one set
+// of templates and assets: the OAuth consent page, its static files and the
+// upload link page (mount it on authorizeStatic, oauth.AuthorizePath and
+// UploadLinkPattern).
+func NewAPIHostPages(svc *service.Service, az *oauth.Server, clientIP func(*http.Request) string, log *slog.Logger) http.Handler {
 	if log == nil {
 		log = slog.New(slog.DiscardHandler)
 	}
-	s, err := newServer(svc, log)
+	s, err := apiHostServer(svc, log)
 	if err != nil {
 		panic(fmt.Sprintf("ui: %v", err))
 	}
-	s.secure = true // the API host is always served over HTTPS by Caddy
-	urls := make(map[string]string, len(s.assetURL))
-	for k, v := range s.assetURL {
-		urls[k] = authorizeStatic + strings.TrimPrefix(v, "/static/")
-	}
-	s.assetURL = urls
 	a := &authorizer{s: s, az: az, ip: clientIP}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET "+authorizeStatic+"{file...}", s.serveStatic)
 	mux.HandleFunc("GET "+oauth.AuthorizePath, a.show)
 	mux.HandleFunc("POST "+oauth.AuthorizePath, a.submit)
-	return securityHeaders(mux)
+	consent := securityHeaders(mux)
+	page := &uploadPage{s: s, ip: clientIP}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet || r.Method == http.MethodHead {
+			if strings.HasPrefix(r.URL.Path, service.UploadLinkPath) {
+				page.serve(w, r)
+				return
+			}
+		}
+		consent.ServeHTTP(w, r)
+	})
 }
 
 type authorizer struct {

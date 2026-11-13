@@ -88,6 +88,9 @@ type uploadDTO struct {
 	MaxFileBytes int64            `json:"max_file_bytes"`
 	MaxCallBytes int              `json:"max_call_bytes"`
 	Fetched      []fetchedFileDTO `json:"fetched"`
+	// UploadURL is the upload link; only the response of POST /uploads has it.
+	UploadURL          string     `json:"upload_url,omitempty"`
+	UploadURLExpiresAt *time.Time `json:"upload_url_expires_at,omitempty"`
 }
 
 func toSiteFile(f service.SiteFile) siteFileDTO {
@@ -125,11 +128,16 @@ func toFilesResult(r service.UpdateResult) filesResultDTO {
 }
 
 func toUpload(i service.UploadInfo, fetched []service.FetchedFile) uploadDTO {
-	return uploadDTO{
+	out := uploadDTO{
 		ID: i.ID, Mode: i.Mode, SiteID: i.SiteID, BaseDeployID: i.Base, Files: i.Files, Bytes: i.Bytes,
 		ExpiresAt: utc(i.ExpiresAt), MaxBytes: i.MaxBytes, MaxFiles: i.MaxFiles, MaxFileBytes: i.MaxFileBytes,
-		MaxCallBytes: i.MaxCallBytes, Fetched: toFetched(fetched),
+		MaxCallBytes: i.MaxCallBytes, Fetched: toFetched(fetched), UploadURL: i.LinkURL,
 	}
+	if i.LinkURL != "" {
+		at := utc(i.LinkExpiresAt)
+		out.UploadURLExpiresAt = &at
+	}
+	return out
 }
 
 func (a *api) listSiteFiles(w http.ResponseWriter, r *http.Request) error {

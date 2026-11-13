@@ -2302,3 +2302,23 @@ a.chip[aria-current="page"] { background: var(--c-ink); color: var(--c-paper); b
   .update-progress__spin { animation: none; border-right-color: currentColor; }
 }
 .update-log { max-height: 16rem; overflow: auto; font-size: var(--t-xs); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* ---- upload link page (API host) ----------------------------------------- */
+
+.upload-link__panel { display: flex; flex-direction: column; gap: var(--s-4); align-self: start; min-width: 0; }
+.upload-link__panel .dropzone { padding: var(--s-6) var(--s-5); }
+.upload-link__count { margin-top: var(--s-3); }
+.upload-link__result { font-weight: 600; }
+.upload-link__errors {
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  list-style: none;
+  max-height: 16rem;
+  overflow: auto;
+  border: var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--c-surface);
+  font-size: var(--t-sm);
+}
+.upload-link__error { padding-block: var(--s-1); overflow-wrap: anywhere; }
+.upload-link__error + .upload-link__error { border-top: var(--rule-thin) solid var(--c-hair); }

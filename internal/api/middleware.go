@@ -72,8 +72,12 @@ func (w *statusWriter) Flush() {
 // link and rely on the server-wide ReadTimeout instead. A variable for tests.
 var requestReadTimeout = 30 * time.Second
 
-// isUpload reports whether r is an archive upload (POST /sites/{ref}/deploys).
+// isUpload reports whether r is an archive upload (POST /sites/{ref}/deploys)
+// or a request to an upload link (PUT or POST /u/...).
 func isUpload(r *http.Request) bool {
+	if (r.Method == http.MethodPut || r.Method == http.MethodPost) && strings.HasPrefix(r.URL.Path, service.UploadLinkPath) {
+		return true
+	}
 	if r.Method != http.MethodPost {
 		return false
 	}
@@ -127,7 +131,7 @@ func (a *api) recoverPanic(w *statusWriter, r *http.Request, next http.Handler) 
 		if err, ok := v.(error); ok && errors.Is(err, http.ErrAbortHandler) {
 			panic(v)
 		}
-		a.log.Error("api panic", "request_id", infoFrom(r.Context()).id, "path", r.URL.Path, "panic", v)
+		a.log.Error("api panic", "request_id", infoFrom(r.Context()).id, "path", redactPath(r.URL.Path), "panic", v)
 		if w.status == 0 {
 			writeJSON(w, http.StatusInternalServerError, errorBody(internalError()))
 		}

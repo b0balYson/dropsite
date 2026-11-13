@@ -2637,7 +2637,7 @@
       },
       "patch": {
         "operationId": "updateSiteFiles",
-        "summary": "Add or replace files (at most 1 MB of content), delete files or folders and download assets on top of base_deploy_id; publishes a new release (source mcp). A stale base answers 409 deploy_conflict",
+        "summary": "Add or replace files (at most 16 MB of content), delete files or folders and download assets on top of base_deploy_id; publishes a new release (source mcp). A stale base answers 409 deploy_conflict",
         "requestBody": {
           "required": true,
           "content": {
@@ -2734,7 +2734,7 @@
     "/uploads": {
       "post": {
         "operationId": "beginUpload",
-        "summary": "Open an upload session (at most 3 per user, closed after 30 idle minutes)",
+        "summary": "Open an upload session (at most 50 per user, closed after 24 idle hours); the response carries the upload link",
         "requestBody": {
           "required": true,
           "content": {
@@ -2785,7 +2785,7 @@
       ],
       "post": {
         "operationId": "uploadFiles",
-        "summary": "Add files (at most 1 MB of content per call) or downloads to an own session; other users' sessions answer upload_expired",
+        "summary": "Add files (at most 16 MB of content per call) or downloads to an own session; other users' sessions answer upload_expired",
         "requestBody": {
           "required": true,
           "content": {
@@ -7359,6 +7359,15 @@
             "items": {
               "$ref": "#/components/schemas/FetchedFile"
             }
+          },
+          "upload_url": {
+            "type": "string",
+            "description": "Upload link of this session, only in the response of POST /uploads: https://<API_HOST>/u/<token>. Without a bearer token, PUT <upload_url>/<path> stores one file and POST <upload_url> with Content-Type application/x-tar (optionally gzip-compressed) stores a folder; GET <upload_url> is a drag-and-drop page for the user. It adds files to this session only and works for one hour from its last use; commit with POST /uploads/{id}/commit (docs/api-contract.md, Upload links)."
+          },
+          "upload_url_expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When upload_url stops working if unused."
           }
         }
       }

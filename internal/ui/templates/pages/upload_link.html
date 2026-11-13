@@ -1,0 +1,83 @@
+{{define "upload_page"}}<!doctype html>
+<html lang="{{.L.Tag}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>{{.L.T "upload.title"}} — {{.Product}}</title>
+{{template "head_icons" .}}
+<link rel="stylesheet" href="{{.Asset "app.css"}}">
+{{if not .D.Fatal}}<script src="{{.Asset "upload.js"}}" defer></script>{{end}}
+</head>
+<body>
+<header class="masthead">
+  <div class="masthead__inner">
+    <span class="wordmark">{{template "logo" .}}</span>
+    <div class="masthead__aside">
+      <nav class="lang" aria-label="{{$.L.T "nav.language"}}">
+        {{range .D.Langs}}<a class="lang__btn" href="{{.Href}}" lang="{{.Tag}}" {{if eq $.L.Lang .Code}}aria-current="true"{{end}}>{{.Label}}</a>{{end}}
+      </nav>
+    </div>
+  </div>
+</header>
+<main id="main" class="page">
+{{template "content" .}}
+</main>
+</body>
+</html>{{end}}
+
+{{define "content"}}
+<section class="auth upload-link">
+  {{if .D.Fatal}}
+  <div class="auth__intro">
+    <p class="eyebrow">{{.L.T "upload.eyebrow"}}</p>
+    <h1 class="display">{{.L.T "upload.error.title"}}</h1>
+    <p class="lede" role="alert">{{.D.Fatal}}</p>
+  </div>
+  {{else}}
+  <div class="auth__intro">
+    <p class="eyebrow">{{.L.T "upload.eyebrow"}}</p>
+    <h1 class="display">{{.L.T "upload.title"}}</h1>
+    <p class="lede">{{.L.T "upload.lede"}}</p>
+    <p class="hint">{{.D.Limits}}</p>
+    <p class="hint">{{.L.T "upload.only_this"}}</p>
+  </div>
+  <div class="upload-link__panel" data-upload-link
+    data-msg-counter="{{.L.T "upload.counter"}}"
+    data-msg-done="{{.L.T "upload.done"}}"
+    data-msg-partial="{{.L.T "upload.partial"}}"
+    data-msg-empty="{{.L.T "upload.no_files"}}"
+    data-msg-too-big="{{.L.T "upload.file.too_big"}}"
+    data-msg-secret="{{.L.T "upload.file.secret"}}"
+    data-msg-rejected="{{.L.T "upload.file.rejected"}}"
+    data-msg-network="{{.L.T "upload.file.network"}}"
+    data-msg-total="{{.L.T "upload.file.total"}}"
+    data-msg-many="{{.L.T "upload.file.many"}}"
+    data-msg-expired="{{.L.T "upload.error.expired"}}">
+    <div class="dropzone" data-drop>
+      <div class="dropzone__body">
+        <p class="dropzone__title">{{.L.T "upload.heading"}}</p>
+        <div class="dropzone__actions">
+          <label class="btn btn--primary file-pick">{{.L.T "upload.pick_folder"}}
+            <input class="file-pick__input" type="file" webkitdirectory multiple data-pick-folder>
+          </label>
+          <label class="btn btn--ghost file-pick">{{.L.T "upload.pick_files"}}
+            <input class="file-pick__input" type="file" multiple data-pick-files>
+          </label>
+        </div>
+      </div>
+      <div class="progress" data-progress hidden>
+        <div class="progress__track" role="progressbar" aria-label="{{.L.T "upload.progress"}}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-bar-wrap>
+          <div class="progress__bar" data-bar></div>
+        </div>
+        <span class="progress__pct mono" data-pct>0%</span>
+      </div>
+      <p class="hint upload-link__count" data-count aria-live="polite" hidden></p>
+    </div>
+    <p class="notice notice--ok upload-link__result" role="status" data-result hidden></p>
+    <ul class="upload-link__errors" data-errors hidden></ul>
+  </div>
+  {{end}}
+</section>
+{{end}}
