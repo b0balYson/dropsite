@@ -33,7 +33,7 @@ func TestDefaults(t *testing.T) {
 	if l.MaxSiteBytes != 50<<20 || l.MaxFileBytes != 20<<20 || l.MaxFiles != 2000 || l.MaxSitesPerUser != 10 || l.KeepReleases != 5 {
 		t.Fatalf("bad limits %+v", l)
 	}
-	if c.SitesDir != "/data" || c.StateDir != "/state" || c.PublicAddr != ":8080" || c.InternalAddr != ":8081" || c.AdminAddr != ":8082" {
+	if c.SitesDir != "/data" || c.StateDir != "/state" || c.PublicAddr != ":8080" || c.InternalAddr != ":8081" || c.AdminAddr != "127.0.0.1:8082" {
 		t.Fatal("bad paths or addresses")
 	}
 	if c.UIURL != "http://127.0.0.1:8082" || len(c.TrustedProxies) == 0 {
@@ -92,6 +92,8 @@ func TestErrors(t *testing.T) {
 		{"proxies", "TRUSTED_PROXIES", "nope", "TRUSTED_PROXIES"},
 		{"file over site", "MAX_FILE_BYTES", "60MiB", "MAX_FILE_BYTES"},
 		{"https port", "SITES_HTTPS_PORT", "70000", "SITES_HTTPS_PORT"},
+		{"admin bind ip", "ADMIN_BIND_IP", "my-host", "ADMIN_BIND_IP"},
+		{"allow public admin", "ALLOW_PUBLIC_ADMIN", "maybe", "ALLOW_PUBLIC_ADMIN"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -100,6 +102,38 @@ func TestErrors(t *testing.T) {
 			_, err := Load(env(e))
 			if err == nil || !strings.Contains(err.Error(), tc.want) {
 				t.Fatalf("want error containing %q, got %v", tc.want, err)
+			}
+		})
+	}
+}
+
+func TestAdminExposureSettings(t *testing.T) {
+	cases := []struct {
+		name      string
+		env       map[string]string
+		addr      string
+		bindIP    string
+		allowPubl bool
+	}{
+		{"defaults", nil, "127.0.0.1:8082", "", false},
+		{"compose", map[string]string{"ADMIN_ADDR": ":8082", "ADMIN_BIND_IP": "127.0.0.1"}, ":8082", "127.0.0.1", false},
+		{"overlay", map[string]string{"ADMIN_BIND_IP": " 100.64.0.10 "}, "127.0.0.1:8082", "100.64.0.10", false},
+		{"ipv6 brackets", map[string]string{"ADMIN_BIND_IP": "[::1]"}, "127.0.0.1:8082", "::1", false},
+		{"allowed", map[string]string{"ADMIN_BIND_IP": "203.0.113.10", "ALLOW_PUBLIC_ADMIN": "1"}, "127.0.0.1:8082", "203.0.113.10", true},
+		{"explicitly off", map[string]string{"ALLOW_PUBLIC_ADMIN": "0"}, "127.0.0.1:8082", "", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := base()
+			for k, v := range tc.env {
+				e[k] = v
+			}
+			c, err := Load(env(e))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if c.AdminAddr != tc.addr || c.AdminBindIP != tc.bindIP || c.AllowPublicAdmin != tc.allowPubl {
+				t.Fatalf("got addr %q bind %q allow %v", c.AdminAddr, c.AdminBindIP, c.AllowPublicAdmin)
 			}
 		})
 	}

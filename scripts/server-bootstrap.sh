@@ -10,7 +10,8 @@
 # Docker Engine with the compose plugin from Docker's apt repository, adds swap
 # on small servers, opens only SSH/80/443 with ufw, clones the repository to
 # /opt/dropsite, writes deploy/.env with a generated administrator password,
-# starts the stack, installs a daily backup and the helper commands
+# starts the stack, removes that password from .env once the administrator
+# exists (it is shown once; dropsite-admin-password resets it), installs a daily backup and the helper commands
 # dropsite-update, dropsite-rollback, dropsite-backup, dropsite-admin-password
 # and dropsite-info.
 #
@@ -43,8 +44,9 @@
 #
 # Output: progress on stderr; on success the last lines on stdout are
 # "DROPSITE_RESULT key=value" (domain, api_host, admin_email, admin_password,
-# admin_password_new, ipv4, ipv6) for the local installer. The password line
-# goes to stdout only and never into the log file.
+# admin_password_new, ipv4, ipv6) for the local installer. admin_password is
+# printed only by the run that generated it; the password line goes to stdout
+# only and never into the log file.
 set -euo pipefail
 umask 022
 
@@ -257,6 +259,17 @@ set_env() {
 	fi
 }
 
+# unset_env KEY: remove every KEY= line from .env, keeping its mode 600.
+unset_env() {
+	f=$(env_file)
+	[ -f "$f" ] || return 0
+	grep -q "^$1=" "$f" || return 0
+	tmp=$(mktemp "$f.XXXXXX")
+	grep -v "^$1=" "$f" >"$tmp" || true
+	chmod 600 "$tmp"
+	mv -f "$tmp" "$f"
+}
+
 generate_password() {
 	pw=""
 	while [ "${#pw}" -lt 24 ]; do
@@ -319,9 +332,27 @@ write_env() {
 		[ -z "$v6" ] || ips="${ips:+$ips,}$v6"
 		[ -z "$ips" ] || set_env SERVER_IPS "$ips"
 	fi
-	for k in BASE_DOMAIN ACME_EMAIL ADMIN_EMAIL ADMIN_PASSWORD; do
+	# ADMIN_PASSWORD is only needed until the first administrator exists;
+	# forget_admin_password removes it after the first healthy start.
+	for k in BASE_DOMAIN ACME_EMAIL ADMIN_EMAIL; do
 		[ -n "$(get_env "$k")" ] || die "$k is empty in $f"
 	done
+}
+
+# forget_admin_password removes ADMIN_PASSWORD from .env once control runs
+# healthy, which means the first administrator exists, and recreates control
+# without it: the value would otherwise stay visible through docker inspect
+# and become valid again if the database were ever recreated empty. The
+# password is reset with dropsite-admin-password.
+forget_admin_password() {
+	grep -q '^ADMIN_PASSWORD=' "$(env_file)" || return 0
+	step "Removing the first administrator password from $(env_file) (reset it with dropsite-admin-password)"
+	unset_env ADMIN_PASSWORD
+	unset ADMIN_PASSWORD
+	if ! compose_quiet up -d --no-build --wait --wait-timeout "$WAIT_TIMEOUT" control; then
+		tail -n 60 "$LOG" >&2
+		die "control did not restart without ADMIN_PASSWORD (full log: $LOG)"
+	fi
 }
 
 compose() { (cd "$APP_DIR/deploy" && docker compose "$@"); }
@@ -670,6 +701,7 @@ main() {
 		touch "$LOG"
 		chmod 600 "$LOG"
 		start_stack
+		forget_admin_password
 		check_stack
 		return
 		;;
@@ -693,16 +725,24 @@ main() {
 	install_docker
 	checkout
 	write_env
+	# Read before it leaves .env: shown once at the end, never logged.
+	admin_password=$(get_env ADMIN_PASSWORD)
 	start_stack
+	forget_admin_password
 	check_stack
 	install_helpers
 	first_backup
 	step "dropsite is running"
 	print_info
-	printf 'DROPSITE_RESULT admin_password=%s\n' "$(get_env ADMIN_PASSWORD)"
+	if [ "$ADMIN_PASSWORD_NEW" = 1 ]; then
+		printf 'DROPSITE_RESULT admin_password=%s\n' "$admin_password"
+	else
+		note "the administrator password is not stored on the server; reset it with dropsite-admin-password"
+	fi
 	printf 'DROPSITE_RESULT admin_password_new=%s\n' "$ADMIN_PASSWORD_NEW"
 }
 
 # One line: bash has parsed it completely before main runs, so a checkout
 # that replaces this file meanwhile (select_release) cannot be read on.
-main "$@"; exit
+# DROPSITE_BOOTSTRAP_LIB=1 only defines the functions (test/install/unit.sh).
+[ -n "${DROPSITE_BOOTSTRAP_LIB:-}" ] || { main "$@"; exit; }

@@ -177,6 +177,8 @@ remote_out_ge() { test "$(REMOTE "$1")" -ge "$2"; }
 remote_grep() { REMOTE "$1" | grep -q -- "$2"; }
 check "control is healthy" remote_out_is 'docker inspect -f {{.State.Health.Status}} $(cd /opt/dropsite/deploy && docker compose ps -q control)' healthy
 check ".env is 600" test "$(REMOTE stat -c %a /opt/dropsite/deploy/.env)" = 600
+check "ADMIN_PASSWORD removed from .env" test "$(REMOTE grep -c ^ADMIN_PASSWORD= /opt/dropsite/deploy/.env || true)" = 0
+check "control runs without ADMIN_PASSWORD" test "$(REMOTE 'docker inspect -f "{{range .Config.Env}}{{println .}}{{end}}" $(cd /opt/dropsite/deploy && docker compose ps -q control) | grep -c "^ADMIN_PASSWORD=." || true')" = 0
 check "ADMIN_BIND_IP=127.0.0.1" test "$(REMOTE sed -n s/^ADMIN_BIND_IP=//p /opt/dropsite/deploy/.env)" = 127.0.0.1
 check "BASE_DOMAIN set" test "$(REMOTE sed -n s/^BASE_DOMAIN=//p /opt/dropsite/deploy/.env)" = "$DOMAIN"
 check "UI_URL uses the local port" test "$(REMOTE sed -n s/^UI_URL=//p /opt/dropsite/deploy/.env)" = "http://localhost:$LOCAL_PORT"

@@ -25,6 +25,9 @@ func (s *Service) Start(ctx context.Context) error {
 	}
 	if created {
 		s.log.Info("first administrator created", "email", s.cfg.AdminEmail)
+	} else if s.cfg.AdminPassword != "" {
+		s.log.Warn("ADMIN_PASSWORD is set although users already exist: it is no longer used and is visible " +
+			"through docker inspect; remove it from .env and reset passwords with dropsite-admin-password")
 	}
 	if err := s.CleanUploads(); err != nil {
 		return err

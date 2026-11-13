@@ -34,6 +34,10 @@ const (
 	minStatsInterval     = time.Second
 	maxStatsInterval     = time.Hour
 
+	// DefaultAdminAddr keeps a binary started outside Docker reachable from
+	// this machine only; compose sets ADMIN_ADDR=:8082 inside the container.
+	DefaultAdminAddr = "127.0.0.1:8082"
+
 	TLSModeOnDemand = "ondemand"
 	TLSModeWildcard = "wildcard"
 )
@@ -59,6 +63,13 @@ type Config struct {
 	PublicAddr   string
 	InternalAddr string
 	AdminAddr    string
+	// AdminBindIP is the host address the admin UI is published on when
+	// control runs in a container (compose passes ADMIN_BIND_IP); empty
+	// outside Docker, where AdminAddr itself tells where the UI listens.
+	AdminBindIP string
+	// AllowPublicAdmin lets the admin UI start on a public address
+	// (ALLOW_PUBLIC_ADMIN=1); without it control refuses to start.
+	AllowPublicAdmin bool
 
 	TrustedProxies []netip.Prefix
 
@@ -146,7 +157,7 @@ func Load(get Getenv) (*Config, error) {
 		StateDir:      r.str("STATE_DIR", "/state"),
 		PublicAddr:    r.str("PUBLIC_ADDR", ":8080"),
 		InternalAddr:  r.str("INTERNAL_ADDR", ":8081"),
-		AdminAddr:     r.str("ADMIN_ADDR", ":8082"),
+		AdminAddr:     r.str("ADMIN_ADDR", DefaultAdminAddr),
 		Limits: domain.Limits{
 			MaxSiteBytes:    r.bytes("MAX_SITE_BYTES", DefaultMaxSiteBytes),
 			MaxFileBytes:    r.bytes("MAX_FILE_BYTES", DefaultMaxFileBytes),
@@ -179,6 +190,8 @@ func Load(get Getenv) (*Config, error) {
 	c.TelegramAPIURL = r.httpURL("TELEGRAM_API_URL", "https://api.telegram.org")
 	c.FormWebhookAllow = r.prefixes("FORM_WEBHOOK_ALLOW_CIDRS", "")
 	c.PublishOptimize = r.onOff("PUBLISH_OPTIMIZE", true)
+	c.AdminBindIP = r.ipAddr("ADMIN_BIND_IP")
+	c.AllowPublicAdmin = r.onOff("ALLOW_PUBLIC_ADMIN", false)
 	c.Renderer = r.renderer()
 
 	// The DNS provider token is deliberately not read here: only Caddy needs
@@ -310,6 +323,20 @@ func (r *reader) prefixes(key, def string) []netip.Prefix {
 		out = append(out, p.Masked())
 	}
 	return out
+}
+
+// ipAddr reads an optional single IP address; empty when unset.
+func (r *reader) ipAddr(key string) string {
+	raw := r.str(key, "")
+	if raw == "" {
+		return ""
+	}
+	a, err := netip.ParseAddr(strings.Trim(raw, "[]"))
+	if err != nil {
+		r.fail(key, "must be an IP address such as 127.0.0.1, got %q", raw)
+		return ""
+	}
+	return a.Unmap().String()
 }
 
 func (r *reader) addrs(key string) []netip.Addr {

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 
 	"github.com/b0balYson/dropsite/internal/config"
@@ -41,10 +42,12 @@ func generatePassword() (string, error) {
 }
 
 // resetPasswordCmd sets a new random password for a user and prints it on
-// stdout (the only stdout output). Without an argument it resets ADMIN_EMAIL:
+// stdout (the only stdout output: scripts such as dropsite-admin-password
+// read it from there). Logs and notes go to stderr. Without an argument it
+// resets ADMIN_EMAIL:
 //
 //	docker compose exec -T control /control reset-password [email]
-func resetPasswordCmd(ctx context.Context, args []string, stdout io.Writer) error {
+func resetPasswordCmd(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if len(args) > 1 {
 		return errUsage
 	}
@@ -66,7 +69,8 @@ func resetPasswordCmd(ctx context.Context, args []string, stdout io.Writer) erro
 	defer db.Close()
 	svc := service.New(service.Deps{
 		Config: cfg, Repo: db, Files: storage.NewFS(cfg.SitesDir),
-		Logger: newLogger(cfg.LogLevel), UploadDir: uploadDir(cfg),
+		Logger:    slog.New(slog.NewJSONHandler(stderr, &slog.HandlerOptions{Level: cfg.LogLevel})),
+		UploadDir: uploadDir(cfg),
 	})
 	password, err := generatePassword()
 	if err != nil {
@@ -80,9 +84,9 @@ func resetPasswordCmd(ctx context.Context, args []string, stdout io.Writer) erro
 		return fmt.Errorf("reset-password: %w", err)
 	}
 	if u.Status == domain.UserBlocked {
-		fmt.Fprintf(os.Stderr, "warning: %s is blocked; unblock the account in the web interface\n", u.Email)
+		fmt.Fprintf(stderr, "warning: %s is blocked; unblock the account in the web interface\n", u.Email)
 	}
-	fmt.Fprintf(os.Stderr, "new password set for %s; every session of this user has ended\n", u.Email)
+	fmt.Fprintf(stderr, "new password set for %s; every session of this user has ended\n", u.Email)
 	_, err = fmt.Fprintln(stdout, password)
 	return err
 }

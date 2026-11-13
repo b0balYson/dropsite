@@ -59,14 +59,15 @@ type composeVolume struct {
 }
 
 type composeService struct {
-	Image       string          `json:"image"`
-	PullPolicy  string          `json:"pull_policy"`
-	Build       *composeBuild   `json:"build"`
-	User        string          `json:"user"`
-	ReadOnly    bool            `json:"read_only"`
-	SecurityOpt []string        `json:"security_opt"`
-	Command     []string        `json:"command"`
-	Volumes     []composeVolume `json:"volumes"`
+	Image       string            `json:"image"`
+	PullPolicy  string            `json:"pull_policy"`
+	Build       *composeBuild     `json:"build"`
+	User        string            `json:"user"`
+	ReadOnly    bool              `json:"read_only"`
+	SecurityOpt []string          `json:"security_opt"`
+	Command     []string          `json:"command"`
+	Volumes     []composeVolume   `json:"volumes"`
+	Environment map[string]string `json:"environment"`
 }
 
 type composeBuild struct {
@@ -197,6 +198,43 @@ func checkCompose(t *testing.T, out []byte) {
 	}
 	if _, ok := mount(initSvc, "logs"); !ok || !slices.Contains(initSvc.Command, "/logs") {
 		t.Errorf("caddy-init must hand /logs to caddy: command=%v", initSvc.Command)
+	}
+	checkAdminEnv(t, control.Environment)
+}
+
+// control listens on :8082 inside the container and checks the published
+// ADMIN_BIND_IP itself, so both must reach its environment.
+func checkAdminEnv(t *testing.T, env map[string]string) {
+	t.Helper()
+	if env["ADMIN_ADDR"] != ":8082" {
+		t.Errorf("control ADMIN_ADDR=%q, want :8082", env["ADMIN_ADDR"])
+	}
+	if env["ADMIN_BIND_IP"] != "127.0.0.1" {
+		t.Errorf("control ADMIN_BIND_IP=%q, want the default 127.0.0.1", env["ADMIN_BIND_IP"])
+	}
+	if _, ok := env["ALLOW_PUBLIC_ADMIN"]; !ok {
+		t.Error("control must receive ALLOW_PUBLIC_ADMIN")
+	}
+}
+
+// After the installer removes ADMIN_PASSWORD from .env, compose must still
+// start control.
+func TestComposeConfigWithoutAdminPassword(t *testing.T) {
+	requireDocker(t)
+	env := filepath.Join(t.TempDir(), "test.env")
+	if err := os.WriteFile(env, []byte("BASE_DOMAIN=example.com\nACME_EMAIL=a@example.com\n"+
+		"ADMIN_EMAIL=admin@example.com\nADMIN_BIND_IP=10.0.0.5\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out := run(t, "docker", "compose", "-f", "docker-compose.yml", "--env-file", env, "config", "--format", "json")
+	var cf composeFile
+	if err := json.Unmarshal(out, &cf); err != nil {
+		t.Fatal(err)
+	}
+	control := cf.Services["control"]
+	if control.Environment["ADMIN_PASSWORD"] != "" || control.Environment["ADMIN_BIND_IP"] != "10.0.0.5" {
+		t.Errorf("control env: ADMIN_PASSWORD=%q ADMIN_BIND_IP=%q",
+			control.Environment["ADMIN_PASSWORD"], control.Environment["ADMIN_BIND_IP"])
 	}
 }
 

@@ -48,7 +48,7 @@ func run(ctx context.Context, args []string) error {
 	case "restore":
 		return restoreCmd(ctx, args)
 	case "reset-password":
-		return resetPasswordCmd(ctx, args, os.Stdout)
+		return resetPasswordCmd(ctx, args, os.Stdout, os.Stderr)
 	case "version", "--version", "-v":
 		fmt.Println(brand.Name, "control", brand.Version)
 		return nil

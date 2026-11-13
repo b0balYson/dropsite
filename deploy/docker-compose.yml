@@ -56,6 +56,9 @@ services:
       # Computed here: the Caddyfile adapter does not expand nested defaults.
       API_HOST: ${API_HOST:-api.${BASE_DOMAIN}}
       CADDY_GLOBAL_EXTRA: ${CADDY_GLOBAL_EXTRA:-}
+      # trusted_proxies and client_ip_headers of a CDN in front of Caddy
+      # (docs/security.md). Empty without a CDN.
+      CADDY_SERVERS_EXTRA: ${CADDY_SERVERS_EXTRA:-}
       # Same value as control, so both always agree on the mode. wildcard
       # needs compose.wildcard.yml (Caddy image with a DNS plugin, token).
       TLS_MODE: ${TLS_MODE:-ondemand}
@@ -105,7 +108,15 @@ services:
       # Required: compose refuses to start without them.
       BASE_DOMAIN: ${BASE_DOMAIN:?BASE_DOMAIN is required (base domain for sites), see .env.example}
       ADMIN_EMAIL: ${ADMIN_EMAIL:?ADMIN_EMAIL is required (first administrator login), see .env.example}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required (first administrator password), see .env.example}
+      # First administrator password: needed only while the database has no
+      # users. The installer removes it from .env after the first start.
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      # The admin UI listens on all interfaces inside the container; where it
+      # is reachable from is ADMIN_BIND_IP below. control refuses to start on
+      # a public ADMIN_BIND_IP unless ALLOW_PUBLIC_ADMIN=1 (docs/security.md).
+      ADMIN_ADDR: ":8082"
+      ADMIN_BIND_IP: ${ADMIN_BIND_IP:-127.0.0.1}
+      ALLOW_PUBLIC_ADMIN: ${ALLOW_PUBLIC_ADMIN:-}
       # Optional: an empty value means "use the built-in default".
       API_HOST: ${API_HOST:-api.${BASE_DOMAIN}}
       UI_URL: ${UI_URL:-http://${ADMIN_BIND_IP:-127.0.0.1}:8082}

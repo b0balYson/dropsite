@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"strings"
 	"testing"
 )
@@ -45,17 +46,23 @@ func TestResetPasswordCmd(t *testing.T) {
 	t.Setenv("SITES_DIR", cfg.SitesDir)
 	t.Setenv("STATE_DIR", cfg.StateDir)
 
-	if err := resetPasswordCmd(ctx, []string{"a", "b"}, &bytes.Buffer{}); !errors.Is(err, errUsage) {
+	if err := resetPasswordCmd(ctx, []string{"a", "b"}, &bytes.Buffer{}, io.Discard); !errors.Is(err, errUsage) {
 		t.Fatalf("two arguments: want usage, got %v", err)
 	}
-	if err := resetPasswordCmd(ctx, []string{"nobody@pp.test"}, &bytes.Buffer{}); err == nil ||
+	if err := resetPasswordCmd(ctx, []string{"nobody@pp.test"}, &bytes.Buffer{}, io.Discard); err == nil ||
 		!strings.Contains(err.Error(), "no user") {
 		t.Fatalf("unknown user: %v", err)
 	}
 
-	var out bytes.Buffer
-	if err := resetPasswordCmd(ctx, nil, &out); err != nil {
+	var out, notes bytes.Buffer
+	t.Setenv("LOG_LEVEL", "debug")
+	if err := resetPasswordCmd(ctx, nil, &out, &notes); err != nil {
 		t.Fatal(err)
+	}
+	// Logs and notes must never mix into the password on stdout.
+	if !strings.Contains(notes.String(), "new password set for admin@pp.test") ||
+		strings.Contains(notes.String(), strings.TrimSpace(out.String())) {
+		t.Fatalf("stderr: %q", notes.String())
 	}
 	password := strings.TrimSpace(out.String())
 	if len(password) != passwordLength || strings.Count(out.String(), "\n") != 1 {

@@ -128,6 +128,9 @@ func serve(ctx context.Context) error {
 	log.Info("starting", "product", brand.Name, "version", brand.Version, "base_domain", cfg.BaseDomain, "api_host", cfg.APIHost)
 	log.Warn("the base domain must be dedicated to published sites: user JavaScript runs on its subdomains, " +
 		"so do not host other company services or cookies on it or its parent")
+	if err := checkAdminExposure(cfg, log); err != nil {
+		return err
+	}
 	a, err := build(ctx, cfg, log)
 	if err != nil {
 		return err

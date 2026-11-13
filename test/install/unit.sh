@@ -141,6 +141,31 @@ if command -v ssh >/dev/null 2>&1; then
 	check "ssh -G: IdentityFile" sh -c 'printf "%s\n" "$1" | grep -q "^identityfile .*my keys/dropsite_sites$"' _ "$out"
 fi
 
+# --- server-bootstrap.sh: the first administrator password ---------------------
+# The bootstrap removes ADMIN_PASSWORD from .env after the first healthy start
+# and recreates control; docker compose is stubbed here.
+if command -v bash >/dev/null 2>&1; then
+	app="$WORK/app"
+	mkdir -p "$app/deploy"
+	envf="$app/deploy/.env"
+	printf 'BASE_DOMAIN=example.com\nADMIN_EMAIL=me@example.com\nADMIN_PASSWORD=Secret123456789abcdef\nUI_URL=\n' >"$envf"
+	chmod 600 "$envf"
+	out=$(DROPSITE_BOOTSTRAP_LIB=1 DROPSITE_DIR="$app" bash -c '
+		. "$1"
+		WORK=$2
+		LOG=$WORK/bootstrap.log
+		compose() { printf "compose %s\n" "$*" >>"$WORK/compose.calls"; }
+		forget_admin_password 2>/dev/null
+		forget_admin_password 2>/dev/null
+		get_env BASE_DOMAIN
+	' _ "$ROOT/scripts/server-bootstrap.sh" "$WORK") || out="bash failed"
+	check "bootstrap: ADMIN_PASSWORD removed from .env" sh -c '! grep -q "^ADMIN_PASSWORD=" "$1"' _ "$envf"
+	check "bootstrap: other settings kept" test "$out" = example.com
+	check "bootstrap: .env stays 600" test "$(ls -l "$envf" | cut -c1-10)" = -rw-------
+	check "bootstrap: control recreated once" test "$(grep -c 'up -d --no-build --wait .* control$' "$WORK/compose.calls")" = 1
+	check "bootstrap: the password is not logged" sh -c '! grep -q Secret123456789abcdef "$1" 2>/dev/null' _ "$WORK/bootstrap.log"
+fi
+
 if [ "$FAILS" != 0 ]; then
 	printf '\n%s check(s) failed\n' "$FAILS"
 	exit 1
