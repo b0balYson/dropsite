@@ -10,6 +10,8 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-13
+
 ### Changed
 
 - Brand identity: the Dropsite logo (a laughing browser window with the
@@ -58,5 +60,6 @@ First public release.
 - The installer does not keep the first administrator password on the server.
 - Threat model and operator guidance in [docs/security.md](docs/security.md).
 
-[Unreleased]: https://github.com/b0balYson/dropsite/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/b0balYson/dropsite/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/b0balYson/dropsite/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/b0balYson/dropsite/releases/tag/v0.1.0
