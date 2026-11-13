@@ -26,7 +26,7 @@ What the installer does:
 
 1. Creates a key just for this server, `~/.ssh/dropsite_<name>`, and adds it to the server. From then on only this key is used.
 2. Checks the server system. Other systems are refused with a clear message.
-3. On the server: installs Docker from Docker's official repository, adds swap on servers with less than 2 GB of memory, opens only ports 22, 80 and 443 in the firewall (ufw), downloads dropsite to `/opt/dropsite`, writes the settings with a **generated administrator password**, starts everything and checks that it answers. It also sets up a daily backup (the last 7 copies in `/var/backups/dropsite`; the form secrets key is copied once to `/root/dropsite-secrets.key`) and the commands below.
+3. On the server: installs Docker from Docker's official repository, adds swap on servers with less than 2 GB of memory, opens only ports 22, 80 and 443 in the firewall (ufw), downloads dropsite to `/opt/dropsite` and switches it to the newest release, writes the settings with a **generated administrator password**, downloads the prebuilt images of that release (nothing is compiled on the server), starts everything and checks that it answers. It also sets up a daily backup (the last 7 copies in `/var/backups/dropsite`; the form secrets key is copied once to `/root/dropsite-secrets.key`) and the commands below.
 4. On your computer: adds a short entry `<name>` to `~/.ssh/config`, so `ssh <name>` connects to the server and opens a tunnel to the admin interface. The local port is the first free one starting from 8082 (another server may already use 8082).
 5. Shows the **DNS records** to create where you bought the domain: `A` for `@` and for `*` with the server IPv4 address, and `AAAA` too when the server has IPv6. Then it can wait (up to 30 minutes, checking every 10 seconds) until the domain points to the server and HTTPS works.
 
@@ -46,8 +46,9 @@ If anything fails, run the same command again: finished steps are skipped. The s
 | Sign in | the e-mail you entered and the generated password shown once at the end; change it on the Account page |
 | Finish the setup | the **Getting started** page (first item of the menu): it checks that the domain points to the server and that HTTPS works, shows the exact DNS records with copy buttons and lists the remaining steps |
 | Connect ChatGPT or Claude | the **Connect AI** page of the admin interface |
-| Update | `ssh <name> dropsite-update` (backup, download, restart) |
-| Undo the last update | `ssh <name> dropsite-rollback` (restores the backup taken right before the update) |
+| Update | `ssh <name> dropsite-update` (backup, switch to the newest release, download its images, restart) |
+| Undo the last update | `ssh <name> dropsite-rollback` (previous release and the backup taken right before the update) |
+| Stay on one release | set `DROPSITE_VERSION=X.Y.Z` in `/opt/dropsite/deploy/.env`, then `dropsite-update`; `latest` follows new releases again ([releasing.md](releasing.md#on-a-server)) |
 | Forgot the admin password | `ssh <name> dropsite-admin-password` prints a new one |
 | Back up now | `ssh <name> dropsite-backup` |
 
@@ -61,7 +62,7 @@ For developers: `make install-test` checks the installer logic and the `~/.ssh/c
 
 ## Manual installation
 
-The [README](../README.md) has the clone, configure and build path. The sections below cover the choices behind it.
+The [README](../README.md) has the short path. The sections below cover the choices behind it.
 
 ## Server
 
@@ -79,27 +80,44 @@ The [README](../README.md) has the clone, configure and build path. The sections
 
 Certificates are issued on first visit; see [tls.md](tls.md) for limits.
 
-## Source checkout
+## Release checkout
+
+Every release is a Git tag `vX.Y.Z` with prebuilt images for linux/amd64 and linux/arm64 on ghcr.io (`ghcr.io/b0balyson/dropsite-control`, and `ghcr.io/b0balyson/dropsite-caddy` for wildcard TLS). Check out the tag of the release you run, so the compose file and the Caddyfile belong to the same release as the images:
 
 ```bash
 git clone https://github.com/b0balYson/dropsite.git
-cd dropsite/deploy
+cd dropsite
+git checkout "$(git tag -l 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)"
+cd deploy
 cp .env.example .env
 chmod 600 .env
 # Set BASE_DOMAIN, ACME_EMAIL, ADMIN_EMAIL and ADMIN_PASSWORD.
+# DROPSITE_VERSION=latest runs the newest release; set the version of the
+# tag you checked out (X.Y.Z) to pin it.
 nano .env
 docker compose config --quiet
-docker compose up -d --build --wait
+docker compose pull
+docker compose up -d --wait
 docker compose ps
 ```
 
-Keep the entire repository. The build context for `control` is its root, one directory above `deploy`. Go runs inside Docker; no host Go installation or dropsite registry login is needed. Docker still downloads upstream base images and Go dependencies. The first build can take several minutes; later builds reuse the compiler cache.
+`docker compose pull` downloads the images; `up` starts them as they are and never builds unless asked. The images are public: no registry login is needed. To check that an image was built by this repository's release workflow: `gh attestation verify oci://ghcr.io/b0balyson/dropsite-control:X.Y.Z --repo b0balYson/dropsite`.
 
 Run all commands below from `dropsite/deploy`. Your `.env` is ignored by Git. Keep the checkout directory and Compose project name unchanged during updates so Docker reuses the data volumes.
 
+## Building from source
+
+Without a published release, for a modified checkout, or on a platform without images, build the images from the checkout instead:
+
+```bash
+docker compose up -d --build --wait
+```
+
+Keep the entire repository. The build context for `control` is its root, one directory above `deploy`. Go runs inside Docker; no host Go installation is needed. Docker still downloads upstream base images and Go dependencies. The first build can take several minutes; later builds reuse the compiler cache. The built images get the tag of `DROPSITE_VERSION` locally; set `DROPSITE_BUILD_VERSION="$(sh ../scripts/version.sh)"` in the environment to make `control` report `dev+<commit>` instead of `dev`. The one-command installer builds from source with `DROPSITE_BUILD=1`, and falls back to it on its own when the images of a release cannot be downloaded.
+
 ## Build memory
 
-For a server with 1 CPU and 1 GB RAM, we recommend 2 GB swap for a source build. This is guidance, not a measured minimum for every architecture. Runtime memory and compiler memory are different: compiling the SQLite dependency can use much more memory than running the server.
+This applies only to building from source. For a server with 1 CPU and 1 GB RAM, we recommend 2 GB swap for a source build. This is guidance, not a measured minimum for every architecture. Runtime memory and compiler memory are different: compiling the SQLite dependency can use much more memory than running the server.
 
 The Dockerfiles compile packages one at a time, limit concurrent Go execution to one CPU, and run garbage collection more often. `GOMEMLIMIT=256MiB` is a soft Go memory target **per process**, not a hard limit on the whole build. The build can exceed it. These settings reduce memory use at the cost of build time.
 
@@ -117,7 +135,7 @@ Look for `Out of memory` or `Killed process`. If confirmed, add RAM or swap usin
 
 | File | Purpose |
 | --- | --- |
-| `docker-compose.yml` | Local source build for `control`; services `caddy-init`, `caddy`, `control`; volumes `sites`, `state`, `caddy_data`, `logs` |
+| `docker-compose.yml` | Services `caddy-init`, `caddy`, `control` (release image of `DROPSITE_VERSION`, or a source build with `--build`); volumes `sites`, `state`, `caddy_data`, `logs` |
 | `Caddyfile` | Static Caddy configuration; do not edit unless you know why each rule is there |
 | `.env` | Your settings, from `.env.example` |
 
@@ -135,7 +153,7 @@ Volumes:
 The interface is served over plain HTTP on `ADMIN_BIND_IP:8082` and must only be reachable from a private network:
 
 - **Single admin:** keep the default `127.0.0.1` and use `ssh -L 8082:127.0.0.1:8082 server`.
-- **Team:** join the server to an overlay network (Tailscale, WireGuard, NetBird), set `ADMIN_BIND_IP` to its overlay address and `UI_URL=http://<overlay address>:8082`, then `docker compose up -d --build --wait`.
+- **Team:** join the server to an overlay network (Tailscale, WireGuard, NetBird), set `ADMIN_BIND_IP` to its overlay address and `UI_URL=http://<overlay address>:8082`, then `docker compose up -d --wait`.
 
 Invite links use `UI_URL`; make sure it is the address your colleagues can open.
 
@@ -148,7 +166,7 @@ Invite links use `UI_URL`; make sure it is the address your colleagues can open.
 
 ## CLI from source
 
-The web interface can publish sites without a CLI. The CLI installer is separate: it needs a published GitHub Release. Until a release exists, build the CLI on the computer where you use your AI assistants. Install the Go version declared in `go.mod`, then run from the repository root:
+The web interface can publish sites without a CLI. The CLI installers download a binary of a GitHub Release and check it against `SHA256SUMS` (`DROPSITE_VERSION=X.Y.Z` picks a release, default the newest); the CLI prints a one-line hint when it and the server are a minor version or more apart. Without a release, or to run a modified checkout, build the CLI on the computer where you use your AI assistants. Install the Go version declared in `go.mod`, then run from the repository root:
 
 ```bash
 go build -o ./bin/dropsite ./cmd/dropsite
@@ -161,4 +179,4 @@ Replace the server URL, connect code and site path. Use `./bin/dropsite.exe` as 
 
 ## Updates
 
-See [backup and upgrade](backup.md#upgrade). Updates use `git pull --ff-only` and a local rebuild, not a pull of a dropsite image.
+See [backup and upgrade](backup.md#upgrade) and [releasing.md](releasing.md#on-a-server). An update checks out the tag of the new release and downloads its images; a source build stays available as a fallback.

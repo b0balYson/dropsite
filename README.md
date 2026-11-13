@@ -4,7 +4,7 @@
 
 Self-hosted publishing of static sites. A marketer asks ChatGPT or Claude "make a coffee shop site and publish it", or drops a zip into the web interface, and gets an HTTPS link on a subdomain of your domain in seconds; later changes, visit statistics, form requests and passwords are plain requests in the same chat. No VPS per site, no git, no DevOps.
 
-- One server. Build from source and start: `docker compose up -d --build --wait`.
+- One server. Prebuilt multi-arch images per release: `docker compose pull && docker compose up -d --wait` (or build from source with `--build`).
 - Archive in, HTTPS link out. Every site gets a random address such as `k3f9x2m7qa.example.site` and an optional readable one such as `promo-may.example.site`.
 - Every publish is an immutable release: switch and roll back instantly, with zero failed requests during the switch.
 - Each user sees and changes only their own sites. Admins manage users, all sites, limits and the audit log.
@@ -27,7 +27,7 @@ curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/ins
 
 On Windows run it in WSL or Git Bash. The installer sets up the server, shows the DNS records to create and ends with `ssh <name>` and `http://localhost:<port>` for the web interface. Details: [docs/install.md](docs/install.md#one-command-installer). The manual path follows.
 
-Requirements: a Linux server (amd64 or arm64), Git, Docker Engine 24+ and Compose 2.24.4+, ports 80 and 443 open, and a domain. For a server with 1 CPU and 1 GB RAM, provide 2 GB swap for building; see [build memory](docs/install.md#build-memory). Go is not needed on the host: Docker downloads the toolchain and builds the application inside a container. Internet access is needed for base images and dependencies. The first build can take several minutes.
+Requirements: a Linux server (amd64 or arm64), Git, Docker Engine 24+ and Compose 2.24.4+, ports 80 and 443 open, and a domain. The server downloads prebuilt images of a release from ghcr.io; nothing is compiled on it. Building from source is the fallback: then provide 2 GB swap on a server with 1 CPU and 1 GB RAM, see [build memory](docs/install.md#build-memory).
 
 ### 1. Choose a dedicated base domain
 
@@ -48,17 +48,21 @@ Check `dig +short example.site` and `dig +short api.example.site`: both must ret
 
 ```bash
 git clone https://github.com/b0balYson/dropsite.git
-cd dropsite/deploy
+cd dropsite
+# The newest release tag: compose file and Caddyfile of the same release as the images.
+git checkout "$(git tag -l 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)"
+cd deploy
 cp .env.example .env
 chmod 600 .env
 # Fill in BASE_DOMAIN, ACME_EMAIL, ADMIN_EMAIL, ADMIN_PASSWORD
 nano .env
 docker compose config --quiet
-docker compose up -d --build --wait
+docker compose pull
+docker compose up -d --wait
 docker compose ps
 ```
 
-Run `docker compose` commands from `dropsite/deploy`. Docker builds `control` from this repository. No prebuilt dropsite image is required. Keep the full checkout for future builds. In `docker compose ps`, `control` must be `healthy` and `caddy` must be `running`. If startup fails, run `docker compose logs --tail=100 control caddy`.
+Run `docker compose` commands from `dropsite/deploy`. `DROPSITE_VERSION=latest` in `.env` runs the newest release; set `X.Y.Z` to pin one ([releasing](docs/releasing.md)). Without a release yet, or to run your own changes, build from the checkout: `docker compose up -d --build --wait` ([details](docs/install.md#building-from-source)). In `docker compose ps`, `control` must be `healthy` and `caddy` must be `running`. If startup fails, run `docker compose logs --tail=100 control caddy`.
 
 ### 4. Open the web interface
 
@@ -132,7 +136,7 @@ $env:DROPSITE_SERVER='https://api.example.com'; $env:DROPSITE_CODE='ABCD-EFGH-JK
 
 Without `--server` and `--code` the installers only install the CLI. `dropsite setup --remove` takes the integrations out again.
 
-The CLI installers download a binary from GitHub Releases. If no release is available, [build the CLI from source](docs/install.md#cli-from-source) on your computer. The server and web publishing do not need the CLI.
+The CLI installers download a binary from GitHub Releases and check its SHA-256 (`DROPSITE_VERSION=X.Y.Z` picks a release). The CLI prints a one-line hint when it and the server are a minor version or more apart. If no release is available, [build the CLI from source](docs/install.md#cli-from-source) on your computer. The server and web publishing do not need the CLI.
 
 ### Own domains
 
@@ -212,7 +216,8 @@ Every issued certificate is published in public Certificate Transparency logs, s
 
 ```sh
 # .env: CF_API_TOKEN=<token>
-docker compose -f docker-compose.yml -f compose.wildcard.yml up -d --build --wait
+docker compose -f docker-compose.yml -f compose.wildcard.yml pull
+docker compose -f docker-compose.yml -f compose.wildcard.yml up -d --wait
 ```
 
 In this mode every release also gets its own preview address `https://p-<release>-<site>.<BASE_DOMAIN>/` (not indexed by search engines), shown in the release history. Step-by-step switch and rollback: [docs/tls.md](docs/tls.md).
@@ -244,11 +249,11 @@ In this mode every release also gets its own preview address `https://p-<release
 ## Operations
 
 - **Backup:** `docker compose exec -T control /control backup - > backup-$(date +%F).tar.gz`. See [docs/backup.md](docs/backup.md) for restore.
-- **Upgrade:** from `dropsite/deploy`, back up, run `git pull --ff-only`, then `docker compose up -d --build --wait`. Your `.env` and data in Docker volumes are preserved. Migrations run automatically; downgrades are not supported. See [upgrade steps](docs/backup.md#upgrade).
+- **Upgrade:** `dropsite-update` on servers set up by the installer; by hand, back up, check out the new release tag, then `docker compose pull` and `docker compose up -d --wait`. Your `.env` and data in Docker volumes are preserved. Migrations run automatically; downgrades are not supported. See [upgrade steps](docs/backup.md#upgrade) and [releasing](docs/releasing.md).
 - **Logs:** JSON on stdout of both containers: `docker compose logs -f`. Caddy also writes the sites access log to the `logs` volume for statistics (rotated at 50 MB, 5 old files kept).
 - **Health:** `docker compose ps` shows the `control` health check.
 
-More: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [docs/tls.md](docs/tls.md), [docs/external-domains.md](docs/external-domains.md), [docs/production-checklist.md](docs/production-checklist.md), [docs/statistics.md](docs/statistics.md), [docs/forms.md](docs/forms.md).
+More: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [docs/releasing.md](docs/releasing.md), [docs/tls.md](docs/tls.md), [docs/external-domains.md](docs/external-domains.md), [docs/production-checklist.md](docs/production-checklist.md), [docs/statistics.md](docs/statistics.md), [docs/forms.md](docs/forms.md).
 
 ## Security model
 

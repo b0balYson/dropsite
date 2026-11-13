@@ -30,7 +30,7 @@ COMPOSE_PROFILES=renderer
 RENDERER_URL=http://renderer:3000
 ```
 
-then `docker compose up -d --build --wait`. The `renderer` service is attached only to the internal network `render` (`internal: true`): it cannot reach the internet or Caddy, only `control`. Expect about 1 GB of RAM for Chromium while it renders.
+then `docker compose up -d --wait`. The `renderer` service is attached only to the internal network `render` (`internal: true`): it cannot reach the internet or Caddy, only `control`. Expect about 1 GB of RAM for Chromium while it renders.
 
 | Variable | Default | Meaning |
 |---|---|---|

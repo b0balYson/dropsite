@@ -49,13 +49,19 @@ Restored without the key, everything else works, but the settings screen reports
 
 ## Upgrade
 
-Run these commands from `dropsite/deploy`. With wildcard TLS, keep `COMPOSE_FILE=docker-compose.yml:compose.wildcard.yml` in `.env` so the same mode is used for every command.
+On a server set up by the installer, `dropsite-update` does all of this and `dropsite-rollback` undoes it ([releasing.md](releasing.md#on-a-server)).
+
+By hand, run these commands from `dropsite/deploy`, with `X.Y.Z` the new release. With wildcard TLS, keep `COMPOSE_FILE=docker-compose.yml:compose.wildcard.yml` in `.env` so the same mode is used for every command.
 
 ```bash
 docker compose exec -T control /control backup - > before-upgrade.tar.gz
-git pull --ff-only
-docker compose up -d --build --wait
+git fetch --tags
+git checkout vX.Y.Z
+DROPSITE_VERSION=X.Y.Z docker compose pull
+DROPSITE_VERSION=X.Y.Z docker compose up -d --wait
 docker compose ps
 ```
 
-Migrations run on start. Downgrading is not supported: to go back, check out the previous Git revision, rebuild it, and restore the backup taken before the upgrade. Keep the same checkout path and Compose project name so Docker reuses the existing volumes. Do not run `docker compose down -v`: it deletes the data volumes.
+With `DROPSITE_VERSION=latest` in `.env` (the default) the variable on the command line is only needed until `latest` points at the new release on ghcr.io; with a pinned version, change it in `.env` instead. A checkout that follows `main` is upgraded with `git pull --ff-only` and `docker compose up -d --build --wait` (a source build).
+
+Migrations run on start. Downgrading is not supported, and a newer database refuses to start with an older `control`: to go back, check out the previous tag, start its images (`DROPSITE_VERSION=<previous> docker compose pull`) or rebuild it, and restore the backup taken before the upgrade. Keep the same checkout path and Compose project name so Docker reuses the existing volumes. Do not run `docker compose down -v`: it deletes the data volumes.

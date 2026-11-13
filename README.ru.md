@@ -4,7 +4,7 @@
 
 Self-hosted публикация статических сайтов. Маркетолог пишет в ChatGPT или Claude «Сделай сайт кофейни и опубликуй» или перетаскивает zip в веб-интерфейс и через несколько секунд получает HTTPS-ссылку на поддомене вашего домена; правки, посещаемость, заявки и пароль — такие же обычные просьбы в том же чате. Без отдельного VPS, git и DevOps.
 
-- Один сервер. Сборка из исходников и запуск: `docker compose up -d --build --wait`.
+- Один сервер. Готовые multi-arch образы каждого релиза: `docker compose pull && docker compose up -d --wait` (или сборка из исходников с `--build`).
 - На входе архив, на выходе HTTPS-ссылка. Каждый сайт получает случайный адрес вида `k3f9x2m7qa.example.site` и по желанию читаемый, например `promo-may.example.site`.
 - Каждая публикация — неизменяемый релиз: переключение и откат мгновенные, без единого неудачного запроса.
 - Пользователь видит и меняет только свои сайты. Администратор управляет пользователями, всеми сайтами, лимитами и журналом.
@@ -19,7 +19,7 @@ dropsite раздаёт только готовую статику (HTML, CSS, J
 
 ## Установка из репозитория
 
-Нужно: Linux-сервер (amd64 или arm64), Git, Docker Engine 24+ и Compose 2.24.4+, открытые порты 80 и 443, домен. На сервере с 1 CPU и 1 ГБ RAM рекомендуем добавить 2 ГБ swap (подкачки на диск) для сборки; диагностика — в [docs/install.md](docs/install.md#build-memory). Go устанавливать на сервер не нужно: Docker скачивает инструменты и собирает приложение внутри контейнера. Нужен доступ к интернету для базовых образов и зависимостей. Первая сборка может занять несколько минут.
+Нужно: Linux-сервер (amd64 или arm64), Git, Docker Engine 24+ и Compose 2.24.4+, открытые порты 80 и 443, домен. Сервер скачивает готовые образы релиза из ghcr.io и ничего не компилирует. Сборка из исходников — запасной путь: тогда на сервере с 1 CPU и 1 ГБ RAM добавьте 2 ГБ swap (подкачки на диск), подробности — в [docs/install.md](docs/install.md#build-memory).
 
 ### 1. Выберите отдельный базовый домен
 
@@ -40,17 +40,21 @@ dropsite раздаёт только готовую статику (HTML, CSS, J
 
 ```bash
 git clone https://github.com/b0balYson/dropsite.git
-cd dropsite/deploy
+cd dropsite
+# Тег последнего релиза: compose-файл и Caddyfile того же релиза, что и образы.
+git checkout "$(git tag -l 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)"
+cd deploy
 cp .env.example .env
 chmod 600 .env
 # Заполните BASE_DOMAIN, ACME_EMAIL, ADMIN_EMAIL, ADMIN_PASSWORD
 nano .env
 docker compose config --quiet
-docker compose up -d --build --wait
+docker compose pull
+docker compose up -d --wait
 docker compose ps
 ```
 
-Выполняйте команды `docker compose` из каталога `dropsite/deploy`. Docker собирает `control` из этого репозитория. Готовые образы dropsite не нужны. Сохраняйте весь репозиторий: он нужен для следующих сборок. В `docker compose ps` сервис `control` должен иметь статус `healthy`, а `caddy` — `running`. Если запуск завершился ошибкой, выполните `docker compose logs --tail=100 control caddy`.
+Выполняйте команды `docker compose` из каталога `dropsite/deploy`. `DROPSITE_VERSION=latest` в `.env` запускает последний релиз; чтобы закрепить версию, укажите `X.Y.Z` ([релизы](docs/releasing.md)). Если релиза ещё нет или нужно запустить свои изменения, соберите из исходников: `docker compose up -d --build --wait` ([подробности](docs/install.md#building-from-source)). В `docker compose ps` сервис `control` должен иметь статус `healthy`, а `caddy` — `running`. Если запуск завершился ошибкой, выполните `docker compose logs --tail=100 control caddy`.
 
 ### 4. Откройте веб-интерфейс
 
@@ -124,7 +128,7 @@ $env:DROPSITE_SERVER='https://api.example.com'; $env:DROPSITE_CODE='ABCD-EFGH-JK
 
 Без `--server` и `--code` установщики только ставят CLI. `dropsite setup --remove` убирает интеграции.
 
-Установщики CLI скачивают бинарник из GitHub Releases. Если релиза ещё нет, соберите CLI из исходников на своём компьютере: [инструкция](docs/install.md#cli-from-source). Для запуска сервера и публикации через веб-интерфейс CLI не нужен.
+Установщики CLI скачивают бинарник из GitHub Releases и проверяют его SHA-256 (`DROPSITE_VERSION=X.Y.Z` выбирает релиз). CLI выводит однострочную подсказку, если его версия и версия сервера расходятся на минорную или больше. Если релиза ещё нет, соберите CLI из исходников на своём компьютере: [инструкция](docs/install.md#cli-from-source). Для запуска сервера и публикации через веб-интерфейс CLI не нужен.
 
 ### Свои домены
 
@@ -204,7 +208,8 @@ Let's Encrypt выдаёт **50 новых сертификатов на зар�
 
 ```sh
 # .env: CF_API_TOKEN=<токен>
-docker compose -f docker-compose.yml -f compose.wildcard.yml up -d --build --wait
+docker compose -f docker-compose.yml -f compose.wildcard.yml pull
+docker compose -f docker-compose.yml -f compose.wildcard.yml up -d --wait
 ```
 
 В этом режиме у каждого релиза есть ещё и свой превью-адрес `https://p-<релиз>-<сайт>.<BASE_DOMAIN>/` (поисковики его не индексируют), он показан в истории релизов. Переход по шагам и откат: [docs/tls.md](docs/tls.md).
@@ -236,11 +241,11 @@ docker compose -f docker-compose.yml -f compose.wildcard.yml up -d --build --wai
 ## Эксплуатация
 
 - **Бэкап:** `docker compose exec -T control /control backup - > backup-$(date +%F).tar.gz`. Восстановление — в [docs/backup.md](docs/backup.md).
-- **Обновление:** из `dropsite/deploy` сделайте бэкап, выполните `git pull --ff-only`, затем `docker compose up -d --build --wait`. Настройки в `.env` и данные в Docker-томах сохраняются. Миграции применяются автоматически, откат схемы не поддерживается. Порядок действий — в [docs/backup.md](docs/backup.md#upgrade).
+- **Обновление:** `dropsite-update` на серверах, установленных установщиком; вручную — бэкап, переход на тег нового релиза, затем `docker compose pull` и `docker compose up -d --wait`. Настройки в `.env` и данные в Docker-томах сохраняются. Миграции применяются автоматически, откат схемы не поддерживается. Порядок действий — в [docs/backup.md](docs/backup.md#upgrade) и [docs/releasing.md](docs/releasing.md).
 - **Логи:** JSON в stdout обоих контейнеров: `docker compose logs -f`. Кроме того, Caddy пишет access-лог сайтов на том `logs` для статистики (ротация по 50 МБ, хранятся 5 старых файлов).
 - **Здоровье:** `docker compose ps` показывает проверку здоровья `control`.
 
-Подробнее: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [docs/tls.md](docs/tls.md), [docs/external-domains.md](docs/external-domains.md), [docs/production-checklist.md](docs/production-checklist.md), [docs/statistics.md](docs/statistics.md), [docs/forms.md](docs/forms.md).
+Подробнее: [docs/install.md](docs/install.md), [docs/backup.md](docs/backup.md), [docs/releasing.md](docs/releasing.md), [docs/tls.md](docs/tls.md), [docs/external-domains.md](docs/external-domains.md), [docs/production-checklist.md](docs/production-checklist.md), [docs/statistics.md](docs/statistics.md), [docs/forms.md](docs/forms.md).
 
 ## Модель безопасности
 

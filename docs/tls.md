@@ -52,7 +52,7 @@ What changes:
 ### Requirements
 
 - DNS of `BASE_DOMAIN` is hosted by a supported provider. Built in: **Cloudflare**.
-- The full repository checkout. Compose builds Caddy 2.11.9 with the DNS plugin locally from [`deploy/caddy/Dockerfile`](../deploy/caddy/Dockerfile); no dropsite registry is used.
+- Caddy 2.11.9 with the DNS plugin: each release publishes it as `ghcr.io/b0balyson/dropsite-caddy:X.Y.Z`, built from [`deploy/caddy/Dockerfile`](../deploy/caddy/Dockerfile). With `--build` Compose builds it from the checkout instead.
 - `compose.wildcard.yml` next to `docker-compose.yml`.
 
 ### Switching to wildcard
@@ -68,10 +68,11 @@ What changes:
 4. **Start with the override:**
 
    ```sh
-   docker compose -f docker-compose.yml -f compose.wildcard.yml up -d --build --wait
+   docker compose -f docker-compose.yml -f compose.wildcard.yml pull
+   docker compose -f docker-compose.yml -f compose.wildcard.yml up -d --wait
    ```
 
-   Run this from `dropsite/deploy`. The override replaces stock Caddy with the local build, including its DNS plugin.
+   Run this from `dropsite/deploy`. The override replaces stock Caddy with the `dropsite-caddy` image of the release, which contains the DNS plugin (add `--build` to `up` to build it from the checkout).
 
 5. **Check.** In `docker compose logs caddy` look for `certificate obtained successfully` with `"identifier":"*.<BASE_DOMAIN>"` and `"identifier":"<BASE_DOMAIN>"` (the first issuance takes up to a minute while the TXT record propagates). Then:
 
@@ -95,7 +96,7 @@ Keep using `-f docker-compose.yml -f compose.wildcard.yml` with every `docker co
 ### Rolling back to ondemand
 
 ```sh
-docker compose -f docker-compose.yml up -d --build --wait
+docker compose -f docker-compose.yml up -d --wait
 ```
 
 Both containers return to ondemand mode (make sure `.env` has no `TLS_MODE=wildcard`). Caddy issues per-address certificates again on the next visit of each address, which counts against the limits above; `control` removes all preview addresses on start. The wildcard certificates stay in the `caddy_data` volume and are reused if you switch back.
@@ -104,7 +105,7 @@ Both containers return to ondemand mode (make sure `.env` has no `TLS_MODE=wildc
 
 Caddy has plugins for most providers (<https://github.com/caddy-dns>). To add one, for example Route 53:
 
-1. In `deploy/caddy/Dockerfile` add `--with github.com/caddy-dns/route53@<version>` to the `xcaddy build` command (pin the version) and build your own image.
+1. In `deploy/caddy/Dockerfile` add `--with github.com/caddy-dns/route53@<version>` to the `xcaddy build` command (pin the version) and build your own image: start with `up -d --build --wait`, because the published `dropsite-caddy` image only has the Cloudflare plugin. On a server set up by the installer, update with `DROPSITE_BUILD=1 dropsite-update`; a plain `dropsite-update` would bring back the published image.
 2. In `deploy/Caddyfile` add a snippet next to `(dns_cloudflare)` with the provider's options (see the plugin's README), reading secrets with `{env.*}`:
 
    ```caddyfile
