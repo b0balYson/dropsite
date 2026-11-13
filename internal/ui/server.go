@@ -140,6 +140,12 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /connect/tokens", s.user(s.createToken))
 	mux.HandleFunc("POST /connect/tokens/{id}/revoke", s.user(s.revokeToken))
 
+	mux.HandleFunc("GET /start", s.admin(s.startPage))
+	mux.HandleFunc("GET /start/checks", s.admin(s.startChecks))
+	mux.HandleFunc("GET /start/summary", s.admin(s.startSummary))
+	mux.HandleFunc("POST /start/hide", s.admin(s.hideStart))
+	mux.HandleFunc("POST /start/show", s.admin(s.showStart))
+
 	mux.HandleFunc("GET /admin/users", s.admin(s.usersPage))
 	mux.HandleFunc("POST /admin/users", s.admin(s.createUser))
 	mux.HandleFunc("POST /admin/users/{id}/block", s.admin(s.blockUser))

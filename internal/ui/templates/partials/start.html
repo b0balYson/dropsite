@@ -1,0 +1,201 @@
+{{/* First-run checklist: the required steps (swapped as one block by htmx), the compact card of the sites list. */}}
+
+{{define "setup_badge"}}{{/* .R = view, .V = state ("" while checking) */}}
+{{- if eq (print .V) "done"}}<span class="badge badge--ok">{{.R.L.T "setup.state.done"}}</span>
+{{- else if eq (print .V) "problem"}}<span class="badge badge--error">{{.R.L.T "setup.state.problem"}}</span>
+{{- else if eq (print .V) "todo"}}<span class="badge badge--muted">{{.R.L.T "setup.state.todo"}}</span>
+{{- else}}<span class="badge badge--muted setup-checking">{{.R.L.T "setup.state.checking"}}</span>{{end -}}
+{{end}}
+
+{{define "setup_mark"}}{{/* .R = view, .V = map: State, N */}}
+<span class="setup-step__mark mono" aria-hidden="true">{{if eq (print .V.State) "done"}}✓{{else if eq (print .V.State) "problem"}}!{{else}}{{.V.N}}{{end}}</span>
+{{end}}
+
+{{define "start_checks"}}{{$d := .D}}{{$c := $d.Checks}}
+<div class="setup" id="setup"{{if not $c}} hx-get="/start/checks" hx-trigger="load" hx-swap="outerHTML"{{end}} aria-busy="{{if $c}}false{{else}}true{{end}}">
+  <div class="setup-status{{if $d.AllDone}} setup-status--ready{{end}}" role="status">
+    {{if $c}}
+    <div class="setup-status__text">
+      <p class="setup-status__count"><span class="mono">{{$d.Done}}/{{$d.Total}}</span> {{if $d.AllDone}}{{.L.T "setup.ready"}}{{else}}{{.L.T "setup.progress" "done" $d.Done "total" $d.Total}}{{end}}</p>
+      <p class="hint">{{if $d.AllDone}}{{.L.T "setup.ready.text"}}{{else}}{{.L.T "setup.checked" "time" (.L.Time $c.CheckedAt)}}{{end}}</p>
+    </div>
+    <ol class="setup-meter" aria-hidden="true">
+      <li{{if eq (print $c.Domain.State) "done"}} class="is-done"{{end}}></li>
+      <li{{if eq (print $c.HTTPS.State) "done"}} class="is-done"{{end}}></li>
+      <li{{if $d.Progress.Chat}} class="is-done"{{end}}></li>
+      <li{{if $d.Progress.Site}} class="is-done"{{end}}></li>
+    </ol>
+    <div class="setup-status__actions">
+      <a class="btn btn--ghost btn--small" href="/start?fresh=1" hx-get="/start/checks?fresh=1" hx-target="#setup" hx-swap="outerHTML" hx-indicator="#setup" hx-disabled-elt="this">{{.L.T "setup.recheck"}}</a>
+      {{if and $d.AllDone (not $d.Progress.Hidden)}}
+      <form method="post" action="/start/hide">
+        {{template "csrf" .}}
+        <button class="btn btn--primary btn--small" type="submit">{{.L.T "setup.hide"}}</button>
+      </form>
+      {{end}}
+    </div>
+    {{else}}
+    <div class="setup-status__text">
+      <p class="setup-status__count">{{.L.T "setup.checking"}}</p>
+      <p class="hint">{{.L.T "setup.checking.text"}}</p>
+      <noscript><p><a class="btn btn--ghost btn--small" href="/start?fresh=1">{{.L.T "setup.recheck"}}</a></p></noscript>
+    </div>
+    {{end}}
+  </div>
+
+  <ol class="setup-list">
+    {{/* 1. Domain */}}
+    {{$st := ""}}{{if $c}}{{$st = print $c.Domain.State}}{{end}}
+    <li class="setup-step setup-step--{{if $st}}{{$st}}{{else}}checking{{end}}" id="step-domain">
+      {{template "setup_mark" (bundle . (dict "State" $st "N" "01"))}}
+      <div class="setup-step__body">
+        <div class="setup-step__head">
+          <h2 class="setup-step__title">{{.L.T "setup.domain.title"}}</h2>
+          {{template "setup_badge" (bundle . $st)}}
+        </div>
+        {{if $c}}{{$r := print $c.Domain.Reason}}
+        <p class="setup-step__text">{{if $r}}{{.L.T (printf "setup.domain.reason.%s" $r) "domain" $d.Domain}}{{else}}{{.L.T "setup.domain.done" "domain" $d.Domain}}{{end}}</p>
+        {{if eq $r "points_elsewhere"}}
+        <ul class="setup-now">
+          {{range list "apex" "star"}}{{$n := $c.Domain.Apex}}{{if eq . "star"}}{{$n = $c.Domain.Star}}{{end}}
+          <li><span class="mono addr-break">{{if eq . "star"}}*.{{$d.Domain}}{{else}}{{$d.Domain}}{{end}}</span> →
+            {{if $n.Result.Addresses}}<span class="mono">{{range $i, $a := $n.Result.Addresses}}{{if $i}}, {{end}}{{$a}}{{end}}</span>{{if eq (print $n.Result.Verdict) "points_elsewhere"}} <span class="status status--error">{{$.L.T "setup.domain.now.elsewhere"}}</span>{{else}} <span class="status status--ok">{{$.L.T "setup.domain.now.here"}}</span>{{end}}
+            {{else}}<span class="muted">{{$.L.T "setup.domain.now.none"}}</span>{{end}}</li>
+          {{end}}
+        </ul>
+        {{end}}
+        {{if ne $st "done"}}{{template "setup_records" .}}{{else}}
+        <details class="setup-more">
+          <summary>{{.L.T "setup.domain.records.show"}}</summary>
+          {{template "setup_records" .}}
+        </details>
+        {{end}}
+        {{else}}
+        <p class="setup-step__text">{{.L.T "setup.domain.lede" "domain" $d.Domain}}</p>
+        {{end}}
+      </div>
+    </li>
+
+    {{/* 2. HTTPS */}}
+    {{$st = ""}}{{if $c}}{{$st = print $c.HTTPS.State}}{{end}}
+    <li class="setup-step setup-step--{{if $st}}{{$st}}{{else}}checking{{end}}" id="step-https">
+      {{template "setup_mark" (bundle . (dict "State" $st "N" "02"))}}
+      <div class="setup-step__body">
+        <div class="setup-step__head">
+          <h2 class="setup-step__title">{{.L.T "setup.https.title"}}</h2>
+          {{template "setup_badge" (bundle . $st)}}
+        </div>
+        {{if $c}}{{$r := print $c.HTTPS.Reason}}
+        <p class="setup-step__text">{{if $r}}{{.L.T (printf "setup.https.reason.%s" $r) "host" $d.APIHost "status" $c.HTTPS.Status}}{{else}}{{.L.T "setup.https.done" "host" $d.APIHost}}{{end}}</p>
+        {{if and (eq $r "cert_invalid") $d.Progress.OnDemand}}<p class="hint">{{.L.T "setup.https.limit"}}</p>{{end}}
+        {{if ne $r "dns_pending"}}
+        <p class="setup-step__actions"><a class="btn btn--ghost btn--small" href="{{$c.HTTPS.URL}}" target="_blank" rel="noopener noreferrer">{{.L.T "setup.https.open"}} <span aria-hidden="true">↗</span></a></p>
+        {{end}}
+        {{else}}
+        <p class="setup-step__text">{{.L.T "setup.https.lede" "host" $d.APIHost}}</p>
+        {{end}}
+      </div>
+    </li>
+
+    {{/* 3. Chat */}}
+    {{$st = print ($d.StepState $d.Progress.Chat)}}
+    <li class="setup-step setup-step--{{$st}}" id="step-chat">
+      {{template "setup_mark" (bundle . (dict "State" $st "N" "03"))}}
+      <div class="setup-step__body">
+        <div class="setup-step__head">
+          <h2 class="setup-step__title">{{.L.T "setup.chat.title"}}</h2>
+          {{template "setup_badge" (bundle . $st)}}
+        </div>
+        <p class="setup-step__text">{{if $d.Progress.Chat}}{{.L.T "setup.chat.done"}}{{else}}{{.L.T "setup.chat.todo"}}{{end}}</p>
+        <p class="setup-step__actions"><a class="btn {{if $d.Progress.Chat}}btn--ghost btn--small{{else}}btn--primary{{end}}" href="/connect">{{if $d.Progress.Chat}}{{.L.T "setup.chat.manage"}}{{else}}{{.L.T "setup.chat.action"}}{{end}}</a></p>
+      </div>
+    </li>
+
+    {{/* 4. First site */}}
+    {{$st = print ($d.StepState $d.Progress.Site)}}
+    <li class="setup-step setup-step--{{$st}}" id="step-site">
+      {{template "setup_mark" (bundle . (dict "State" $st "N" "04"))}}
+      <div class="setup-step__body">
+        <div class="setup-step__head">
+          <h2 class="setup-step__title">{{.L.T "setup.site.title"}}</h2>
+          {{template "setup_badge" (bundle . $st)}}
+        </div>
+        <p class="setup-step__text">{{if $d.Progress.Site}}{{.L.T "setup.site.done"}}{{else}}{{.L.T "setup.site.todo"}}{{end}}</p>
+        <p class="setup-step__actions"><a class="btn {{if $d.Progress.Site}}btn--ghost btn--small{{else}}btn--primary{{end}}" href="/{{if not $d.Progress.Site}}#new-site{{end}}">{{if $d.Progress.Site}}{{.L.T "setup.site.manage"}}{{else}}{{.L.T "setup.site.action"}}{{end}}</a></p>
+      </div>
+    </li>
+  </ol>
+</div>
+{{end}}
+
+{{define "setup_records"}}{{$d := .D}}{{$c := $d.Checks}}
+<div class="setup-records">
+  <p class="setup-records__lede">{{.L.T "setup.domain.where"}}</p>
+  <table class="table dns-table">
+    <thead><tr>
+      <th scope="col">{{.L.T "setup.domain.col.type"}}</th>
+      <th scope="col">{{.L.T "setup.domain.col.name"}}</th>
+      <th scope="col">{{.L.T "setup.domain.col.value"}}</th>
+    </tr></thead>
+    <tbody>
+    {{range $i, $rec := $c.Domain.Records}}
+    <tr>
+      <td data-label="{{$.L.T "setup.domain.col.type"}}" class="mono dns-table__type">{{$rec.Type}}</td>
+      <td data-label="{{$.L.T "setup.domain.col.name"}}"><span class="mono dns-table__name">{{$rec.Name}}</span> <span class="hint addr-break">{{wbr (recordhost $rec.Name $d.Domain)}}</span></td>
+      <td data-label="{{$.L.T "setup.domain.col.value"}}">
+        {{if $rec.Value}}
+        <span class="dns-table__value"><code class="mono" id="rec-{{$i}}">{{$rec.Value}}</code>
+        <button class="btn btn--small btn--ghost" type="button" data-copy="#rec-{{$i}}" data-copied="{{$.L.T "copy.done"}}" aria-label="{{$.L.T "copy.button"}}: {{$rec.Type}} {{$rec.Name}} {{$rec.Value}}">{{$.L.T "copy.button"}}</button></span>
+        {{else}}<span class="muted">{{$.L.T "setup.domain.value.unknown"}}</span>{{end}}
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  <ul class="setup-records__notes">
+    <li>{{.L.T "setup.domain.names"}}</li>
+    <li>{{.L.T "setup.domain.sub" "domain" $d.Domain}}</li>
+    <li>{{.L.T "setup.domain.wait"}}</li>
+    {{if $d.Unknown}}<li>{{.L.T "setup.domain.ipsunknown"}}</li>{{end}}
+  </ul>
+</div>
+{{end}}
+
+{{define "start_summary"}}{{$d := .D}}
+<aside class="setup-card{{if $d.AllDone}} setup-card--ready{{end}}" id="setup-card" aria-labelledby="setup-card-h">
+  <div class="setup-card__text">
+    <p class="eyebrow">{{.L.T "nav.start"}}</p>
+    <h2 class="setup-card__title" id="setup-card-h">{{if $d.AllDone}}{{.L.T "setup.ready"}}{{else}}{{.L.T "setup.progress" "done" $d.Done "total" $d.Total}}{{end}}</h2>
+    {{with $d.Next}}<p class="hint">{{$.L.T "setup.next" "step" ($.L.T (printf "setup.%s.title" .))}}</p>{{else}}<p class="hint">{{.L.T "setup.ready.text"}}</p>{{end}}
+  </div>
+  {{if $d.Checks}}
+  <ol class="setup-meter" aria-hidden="true">
+    <li{{if eq (print $d.Checks.Domain.State) "done"}} class="is-done"{{end}}></li>
+    <li{{if eq (print $d.Checks.HTTPS.State) "done"}} class="is-done"{{end}}></li>
+    <li{{if $d.Progress.Chat}} class="is-done"{{end}}></li>
+    <li{{if $d.Progress.Site}} class="is-done"{{end}}></li>
+  </ol>
+  {{end}}
+  <div class="setup-card__actions">
+    {{if $d.AllDone}}
+    <form method="post" action="/start/hide">
+      {{template "csrf" .}}
+      <button class="btn btn--small" type="submit">{{.L.T "setup.hide"}}</button>
+    </form>
+    <a class="link-quiet" href="/start">{{.L.T "setup.open"}}</a>
+    {{else}}
+    <a class="btn btn--primary" href="/start{{with $d.Next}}#step-{{.}}{{end}}">{{.L.T "setup.continue"}}</a>
+    {{end}}
+  </div>
+</aside>
+{{end}}
+
+{{define "start_summary_slot"}}
+<aside class="setup-card setup-card--loading" id="setup-card" hx-get="/start/summary" hx-trigger="load" hx-swap="outerHTML" aria-busy="true">
+  <div class="setup-card__text">
+    <p class="eyebrow">{{.L.T "nav.start"}}</p>
+    <p class="setup-card__title">{{.L.T "setup.checking"}}</p>
+  </div>
+  <div class="setup-card__actions"><a class="btn btn--ghost" href="/start">{{.L.T "setup.open"}}</a></div>
+</aside>
+{{end}}

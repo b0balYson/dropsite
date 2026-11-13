@@ -1,3 +1,7 @@
+{{define "guide_url"}}{{/* .R = view, .V = id suffix */}}
+<span class="guide-url"><code class="mono" id="mcp-url-{{.V}}">{{.R.D.MCPURL}}</code><button class="btn btn--small" type="button" data-copy="#mcp-url-{{.V}}" data-copied="{{.R.L.T "copy.done"}}">{{.R.L.T "copy.button"}}</button></span>
+{{end}}
+
 {{define "content"}}
 <header class="page-head">
   <div class="page-head__text">
@@ -23,32 +27,46 @@
     <p class="hint">{{.L.T "connect.chat.code"}}</p>
   </div>
   <div class="chat-steps">
-    <div class="chat-steps__col">
-      <h3 class="chat-steps__title">ChatGPT</h3>
-      <ol class="steps-small">
-        <li>{{.L.T "connect.chat.gpt.1"}}</li>
-        <li>{{.L.T "connect.chat.gpt.2"}}</li>
-        <li>{{.L.T "connect.chat.gpt.3"}}</li>
+    <article class="guide" aria-labelledby="guide-gpt-h">
+      <h3 class="chat-steps__title" id="guide-gpt-h">ChatGPT</h3>
+      <ol class="guide-steps">
+        <li>{{emph (.L.T "connect.guide.gpt.1")}}</li>
+        <li>{{emph (.L.T "connect.guide.gpt.2")}}</li>
+        <li>{{emph (.L.T "connect.guide.gpt.3")}}</li>
+        <li>{{emph (.L.T "connect.guide.gpt.4")}}{{template "guide_url" (bundle . "gpt")}}</li>
+        <li>{{emph (.L.T "connect.guide.gpt.5")}}</li>
+        <li>{{emph (.L.T "connect.guide.code")}} <a class="guide-jump" href="#connect-block">{{.L.T "connect.guide.code.jump"}}</a></li>
+        <li>{{emph (.L.T "connect.guide.gpt.7")}}</li>
       </ol>
       <p class="hint">{{.L.T "connect.chat.gpt.plans"}} <a href="https://help.openai.com/" rel="noopener noreferrer" target="_blank">help.openai.com</a></p>
-    </div>
-    <div class="chat-steps__col">
-      <h3 class="chat-steps__title">{{.L.T "connect.chat.claude.title"}}</h3>
-      <ol class="steps-small">
-        <li>{{.L.T "connect.chat.claude.1"}}</li>
-        <li>{{.L.T "connect.chat.claude.2"}}</li>
-        <li>{{.L.T "connect.chat.claude.3"}}</li>
+    </article>
+    <article class="guide" aria-labelledby="guide-claude-h">
+      <h3 class="chat-steps__title" id="guide-claude-h">{{.L.T "connect.chat.claude.title"}}</h3>
+      <ol class="guide-steps">
+        <li>{{emph (.L.T "connect.guide.claude.1")}}</li>
+        <li>{{emph (.L.T "connect.guide.claude.2")}}</li>
+        <li>{{emph (.L.T "connect.guide.claude.3")}}{{template "guide_url" (bundle . "claude")}}</li>
+        <li>{{emph (.L.T "connect.guide.claude.4")}}</li>
+        <li>{{emph (.L.T "connect.guide.code")}} <a class="guide-jump" href="#connect-block">{{.L.T "connect.guide.code.jump"}}</a></li>
+        <li>{{emph (.L.T "connect.guide.claude.6")}}</li>
       </ol>
-    </div>
-    <div class="chat-steps__col">
-      <h3 class="chat-steps__title">Claude Code</h3>
-      <ol class="steps-small">
+      <p class="hint">{{emph (.L.T "connect.guide.claude.team")}}</p>
+    </article>
+    <article class="guide guide--quiet" aria-labelledby="guide-cc-h">
+      <h3 class="chat-steps__title" id="guide-cc-h">Claude Code</h3>
+      <ol class="guide-steps">
         <li>{{.L.T "connect.chat.cc.1"}}
           <pre class="code" id="cc-cmd"><code>claude mcp add --transport http dropsite {{.D.MCPURL}}</code></pre>
           <button class="btn btn--small btn--ghost" type="button" data-copy="#cc-cmd" data-copied="{{.L.T "copy.done"}}">{{.L.T "copy.button"}}</button>
         </li>
         <li>{{.L.T "connect.chat.cc.2"}}</li>
       </ol>
+    </article>
+    <div class="first-say" role="note" aria-labelledby="first-say-h">
+      <p class="first-say__label" id="first-say-h">{{.L.T "connect.first.title"}}</p>
+      <p class="first-say__phrase">{{.L.T "connect.first.check"}}</p>
+      <p class="hint">{{.L.T "connect.first.check.text"}}</p>
+      <p class="first-say__phrase">{{.L.T "connect.first.make"}}</p>
     </div>
   </div>
 </section>
@@ -88,6 +106,34 @@
       <li>{{.L.T "connect.self.admin"}}</li>
     </ul>
   </div>
+</section>
+
+<section class="section connect-trouble" id="trouble" aria-labelledby="trouble-h">
+  <h2 class="section-title" id="trouble-h">{{.L.T "connect.trouble.title"}}</h2>
+  <dl class="trouble-list">
+    <div class="trouble">
+      <dt>{{.L.T "connect.trouble.dns.q"}}</dt>
+      <dd>{{.L.T "connect.trouble.dns.a"}}
+        {{if .IsAdmin}}<a href="/start#step-domain">{{.L.T "connect.trouble.checklist"}}</a>{{else}}{{.L.T "connect.trouble.askadmin"}}{{end}}</dd>
+    </div>
+    <div class="trouble">
+      <dt>{{.L.T "connect.trouble.failed.q"}}</dt>
+      <dd><p>{{.L.T "connect.trouble.failed.a"}} <a class="mono addr-break" href="{{.D.MetaURL}}" target="_blank" rel="noopener noreferrer">{{wbr .D.MetaURL}}</a></p>
+        <p>{{.L.T "connect.trouble.failed.b"}} {{if .IsAdmin}}<a href="/start#step-https">{{.L.T "connect.trouble.checklist"}}</a>{{else}}{{.L.T "connect.trouble.askadmin"}}{{end}}</p></dd>
+    </div>
+    <div class="trouble">
+      <dt>{{.L.T "connect.trouble.plan.q"}}</dt>
+      <dd>{{emph (.L.T "connect.trouble.plan.a")}} <a href="https://help.openai.com/" rel="noopener noreferrer" target="_blank">help.openai.com</a></dd>
+    </div>
+    <div class="trouble">
+      <dt>{{.L.T "connect.trouble.code.q"}}</dt>
+      <dd>{{emph (.L.T "connect.trouble.code.a")}}</dd>
+    </div>
+    <div class="trouble">
+      <dt>{{.L.T "connect.trouble.unused.q"}}</dt>
+      <dd>{{emph (.L.T "connect.trouble.unused.a")}}</dd>
+    </div>
+  </dl>
 </section>
 
 <section class="section" id="apps" aria-labelledby="apps-h">

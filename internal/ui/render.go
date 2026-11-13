@@ -29,6 +29,29 @@ var funcs = template.FuncMap{
 	"dict":   dict,
 	"list":   func(v ...string) []string { return v },
 	"langs":  func() []langOption { return langOptions },
+	// recordhost spells a DNS record name ("@", "*") as a full host name.
+	"recordhost": recordHost,
+	"emph":       emph,
+}
+
+// emph escapes s and renders **text** as <strong>text</strong>, so catalog
+// strings can mark the exact menu names a person looks for.
+func emph(s string) template.HTML {
+	parts := strings.Split(s, "**")
+	var b strings.Builder
+	for i, p := range parts {
+		open := i%2 == 1 && i < len(parts)-1
+		if open {
+			b.WriteString("<strong>")
+		} else if i%2 == 1 {
+			b.WriteString("**") // an unpaired marker stays as text
+		}
+		b.WriteString(template.HTMLEscapeString(p))
+		if open {
+			b.WriteString("</strong>")
+		}
+	}
+	return template.HTML(b.String()) //nolint:gosec // every part is escaped above; only <strong> is added
 }
 
 // dict builds a map from alternating string keys and values.
@@ -100,9 +123,12 @@ type view struct {
 	Path    string
 	Product string
 	// Site is set on the pages of one site (see sitePageOf).
-	Site   *siteNav
-	assets map[string]string
-	D      any
+	Site *siteNav
+	// ShowStart puts the first-run checklist in the sidebar (admins, until
+	// it is dismissed).
+	ShowStart bool
+	assets    map[string]string
+	D         any
 }
 
 // Asset returns the cache-busting URL of a static file.
@@ -116,6 +142,7 @@ func (s *server) newView(r *http.Request, rc *reqCtx, nav, title string, data an
 	if rc.authed {
 		u := rc.actor.User
 		v.Me, v.IsAdmin = &u, u.IsAdmin()
+		v.ShowStart = v.IsAdmin && !s.svc.SetupHidden(r.Context())
 	}
 	return v
 }

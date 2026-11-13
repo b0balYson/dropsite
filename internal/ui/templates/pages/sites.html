@@ -9,6 +9,8 @@
 
 {{if .D.AtLimit}}{{with .D.Form.Error}}<p class="notice notice--error" role="alert">{{.}}</p>{{end}}<p class="notice notice--warn" role="status">{{.L.T "sites.atlimit" "limit" .D.Limit}}</p>{{end}}
 
+{{if .ShowStart}}{{template "start_summary_slot" .}}{{end}}
+
 {{template "sites_workspace_filter" .}}
 
 {{if .D.Sites}}

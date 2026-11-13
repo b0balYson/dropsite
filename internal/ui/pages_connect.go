@@ -7,6 +7,7 @@ import (
 
 	"github.com/b0balYson/dropsite/internal/brand"
 	"github.com/b0balYson/dropsite/internal/domain"
+	"github.com/b0balYson/dropsite/internal/setupcheck"
 )
 
 const (
@@ -41,9 +42,11 @@ type issuedCode struct {
 }
 
 type connectData struct {
-	Code     *issuedCode
-	Apps     []domain.OAuthGrant
-	MCPURL   string
+	Code   *issuedCode
+	Apps   []domain.OAuthGrant
+	MCPURL string
+	// MetaURL is the OAuth metadata address people open when a connector fails.
+	MetaURL  string
 	Tokens   []tokenRow
 	Issued   *issuedToken
 	Error    string
@@ -88,7 +91,8 @@ func (s *server) connectData(r *http.Request, rc *reqCtx) (connectData, error) {
 		}
 		rows = append(rows, tokenRow{Token: t, State: state})
 	}
-	return connectData{Tokens: rows, Apps: apps, TTLs: tokenTTLs, MCPURL: s.svc.MCPResource()}, nil
+	return connectData{Tokens: rows, Apps: apps, TTLs: tokenTTLs, MCPURL: s.svc.MCPResource(),
+		MetaURL: s.svc.APIURL() + setupcheck.ProbePath}, nil
 }
 
 func (s *server) connectPage(w http.ResponseWriter, r *http.Request, rc *reqCtx) {

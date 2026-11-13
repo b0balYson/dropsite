@@ -18,6 +18,7 @@
     <a class="sidebar__close" href="#" data-menu-close><span aria-hidden="true">✕</span><span class="sr-only">{{.L.T "nav.menu.close"}}</span></a>
   </div>
   <nav class="side-nav" aria-label="{{.L.T "nav.label"}}">
+    {{with .StartLink}}<ul class="side-nav__list side-start"><li class="side-nav__item">{{template "side_link" .}}</li></ul>{{end}}
     <ul class="side-nav__list">
       {{range $i, $l := .MainLinks}}
       <li class="side-nav__item{{if and (eq $i 0) $.Site}} is-open{{end}}">

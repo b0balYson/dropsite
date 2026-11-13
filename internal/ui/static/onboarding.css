@@ -1,0 +1,236 @@
+/* First-run checklist ("Getting started") and the step-by-step chat guides
+   of the Connect AI page. Uses the tokens of app.css. */
+
+/* ---- sidebar entry ------------------------------------------------------- */
+
+.side-start { margin-bottom: var(--s-3); }
+.side-start .side-link {
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 var(--c-current);
+}
+
+/* ---- status bar ---------------------------------------------------------- */
+
+.setup-status {
+  display: grid;
+  gap: var(--s-4);
+  align-items: center;
+  padding: var(--s-5);
+  background: var(--c-surface);
+  border: var(--rule-thin) solid var(--c-hair);
+  border-top: var(--rule-thick) solid var(--c-rule);
+}
+.setup-status--ready { border-top-color: var(--c-ok); background: var(--c-ok-bg); }
+.setup-status__text { min-width: 0; }
+.setup-status__text > * + * { margin-top: var(--s-1); }
+.setup-status__count { font-size: var(--t-md); font-weight: 700; letter-spacing: -0.01em; }
+.setup-status__count .mono { margin-right: var(--s-2); color: var(--c-ink-2); font-weight: 600; }
+.setup-status__actions { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-3); align-items: center; }
+@media (min-width: 48rem) {
+  .setup-status { grid-template-columns: minmax(0, 1fr) 9rem auto; }
+}
+
+/* Four segments, one per required step. */
+.setup-meter { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; min-width: 6rem; }
+.setup-meter li { height: 6px; border-radius: 1px; background: var(--c-hair); }
+.setup-meter li.is-done { background: var(--c-ok); }
+
+/* While a re-check runs the old results fade. */
+.setup.htmx-request .setup-list { opacity: 0.5; transition: opacity var(--dur) var(--ease); }
+.setup.htmx-request .setup-status__actions .btn { pointer-events: none; }
+.setup[aria-busy="true"] .setup-status__count::after,
+.setup-checking::after {
+  content: "";
+  display: inline-block;
+  width: 0.7em;
+  height: 0.7em;
+  margin-left: 0.5em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: -0.05em;
+  animation: setup-spin 0.9s linear infinite;
+}
+.setup-checking::after { margin-left: 0.15em; border-width: 1.5px; }
+.setup-checking::before { display: none; }
+@keyframes setup-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .setup[aria-busy="true"] .setup-status__count::after, .setup-checking::after { animation: none; }
+}
+
+/* ---- steps --------------------------------------------------------------- */
+
+.setup-list { margin-top: var(--s-5); }
+.setup-step {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  gap: var(--s-4);
+  padding: var(--s-5) 0;
+  border-bottom: var(--rule-thin) solid var(--c-hair);
+}
+.setup-step:last-child { border-bottom: 0; }
+@media (min-width: 48rem) {
+  .setup-step { grid-template-columns: 4rem minmax(0, 1fr); gap: var(--s-5); }
+}
+.setup-step__mark {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1.5px solid var(--c-ink);
+  border-radius: 50%;
+  font-size: var(--t-sm);
+  font-weight: 600;
+  background: var(--c-surface);
+}
+.setup-step--done .setup-step__mark { background: var(--c-ok); border-color: var(--c-ok); color: var(--c-surface); font-size: var(--t-md); }
+.setup-step--problem .setup-step__mark { background: var(--c-error); border-color: var(--c-error); color: var(--c-surface); font-weight: 700; }
+.setup-step--checking .setup-step__mark { border-style: dashed; color: var(--c-ink-3); }
+.setup-step__body { min-width: 0; max-width: 52rem; }
+.setup-step__body > * + * { margin-top: var(--s-3); }
+.setup-step__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); }
+.setup-step__title { font-size: var(--t-lg); font-weight: 700; letter-spacing: -0.015em; line-height: 1.2; }
+.setup-step--done .setup-step__title { color: var(--c-ink-2); }
+.setup-step__text { max-width: 62ch; }
+.setup-step--problem .setup-step__text { color: var(--c-ink); }
+.setup-step__actions { display: flex; flex-wrap: wrap; gap: var(--s-3); }
+
+.setup-now { display: grid; gap: var(--s-1); font-size: var(--t-sm); }
+.setup-now li { padding-left: var(--s-3); border-left: 2px solid var(--c-hair); }
+
+.setup-more > summary { cursor: pointer; font-size: var(--t-sm); font-weight: 600; width: max-content; max-width: 100%; }
+.setup-more[open] > summary { margin-bottom: var(--s-3); }
+
+/* ---- DNS records --------------------------------------------------------- */
+
+.setup-records { padding: var(--s-4); background: var(--c-sunk); border-left: 4px solid var(--c-ink); }
+.setup-records > * + * { margin-top: var(--s-3); }
+.setup-records__lede { font-weight: 600; }
+.setup-records .table { background: var(--c-surface); }
+.dns-table__type { font-weight: 600; width: 5rem; }
+.dns-table__name { font-weight: 600; font-size: var(--t-md); margin-right: var(--s-2); }
+.dns-table__value { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); }
+.dns-table__value code { font-size: var(--t-md); font-weight: 600; overflow-wrap: anywhere; }
+.setup-records__notes { display: grid; gap: var(--s-1); padding-left: 1.25rem; list-style: disc; font-size: var(--t-sm); color: var(--c-ink-2); max-width: 70ch; }
+
+/* ---- optional steps and dismissal ---------------------------------------- */
+
+.setup-optional { margin-top: var(--s-7); }
+.setup-group {
+  font-family: var(--f-mono);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-ink-2);
+  padding-bottom: var(--s-2);
+  border-bottom: var(--rule-thin) solid var(--c-rule);
+}
+.setup-list--optional { margin-top: 0; }
+.setup-list--optional .setup-step__title { font-size: var(--t-md); }
+.setup-list--optional .setup-step__mark { width: 2rem; height: 2rem; margin-left: 0.25rem; }
+.setup-dismiss { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-2) var(--s-3); margin-top: var(--s-6); padding-top: var(--s-4); border-top: var(--rule-thin) solid var(--c-hair); }
+.setup-hidden { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-3); margin-bottom: var(--s-5); }
+.setup-hidden > * + * { margin-top: 0; }
+
+/* ---- card on the sites list ---------------------------------------------- */
+
+.setup-card {
+  display: grid;
+  gap: var(--s-3) var(--s-5);
+  align-items: center;
+  margin-bottom: var(--s-6);
+  padding: var(--s-4) var(--s-5);
+  background: var(--c-surface);
+  border: var(--rule-thin) solid var(--c-hair);
+  border-left: 6px solid var(--c-current);
+  min-height: 6.5rem;
+}
+.setup-card--ready { border-left-color: var(--c-ok); }
+.setup-card--loading { border-left-color: var(--c-hair); }
+.setup-card .eyebrow { margin-bottom: var(--s-1); }
+.setup-card__text { min-width: 0; }
+.setup-card__title { font-size: var(--t-md); font-weight: 700; letter-spacing: -0.01em; }
+.setup-card__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); }
+@media (min-width: 48rem) {
+  .setup-card { grid-template-columns: minmax(0, 1fr) 8rem auto; }
+  .setup-card--loading { grid-template-columns: minmax(0, 1fr) auto; }
+}
+.link-quiet { font-size: var(--t-sm); color: var(--c-ink-2); }
+.link-quiet:hover { color: var(--c-ink); }
+
+/* ---- Connect AI: step-by-step guides ------------------------------------- */
+
+.guide { padding-top: var(--s-3); border-top: var(--rule-thin) solid var(--c-hair); min-width: 0; }
+.guide > * + * { margin-top: var(--s-3); }
+.guide--quiet .chat-steps__title { color: var(--c-ink-2); }
+.guide-steps { counter-reset: g; display: grid; gap: var(--s-3); }
+.guide-steps > li { counter-increment: g; position: relative; padding-left: 2.25rem; min-width: 0; }
+.guide-steps > li::before {
+  content: counter(g);
+  position: absolute;
+  left: 0;
+  top: 0.05em;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1.5px solid var(--c-ink);
+  border-radius: 50%;
+  font-family: var(--f-mono);
+  font-size: var(--t-xs);
+  font-weight: 600;
+}
+.guide-steps strong { font-weight: 700; }
+.guide-steps .code { margin-block: var(--s-2); }
+.guide-url {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+  padding: var(--s-2) var(--s-2) var(--s-2) var(--s-3);
+  background: var(--c-ink);
+  border-radius: var(--r-sm);
+}
+.guide-url code { flex: 1 1 12rem; min-width: 0; color: var(--c-paper); font-size: var(--t-sm); overflow-wrap: anywhere; }
+.guide-jump { font-size: var(--t-sm); font-weight: 600; white-space: nowrap; }
+
+.first-say {
+  padding: var(--s-4) var(--s-5);
+  background: var(--c-current-bg);
+  border-left: 6px solid var(--c-current);
+}
+.first-say > * + * { margin-top: var(--s-2); }
+.first-say__label { font-family: var(--f-mono); font-size: var(--t-xs); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-current); }
+.first-say__phrase { font-size: var(--t-md); font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; }
+
+.trouble-list { display: grid; gap: 0; max-width: 60rem; }
+.trouble { padding: var(--s-4) 0; border-top: var(--rule-thin) solid var(--c-hair); }
+.trouble:first-child { border-top: var(--rule-thin) solid var(--c-rule); }
+.trouble dt { font-weight: 700; }
+.trouble dd { margin: var(--s-2) 0 0; color: var(--c-ink-2); max-width: 70ch; }
+.trouble dd > p + p { margin-top: var(--s-2); }
+.dns-table td { vertical-align: middle; }
+.setup-now .mono { overflow-wrap: anywhere; }
+
+/* Phones: a record is two lines (type and name, then the value to copy),
+   and the records box uses the full width under the step mark. */
+@media (max-width: 47.99rem) {
+  .setup-step { grid-template-columns: 2.25rem minmax(0, 1fr); gap: var(--s-3); }
+  .setup-step__mark { width: 2.25rem; height: 2.25rem; }
+  .setup-records { margin-left: calc(-2.25rem - var(--s-3)); padding: var(--s-3); }
+  .table.dns-table tr {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--s-2) var(--s-3);
+    align-items: baseline;
+    padding: var(--s-3) var(--s-2);
+  }
+  .table.dns-table td { display: block; width: auto; padding: 0; }
+  .table.dns-table td::before { content: none; }
+  .table.dns-table td:nth-child(3) { grid-column: 1 / -1; }
+  .dns-table__type { width: auto; }
+  .dns-table__value code { font-size: var(--t-base); }
+}
+.setup-restore { margin-top: var(--s-3); }

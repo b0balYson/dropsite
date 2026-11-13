@@ -72,4 +72,15 @@
 
 {{template "admin_forms" .}}
 {{template "admin_sheets" .}}
+
+{{if not .ShowStart}}
+<section class="section" aria-labelledby="setup-h">
+  <h2 class="section-title" id="setup-h">{{.L.T "nav.start"}}</h2>
+  <p class="hint">{{.L.T "setup.hidden.note"}}</p>
+  <form class="setup-restore" method="post" action="/start/show">
+    {{template "csrf" .}}
+    <button class="btn btn--small" type="submit">{{.L.T "setup.show"}}</button>
+  </form>
+</section>
+{{end}}
 {{end}}

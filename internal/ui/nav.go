@@ -101,6 +101,18 @@ func (v view) links(items []mainItem) []navLink {
 // MainLinks are the sidebar's primary sections.
 func (v view) MainLinks() []navLink { return v.links(mainNav) }
 
+// StartLink is the first-run checklist entry; nil once it is dismissed.
+func (v view) StartLink() *navLink {
+	if !v.ShowStart {
+		return nil
+	}
+	l := navLink{Href: "/start", Label: v.L.T("nav.start")}
+	if v.Nav == "start" {
+		l.Current = "page"
+	}
+	return &l
+}
+
 // AdminLinks are the administration sections; empty for other users.
 func (v view) AdminLinks() []navLink {
 	if !v.IsAdmin {
@@ -136,6 +148,9 @@ func (v view) SectionLabel() string {
 				return v.L.T(s.Label)
 			}
 		}
+	}
+	if v.Nav == "start" {
+		return v.L.T("nav.start")
 	}
 	for _, it := range append(append([]mainItem{}, mainNav...), adminNav...) {
 		if it.Nav == v.Nav {

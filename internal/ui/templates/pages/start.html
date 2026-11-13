@@ -1,0 +1,59 @@
+{{define "content"}}{{$d := .D}}
+<header class="page-head">
+  <div class="page-head__text">
+    <p class="eyebrow">{{.L.T "setup.eyebrow"}}</p>
+    <h1 class="display">{{.L.T "setup.title"}}</h1>
+    <p class="lede">{{.L.T "setup.lede"}}</p>
+  </div>
+</header>
+
+{{if $d.Progress.Hidden}}
+<div class="notice setup-hidden" role="status">
+  <p>{{.L.T "setup.hidden.note"}}</p>
+  <form method="post" action="/start/show">
+    {{template "csrf" .}}
+    <button class="btn btn--small" type="submit">{{.L.T "setup.show"}}</button>
+  </form>
+</div>
+{{end}}
+
+{{template "start_checks" .}}
+
+<section class="setup-optional" aria-labelledby="setup-optional-h">
+  <h2 class="setup-group" id="setup-optional-h">{{.L.T "setup.optional"}}</h2>
+  <ol class="setup-list setup-list--optional">
+    {{$st := print ($d.StepState $d.Progress.Team)}}
+    <li class="setup-step setup-step--{{$st}}" id="step-team">
+      {{template "setup_mark" (bundle . (dict "State" $st "N" "+"))}}
+      <div class="setup-step__body">
+        <div class="setup-step__head">
+          <h3 class="setup-step__title">{{.L.T "setup.team.title"}}</h3>
+          {{template "setup_badge" (bundle . $st)}}
+        </div>
+        <p class="setup-step__text">{{if $d.Progress.Team}}{{.L.T "setup.team.done"}}{{else}}{{.L.T "setup.team.todo"}}{{end}}</p>
+        <p class="setup-step__actions"><a class="btn btn--ghost btn--small" href="/admin/users">{{.L.T "setup.team.action"}}</a></p>
+      </div>
+    </li>
+    {{$st = print ($d.StepState $d.Progress.Requests)}}
+    <li class="setup-step setup-step--{{$st}}" id="step-requests">
+      {{template "setup_mark" (bundle . (dict "State" $st "N" "+"))}}
+      <div class="setup-step__body">
+        <div class="setup-step__head">
+          <h3 class="setup-step__title">{{.L.T "setup.requests.title"}}</h3>
+          {{template "setup_badge" (bundle . $st)}}
+        </div>
+        <p class="setup-step__text">{{if $d.Progress.Requests}}{{.L.T "setup.requests.done"}}{{else}}{{.L.T "setup.requests.todo"}}{{end}}</p>
+        <p class="setup-step__actions"><a class="btn btn--ghost btn--small" href="/admin/settings#forms-h">{{.L.T "setup.requests.action"}}</a></p>
+      </div>
+    </li>
+  </ol>
+</section>
+
+{{if not $d.Progress.Hidden}}
+<form class="setup-dismiss" method="post" action="/start/hide">
+  {{template "csrf" .}}
+  <button class="link-btn" type="submit">{{.L.T "setup.hide"}}</button>
+  <span class="hint">{{.L.T "setup.hide.hint"}}</span>
+</form>
+{{end}}
+{{end}}
