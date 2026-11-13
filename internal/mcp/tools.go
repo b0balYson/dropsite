@@ -87,12 +87,14 @@ func (t tools) register(s *sdk.Server, o Options) {
 	sdk.AddTool(s, &sdk.Tool{Name: "get_site", Annotations: readOnly("Get site"),
 		Description: "Get one site: its name, every link (primary first), the version being served, password, " +
 			"search engine and expiry settings, own domains, the draft waiting to be published, and what is " +
-			"attached (forms with requests, delivery channels, analytics counters). Call it when a chat turns to an existing site, and build on what is " +
-			"already set up instead of offering it again. Show the user the primary link."}, t.getSite)
+			"attached (forms with requests, delivery channels, analytics counters, data collections, API key " +
+			"proxies). Call it when a chat turns to an existing site, and build on what is already set up instead " +
+			"of offering it again. Show the user the primary link."}, t.getSite)
 	sdk.AddTool(s, &sdk.Tool{Name: "set_slug", Annotations: writes("Set address", false, true),
 		Description: "Set, change or remove (empty slug) the memorable address of a site, e.g. coffee-river." +
-			"<base domain>. The random address keeps working. If the label is taken, suggest variants. Tell the " +
-			"user the new link; it may need a minute to open the first time."}, t.setSlug)
+			"<base domain>; the same as update_site with only slug. The random address keeps working, the old " +
+			"memorable one stops. If the label is taken, suggest variants. Tell the user the new link; it may need " +
+			"a minute to open the first time."}, t.setSlug)
 	sdk.AddTool(s, &sdk.Tool{Name: "list_deploys", Annotations: readOnly("List versions"),
 		Description: "List the versions (releases) of a site, newest first, marking the one being served, with " +
 			"date, origin and, when enabled, a preview link of each version; the draft, if any, is marked. Use it when the user asks about " +
@@ -108,7 +110,8 @@ func (t tools) register(s *sdk.Server, o Options) {
 	if o.Files {
 		sdk.AddTool(s, &sdk.Tool{Name: "deploy_files", Annotations: writes("Publish files", false, false),
 			Description: "Publish a new static site, or replace a whole site, from files passed by value (at most " +
-				"16 MB in total) and return its link to give to the user. Creates a new site when site is omitted. " +
+				"16 MB in total) and return its link to give to the user (\"make a site for my bakery\"). Creates a " +
+				"new site when site is omitted. " +
 				"index.html is required at the root. Every file not passed is gone from the new version: to change " +
 				"an existing site use list_site_files, read_site_files and update_site_files instead. For sites " +
 				"larger than 16 MB use begin_upload, upload_files and commit_upload. Ship every image, font and script with the " +
@@ -166,23 +169,24 @@ func (t tools) createSite(ctx context.Context, req *sdk.CallToolRequest, in crea
 	return nil, s, err
 }
 
-func (t tools) getSite(ctx context.Context, req *sdk.CallToolRequest, in siteArgs) (*sdk.CallToolResult, Site, error) {
+func (t tools) getSite(ctx context.Context, req *sdk.CallToolRequest, in siteArgs) (*sdk.CallToolResult, SiteDetail, error) {
 	b, err := t.resolve(ctx, req)
 	if err != nil {
-		return nil, Site{}, err
+		return nil, SiteDetail{}, err
 	}
 	s, err := b.GetSite(ctx, in.Site)
 	if err != nil {
-		return nil, Site{}, err
+		return nil, SiteDetail{}, err
 	}
+	out := SiteDetail{Site: s}
 	if at, ok := b.(SiteAttacher); ok {
 		a, err := at.SiteAttachments(ctx, s.ID)
 		if err != nil {
-			return nil, Site{}, err
+			return nil, SiteDetail{}, err
 		}
-		s.Attached = &a
+		out.Attached = &a
 	}
-	return nil, s, nil
+	return nil, out, nil
 }
 
 func (t tools) setSlug(ctx context.Context, req *sdk.CallToolRequest, in slugArgs) (*sdk.CallToolResult, Site, error) {

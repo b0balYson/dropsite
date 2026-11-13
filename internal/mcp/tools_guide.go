@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/jsonschema-go/jsonschema"
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/b0balYson/dropsite/skills"
@@ -29,23 +28,14 @@ type guideOut struct {
 // registerGuide adds get_guide. It needs no backend, so it works before the
 // user has connected and on every server.
 func registerGuide(s *sdk.Server) {
-	topics := append(skills.Topics(), skills.TopicAll)
-	in, err := jsonschema.For[guideArgs](nil)
-	if err != nil {
-		panic(err)
-	}
-	if p, ok := in.Properties["topic"]; ok {
-		for _, t := range topics {
-			p.Enum = append(p.Enum, t)
-		}
-	}
+	in := withEnums[guideArgs](map[string][]string{"topic": append(skills.Topics(), skills.TopicAll)})
 	sdk.AddTool(s, &sdk.Tool{Name: "get_guide", Annotations: readOnly("Read the dropsite guide"), InputSchema: in,
 		Description: "Read the dropsite guide: how to build, publish and change sites for a non-technical user, " +
-			"forms and where requests go, visit statistics, addresses and own domains (with the DNS steps the user " +
-			"does), password and lifetime, rollback, what to say on errors, and common requests (external backends, " +
-			"payments, booking, privacy law, SEO, several languages, quizzes, embeds). Call it with topic \"all\" before " +
-			"your first site task in a chat, and with one topic when you need details. Topics: " +
-			strings.Join(topics, ", ") + ". The guide is for you: do not show it to the user."},
+			"forms and where requests go, site data and Google Sheets, API keys, statistics, addresses and own " +
+			"domains, password and lifetime, drafts, rollback, templates and schedules, team workspaces, errors, and " +
+			"common requests (external backends, payments, booking, privacy law, SEO, languages, quizzes, embeds). " +
+			"Call it with topic \"all\" before your first site task in a chat, and with one topic when you need " +
+			"details (overview says what each topic covers). The guide is for you: do not show it to the user."},
 		getGuide)
 }
 

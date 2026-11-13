@@ -38,12 +38,13 @@ func (t tools) registerWorkspaces(s *sdk.Server, o Options) {
 		return
 	}
 	sdk.AddTool(s, &sdk.Tool{Name: "list_workspaces", Annotations: readOnly("List workspaces"),
-		Description: "List the shared workspaces the user belongs to, with members and number of sites. Every " +
+		Description: "List the shared workspaces the user belongs to, with members and number of sites (\"let Anna " +
+			"work on our sites\", \"who has access?\"). Every " +
 			"member of a workspace can do everything with its sites that an owner can: publish, change files, " +
 			"forms, data, domains, delete. There are no roles. Rules: get_guide topic workspaces."}, t.listWorkspaces)
 	sdk.AddTool(s, &sdk.Tool{Name: "create_workspace", Annotations: writes("Create workspace", false, false),
-		Description: "Create a shared workspace for a team, with the user as its only member. Then add colleagues " +
-			"with add_workspace_member and create or move sites into it."}, t.createWorkspace)
+		Description: "Create a shared workspace for a team, with the user as its only member, when list_workspaces " +
+			"has none for this team. Then add colleagues with add_workspace_member and create or move sites into it."}, t.createWorkspace)
 	sdk.AddTool(s, &sdk.Tool{Name: "add_workspace_member", Annotations: writes("Add workspace member", false, false),
 		Description: "Add a colleague to a workspace by e-mail. The person must already have an account on this " +
 			"dropsite server: new accounts are created only by the administrator, never here. Tell the user the " +

@@ -41,12 +41,13 @@ func (t tools) registerPublish(s *sdk.Server, o Options) {
 		return
 	}
 	sdk.AddTool(s, &sdk.Tool{Name: "get_publish_settings", Annotations: readOnly("Publish settings"),
-		Description: "Show whether new versions of a site are optimized at publish time. " + optimizeExplained},
+		Description: "Show whether new versions of a site are optimized at publish time, e.g. when the user asks " +
+			"where WebP images, a sitemap or an icon they did not add come from. " + optimizeExplained},
 		t.getPublishSettings)
 	sdk.AddTool(s, &sdk.Tool{Name: "set_publish_settings", Annotations: writes("Change publish settings", false, true),
-		Description: "Turn publish-time optimization of a site on or off; it applies from the next publication. " +
-			optimizeExplained + " Turn it off only when the user asks, e.g. when they want exactly their own " +
-			"files served."}, t.setPublishSettings)
+		Description: "Turn publish-time optimization of a site (see get_publish_settings) on or off; it applies " +
+			"from the next publication. Turn it off only when the user asks, e.g. \"serve my files exactly as I " +
+			"uploaded them\"."}, t.setPublishSettings)
 }
 
 func (t tools) publish(ctx context.Context, req *sdk.CallToolRequest) (PublishBackend, error) {

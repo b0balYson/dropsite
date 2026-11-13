@@ -45,13 +45,13 @@ type listCollectionTemplatesArgs struct {
 
 func (t tools) registerCollectionTemplates(s *sdk.Server) {
 	sdk.AddTool(s, &sdk.Tool{Name: "list_collection_templates", Annotations: readOnly("List collection templates"),
-		Description: "List the built-in templates of site data collections: menu (categories and prices), catalog " +
+		Description: "List the built-in data templates of collections: menu (categories and prices), catalog " +
 			"(products), services (price list), events (schedule), team, faq and reviews (moderated). Call it before " +
 			"creating a collection for such content; with name it returns the template's JSON Schema, sample " +
-			"documents and a ready snippet that loads the collection, keeps fallback content and renders accessible " +
-			"markup without styles. A template is a starting point, not a design: adapt fields, samples, texts and " +
-			"markup to the site and style it with the site's own CSS so sites do not look alike. Then call " +
-			"save_collection with template."}, t.listCollectionTemplates)
+			"documents and an unstyled snippet that loads the collection and keeps fallback content. A template is " +
+			"a starting point, not a design: adapt fields, texts and markup to the site and style it with the " +
+			"site's own CSS. Then call save_collection with template. These are data templates; starter site " +
+			"designs are list_templates."}, t.listCollectionTemplates)
 }
 
 func (t tools) listCollectionTemplates(ctx context.Context, req *sdk.CallToolRequest, in listCollectionTemplatesArgs) (*sdk.CallToolResult, CollectionTemplateList, error) {

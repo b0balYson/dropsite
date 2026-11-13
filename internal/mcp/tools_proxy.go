@@ -49,13 +49,14 @@ func (t tools) registerProxyTools(s *sdk.Server) {
 			"counters. Keys are never shown. Use it before changing an endpoint or when calls from the site fail."},
 		t.listProxyEndpoints)
 	sdk.AddTool(s, &sdk.Tool{Name: "set_proxy_endpoint", Annotations: writes("Set up API key proxy", false, true),
-		Description: "Create or replace a secret proxy endpoint, so a page of a static site can call a third-party " +
-			"API (OpenAI or another model API, a CRM, a Telegram bot, maps, payments) without the key being in " +
-			"the page: the page calls /_dropsite/proxy/<name>/<path> and dropsite adds the key on the server. " +
-			"Pass the whole configuration each time. There is no key parameter: the user pastes the key " +
-			"in the web interface at secret_url; never ask for it in the chat. Changing upstream_url, " +
-			"allowed_hosts, auth or auth_name removes a stored key, so the user has to paste it again. Follow " +
-			"next_step. See get_guide topic proxy."}, t.setProxyEndpoint)
+		Description: "Create or replace a secret proxy endpoint when a page must call a third-party API with a " +
+			"secret key (\"add an AI chat to the site\": OpenAI or another model API, a CRM, a Telegram bot, maps): " +
+			"the page calls /_dropsite/proxy/<name>/<path> and dropsite adds the key on the server. Pass the whole " +
+			"configuration each time. There is no key parameter: the user pastes the key in the web interface at " +
+			"secret_url; never ask for it in the chat. Changing upstream_url, allowed_hosts, auth or auth_name " +
+			"removes a stored key, so the user has to paste it again. Follow next_step. Not for contact forms " +
+			"(use the site's forms) or sign-in and databases with a public key such as Supabase (get_guide topic " +
+			"external_backend); details: get_guide topic proxy."}, t.setProxyEndpoint)
 	sdk.AddTool(s, &sdk.Tool{Name: "delete_proxy_endpoint", Annotations: writes("Delete API key proxy", true, true),
 		Description: "Delete a secret proxy endpoint and its stored key; pages calling it stop working. Only " +
 			"after the user explicitly confirmed: pass the endpoint name again in confirm."}, t.deleteProxyEndpoint)

@@ -73,7 +73,7 @@ func (t tools) registerCollections(s *sdk.Server, o Options) {
 		return
 	}
 	sdk.AddTool(s, &sdk.Tool{Name: "list_collections", Annotations: readOnly("List site data"),
-		Description: "List the data collections of a site: small sets of JSON documents (menu items, prices, " +
+		Description: "List the data collections of a site (\"I want to change prices from the chat\"): small sets of JSON documents (menu items, prices, " +
 			"catalog entries, schedule, reviews) that the site's pages load from /_dropsite/data/<name>, so they " +
 			"change from the chat without a new release. Shows mode, schema, document and pending counts, the " +
 			"public address and snippet: ready JavaScript that loads the collection and keeps the HTML fallback " +
@@ -96,18 +96,21 @@ func (t tools) registerCollections(s *sdk.Server, o Options) {
 			"pending shows visitor proposals waiting for approval. Call it before changing documents, e.g. to " +
 			"find the ID of the item whose price the user wants to change."}, t.listDocuments)
 	sdk.AddTool(s, &sdk.Tool{Name: "save_documents", Annotations: writes("Save documents", true, false),
-		Description: "Write documents to a collection: a document with an existing ID is replaced as a whole, one " +
-			"without ID is added. Changes are live on the site at once, without a new release, and are not undone " +
-			"by a rollback. All documents are written or none (an error names the document index and field). " +
-			"replace true first removes every document of the collection: ask the user to confirm before using " +
-			"it. Tell the user what changed and give the site link."}, t.saveDocuments)
+		Description: "Add or change items of a collection (\"the cappuccino now costs 250\", \"add a dish\"): a " +
+			"document with an existing ID is replaced as a whole, one without ID is added. Changes are live on the " +
+			"site at once, without a new release or draft, and are not undone by a rollback. All documents are " +
+			"written or none (an error names the document index and field). replace true first removes every " +
+			"document of the collection: ask the user to confirm before using it. A collection linked to a Google " +
+			"Sheet (get_sheet_link) is overwritten by the next synchronization: change the sheet instead. Tell the " +
+			"user what changed and give the site link."}, t.saveDocuments)
 	sdk.AddTool(s, &sdk.Tool{Name: "delete_documents", Annotations: writes("Delete documents", true, true),
 		Description: "Delete documents of a collection by ID; they disappear from the site at once and cannot be " +
-			"restored. Ask the user to confirm which documents will be deleted first."}, t.deleteDocuments)
-	sdk.AddTool(s, &sdk.Tool{Name: "moderate_documents", Annotations: writes("Approve or reject", false, true),
+			"restored. Only after the user explicitly confirmed: say which items will be deleted and wait for yes " +
+			"(this tool has no confirm parameter)."}, t.deleteDocuments)
+	sdk.AddTool(s, &sdk.Tool{Name: "moderate_documents", Annotations: writes("Approve or reject", true, true),
 		Description: "Approve pending visitor proposals of a moderated collection (they appear on the site at " +
-			"once) or reject them (they are deleted). Show the user the pending documents from list_documents " +
-			"and act on their decision."}, t.moderateDocuments)
+			"once) or reject them (they are deleted), e.g. \"show new reviews\". Show the user the pending documents " +
+			"from list_documents and act only on their explicit decision; rejecting needs them to confirm which ones."}, t.moderateDocuments)
 }
 
 func (t tools) collections(ctx context.Context, req *sdk.CallToolRequest) (CollectionsBackend, error) {

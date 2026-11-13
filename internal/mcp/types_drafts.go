@@ -38,11 +38,9 @@ var ErrDiscardConfirm = errors.New("not deleted: ask the user to confirm deletin
 var errNoDrafts = errors.New("this server cannot save drafts")
 
 // draftAdvice is shared by the tools that publish.
-const draftAdvice = " Pass draft true to save a draft instead of going live: do so by default when the site is " +
-	"already live (it has visits, an own domain, or is older than three days), unless the user asked to publish " +
-	"directly; for a brand-new site publish directly. A draft is checked like any publication, visitors keep " +
-	"seeing the current version, and preview_url shows the draft: reply \"Here is how it will look: " +
-	"<preview_url>. Publish?\" and call publish_draft after a yes."
+const draftAdvice = " On a site that is already live (visits, an own domain, or older than three days) pass " +
+	"draft true unless the user asked to publish directly: visitors keep the current version, and you reply " +
+	"\"Here is how it will look: <preview_url>. Publish?\" and call publish_draft after a yes (get_guide topic drafts)."
 
 // draftSummary words the outcome of a change saved as a draft.
 func draftSummary(files int, siteURL, previewURL string) string {

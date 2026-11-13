@@ -100,14 +100,16 @@ func (t tools) registerForms(s *sdk.Server, o Options) {
 			"deliveries and suggest list_channels."}, t.listSubmissions)
 	sdk.AddTool(s, &sdk.Tool{Name: "export_submissions", Annotations: readOnly("Export submissions"),
 		Description: "Return a site's submissions as CSV text (the same columns as the download in the web " +
-			"interface, formulas escaped) for the user to save or paste into a spreadsheet. At most 100000 rows " +
-			"and 16 MB; when truncated is true, tell the user that only the newest rows are included and give " +
-			"cabinet_url, where the full CSV can be downloaded."}, t.exportSubmissions)
+			"interface, formulas escaped) when the user wants a file or a table of requests. Includes the newest " +
+			"max_rows rows (default 200, at most 1000) and at most 16 MB; when truncated is true, tell the user that " +
+			"only the newest rows are included and give cabinet_url, where the full CSV can be downloaded. For new " +
+			"requests to keep arriving in a Google Sheet, use add_channel with kind sheets instead."}, t.exportSubmissions)
 	sdk.AddTool(s, &sdk.Tool{Name: "list_channels", Annotations: readOnly("List delivery channels"),
 		Description: "List where a site's submissions are delivered (Telegram chats, e-mail addresses, " +
 			"webhooks, Google Sheets) with their state in plain words, and which channel kinds this server offers."}, t.listChannels)
 	sdk.AddTool(s, &sdk.Tool{Name: "add_channel", Annotations: writes("Add delivery channel", false, false),
-		Description: "Start delivering a site's submissions to Telegram, e-mail, a webhook or a Google Sheet. " +
+		Description: "Start delivering a site's form submissions to Telegram, e-mail, a webhook or a Google Sheet " +
+			"(\"send requests to my Telegram\"). " +
 			"telegram without target returns a link: ask the user to open it in Telegram and press Start in " +
 			"the chat that should get the submissions (for a group: add the bot to the group, then send the " +
 			"/start command shown in the link there); then call list_channels to see it active. " +
@@ -115,7 +117,8 @@ func (t tools) registerForms(s *sdk.Server, o Options) {
 			"webhook (target = https URL) is active at once and returns a signing secret shown only this once: " +
 			"give it to the user for the receiving system. " +
 			"sheets (target = link to the sheet, shared with the address from get_sheets_setup as Editor) writes the " +
-			"header row as a test and is active at once; every submission becomes a row, new fields add columns. " +
+			"header row as a test and is active at once; every submission becomes a row, new fields add columns " +
+			"(to take site data from a sheet, use link_sheet). " +
 			"Follow next_step in the result. If the result says " +
 			"channel_unavailable, tell the user that the administrator of the dropsite server must set up " +
 			"Telegram or e-mail first."}, t.addChannel)
@@ -126,8 +129,8 @@ func (t tools) registerForms(s *sdk.Server, o Options) {
 		Description: "Turn delivery to a channel off (queued submissions for it are dropped, they stay visible " +
 			"in list_submissions) or on again. Turning on also resumes a webhook or Google Sheet paused after repeated failures."}, t.setChannelEnabled)
 	sdk.AddTool(s, &sdk.Tool{Name: "delete_channel", Annotations: writes("Delete delivery channel", true, true),
-		Description: "Remove a delivery channel; submissions stay stored. Only after the user explicitly " +
-			"confirmed: pass the channel's ID or target again in confirm."}, t.deleteChannel)
+		Description: "Remove a delivery channel; submissions stay stored. To pause delivery instead, use " +
+			"set_channel_enabled. Only after the user explicitly confirmed: pass the channel's ID or target again in confirm."}, t.deleteChannel)
 	sdk.AddTool(s, &sdk.Tool{Name: "rotate_channel_secret", Annotations: writes("New webhook secret", true, false),
 		Description: "Issue a new signing secret for a webhook channel; the old one stops working at once, so " +
 			"the receiving system must be updated. Only after the user explicitly confirmed: pass the channel's " +

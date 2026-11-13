@@ -50,9 +50,8 @@ type commitUploadArgs struct {
 var errNoSiteFiles = errors.New("this server cannot read or edit site files")
 
 // fetchAdvice is shared advice for the tools that write files.
-const fetchAdvice = " Put images, fonts, CSS and JS inside the site (fetch downloads them from public https " +
-	"addresses; large photos are scaled down to 2000 px wide) instead of linking to other servers, so the site " +
-	"stays fast and keeps working."
+const fetchAdvice = " Ship images, fonts, CSS and JS inside the site instead of linking to other servers: fetch " +
+	"downloads them from public https addresses (large photos are scaled down to 2000 px wide)."
 
 // registerFiles adds the tools for reading and editing site files
 // (o.SiteFiles); the backend must implement SiteFilesBackend.
@@ -61,25 +60,27 @@ func (t tools) registerFiles(s *sdk.Server, o Options) {
 		return
 	}
 	sdk.AddTool(s, &sdk.Tool{Name: "list_site_files", Annotations: readOnly("List site files"),
-		Description: "List the files of a published site (the version being served, or deploy_id). Use it before " +
-			"changing an existing site, e.g. when the user asks to change prices, texts or photos. Returns deploy_id: " +
-			"pass it as base_deploy_id to update_site_files."}, t.listSiteFiles)
+		Description: "List the files of a published site (the version being served, or deploy_id, e.g. the draft). " +
+			"Call it first when the user asks to change texts, photos or pages of an existing site. Returns " +
+			"deploy_id: pass it as base_deploy_id to update_site_files. Prices, menus or schedules kept in a " +
+			"collection (get_site lists them under attached) change with save_documents, not by editing files."}, t.listSiteFiles)
 	sdk.AddTool(s, &sdk.Tool{Name: "read_site_files", Annotations: readOnly("Read site files"),
 		Description: "Read files of a published site: text as is, small binary files as base64, large ones only " +
 			"described. At most 8 MB of content per call; read the rest in further calls. Read the files you are " +
 			"going to change, then call update_site_files with the deploy_id returned here."}, t.readSiteFiles)
 	sdk.AddTool(s, &sdk.Tool{Name: "update_site_files", Annotations: writes("Change site files", false, false),
-		Description: "Change an existing site: add or replace files (whole content), delete files or folders, and " +
-			"download files by URL (fetch). Everything else stays as it was. Creates a new version; the previous one " +
-			"stays available for rollback. base_deploy_id must be the deploy_id you read the files from: if the " +
-			"site changed meanwhile you get a deploy_conflict error; then read the files again and redo the change. " +
-			"Give the user the returned link and say in plain words what changed. base_deploy_id may also be the " +
-			"site's draft, to keep working on it." + fetchAdvice + draftAdvice}, t.updateSiteFiles)
+		Description: "Change an existing site (\"change the photo\", \"add a page\"): add or replace files (whole " +
+			"content), delete files or folders, download files by URL (fetch); everything else stays. Creates a new " +
+			"version; the previous one stays available for rollback. base_deploy_id is the deploy_id you read the " +
+			"files from (or the draft's, to keep working on it); on deploy_conflict read the files again and redo the " +
+			"change. Give the user the returned link and say in plain words what changed. For a whole new site use " +
+			"deploy_files; for collection data use save_documents." + fetchAdvice + draftAdvice}, t.updateSiteFiles)
 	sdk.AddTool(s, &sdk.Tool{Name: "begin_upload", Annotations: writes("Start upload", false, false),
+		InputSchema: withEnums[beginUploadArgs](map[string][]string{"mode": {"", "replace", "patch"}}),
 		Description: "Start uploading a site that is larger than 16 MB, in parts. mode replace publishes exactly " +
 			"the uploaded files (a new site when site is omitted); mode patch adds them on top of base_deploy_id. " +
-			"Then call upload_files (up to 16 MB per call) and commit_upload. The session closes after 24 idle " +
-			"hours; at most 50 can be open."}, t.beginUpload)
+			"Then call upload_files (up to 16 MB per call) and commit_upload, or schedule_publish with upload_id to " +
+			"go live at a given time. The session closes after 24 idle hours; at most 50 can be open."}, t.beginUpload)
 	sdk.AddTool(s, &sdk.Tool{Name: "upload_files", Annotations: writes("Upload files", false, true),
 		Description: "Send the next part of an upload started with begin_upload: files by value (at most 16 MB per " +
 			"call) and/or fetch entries the server downloads. Sending a path again replaces it." + fetchAdvice}, t.uploadFiles)

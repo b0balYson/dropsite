@@ -84,30 +84,35 @@ func (t tools) registerWorkflow(s *sdk.Server, o Options) {
 			"domains, the address, password, lifetime and analytics counters are not; tell the user that in one " +
 			"line. To change the existing site instead, use update_site_files. Reply with the new link."}, t.cloneSite)
 	sdk.AddTool(s, &sdk.Tool{Name: "list_templates", Annotations: readOnly("List templates"),
-		Description: "List the built-in starter sites (cafe, services, event, portfolio, link page): small, fast, " +
-			"mobile-friendly and accessible. Offer one when the user wants a typical site and has no design yet."}, t.listTemplates)
+		Description: "List the built-in starter sites (cafe, services, event, portfolio, link page). Only when the " +
+			"user asks for a template or ready designs (\"quickly, from a template\") or wants a site online within a " +
+			"minute: by default build every site with its own design, because templates make sites look alike."}, t.listTemplates)
 	sdk.AddTool(s, &sdk.Tool{Name: "create_site_from_template", Annotations: writes("Create site from template", false, false),
-		Description: "Create and publish a new site from a built-in template with the user's site name, then " +
-			"replace the sample texts, prices and contacts with the user's own using list_site_files, " +
-			"read_site_files and update_site_files. Reply with the link."}, t.createFromTemplate)
+		Description: "Create and publish a new site from the starter site the user chose in list_templates, with " +
+			"their site name, then replace every sample text, price and contact with the user's own (list_site_files, " +
+			"read_site_files, update_site_files). Reply with the link."}, t.createFromTemplate)
 	sdk.AddTool(s, &sdk.Tool{Name: "schedule_publish", Annotations: writes("Schedule publish", false, false),
 		Description: "Make a version go live at a given time, e.g. \"publish the sale on Monday at 9\". Either pass " +
 			"upload_id of an upload (begin_upload, upload_files) instead of calling commit_upload: it becomes a " +
 			"prepared version that visitors do not see yet; or pass site and deploy_id of an existing version that " +
 			"is not being served. publish_at needs the user's time zone; ask if unsure. The site keeps showing " +
 			"the current version until then. Tell the user the date and time in their words and, if returned, the " +
-			"preview link to check the new version. Undo with cancel_scheduled_publish."}, t.schedulePublish)
+			"preview link to check the new version. Undo with cancel_scheduled_publish. To show a change first " +
+			"and publish it when the user says yes, use a draft instead (draft true, then publish_draft)."}, t.schedulePublish)
 	sdk.AddTool(s, &sdk.Tool{Name: "list_scheduled_publishes", Annotations: readOnly("List scheduled publishes"),
 		Description: "List versions waiting to go live and those that went live, failed or were cancelled in the " +
-			"last 7 days, for one site or all sites."}, t.listSchedules)
+			"last 7 days, for one site or all sites (\"what is scheduled?\", \"did the sale go live?\")."}, t.listSchedules)
 	sdk.AddTool(s, &sdk.Tool{Name: "cancel_scheduled_publish", Annotations: writes("Cancel scheduled publish", false, true),
-		Description: "Cancel a publish that is still waiting. The prepared version stays in the version list."}, t.cancelSchedule)
+		Description: "Cancel a publish that is still waiting, when the user changed their mind. The site keeps " +
+			"its current version; the prepared version stays in the version list."}, t.cancelSchedule)
 	sdk.AddTool(s, &sdk.Tool{Name: "screenshot_site", Annotations: readOnly("Screenshot site"),
+		InputSchema: withEnums[screenshotArgs](map[string][]string{"device": {"", "desktop", "mobile"}}),
 		Description: "Get a picture of the first screen of a site version, as a phone (mobile) or a computer " +
 			"(desktop) shows it. Use it to check your own work before telling the user it is ready: layout, " +
 			"overflowing text, contrast, missing images. Pages are shot from the site's own files, without " +
 			"other servers." + rendererAdvice}, t.screenshot)
 	sdk.AddTool(s, &sdk.Tool{Name: "compare_versions", Annotations: readOnly("Compare versions"),
+		InputSchema: withEnums[compareArgs](map[string][]string{"device": {"", "desktop", "mobile"}}),
 		Description: "Compare the first screen of two versions of a site: returns a picture \"before | after\" " +
 			"with the changes highlighted and the share of changed pixels. Use it to show the user what changed " +
 			"or to make sure an edit touched only what was asked." + rendererAdvice}, t.compareVersions)

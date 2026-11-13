@@ -44,7 +44,8 @@ func (t tools) registerSheets(s *sdk.Server, o Options) {
 		Description: "Check whether Google Sheets can be connected and get the address the user must share the " +
 			"spreadsheet with. Call it first when the user wants form submissions in a Google Sheet or wants site " +
 			"data (prices, menu, schedule, catalog) to come from a Google Sheet. Tell the user next_step in " +
-			"plain words: open the spreadsheet, press Share, add the address, send the link."}, t.getSheetsSetup)
+			"plain words: open the spreadsheet, press Share, add the address, send the link. When configured is " +
+			"false, only an administrator can add the Google key in the web interface: never ask for it in the chat."}, t.getSheetsSetup)
 	sdk.AddTool(s, &sdk.Tool{Name: "get_sheet_link", Annotations: readOnly("Show sheet link"),
 		Description: "Show which Google Sheet a collection is linked to, how often it synchronizes and the result " +
 			"of the last synchronization with problems per row. Use it when the user asks why the site does " +
@@ -62,8 +63,8 @@ func (t tools) registerSheets(s *sdk.Server, o Options) {
 			"and wants the site updated). If some rows are wrong nothing changes and the result lists them by row " +
 			"number: tell the user which rows and columns to fix in the sheet."}, t.syncSheet)
 	sdk.AddTool(s, &sdk.Tool{Name: "unlink_sheet", Annotations: writes("Unlink Google Sheet", false, true),
-		Description: "Stop taking a collection's documents from its Google Sheet. The documents stay as they are " +
-			"and can be edited in the chat again."}, t.unlinkSheet)
+		Description: "Stop taking a collection's documents from its Google Sheet, when the user wants to edit them " +
+			"in the chat again. The documents stay as they are."}, t.unlinkSheet)
 }
 
 func (t tools) sheets(ctx context.Context, req *sdk.CallToolRequest) (SheetsBackend, error) {

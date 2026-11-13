@@ -31,8 +31,14 @@ type Site struct {
 	SiteExtras
 	// Draft is the site's draft release (change staged-publish).
 	Draft *Draft `json:"draft,omitempty" jsonschema:"a new version visitors do not see yet: open preview_url to check it, publish_draft makes it live"`
-	// Attached is filled by get_site only.
-	Attached *SiteAttached `json:"attached,omitempty" jsonschema:"what is attached to the site: forms, delivery channels, counters (get_site only)"`
+}
+
+// SiteDetail is a site as get_site returns it: the site and what is
+// attached to it. Only get_site carries attachments, so the other tools keep
+// the shorter Site schema.
+type SiteDetail struct {
+	Site
+	Attached *SiteAttached `json:"attached,omitempty" jsonschema:"what is attached to the site: forms, delivery channels, counters, data collections, API key proxies"`
 }
 
 // Deploy is a release.
