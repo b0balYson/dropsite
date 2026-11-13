@@ -32,7 +32,7 @@
     "thanks_title": "Заявка принята",
     "thanks_text": "Спасибо! Перезвоним в течение часа в рабочее время, чтобы уточнить детали и договориться о выезде.",
     "thanks_back": "Вернуться на сайт",
-    "footer": "Сайт опубликован с dropsite"
+    "footer": "Сайт опубликован с Dropsite"
   },
   "en": {
     "description": "Turnkey home renovations: a quote in one day, a fixed price and a warranty.",
@@ -67,6 +67,6 @@
     "thanks_title": "Request received",
     "thanks_text": "Thank you! We will call you back within an hour during business hours to talk through the details and arrange a visit.",
     "thanks_back": "Back to the site",
-    "footer": "Published with dropsite"
+    "footer": "Published with Dropsite"
   }
 }

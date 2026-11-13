@@ -10,7 +10,7 @@ For plain contact forms use the forms of the site (topic `forms`), not the proxy
 
 ## How it works
 
-The page calls a relative address on its own site, `/_dropsite/proxy/<name>/<path>`. dropsite forwards the request to the endpoint's base address plus `<path>`, adds the stored key and returns the answer. The key never reaches the page, the chat or the API responses.
+The page calls a relative address on its own site, `/_dropsite/proxy/<name>/<path>`. Dropsite forwards the request to the endpoint's base address plus `<path>`, adds the stored key and returns the answer. The key never reaches the page, the chat or the API responses.
 
 1. Create the endpoint with set_proxy_endpoint: a short `name` (for example `openai`, `crm`, `tg`), the https base address in `upstream_url`, and how the key is sent in `auth`:
    - `bearer` sends `Authorization: Bearer <key>` (OpenAI and most model APIs);

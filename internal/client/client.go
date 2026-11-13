@@ -1,4 +1,4 @@
-// Package client is a typed HTTP client for the dropsite API v1
+// Package client is a typed HTTP client for the Dropsite API v1
 // (see docs/api-contract.md).
 package client
 

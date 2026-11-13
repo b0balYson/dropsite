@@ -115,7 +115,7 @@ func (w *rateWriter) Flush() {
 	}
 }
 
-var errNoActor = errors.New("this request is not authenticated; reconnect dropsite")
+var errNoActor = errors.New("this request is not authenticated; reconnect Dropsite")
 
 func resolver(svc *service.Service, log *slog.Logger) mcp.Resolver {
 	return func(_ context.Context, req *sdk.CallToolRequest) (mcp.Backend, error) {

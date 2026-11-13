@@ -1,6 +1,6 @@
 # Connecting AI assistants
 
-dropsite is meant to be used from a chat: the user connects it once and then asks in plain words ("make a coffee shop site and publish it", "show the latest requests", "close the site with a password"). Everything starts on the **Connect AI** page of the web interface.
+Dropsite is meant to be used from a chat: the user connects it once and then asks in plain words ("make a coffee shop site and publish it", "show the latest requests", "close the site with a password"). Everything starts on the **Connect AI** page of the web interface.
 
 | Assistant | How it works with sites | How it is connected |
 | --- | --- | --- |
@@ -16,9 +16,9 @@ All of them connect to the remote MCP endpoint `https://api.<BASE_DOMAIN>/mcp` (
 - **claude.ai and Claude Desktop:** Settings → Connectors → Add custom connector, paste the address, press Add and Connect. The connector appears in Claude Desktop too. On a Team or Enterprise plan an owner adds it for the organisation first.
 - **Claude Code:** `claude mcp add --transport http dropsite https://api.<BASE_DOMAIN>/mcp`, then `/mcp` in Claude Code to sign in.
 
-The Connect AI page spells these out as numbered steps with the exact menu names, a copy button for the address in the step that needs it, a first message to try ("Show my dropsite sites") and a troubleshooting list (DNS not ready, "connector failed", ChatGPT plan, expired code, the chat not using dropsite).
+The Connect AI page spells these out as numbered steps with the exact menu names, a copy button for the address in the step that needs it, a first message to try ("Show my Dropsite sites") and a troubleshooting list (DNS not ready, "connector failed", ChatGPT plan, expired code, the chat not using Dropsite).
 
-When the dropsite page opens, the user presses **Connect** on the Connect AI page, enters the one-time code and presses **Allow**. The page shows the application name, the domain it returns to and the permissions; it never asks for a password (passwords are typed only on the private interface).
+When the Dropsite page opens, the user presses **Connect** on the Connect AI page, enters the one-time code and presses **Allow**. The page shows the application name, the domain it returns to and the permissions; it never asks for a password (passwords are typed only on the private interface).
 
 Example requests (the Connect AI page shows them in the interface language):
 
@@ -45,7 +45,7 @@ Chats differ in which MCP features reach the model (checked November 2026):
 | tool descriptions and annotations | used; annotations drive write confirmations | used; read-only tools run without a prompt, destructive ones always ask ([review criteria](https://claude.com/docs/connectors/building/review-criteria.md)) | used |
 | prompts, resources | not used for the model | user-invoked only | user-invoked only |
 
-So dropsite delivers its rules three ways, from one source:
+So Dropsite delivers its rules three ways, from one source:
 
 1. **Server instructions** sent on `initialize` by both servers: the essentials in the first paragraph (plain language, give the link, confirm before deleting, call `get_guide`), then short rules for every task.
 2. **`get_guide`**, a read-only tool that works even before the user has connected. `topic` is one of `overview`, `create`, `update`, `large_sites`, `assets`, `forms`, `data`, `stats`, `addresses`, `protection`, `rollback`, `account`, `errors`, or `all` (default).
@@ -132,7 +132,7 @@ The assistant does not need the original files: it reads the published ones.
 | Tool | What it does |
 | --- | --- |
 | `list_site_files` | files of the served release (or `deploy_id`): path, size, sha256, type; up to 1000 per call, `prefix` narrows the list. Returns `deploy_id`. |
-| `read_site_files` | up to 2000 paths or patterns (`css/*.css`): text as is, binaries up to 4 MB as base64, larger files only described; at most 8 MB of content per call. The analytics block dropsite inserts into HTML is not shown. |
+| `read_site_files` | up to 2000 paths or patterns (`css/*.css`): text as is, binaries up to 4 MB as base64, larger files only described; at most 8 MB of content per call. The analytics block Dropsite inserts into HTML is not shown. |
 | `update_site_files` | `base_deploy_id` (required) plus `files` to write, `delete` (files or folders) and `fetch` (`{url, path}` downloaded by the server). Builds a new release from the base with the changes; everything else is kept, the previous release stays available for rollback. |
 | `begin_upload`, `upload_files`, `commit_upload` | sites larger than 16 MB: a session in `replace` mode (new content, a new site when `site` is omitted) or `patch` mode (on top of `base_deploy_id`), up to 16 MB per `upload_files` call. |
 

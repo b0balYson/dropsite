@@ -190,7 +190,7 @@ func TestDeployBadProjectFile(t *testing.T) {
 	dir := siteDir(t, map[string]string{"index.html": "x", ".dropsite.json": "{}"})
 	r := e.run("deploy", dir)
 	expectCode(t, r, 1)
-	expectContains(t, "stderr", r.stderr, "not a valid dropsite project file")
+	expectContains(t, "stderr", r.stderr, "not a valid Dropsite project file")
 }
 
 func TestDeployCustomTitle(t *testing.T) {

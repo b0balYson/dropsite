@@ -26,7 +26,7 @@
   "updates.failed.hint": "Работает прежняя версия. Подробности в /var/log/dropsite-update.log на сервере.",
   "updates.log": "Последние строки журнала",
   "updates.button": "Обновить до {version}",
-  "updates.confirm.title": "Обновить dropsite до {version}?",
+  "updates.confirm.title": "Обновить Dropsite до {version}?",
   "updates.confirm.backup": "Сначала сервер сделает резервную копию.",
   "updates.confirm.restart": "Панель перезапустится и будет недоступна примерно минуту.",
   "updates.confirm.sites": "Сайты продолжат работать.",
@@ -41,5 +41,5 @@
   "err.update_unavailable": "Эта версия не новее текущей. Проверьте обновления ещё раз.",
   "err.update_in_progress": "Обновление уже ждёт или идёт. Дождитесь его окончания.",
   "err.update_helper_missing": "Помощник обновлений на сервере не установлен. Выполните на сервере dropsite-update.",
-  "audit.action.update.request": "Запрошено обновление dropsite"
+  "audit.action.update.request": "Запрошено обновление Dropsite"
 }

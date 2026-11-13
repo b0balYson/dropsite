@@ -1,6 +1,6 @@
 # Payments
 
-A site published with dropsite never handles card data: no fields for card numbers, CVC or expiry dates, and no payment code of your own.
+A site published with Dropsite never handles card data: no fields for card numbers, CVC or expiry dates, and no payment code of your own.
 
 - Use the payment link of the user's payment service: YooKassa (payment links or a payment form link), CloudPayments (payment link or widget page from their account), Stripe Payment Links, or similar. Ask the user to create the link (one per product or price) in their account and send it to you; never invent one.
 - Put the link on a clear button ("Pay 1 500 ₽", "Buy now") as an ordinary `<a href>`; the payment page opens on the service's site. Set the return address in the service to a page of the site (for example `thanks.html`).

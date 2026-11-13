@@ -52,7 +52,7 @@ type setupOutput struct {
 
 func cmdSetup(_ context.Context, a *app, args []string) error {
 	fs := a.newFlagSet("setup", "[--remove] [--json]",
-		"Find AI assistants on this computer and connect them to "+brand.Name+":\n"+
+		"Find AI assistants on this computer and connect them to "+brand.DisplayName+":\n"+
 			"the publish skill for Claude Code, Codex and Cursor, and the local MCP\n"+
 			"server for Claude Desktop. Running it again changes nothing; --remove\n"+
 			"takes out only what setup added.")
@@ -320,7 +320,7 @@ func (a *app) printSetup(out setupOutput, remove bool) {
 		fmt.Fprintln(a.stdout, `Then ask the assistant: "publish this site".`)
 	}
 	if !remove && !out.LoggedIn {
-		fmt.Fprintf(a.stderr, "\nNote: %s is not signed in yet. Press Connect on the Connect AI page and run the command shown there.\n", brand.Name)
+		fmt.Fprintf(a.stderr, "\nNote: %s is not signed in yet. Press Connect on the Connect AI page and run the command shown there.\n", brand.DisplayName)
 	}
 }
 

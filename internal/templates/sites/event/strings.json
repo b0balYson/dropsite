@@ -26,7 +26,7 @@
     "thanks_title": "Вы записаны!",
     "thanks_text": "Спасибо, заявка у нас. Мы пришлём подтверждение, а накануне напомним о событии.",
     "thanks_back": "Вернуться к программе",
-    "footer": "Сайт опубликован с dropsite"
+    "footer": "Сайт опубликован с Dropsite"
   },
   "en": {
     "description": "A day of music, talks and workshops. Date, programme and sign-up.",
@@ -55,6 +55,6 @@
     "thanks_title": "You are signed up!",
     "thanks_text": "Thank you, we have your request. We will confirm it and remind you the day before the event.",
     "thanks_back": "Back to the programme",
-    "footer": "Published with dropsite"
+    "footer": "Published with Dropsite"
   }
 }

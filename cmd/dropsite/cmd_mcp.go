@@ -19,12 +19,12 @@ import (
 	"github.com/b0balYson/dropsite/internal/mcp"
 )
 
-var errMCPNotConnected = errors.New(brand.Name + " is not connected on this computer: ask the user to open the " +
-	"Connect AI page of the " + brand.Name + " web interface, press Connect and run the command shown there, then retry")
+var errMCPNotConnected = errors.New("this computer is not connected to " + brand.DisplayName + ": ask the user to open the " +
+	"Connect AI page of the " + brand.DisplayName + " web interface, press Connect and run the command shown there, then retry")
 
 func cmdMCP(ctx context.Context, a *app, args []string) error {
 	fs := a.newFlagSet("mcp", "",
-		"Serve the "+brand.Name+" tools to a desktop AI client (Claude Desktop) over stdio\n"+
+		"Serve the "+brand.DisplayName+" tools to a desktop AI client (Claude Desktop) over stdio\n"+
 			"(Model Context Protocol). It uses the saved login; 'setup' configures Claude Desktop.")
 	pos, err := parseArgs(fs, args)
 	if err != nil {

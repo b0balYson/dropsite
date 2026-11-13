@@ -29,8 +29,8 @@ type guideOut struct {
 // user has connected and on every server.
 func registerGuide(s *sdk.Server) {
 	in := withEnums[guideArgs](map[string][]string{"topic": append(skills.Topics(), skills.TopicAll)})
-	sdk.AddTool(s, &sdk.Tool{Name: "get_guide", Annotations: readOnly("Read the dropsite guide"), InputSchema: in,
-		Description: "Read the dropsite guide: how to build, publish and change sites for a non-technical user, " +
+	sdk.AddTool(s, &sdk.Tool{Name: "get_guide", Annotations: readOnly("Read the Dropsite guide"), InputSchema: in,
+		Description: "Read the Dropsite guide: how to build, publish and change sites for a non-technical user, " +
 			"forms and where requests go, site data and Google Sheets, API keys, statistics, addresses and own " +
 			"domains, password and lifetime, drafts, rollback, templates and schedules, team workspaces, errors, and " +
 			"common requests (external backends, payments, booking, privacy law, SEO, languages, quizzes, embeds). " +

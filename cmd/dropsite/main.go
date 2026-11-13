@@ -1,4 +1,4 @@
-// Command dropsite publishes a directory of static files to a dropsite server.
+// Command dropsite publishes a directory of static files to a Dropsite server.
 package main
 
 import (

@@ -2,15 +2,15 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset=".github/assets/logo-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset=".github/assets/logo.svg">
-    <img src=".github/assets/logo.svg" alt="dropsite" width="300">
+    <img src=".github/assets/logo.svg" alt="Dropsite" width="300">
   </picture>
 </h1>
 
 [English](README.md) | [Русский](README.ru.md) | **简体中文**
 
-dropsite 在您自己的服务器上发布网站。您对 ChatGPT 或 Claude 说“为我的咖啡店做一个网站并发布”，大约一分钟后，网站就会通过 HTTPS 在您自己的域名下上线。修改内容、查看表单提交、访问量和设置密码，也只需在同一个对话中提出请求。
+Dropsite 在您自己的服务器上发布网站。您对 ChatGPT 或 Claude 说“为我的咖啡店做一个网站并发布”，大约一分钟后，网站就会通过 HTTPS 在您自己的域名下上线。修改内容、查看表单提交、访问量和设置密码，也只需在同一个对话中提出请求。
 
-dropsite 只托管已经做好的静态网站（HTML、CSS、JavaScript、图片），不负责构建项目，也不运行服务器端代码。
+Dropsite 只托管已经做好的静态网站（HTML、CSS、JavaScript、图片），不负责构建项目，也不运行服务器端代码。
 
 ## 准备工作
 
@@ -54,7 +54,7 @@ curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/ins
 安装程序会询问服务器 IP、root 密码（或密钥文件）、域名和电子邮箱。随后它会：
 
 1. 连接服务器；密码只使用一次，不会被保存；
-2. 在服务器上安装 dropsite 并开启每日自动备份（约 10–20 分钟）；
+2. 在服务器上安装 Dropsite 并开启每日自动备份（约 10–20 分钟）；
 3. 列出需要在域名注册商处添加的两条 DNS 记录，并等待域名生效；
 4. 告诉您要运行的命令、要打开的地址、登录名和密码。
 
@@ -69,7 +69,7 @@ curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/ins
 
 1. 运行 `ssh <名称>`，保持窗口打开，在浏览器中访问 `http://localhost:<端口>`（端口会在安装结束时显示）。使用您的邮箱和生成的密码登录。
 2. **入门指南**页面是一份会自动检查服务器的清单：域名是否指向本服务器、HTTPS 是否正常、是否已连接对话、是否已有第一个网站。它会列出确切的 DNS 记录并提供复制按钮，某一步未通过时会说明如何解决。可选步骤：邀请同事，以及为表单提交配置 Telegram 或电子邮件。
-3. 打开 **连接 AI** 页面，选择您使用的对话工具并按编号步骤操作：把地址 `https://api.<您的域名>/mcp` 添加为连接器，然后点击 **连接**，在打开的 dropsite 页面中输入一次性连接码。对话中永远不会要求您输入密码。
+3. 打开 **连接 AI** 页面，选择您使用的对话工具并按编号步骤操作：把地址 `https://api.<您的域名>/mcp` 添加为连接器，然后点击 **连接**，在打开的 Dropsite 页面中输入一次性连接码。对话中永远不会要求您输入密码。
 4. 对对话说：“为我的咖啡店做一个网站并发布”。
 
 ## 功能一览

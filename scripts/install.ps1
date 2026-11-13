@@ -1,4 +1,4 @@
-# Install the dropsite CLI on Windows from GitHub Releases, without admin rights.
+# Install the Dropsite CLI on Windows from GitHub Releases, without admin rights.
 #
 #   irm https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.ps1 | iex
 #

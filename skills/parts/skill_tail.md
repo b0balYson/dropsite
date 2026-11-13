@@ -1,4 +1,4 @@
-After publishing a site with a form, tell the user to open the site in the dropsite web interface and connect a channel in the **Submissions** block (Telegram, e-mail or a webhook; optionally turn on **Require Altcha**); until then submissions are stored but not forwarded.
+After publishing a site with a form, tell the user to open the site in the Dropsite web interface and connect a channel in the **Submissions** block (Telegram, e-mail or a webhook; optionally turn on **Require Altcha**); until then submissions are stored but not forwarded.
 
 ## Errors
 

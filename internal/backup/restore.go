@@ -115,7 +115,7 @@ func extract(ctx context.Context, r io.Reader, stage string) (Manifest, error) {
 		}
 	}
 	if m.Format != formatV1 || !sawDB {
-		return Manifest{}, errors.New("archive is not a complete dropsite backup")
+		return Manifest{}, errors.New("archive is not a complete Dropsite backup")
 	}
 	return m, nil
 }

@@ -41,7 +41,7 @@ RUN mkdir -p /out/volumes/data /out/volumes/state \
 
 FROM ${RUNTIME_IMAGE}
 LABEL org.opencontainers.image.title="dropsite-control" \
-      org.opencontainers.image.description="dropsite control server: API, web interface and publishing" \
+      org.opencontainers.image.description="Dropsite control server: API, web interface and publishing" \
       org.opencontainers.image.source="https://github.com/b0balYson/dropsite" \
       org.opencontainers.image.licenses="Apache-2.0"
 COPY --from=build --chown=65532:65532 /out/volumes/ /

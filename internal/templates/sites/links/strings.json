@@ -17,7 +17,7 @@
     "thanks_title": "Заявка отправлена",
     "thanks_text": "Спасибо! Перезвоню в течение дня, и мы договоримся о съёмке.",
     "thanks_back": "Вернуться к ссылкам",
-    "footer": "Сайт опубликован с dropsite"
+    "footer": "Сайт опубликован с Dropsite"
   },
   "en": {
     "description": "Every link in one place: social networks, messengers, shop and contacts.",
@@ -37,6 +37,6 @@
     "thanks_title": "Request sent",
     "thanks_text": "Thank you! I will call you back within a day to arrange the session.",
     "thanks_back": "Back to the links",
-    "footer": "Published with dropsite"
+    "footer": "Published with Dropsite"
   }
 }

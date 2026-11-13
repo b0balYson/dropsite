@@ -1,4 +1,4 @@
-/* Shared base of the dropsite starter templates: mobile first, system
+/* Shared base of the Dropsite starter templates: mobile first, system
    fonts, visible focus, reduced motion. Each template sets the tokens. */
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }

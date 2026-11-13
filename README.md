@@ -2,15 +2,15 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset=".github/assets/logo-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset=".github/assets/logo.svg">
-    <img src=".github/assets/logo.svg" alt="dropsite" width="300">
+    <img src=".github/assets/logo.svg" alt="Dropsite" width="300">
   </picture>
 </h1>
 
 **English** | [Русский](README.ru.md) | [简体中文](README.zh-CN.md)
 
-dropsite publishes websites on your own server. You ask ChatGPT or Claude "make a site for my coffee shop and publish it", and a minute later the site is live at an HTTPS address on your own domain. Changes, form requests, visit numbers and passwords are just more requests in the same chat.
+Dropsite publishes websites on your own server. You ask ChatGPT or Claude "make a site for my coffee shop and publish it", and a minute later the site is live at an HTTPS address on your own domain. Changes, form requests, visit numbers and passwords are just more requests in the same chat.
 
-dropsite serves finished static sites (HTML, CSS, JavaScript, images). It does not build projects or run server code.
+Dropsite serves finished static sites (HTML, CSS, JavaScript, images). It does not build projects or run server code.
 
 ## What you need
 
@@ -54,7 +54,7 @@ curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/ins
 The installer asks for the server IP, the root password (or a key file), your domain and your e-mail. Then it:
 
 1. connects to the server; the password is used once and never saved;
-2. installs dropsite there and turns on a daily backup (10–20 minutes);
+2. installs Dropsite there and turns on a daily backup (10–20 minutes);
 3. shows the two DNS records to create where you bought the domain and waits until the domain works;
 4. tells you the command to run, the address to open, the login and the password.
 
@@ -69,7 +69,7 @@ You only see a check mark per step. The details are in `~/.dropsite/install-<nam
 
 1. Run `ssh <name>`, keep that window open, and open `http://localhost:<port>` in the browser (the installer shows the port). Sign in with your e-mail and the generated password.
 2. The **Getting started** page is a checklist that checks the server for you: the domain points here, HTTPS works, a chat is connected, the first site exists. It shows the exact DNS records with copy buttons and what to fix if a step fails. Optional steps: invite a teammate and set up Telegram or e-mail for form requests.
-3. Open **Connect AI**, pick your chat and follow the numbered steps. You add the address `https://api.<your domain>/mcp` as a connector, then press **Connect** and type the one-time connect code into the dropsite page that opens. Your password is never asked for in a chat.
+3. Open **Connect AI**, pick your chat and follow the numbered steps. You add the address `https://api.<your domain>/mcp` as a connector, then press **Connect** and type the one-time connect code into the Dropsite page that opens. Your password is never asked for in a chat.
 4. Ask the chat: "Make a site for my coffee shop and publish it".
 
 ## What you can do

@@ -89,11 +89,11 @@ jobs:
           - image: control
             context: .
             file: deploy/Dockerfile
-            description: dropsite control server, API, web interface and publishing
+            description: Dropsite control server, API, web interface and publishing
           - image: caddy
             context: deploy/caddy
             file: deploy/caddy/Dockerfile
-            description: Caddy with DNS provider plugins for dropsite wildcard TLS
+            description: Caddy with DNS provider plugins for Dropsite wildcard TLS
     env:
       VERSION: ${{ needs.verify.outputs.version }}
     steps:

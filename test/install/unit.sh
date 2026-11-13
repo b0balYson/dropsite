@@ -254,7 +254,7 @@ sim() {
 				fi
 				# Even if the new password leaked into the progress stream, the
 				# installer scrubs it from the log once it knows it.
-				printf 'note: leaked %s\n==> dropsite is running\n' "$SIM_PW" >&2
+				printf 'note: leaked %s\n==> Dropsite is running\n' "$SIM_PW" >&2
 				printf 'DROPSITE_RESULT domain=r3100.com\nDROPSITE_RESULT api_host=api.r3100.com\n'
 				printf 'DROPSITE_RESULT admin_email=me@example.com\nDROPSITE_RESULT ipv4=186.243.218.235\nDROPSITE_RESULT ipv6=\n'
 				printf 'DROPSITE_RESULT admin_password=%s\nDROPSITE_RESULT admin_password_new=1\n' "$SIM_PW"
@@ -281,7 +281,7 @@ if command -v ssh-keygen >/dev/null 2>&1; then
 	check "run: short output (<= 20 non-empty lines)" test "$(grep -c . "$WORK/sim-en-ok.out")" -le 20
 	check "run: no technical words on screen" hasnt en-ok 'swap|firewall|\.env|docker|localforward|bootstrap|==>'
 	check "run: connect step" has en-ok "✓ Connected to the server"
-	check "run: install step" has en-ok "✓ Installed dropsite"
+	check "run: install step" has en-ok "✓ Installed Dropsite"
 	check "run: HTTPS step" has en-ok "✓ Turned on HTTPS"
 	check "run: two A records" test "$(grep -c '^  A      [@*] ' "$WORK/sim-en-ok.out")" = 2
 	check "run: Cloudflare hint" has en-ok 'DNS only'
@@ -320,7 +320,7 @@ if command -v ssh-keygen >/dev/null 2>&1; then
 	sim en fail
 	check "failure: exits 1" test "$(cat "$WORK/sim-en-fail.rc")" = 1
 	check "failure: plain sentence" has en-fail "The installation on the server stopped with an error."
-	check "failure: step marked" has en-fail "✗ Installing dropsite on the server"
+	check "failure: step marked" has en-fail "✗ Installing Dropsite on the server"
 	check "failure: last log lines" has en-fail "  error: command failed: apt-get"
 	check "failure: log path" has en-fail "Full log: $(simlog en-fail)"
 	check "failure: run again" has en-fail "Run the same command again: finished steps are skipped."
@@ -328,7 +328,7 @@ if command -v ssh-keygen >/dev/null 2>&1; then
 
 	sim ru ok
 	check "ru: exits 0" test "$(cat "$WORK/sim-ru-ok.rc")" = 0
-	check "ru: steps in Russian" has ru-ok "✓ Установил dropsite"
+	check "ru: steps in Russian" has ru-ok "✓ Установил Dropsite"
 	check "ru: final block in Russian" has ru-ok "1. Выполните: ssh r3100"
 	sim zh ok
 	check "zh: final block in Chinese" has zh-ok "1. 运行：ssh r3100"

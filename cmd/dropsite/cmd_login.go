@@ -92,7 +92,7 @@ func (a *app) tokenName() string {
 	if r := []rune(host); len(r) > 40 {
 		host = string(r[:40])
 	}
-	return brand.Name + " CLI on " + host
+	return brand.DisplayName + " CLI on " + host
 }
 
 func codeError(server string, err error) error {
@@ -100,7 +100,7 @@ func codeError(server string, err error) error {
 	if errors.As(err, &ae) && ae.Code == "connect_code_invalid" {
 		return withHint(fmt.Errorf("%s rejected the connect code, nothing was saved: %w", server, err),
 			"Codes work once and expire after 10 minutes. Press Connect on the Connect AI page",
-			"of the dropsite web interface for a new command.")
+			"of the Dropsite web interface for a new command.")
 	}
 	return fmt.Errorf("could not exchange the connect code, nothing was saved: %w", err)
 }
@@ -151,7 +151,7 @@ func loginError(server string, err error) error {
 func (a *app) warnEnvOverrides() {
 	for _, k := range []string{envServer, envToken} {
 		if a.getenv(k) != "" {
-			fmt.Fprintf(a.stderr, "Note: %s is set and takes precedence over the saved %s config.\n", k, brand.Name)
+			fmt.Fprintf(a.stderr, "Note: %s is set and takes precedence over the saved %s config.\n", k, brand.DisplayName)
 		}
 	}
 }

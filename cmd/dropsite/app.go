@@ -122,7 +122,7 @@ func (a *app) help(ctx context.Context, args []string) int {
 
 func (a *app) printUsage(w io.Writer) {
 	fmt.Fprintf(w, "%s %s: publish static sites\n\nUsage:\n  %s <command> [flags] [args]\n\nCommands:\n",
-		brand.Name, brand.Version, brand.Name)
+		brand.DisplayName, brand.Version, brand.Name)
 	cmds := commands()
 	names := make([]string, 0, len(cmds))
 	for n := range cmds {

@@ -1,13 +1,13 @@
 ---
 name: dropsite-publish
-description: Publish a folder of static files (HTML, CSS, JS, images) to the team's dropsite server and return a public HTTPS link, build self-contained fast sites for it, and build contact or lead forms that work on dropsite without third-party form services. Use when the user asks to publish, deploy, share, upload or "put online" a landing page, site, prototype or HTML file built in this project, asks for a link to it, or wants a form (lead, contact, order, callback) on a site that will be published with dropsite.
+description: Publish a folder of static files (HTML, CSS, JS, images) to the team's Dropsite server and return a public HTTPS link, build self-contained fast sites for it, and build contact or lead forms that work on Dropsite without third-party form services. Use when the user asks to publish, deploy, share, upload or "put online" a landing page, site, prototype or HTML file built in this project, asks for a link to it, or wants a form (lead, contact, order, callback) on a site that will be published with Dropsite.
 ---
 
 <!-- Generated from skills/parts and skills/guide: edit those files and run `go test ./skills -update`. -->
 
-# Publish a static site with dropsite
+# Publish a static site with Dropsite
 
-dropsite hosts finished static files. It does not build projects: if the project needs a build step (`npm run build`, `vite build`, `astro build`, `next build && next export`), run it first and publish the output folder.
+Dropsite hosts finished static files. It does not build projects: if the project needs a build step (`npm run build`, `vite build`, `astro build`, `next build && next export`), run it first and publish the output folder.
 
 Talk to the user in plain words: say what you did and give the link; explain commands or files only if they ask.
 
@@ -19,7 +19,7 @@ Run:
 dropsite version && dropsite sites --json >/dev/null && echo READY
 ```
 
-- `command not found`: the CLI is not installed. Stop and tell the user to open the **Connect AI** page of their dropsite web interface, press **Connect** and run the command shown there in their own terminal (it installs the CLI and signs in). Do not try to install it yourself.
+- `command not found`: the CLI is not installed. Stop and tell the user to open the **Connect AI** page of their Dropsite web interface, press **Connect** and run the command shown there in their own terminal (it installs the CLI and signs in). Do not try to install it yourself.
 - An error that mentions `not logged in`, `dropsite login` or `401`: the CLI is not signed in or its key was revoked. Stop and give the user the same advice: press **Connect** on the **Connect AI** page and run the shown command in their own terminal. Never ask the user to paste a token or a connect code into the chat.
 
 ## 2. Find the folder to publish
@@ -50,4 +50,4 @@ Tell the user the `url` as a clickable link, and mention that:
 
 - the page is live now; repeating the publish updates it in place;
 - `dropsite rollback <site>` restores the previous version if something broke;
-- a memorable address (slug such as `promo-may`), a password, own domains and form delivery are set in the web interface, or from a chat (ChatGPT, claude.ai) connected to dropsite.
+- a memorable address (slug such as `promo-may`), a password, own domains and form delivery are set in the web interface, or from a chat (ChatGPT, claude.ai) connected to Dropsite.

@@ -55,8 +55,8 @@ const manualUpdateCommand = "ssh <server> dropsite-update"
 
 func registerUpdateTools(t tools, s *sdk.Server) {
 	sdk.AddTool(s, &sdk.Tool{Name: "check_updates",
-		Annotations: &sdk.ToolAnnotations{Title: "Check for dropsite updates", ReadOnlyHint: true, OpenWorldHint: boolPtr(true)},
-		Description: "Show the dropsite server's version, whether a newer release exists, its what's-new link and how " +
+		Annotations: &sdk.ToolAnnotations{Title: "Check for Dropsite updates", ReadOnlyHint: true, OpenWorldHint: boolPtr(true)},
+		Description: "Show the Dropsite server's version, whether a newer release exists, its what's-new link and how " +
 			"to update. Read-only: it never updates anything. Call it when the user asks about the version or " +
 			"updates. An administrator updates in the web interface (Settings, Updates) or on the server; other " +
 			"users ask their administrator. Mention an available update to an administrator once per chat, " +
@@ -78,7 +78,7 @@ func NewUpdateCheck(f UpdateFacts) UpdateCheck {
 	}
 	switch {
 	case !f.IsAdmin:
-		out.HowToUpdate = "Ask your dropsite administrator: only an administrator can update the server."
+		out.HowToUpdate = "Ask your Dropsite administrator: only an administrator can update the server."
 	case f.HelperPresent && f.PanelURL != "":
 		out.UpdatePanelURL = f.PanelURL
 		out.HowToUpdate = "Open " + f.PanelURL + " (Settings, Updates) and press Update; the server backs up first " +
@@ -94,13 +94,13 @@ func NewUpdateCheck(f UpdateFacts) UpdateCheck {
 func updateSummary(u UpdateCheck) string {
 	switch {
 	case u.UpdateAvailable:
-		s := fmt.Sprintf("dropsite %s is available (this server runs %s). What's new: %s.", u.LatestVersion,
+		s := fmt.Sprintf("Dropsite %s is available (this server runs %s). What's new: %s.", u.LatestVersion,
 			u.CurrentVersion, u.ReleaseNotesURL)
 		return s + " " + u.HowToUpdate
 	case !u.CheckEnabled:
-		return fmt.Sprintf("This server runs dropsite %s; it does not check for new releases.", u.CurrentVersion)
+		return fmt.Sprintf("This server runs Dropsite %s; it does not check for new releases.", u.CurrentVersion)
 	case u.LatestVersion == "":
-		return fmt.Sprintf("This server runs dropsite %s; it has not checked for new releases yet.", u.CurrentVersion)
+		return fmt.Sprintf("This server runs Dropsite %s; it has not checked for new releases yet.", u.CurrentVersion)
 	}
-	return fmt.Sprintf("This server runs dropsite %s, the latest release.", u.CurrentVersion)
+	return fmt.Sprintf("This server runs Dropsite %s, the latest release.", u.CurrentVersion)
 }

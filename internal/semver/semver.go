@@ -1,4 +1,4 @@
-// Package semver parses the release versions dropsite is tagged with
+// Package semver parses the release versions Dropsite is tagged with
 // (MAJOR.MINOR.PATCH with an optional pre-release, an optional leading "v")
 // and compares them. Development builds ("dev", "dev+<sha>") are not
 // release versions and never parse.

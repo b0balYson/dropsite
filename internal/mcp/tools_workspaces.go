@@ -47,7 +47,7 @@ func (t tools) registerWorkspaces(s *sdk.Server, o Options) {
 			"has none for this team. Then add colleagues with add_workspace_member and create or move sites into it."}, t.createWorkspace)
 	sdk.AddTool(s, &sdk.Tool{Name: "add_workspace_member", Annotations: writes("Add workspace member", false, false),
 		Description: "Add a colleague to a workspace by e-mail. The person must already have an account on this " +
-			"dropsite server: new accounts are created only by the administrator, never here. Tell the user the " +
+			"Dropsite server: new accounts are created only by the administrator, never here. Tell the user the " +
 			"colleague can now change every site of the workspace."}, t.addWorkspaceMember)
 	sdk.AddTool(s, &sdk.Tool{Name: "remove_workspace_member", Annotations: writes("Remove workspace member", true, true),
 		Description: "Remove a member from a workspace, or leave it (the user's own e-mail). The person loses access " +

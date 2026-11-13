@@ -75,7 +75,7 @@ type channelDeleted struct {
 var ErrChannelConfirm = errors.New("nothing changed: ask the user to confirm, then call again with confirm set " +
 	"to the channel's ID or target exactly as shown by list_channels")
 
-var errNoForms = errors.New("this server cannot manage forms; use the web interface of dropsite")
+var errNoForms = errors.New("this server cannot manage forms; use the web interface of Dropsite")
 
 func (t tools) registerForms(s *sdk.Server, o Options) {
 	if !o.Forms {
@@ -120,7 +120,7 @@ func (t tools) registerForms(s *sdk.Server, o Options) {
 			"header row as a test and is active at once; every submission becomes a row, new fields add columns " +
 			"(to take site data from a sheet, use link_sheet). " +
 			"Follow next_step in the result. If the result says " +
-			"channel_unavailable, tell the user that the administrator of the dropsite server must set up " +
+			"channel_unavailable, tell the user that the administrator of the Dropsite server must set up " +
 			"Telegram or e-mail first."}, t.addChannel)
 	sdk.AddTool(s, &sdk.Tool{Name: "verify_channel", Annotations: writes("Confirm delivery channel", false, false),
 		Description: "Confirm a Telegram (by chat ID) or e-mail channel with the 6-digit code the user received. " +
@@ -324,7 +324,7 @@ func (t tools) rotateChannelSecret(ctx context.Context, req *sdk.CallToolRequest
 	return nil, r, err
 }
 
-// formSnippetHTML is a working form for any dropsite site.
+// formSnippetHTML is a working form for any Dropsite site.
 const formSnippetHTML = `<form action="/_form/contact" method="post">
   <label>Name <input name="name" required></label>
   <label>Phone or e-mail <input name="contact" required></label>

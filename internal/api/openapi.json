@@ -2884,7 +2884,7 @@
       "post": {
         "operationId": "cloneSite",
         "summary": "Create a new site from the current release of a site (files only)",
-        "description": "Forms, collections, domains, the slug, password, noindex, expiry and counters are not copied; the counter block dropsite inserted is removed from the pages. Fails with site_not_published when the site has no release.",
+        "description": "Forms, collections, domains, the slug, password, noindex, expiry and counters are not copied; the counter block Dropsite inserted is removed from the pages. Fails with site_not_published when the site has no release.",
         "requestBody": { "required": false, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NewSiteRequest" } } } },
         "responses": {
           "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DeployResult" } } } },

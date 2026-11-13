@@ -34,5 +34,5 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 FROM ${RUNTIME_IMAGE}
 COPY --from=build /out/caddy /usr/bin/caddy
 LABEL org.opencontainers.image.title="dropsite-caddy" \
-      org.opencontainers.image.description="Caddy with DNS provider plugins for dropsite wildcard TLS" \
+      org.opencontainers.image.description="Caddy with DNS provider plugins for Dropsite wildcard TLS" \
       org.opencontainers.image.source="https://github.com/b0balYson/dropsite"

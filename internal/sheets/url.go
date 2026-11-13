@@ -1,6 +1,6 @@
 // Package sheets is a small Google Sheets client for a service account:
 // spreadsheet links, the service account key, RS256-signed token requests
-// and the four Sheets API v4 calls dropsite needs. It talks only to
+// and the four Sheets API v4 calls Dropsite needs. It talks only to
 // oauth2.googleapis.com and sheets.googleapis.com over https.
 package sheets
 

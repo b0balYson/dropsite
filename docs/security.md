@@ -1,6 +1,6 @@
 # Security model
 
-This page describes what dropsite protects, what it deliberately leaves to the operator and which settings matter. It complements the hardening already built into the code: argon2id passwords, hashed sessions and tokens, CSRF protection, SSRF guards with a dial-time address check, safe archive extraction, parameterized SQL, a strict CSP and distroless non-root containers.
+This page describes what Dropsite protects, what it deliberately leaves to the operator and which settings matter. It complements the hardening already built into the code: argon2id passwords, hashed sessions and tokens, CSRF protection, SSRF guards with a dial-time address check, safe archive extraction, parameterized SQL, a strict CSP and distroless non-root containers.
 
 ## Deployment model
 

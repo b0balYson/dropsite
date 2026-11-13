@@ -33,10 +33,10 @@ func TestCheckUpdates(t *testing.T) {
 			CheckEnabled: true, IsAdmin: true, PanelURL: "http://localhost:8082/admin/settings#updates-h"},
 			[]string{"ssh <server> dropsite-update"}, []string{"localhost:8082"}, false, true},
 		{"user", UpdateFacts{Current: "0.4.0", Latest: "0.5.0", Available: true, ReleaseURL: notes, CheckEnabled: true},
-			[]string{"Ask your dropsite administrator", notes}, []string{"dropsite-update", "/admin/settings"}, false, false},
+			[]string{"Ask your Dropsite administrator", notes}, []string{"dropsite-update", "/admin/settings"}, false, false},
 		{"up to date", UpdateFacts{Current: "0.5.0", Latest: "0.5.0", ReleaseURL: notes, CheckEnabled: true, IsAdmin: true,
 			HelperPresent: true, PanelURL: "https://p/admin/settings#updates-h"},
-			[]string{"runs dropsite 0.5.0, the latest release"}, nil, true, false},
+			[]string{"runs Dropsite 0.5.0, the latest release"}, nil, true, false},
 		{"check off", UpdateFacts{Current: "dev+abc"}, []string{"does not check"}, nil, false, false},
 	}
 	for _, tc := range cases {
@@ -121,7 +121,7 @@ func TestGuideTellsToMentionUpdatesOnce(t *testing.T) {
 		}
 	}
 	ov, _ := skills.Guide("overview")
-	if !strings.Contains(ov, "updates of the dropsite server") {
+	if !strings.Contains(ov, "updates of the Dropsite server") {
 		t.Error("overview does not point to the update rule")
 	}
 }

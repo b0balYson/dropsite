@@ -38,7 +38,7 @@ type WorkspaceBackend interface {
 }
 
 var (
-	errNoWorkspaces = errors.New("this server cannot manage workspaces; use the web interface of dropsite")
+	errNoWorkspaces = errors.New("this server cannot manage workspaces; use the web interface of Dropsite")
 	// ErrConfirmMove is returned by move_site without a matching confirm.
 	ErrConfirmMove = errors.New("not moved: tell the user who will be able to change the site after the move, ask " +
 		"them to confirm, then call move_site again with confirm set to the site's slug or ID exactly as shown by get_site")

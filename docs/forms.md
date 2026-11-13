@@ -71,7 +71,7 @@ The widget shows its status in Russian or English according to `<html lang>` or 
 Open the site in the web interface: the **Submissions** block shows the channels and the latest submissions; **Channels and all submissions** opens the full screen.
 
 - **Telegram.** Leave the chat ID empty and press *Add Telegram*: you get a `t.me/<bot>?start=<code>` link; open it and press *Start* in the chat that should receive submissions (for a group, add the bot to the group first and send the `/start <code>` command there). Alternatively enter a chat ID: the bot sends a 6-digit code to that chat, enter it on the screen. The bot can only write to chats where it was started or added.
-- **E-mail.** Enter an address; a 6-digit code arrives by mail (subject "dropsite: код подтверждения / confirmation code", the site address is in the body). Codes work for 30 minutes and 5 attempts. If the mail server fails, you see a general message; the administrator finds the server's reply in the control log.
+- **E-mail.** Enter an address; a 6-digit code arrives by mail (subject "Dropsite: код подтверждения / confirmation code", the site address is in the body). Codes work for 30 minutes and 5 attempts. If the mail server fails, you see a general message; the administrator finds the server's reply in the control log.
 - **Webhook.** Enter an `https://` address. The signing secret is shown once (rotate it any time). Every submission is a `POST` with JSON:
 
   ```json

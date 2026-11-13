@@ -1,5 +1,5 @@
 #!/bin/sh
-# Install the dropsite CLI from GitHub Releases, without sudo.
+# Install the Dropsite CLI from GitHub Releases, without sudo.
 #
 #   curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install.sh | sh
 #

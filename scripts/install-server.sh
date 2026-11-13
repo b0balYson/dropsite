@@ -1,5 +1,5 @@
 #!/bin/sh
-# Install dropsite on your own server with one command, from macOS or Linux:
+# Install Dropsite on your own server with one command, from macOS or Linux:
 #
 #   curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/install-server.sh | sh
 #
@@ -8,7 +8,7 @@
 #   - creates a key ~/.ssh/dropsite_<name> and installs it on the server (the
 #     root password is typed into ssh itself once and never stored);
 #   - uploads and runs scripts/server-bootstrap.sh on the server (Docker,
-#     swap, firewall, dropsite, daily backups, update command);
+#     swap, firewall, Dropsite, daily backups, update command);
 #   - adds "Host <name>" with a tunnel to the admin interface to ~/.ssh/config;
 #   - tells you which DNS records to create and waits until the domain works.
 #
@@ -62,8 +62,8 @@ DNS_INTERVAL=10
 # Messages: one table per language. printf formats, %s are filled in order.
 
 msgs_en() {
-	M_title='dropsite: your own server for sites'
-	M_intro='This installs dropsite on a fresh rented server (VPS) with Ubuntu 22.04 or newer, or Debian 12 or newer.
+	M_title='Dropsite: your own server for sites'
+	M_intro='This installs Dropsite on a fresh rented server (VPS) with Ubuntu 22.04 or newer, or Debian 12 or newer.
 You will need: the server IP address and root password (from your hosting provider), a domain and an e-mail.
 It takes 10-20 minutes. Press Ctrl+C to stop at any time.'
 	M_q_host='Server IP address'
@@ -87,14 +87,14 @@ It takes 10-20 minutes. Press Ctrl+C to stop at any time.'
   domain:  %s
   e-mail:  %s'
 	M_confirm='Continue? [Y/n]'
-	M_confirm_short='Install dropsite on %s for %s? [Y/n]'
+	M_confirm_short='Install Dropsite on %s for %s? [Y/n]'
 	M_cancelled='Cancelled. Nothing was changed.'
 	M_need_tool='"%s" is required but not found on this computer.'
-	M_installing='Installing dropsite. It takes 10-20 minutes, keep this window open.'
+	M_installing='Installing Dropsite. It takes 10-20 minutes, keep this window open.'
 	M_s_connect='Connecting to the server'
 	M_s_connect_done='Connected to the server'
-	M_s_install='Installing dropsite on the server'
-	M_s_install_done='Installed dropsite'
+	M_s_install='Installing Dropsite on the server'
+	M_s_install_done='Installed Dropsite'
 	M_s_dns='Waiting for the domain'
 	M_s_dns_done='The domain works'
 	M_s_https='Turning on HTTPS'
@@ -109,7 +109,7 @@ and run the command again.'
 	M_step_check='Checking the server system'
 	M_os_bad='The server runs "%s". Supported: Ubuntu 22.04 or newer, Debian 12 or newer. Reinstall the server with one of them in your provider'"'"'s control panel and run the command again.'
 	M_step_sshcfg='Saved the connection as "%s" in %s (admin interface on local port %s)'
-	M_step_bootstrap='Installing dropsite on the server: 10-20 minutes. Keep this window open.'
+	M_step_bootstrap='Installing Dropsite on the server: 10-20 minutes. Keep this window open.'
 	M_bootstrap_failed='The installation on the server stopped with an error.'
 	M_server_log='Server log: ssh %s tail -n 100 /var/log/dropsite-install.log'
 	M_log_tail='Last lines of the log:'
@@ -136,7 +136,7 @@ DNS changes take from a few minutes to an hour. With Cloudflare, choose "DNS onl
   %s'
 	M_interrupted='Stopped. The server is installed and keeps working.'
 	M_skip_dns='DNS check skipped.'
-	M_done='Done! dropsite is installed.'
+	M_done='Done! Dropsite is installed.'
 	M_open_admin='Open the admin interface:
   1. In a terminal run:   ssh %s
      and keep that window open.
@@ -149,9 +149,9 @@ Password:  the one from the first installation. Forgot it? Run:  ssh %s dropsite
 	M_connect_ai='Connect ChatGPT or Claude: in the admin interface open "Connect AI" and follow the steps there.'
 	M_open_public='The admin interface is also open to the internet: %s
 This is a potential threat: use a strong, unique password and turn it off in Settings when you do not need it.'
-	M_update='Update dropsite later:   ssh %s dropsite-update'
+	M_update='Update Dropsite later:   ssh %s dropsite-update'
 	M_sites_at='Your sites will be at https://<name>.%s'
-	M_no_install='No dropsite server named "%s" in %s. Run the installer without --check-dns first.'
+	M_no_install='No Dropsite server named "%s" in %s. Run the installer without --check-dns first.'
 	M_done_short='Done!'
 	M_final_ssh='1. Run: ssh %s   (keep that window open)'
 	M_final_open='2. Open: http://localhost:%s'
@@ -162,8 +162,8 @@ This is a potential threat: use a strong, unique password and turn it off in Set
 }
 
 msgs_ru() {
-	M_title='dropsite — свой сервер для сайтов'
-	M_intro='Скрипт установит dropsite на новый арендованный сервер (VPS) с Ubuntu 22.04 или новее либо Debian 12 или новее.
+	M_title='Dropsite — свой сервер для сайтов'
+	M_intro='Скрипт установит Dropsite на новый арендованный сервер (VPS) с Ubuntu 22.04 или новее либо Debian 12 или новее.
 Понадобятся: IP-адрес сервера и пароль root (из письма хостинга), домен и e-mail.
 Займёт 10-20 минут. Остановить можно в любой момент клавишами Ctrl+C.'
 	M_q_host='IP-адрес сервера'
@@ -187,14 +187,14 @@ msgs_ru() {
   домен:   %s
   e-mail:  %s'
 	M_confirm='Продолжить? [Y/n]'
-	M_confirm_short='Ставлю dropsite на %s для %s? [Y/n]'
+	M_confirm_short='Ставлю Dropsite на %s для %s? [Y/n]'
 	M_cancelled='Отменено. Ничего не изменилось.'
 	M_need_tool='На этом компьютере не найдена программа "%s".'
-	M_installing='Устанавливаю dropsite. Это 10–20 минут, не закрывайте окно.'
+	M_installing='Устанавливаю Dropsite. Это 10–20 минут, не закрывайте окно.'
 	M_s_connect='Подключаюсь к серверу'
 	M_s_connect_done='Подключился к серверу'
-	M_s_install='Ставлю dropsite на сервер'
-	M_s_install_done='Установил dropsite'
+	M_s_install='Ставлю Dropsite на сервер'
+	M_s_install_done='Установил Dropsite'
 	M_s_dns='Жду домен'
 	M_s_dns_done='Домен работает'
 	M_s_https='Включаю HTTPS'
@@ -209,7 +209,7 @@ msgs_ru() {
 	M_step_check='Проверяю систему сервера'
 	M_os_bad='На сервере "%s". Поддерживаются: Ubuntu 22.04 и новее, Debian 12 и новее. Переустановите сервер с одной из этих систем в панели хостинга и запустите команду ещё раз.'
 	M_step_sshcfg='Подключение сохранено как "%s" в %s (веб-интерфейс на локальном порту %s)'
-	M_step_bootstrap='Устанавливаю dropsite на сервер: 10-20 минут. Не закрывайте это окно.'
+	M_step_bootstrap='Устанавливаю Dropsite на сервер: 10-20 минут. Не закрывайте это окно.'
 	M_bootstrap_failed='Установка на сервере остановилась с ошибкой.'
 	M_server_log='Журнал на сервере: ssh %s tail -n 100 /var/log/dropsite-install.log'
 	M_log_tail='Последние строки журнала:'
@@ -236,7 +236,7 @@ msgs_ru() {
   %s'
 	M_interrupted='Остановлено. Сервер установлен и продолжает работать.'
 	M_skip_dns='Проверка DNS пропущена.'
-	M_done='Готово! dropsite установлен.'
+	M_done='Готово! Dropsite установлен.'
 	M_open_admin='Как открыть веб-интерфейс:
   1. В терминале выполните:   ssh %s
      и не закрывайте это окно.
@@ -249,9 +249,9 @@ msgs_ru() {
 	M_connect_ai='Подключить ChatGPT или Claude: в веб-интерфейсе откройте "Подключить ИИ" и следуйте шагам.'
 	M_open_public='Веб-интерфейс также открыт из интернета: %s
 Это потенциальная угроза: используйте надёжный уникальный пароль и выключите доступ в настройках, когда он не нужен.'
-	M_update='Обновить dropsite потом:   ssh %s dropsite-update'
+	M_update='Обновить Dropsite потом:   ssh %s dropsite-update'
 	M_sites_at='Ваши сайты будут по адресам https://<имя>.%s'
-	M_no_install='Сервер dropsite с именем "%s" не найден в %s. Сначала запустите установку без --check-dns.'
+	M_no_install='Сервер Dropsite с именем "%s" не найден в %s. Сначала запустите установку без --check-dns.'
 	M_done_short='Готово!'
 	M_final_ssh='1. Выполните: ssh %s   (окно не закрывайте)'
 	M_final_open='2. Откройте: http://localhost:%s'
@@ -262,8 +262,8 @@ msgs_ru() {
 }
 
 msgs_zh() {
-	M_title='dropsite：您自己的网站服务器'
-	M_intro='此脚本会在一台全新租用的服务器（VPS，Ubuntu 22.04 及以上或 Debian 12 及以上）上安装 dropsite。
+	M_title='Dropsite：您自己的网站服务器'
+	M_intro='此脚本会在一台全新租用的服务器（VPS，Ubuntu 22.04 及以上或 Debian 12 及以上）上安装 Dropsite。
 需要准备：服务器 IP 地址和 root 密码（来自主机商的邮件）、一个域名和一个电子邮箱。
 大约需要 10-20 分钟。随时可以按 Ctrl+C 停止。'
 	M_q_host='服务器 IP 地址'
@@ -287,14 +287,14 @@ msgs_zh() {
   域名：  %s
   邮箱：  %s'
 	M_confirm='继续吗？[Y/n]'
-	M_confirm_short='在 %s 上为 %s 安装 dropsite 吗？[Y/n]'
+	M_confirm_short='在 %s 上为 %s 安装 Dropsite 吗？[Y/n]'
 	M_cancelled='已取消，没有做任何更改。'
 	M_need_tool='此电脑上找不到所需的程序 "%s"。'
-	M_installing='正在安装 dropsite，大约需要 10–20 分钟，请不要关闭此窗口。'
+	M_installing='正在安装 Dropsite，大约需要 10–20 分钟，请不要关闭此窗口。'
 	M_s_connect='正在连接服务器'
 	M_s_connect_done='已连接服务器'
-	M_s_install='正在服务器上安装 dropsite'
-	M_s_install_done='dropsite 已安装'
+	M_s_install='正在服务器上安装 Dropsite'
+	M_s_install_done='Dropsite 已安装'
 	M_s_dns='正在等待域名生效'
 	M_s_dns_done='域名已生效'
 	M_s_https='正在启用 HTTPS'
@@ -309,7 +309,7 @@ msgs_zh() {
 	M_step_check='正在检查服务器系统'
 	M_os_bad='服务器运行的是 "%s"。支持的系统：Ubuntu 22.04 及以上、Debian 12 及以上。请在主机商控制面板中重装为其中之一，然后重新运行命令。'
 	M_step_sshcfg='连接已保存为 "%s"，位于 %s（管理界面使用本地端口 %s）'
-	M_step_bootstrap='正在服务器上安装 dropsite：需要 10-20 分钟，请不要关闭此窗口。'
+	M_step_bootstrap='正在服务器上安装 Dropsite：需要 10-20 分钟，请不要关闭此窗口。'
 	M_bootstrap_failed='服务器上的安装因错误而停止。'
 	M_server_log='服务器日志：ssh %s tail -n 100 /var/log/dropsite-install.log'
 	M_log_tail='日志的最后几行：'
@@ -336,7 +336,7 @@ DNS 更改需要几分钟到一小时生效。使用 Cloudflare 时请选择 "DN
   %s'
 	M_interrupted='已停止。服务器已安装并继续运行。'
 	M_skip_dns='已跳过 DNS 检查。'
-	M_done='完成！dropsite 已安装。'
+	M_done='完成！Dropsite 已安装。'
 	M_open_admin='打开管理界面：
   1. 在终端中运行：   ssh %s
      并保持该窗口打开。
@@ -349,9 +349,9 @@ DNS 更改需要几分钟到一小时生效。使用 Cloudflare 时请选择 "DN
 	M_connect_ai='连接 ChatGPT 或 Claude：在管理界面中打开 "Connect AI" 页面并按步骤操作。'
 	M_open_public='管理界面也已向互联网开放：%s
 这是一个潜在的威胁：请使用强且唯一的密码，不需要时在设置中关闭。'
-	M_update='以后更新 dropsite：   ssh %s dropsite-update'
+	M_update='以后更新 Dropsite：   ssh %s dropsite-update'
 	M_sites_at='您的网站地址将是 https://<名称>.%s'
-	M_no_install='找不到名为 "%s" 的 dropsite 服务器（%s）。请先在不带 --check-dns 的情况下运行安装程序。'
+	M_no_install='找不到名为 "%s" 的 Dropsite 服务器（%s）。请先在不带 --check-dns 的情况下运行安装程序。'
 	M_done_short='完成！'
 	M_final_ssh='1. 运行：ssh %s   （保持该窗口打开）'
 	M_final_open='2. 打开：http://localhost:%s'
@@ -503,7 +503,7 @@ log_open() {
 		return 0
 	fi
 	log_line ""
-	log_line "===== $(date -u +%FT%TZ) dropsite install-server.sh ====="
+	log_line "===== $(date -u +%FT%TZ) Dropsite install-server.sh ====="
 }
 
 # scrub_log SECRET: replace SECRET in the log (defence in depth: the server

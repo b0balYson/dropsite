@@ -108,7 +108,7 @@ type Config struct {
 	UpdateCheckURL string
 }
 
-// DefaultUpdateCheckURL is the newest published release of dropsite; GitHub
+// DefaultUpdateCheckURL is the newest published release of Dropsite; GitHub
 // never answers a draft or a pre-release here.
 const DefaultUpdateCheckURL = "https://api.github.com/repos/b0balYson/dropsite/releases/latest"
 

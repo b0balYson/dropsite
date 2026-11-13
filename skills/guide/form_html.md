@@ -1,6 +1,6 @@
 # Forms on the site
 
-dropsite receives form submissions itself: never use Formspree, Google Forms, Netlify Forms or other form services for a site published here, and never write a backend. Every form posts to `/_form/<name>` on the same site.
+Dropsite receives form submissions itself: never use Formspree, Google Forms, Netlify Forms or other form services for a site published here, and never write a backend. Every form posts to `/_form/<name>` on the same site.
 
 Generate forms like this, always with the honeypot and the Altcha widget (the widget is harmless until the owner turns the check on):
 

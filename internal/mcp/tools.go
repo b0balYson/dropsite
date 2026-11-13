@@ -77,7 +77,7 @@ func writes(title string, destructive, idempotent bool) *sdk.ToolAnnotations {
 func (t tools) register(s *sdk.Server, o Options) {
 	registerGuide(s)
 	sdk.AddTool(s, &sdk.Tool{Name: "list_sites", Annotations: readOnly("List sites"),
-		Description: "List the user's dropsite sites with names, links and current versions. Call it first " +
+		Description: "List the user's Dropsite sites with names, links and current versions. Call it first " +
 			"whenever the user talks about \"my site\" or gives a link, to find which site they mean; if several " +
 			"fit, show their names and links and ask. Rules for working with sites: get_guide."}, t.listSites)
 	sdk.AddTool(s, &sdk.Tool{Name: "create_site", Annotations: writes("Create site", false, false),

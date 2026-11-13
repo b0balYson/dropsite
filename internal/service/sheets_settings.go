@@ -57,7 +57,7 @@ type SheetsStatus struct {
 }
 
 var errSheetsNotConfigured = domain.E(domain.KindInvalid, domain.CodeSheetsNotConfigured,
-	"Google Sheets is not connected on this dropsite server; ask the administrator to add a Google service "+
+	"Google Sheets is not connected on this Dropsite server; ask the administrator to add a Google service "+
 		"account key in the settings of the web interface")
 
 var errSheetsUnreadable = domain.E(domain.KindInvalid, domain.CodeSheetsNotConfigured,
@@ -183,7 +183,7 @@ func (s *Service) sheetsCallErr(err error, email string, write bool) error {
 			role = "Editor"
 		}
 		return domain.E(domain.KindInvalid, domain.CodeSheetsAccessDenied,
-			fmt.Sprintf("dropsite cannot open this spreadsheet or sheet: in Google Sheets press Share, add %s as %s, "+
+			fmt.Sprintf("Dropsite cannot open this spreadsheet or sheet: in Google Sheets press Share, add %s as %s, "+
 				"and check that the link points to the right sheet", email, role)).
 			WithParams(map[string]any{"service_account_email": email, "role": strings.ToLower(role)})
 	case sheets.IsAuth(err):

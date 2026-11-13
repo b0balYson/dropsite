@@ -1,6 +1,6 @@
 # API keys for pages (secret proxy)
 
-A static page cannot hide a key: everything in its HTML and JavaScript reaches the visitor. A **proxy endpoint** lets a page of a site call a third-party API (OpenAI, a CRM, a Telegram bot, maps) while the key stays on the dropsite server. No code of the owner runs on the server: control only forwards the request and adds the key.
+A static page cannot hide a key: everything in its HTML and JavaScript reaches the visitor. A **proxy endpoint** lets a page of a site call a third-party API (OpenAI, a CRM, a Telegram bot, maps) while the key stays on the Dropsite server. No code of the owner runs on the server: control only forwards the request and adds the key.
 
 ```text
 page ──fetch──▶ https://<site>/_dropsite/proxy/<name>/<path>

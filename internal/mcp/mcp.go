@@ -1,4 +1,4 @@
-// Package mcp defines the MCP tools of dropsite. The same tools are served by
+// Package mcp defines the MCP tools of Dropsite. The same tools are served by
 // the remote endpoint on the API host (internal/mcp/remote, backed by
 // internal/service) and by the local stdio server of the CLI (backed by the
 // HTTP API). This package must not import the server: the CLI links it.
@@ -140,7 +140,7 @@ type Options struct {
 	Instructions string
 }
 
-// NewServer builds an MCP server with the dropsite tools.
+// NewServer builds an MCP server with the Dropsite tools.
 func NewServer(version string, resolve Resolver, o Options) *sdk.Server {
 	s := sdk.NewServer(&sdk.Implementation{Name: brand.Name, Title: brand.DisplayName, Version: version},
 		&sdk.ServerOptions{Instructions: o.Instructions})

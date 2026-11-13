@@ -29,7 +29,7 @@ type qualityArgs struct {
 	DeployID string `json:"deploy_id,omitempty" jsonschema:"version to check; empty means the version being served"`
 }
 
-var errNoQuality = errors.New("this server cannot show quality reports; use the web interface of dropsite")
+var errNoQuality = errors.New("this server cannot show quality reports; use the web interface of Dropsite")
 
 // NoReportSummary is the summary of a version without a report.
 const NoReportSummary = "This version has no quality report (it was published before reports existed); publish again to get one."

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prepare a fresh Ubuntu (22.04 or newer) or Debian (12 or newer) server for dropsite and
+# Prepare a fresh Ubuntu (22.04 or newer) or Debian (12 or newer) server for Dropsite and
 # start it. Runs on the server as root; install-server.sh uploads
 # and runs it over ssh, but it also works on its own:
 #
@@ -252,7 +252,7 @@ configure_firewall() {
 
 checkout() {
 	if [ -d "$APP_DIR/.git" ]; then
-		step "Updating the dropsite source in $APP_DIR"
+		step "Updating the Dropsite source in $APP_DIR"
 		# A release checkout is detached at its tag: back to the branch first.
 		if ! git -C "$APP_DIR" symbolic-ref -q HEAD >/dev/null; then
 			git -C "$APP_DIR" checkout -q "$(cat "$STATE_DIR/branch" 2>/dev/null || echo "$REF")" >>"$LOG" 2>&1 </dev/null || true
@@ -261,7 +261,7 @@ checkout() {
 			warn "could not update $APP_DIR with 'git pull --ff-only'; continuing with the current version"
 		fi
 	else
-		step "Downloading dropsite to $APP_DIR"
+		step "Downloading Dropsite to $APP_DIR"
 		[ ! -e "$APP_DIR" ] || [ -z "$(ls -A "$APP_DIR")" ] ||
 			die "$APP_DIR exists and is not a git checkout; move it away and run again"
 		run git clone --branch "$REF" "$REPO_URL" "$APP_DIR"
@@ -467,7 +467,7 @@ compose_quiet() {
 # checked-out branch, with images tagged "dev".
 stack_up() {
 	if select_release; then
-		step "Downloading the dropsite $DROPSITE_VERSION images"
+		step "Downloading the Dropsite $DROPSITE_VERSION images"
 		if compose_quiet pull && images_present &&
 			compose_quiet up -d --no-build --wait --wait-timeout "$WAIT_TIMEOUT"; then
 			tag_latest
@@ -479,7 +479,7 @@ stack_up() {
 	fi
 	DROPSITE_BUILD_VERSION=$(sh "$APP_DIR/scripts/version.sh" 2>/dev/null || echo dev)
 	export DROPSITE_BUILD_VERSION
-	step "Building and starting dropsite $DROPSITE_BUILD_VERSION from source (the first build takes several minutes)"
+	step "Building and starting Dropsite $DROPSITE_BUILD_VERSION from source (the first build takes several minutes)"
 	compose_quiet up -d --build --wait --wait-timeout "$WAIT_TIMEOUT"
 }
 
@@ -488,7 +488,7 @@ start_stack() {
 	if ! stack_up; then
 		tail -n 60 "$LOG" >&2
 		compose ps >&2 || true
-		die "dropsite did not start (full log: $LOG)"
+		die "Dropsite did not start (full log: $LOG)"
 	fi
 	for _ in $(seq 1 60); do
 		id=$(compose ps -q control)
@@ -530,12 +530,12 @@ write_file() {
 
 install_helpers() {
 	step "Installing the commands dropsite-update, dropsite-rollback, dropsite-backup, dropsite-admin-password, dropsite-info, dropsite-update-watch"
-	header=$(printf '#!/usr/bin/env bash\n# Installed by dropsite server-bootstrap.sh; reinstalled by dropsite-update.\nset -euo pipefail\nAPP_DIR=%q\n' "$APP_DIR")
+	header=$(printf '#!/usr/bin/env bash\n# Installed by Dropsite server-bootstrap.sh; reinstalled by dropsite-update.\nset -euo pipefail\nAPP_DIR=%q\n' "$APP_DIR")
 
 	{
 		printf '%s\n' "$header"
 		cat <<'EOF'
-# Back up dropsite into /var/backups/dropsite, keeping the newest 7 archives.
+# Back up Dropsite into /var/backups/dropsite, keeping the newest 7 archives.
 # The first run also copies the form secrets key to /root/dropsite-secrets.key.
 DIR=/var/backups/dropsite
 KEEP=${DROPSITE_KEEP_BACKUPS:-7}
@@ -560,7 +560,7 @@ EOF
 	{
 		printf '%s\n' "$header"
 		cat <<'EOF'
-# Update dropsite: back up, remember what runs now (for dropsite-rollback),
+# Update Dropsite: back up, remember what runs now (for dropsite-rollback),
 # download the new version, start it and restart Caddy if its config changed.
 #   dropsite-update            the release DROPSITE_VERSION in deploy/.env names
 #                              (latest by default)
@@ -636,7 +636,7 @@ if [ "$(sha256sum Caddyfile | cut -d' ' -f1)" != "$before" ]; then
 fi
 bash "$APP_DIR/scripts/server-bootstrap.sh" --install-helpers
 docker compose ps --format "    {{.Service}}: {{.Status}}"
-echo "==> dropsite is up to date. To go back: dropsite-rollback"
+echo "==> Dropsite is up to date. To go back: dropsite-rollback"
 EOF
 	} | write_file "$BIN_DIR/dropsite-update" 0755
 
@@ -654,7 +654,7 @@ STATE=/var/lib/dropsite/previous-release
 . "$STATE"
 [ -s "$PREV_BACKUP" ] || { echo "the backup $PREV_BACKUP is missing" >&2; exit 1; }
 if [ "${1:-}" != --yes ]; then
-	echo "This returns dropsite to commit $PREV_COMMIT (version ${PREV_VERSION:-dev}, as of $PREV_DATE)"
+	echo "This returns Dropsite to commit $PREV_COMMIT (version ${PREV_VERSION:-dev}, as of $PREV_DATE)"
 	echo "and restores the backup $PREV_BACKUP: changes made since then are lost."
 	read -r -p "Type yes to continue: " answer
 	[ "$answer" = yes ] || exit 1
@@ -873,7 +873,7 @@ EOF
 	} | write_file "$BIN_DIR/dropsite-update-watch" 0755
 
 	printf '%s\n' \
-		'# dropsite: run an update requested in the web interface (see dropsite-update-watch).' \
+		'# Dropsite: run an update requested in the web interface (see dropsite-update-watch).' \
 		'SHELL=/bin/bash' \
 		'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' \
 		'* * * * * root /usr/local/bin/dropsite-update-watch >/dev/null 2>&1' |
@@ -881,7 +881,7 @@ EOF
 	install_update_unit
 
 	printf '%s\n' \
-		'# dropsite: daily backup at 03:15 server time (see dropsite-backup).' \
+		'# Dropsite: daily backup at 03:15 server time (see dropsite-backup).' \
 		'SHELL=/bin/bash' \
 		'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' \
 		'15 3 * * * root /usr/local/bin/dropsite-backup >>/var/log/dropsite-backup.log 2>&1' |
@@ -894,10 +894,10 @@ install_update_unit() {
 	[ -d /run/systemd/system ] || return 0
 	data=$(docker volume inspect -f '{{.Mountpoint}}' dropsite_state 2>/dev/null) || return 0
 	[ -n "$data" ] || return 0
-	printf '%s\n' '[Unit]' 'Description=Run a dropsite update requested in the web interface' '' \
+	printf '%s\n' '[Unit]' 'Description=Run a Dropsite update requested in the web interface' '' \
 		'[Service]' 'Type=oneshot' 'ExecStart=/usr/local/bin/dropsite-update-watch' |
 		write_file "$SYSTEMD_DIR/dropsite-update-watch.service" 0644
-	printf '%s\n' '[Unit]' 'Description=Watch for dropsite update requests' '' \
+	printf '%s\n' '[Unit]' 'Description=Watch for Dropsite update requests' '' \
 		'[Path]' "PathChanged=$data/update/request" '' '[Install]' 'WantedBy=multi-user.target' |
 		write_file "$SYSTEMD_DIR/dropsite-update-watch.path" 0644
 	if ! { systemctl daemon-reload && systemctl enable --now dropsite-update-watch.path; } >>"$LOG" 2>&1 </dev/null; then
@@ -936,7 +936,7 @@ first_backup() {
 
 print_info() {
 	f=$(env_file)
-	[ -f "$f" ] || die "dropsite is not installed in $APP_DIR"
+	[ -f "$f" ] || die "Dropsite is not installed in $APP_DIR"
 	domain=$(get_env BASE_DOMAIN)
 	api_host=$(get_env API_HOST)
 	printf 'DROPSITE_RESULT domain=%s\n' "$domain"
@@ -996,7 +996,7 @@ main() {
 	validate_inputs
 	touch "$LOG"
 	chmod 600 "$LOG"
-	printf '\n===== %s dropsite bootstrap =====\n' "$(date -u +%FT%TZ)" >>"$LOG"
+	printf '\n===== %s Dropsite bootstrap =====\n' "$(date -u +%FT%TZ)" >>"$LOG"
 	install_base_packages
 	ensure_swap
 	configure_firewall
@@ -1011,7 +1011,7 @@ main() {
 	apply_public_admin
 	install_helpers
 	first_backup
-	step "dropsite is running"
+	step "Dropsite is running"
 	print_info
 	if [ "$ADMIN_PASSWORD_NEW" = 1 ]; then
 		printf 'DROPSITE_RESULT admin_password=%s\n' "$admin_password"

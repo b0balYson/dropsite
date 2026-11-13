@@ -1,13 +1,13 @@
 ---
 name: dropsite-publish
-description: Publish a folder of static files (HTML, CSS, JS, images) to the team's dropsite server and return a public HTTPS link, build self-contained fast sites for it, and build contact or lead forms that work on dropsite without third-party form services. Use when the user asks to publish, deploy, share, upload or "put online" a landing page, site, prototype or HTML file built in this project, asks for a link to it, or wants a form (lead, contact, order, callback) on a site that will be published with dropsite.
+description: Publish a folder of static files (HTML, CSS, JS, images) to the team's Dropsite server and return a public HTTPS link, build self-contained fast sites for it, and build contact or lead forms that work on Dropsite without third-party form services. Use when the user asks to publish, deploy, share, upload or "put online" a landing page, site, prototype or HTML file built in this project, asks for a link to it, or wants a form (lead, contact, order, callback) on a site that will be published with Dropsite.
 ---
 
 <!-- Generated from skills/parts and skills/guide: edit those files and run `go test ./skills -update`. -->
 
-# Publish a static site with dropsite
+# Publish a static site with Dropsite
 
-dropsite hosts finished static files. It does not build projects: if the project needs a build step (`npm run build`, `vite build`, `astro build`, `next build && next export`), run it first and publish the output folder.
+Dropsite hosts finished static files. It does not build projects: if the project needs a build step (`npm run build`, `vite build`, `astro build`, `next build && next export`), run it first and publish the output folder.
 
 Talk to the user in plain words: say what you did and give the link; explain commands or files only if they ask.
 
@@ -19,7 +19,7 @@ Run:
 dropsite version && dropsite sites --json >/dev/null && echo READY
 ```
 
-- `command not found`: the CLI is not installed. Stop and tell the user to open the **Connect AI** page of their dropsite web interface, press **Connect** and run the command shown there in their own terminal (it installs the CLI and signs in). Do not try to install it yourself.
+- `command not found`: the CLI is not installed. Stop and tell the user to open the **Connect AI** page of their Dropsite web interface, press **Connect** and run the command shown there in their own terminal (it installs the CLI and signs in). Do not try to install it yourself.
 - An error that mentions `not logged in`, `dropsite login` or `401`: the CLI is not signed in or its key was revoked. Stop and give the user the same advice: press **Connect** on the **Connect AI** page and run the shown command in their own terminal. Never ask the user to paste a token or a connect code into the chat.
 
 ## 2. Find the folder to publish
@@ -50,18 +50,18 @@ Tell the user the `url` as a clickable link, and mention that:
 
 - the page is live now; repeating the publish updates it in place;
 - `dropsite rollback <site>` restores the previous version if something broke;
-- a memorable address (slug such as `promo-may`), a password, own domains and form delivery are set in the web interface, or from a chat (ChatGPT, claude.ai) connected to dropsite.
+- a memorable address (slug such as `promo-may`), a password, own domains and form delivery are set in the web interface, or from a chat (ChatGPT, claude.ai) connected to Dropsite.
 
 ## Self-contained, fast and accessible sites
 
-Sites published with dropsite must work on their own: no part of the page may depend on another server to load or look right.
+Sites published with Dropsite must work on their own: no part of the page may depend on another server to load or look right.
 
 ### Ship everything with the site
 
 - Every image, font, icon, script and stylesheet is a file of the site. No Google Fonts, no CDN links (jsDelivr, unpkg, cdnjs), no hotlinked photos (Unsplash, Pexels, other sites), no external icon kits.
 - To use a picture or a font from the web, download it into the site: in a chat, add a `fetch` entry (`url` + `path` inside the site) to update_site_files or upload_files and the server downloads it; when publishing a folder, save the file into the folder. Then reference it by a relative path (`img/hero.webp`, `fonts/inter.woff2`).
 - Use only images and fonts the user owns or that are free to use (for example, fonts under the SIL Open Font License, photos with a free license). Never take images from someone else's site.
-- Allowed external links: ordinary `<a href>` links (maps, social networks, messengers), analytics counters that dropsite inserts itself when the user turns them on (do not add counter code by hand), and maps, videos or chat widgets the user explicitly asked for (see "Maps, videos and chat widgets").
+- Allowed external links: ordinary `<a href>` links (maps, social networks, messengers), analytics counters that Dropsite inserts itself when the user turns them on (do not add counter code by hand), and maps, videos or chat widgets the user explicitly asked for (see "Maps, videos and chat widgets").
 - Prefer system fonts (`font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`). If a brand font matters, ship one or two WOFF2 files with `font-display: swap`.
 - Keep JavaScript minimal; a typical business site needs none, except the form widget described under "Forms on the site".
 
@@ -82,7 +82,7 @@ Sites published with dropsite must work on their own: no part of the page may de
 
 ## Forms on the site
 
-dropsite receives form submissions itself: never use Formspree, Google Forms, Netlify Forms or other form services for a site published here, and never write a backend. Every form posts to `/_form/<name>` on the same site.
+Dropsite receives form submissions itself: never use Formspree, Google Forms, Netlify Forms or other form services for a site published here, and never write a backend. Every form posts to `/_form/<name>` on the same site.
 
 Generate forms like this, always with the honeypot and the Altcha widget (the widget is harmless until the owner turns the check on):
 
@@ -109,10 +109,10 @@ Generate forms like this, always with the honeypot and the Altcha widget (the wi
 
 ## Accounts, databases and logins (external backend)
 
-dropsite serves static files only. When the user needs sign-in, a database, a shared list or file uploads, connect the site to a backend service the user owns: Supabase, Firebase, PocketBase or Appwrite. Use it only when a form submission is not enough; a simple request form needs no backend (see "Forms on the site"). A third-party API that needs a secret key (OpenAI, a CRM) needs no backend either: dropsite's API key proxy forwards the calls and keeps the key on the server.
+Dropsite serves static files only. When the user needs sign-in, a database, a shared list or file uploads, connect the site to a backend service the user owns: Supabase, Firebase, PocketBase or Appwrite. Use it only when a form submission is not enough; a simple request form needs no backend (see "Forms on the site"). A third-party API that needs a secret key (OpenAI, a CRM) needs no backend either: Dropsite's API key proxy forwards the calls and keeps the key on the server.
 
 - Ask the user to create the project in that service themselves and to send you only the **public** values: the project URL and the public key (Supabase `anon` or `sb_publishable_…` key, Firebase web config with its `apiKey`, Appwrite project ID, PocketBase URL). These are designed to be shipped in a web page.
-- Never put a secret key into the site: no Supabase `service_role` or `sb_secret_…` key, no Firebase service account JSON or Admin SDK key, no Appwrite API key, no PocketBase admin password. Everything in the site is public. dropsite refuses to publish files that contain such keys. If the user pastes one into the chat, do not use it and tell them to rotate it in the service.
+- Never put a secret key into the site: no Supabase `service_role` or `sb_secret_…` key, no Firebase service account JSON or Admin SDK key, no Appwrite API key, no PocketBase admin password. Everything in the site is public. Dropsite refuses to publish files that contain such keys. If the user pastes one into the chat, do not use it and tell them to rotate it in the service.
 - The public key is safe only with access rules. Before going live, tell the user to turn on and check them: Supabase Row Level Security on every table with policies for exactly what visitors may read or write; Firebase Security Rules (never `allow read, write: if true`); Appwrite collection permissions; PocketBase API rules. Write the rules for them as text they paste into the service.
 - Ship the SDK with the site: download the ES module build into the site (`fetch` entry or save it into the folder, for example `js/supabase.js`) and import it by a relative path. No CDN links (jsDelivr, unpkg, esm.sh, gstatic).
 - The service's own sign-in redirect and allowed origins must include the site's address: tell the user to add the link (and their own domain, if any) in the service settings.
@@ -120,7 +120,7 @@ dropsite serves static files only. When the user needs sign-in, a database, a sh
 
 ## Payments
 
-A site published with dropsite never handles card data: no fields for card numbers, CVC or expiry dates, and no payment code of your own.
+A site published with Dropsite never handles card data: no fields for card numbers, CVC or expiry dates, and no payment code of your own.
 
 - Use the payment link of the user's payment service: YooKassa (payment links or a payment form link), CloudPayments (payment link or widget page from their account), Stripe Payment Links, or similar. Ask the user to create the link (one per product or price) in their account and send it to you; never invent one.
 - Put the link on a clear button ("Pay 1 500 ₽", "Buy now") as an ordinary `<a href>`; the payment page opens on the service's site. Set the return address in the service to a page of the site (for example `thanks.html`).
@@ -130,7 +130,7 @@ A site published with dropsite never handles card data: no fields for card numbe
 
 ## Booking and appointments
 
-dropsite does not keep a calendar and does not count free seats or time slots. Say this plainly when the user asks for booking, and offer one of two ways:
+Dropsite does not keep a calendar and does not count free seats or time slots. Say this plainly when the user asks for booking, and offer one of two ways:
 
 - **The user's booking service** (YCLIENTS, Calendly, Cal.com, Google Calendar appointment pages, a restaurant booking system): ask for their booking link and put it on a clear "Book" button as an ordinary link. Embed their widget only if the user asks for it (see "Maps, videos and chat widgets").
 - **A booking request form**: a form posting to `/_form/booking` with name, phone, preferred date and time (`<input type="date">`, `<input type="time">` or a short list of slots) and a comment. Say on the page that this is a request and that the business confirms it by phone or message; the thanks page repeats it. Offer to connect Telegram so requests arrive at once.
@@ -142,8 +142,8 @@ Never promise that a slot is reserved or that two people cannot pick the same ti
 A form that collects names, phones or e-mails collects personal data. In Russia this falls under 152-FZ, in the EU under the GDPR. Do the basics on every site with a form or analytics; you are not a lawyer, so say that the texts are a template the user should check.
 
 - **Consent checkbox** in every form with personal data: a required, unchecked `<input type="checkbox" name="consent" required>` with a label like "I agree to the processing of my personal data under the privacy policy", where "privacy policy" links to the policy page. Never pre-check it. Russian sites: a separate consent is needed for marketing mailings.
-- **Privacy policy page** (`privacy.html`), linked from every form and the footer: who processes the data (the business name, tax number, contacts), what data is collected and why, where it goes (dropsite stores requests and forwards them to the owner's channels), how long it is kept, how to ask for deletion. Ask the user for the business details; never invent them.
-- **Cookie banner** only when analytics counters are on (Yandex Metrica, Google Analytics set through set_counters): a small banner at the bottom saying the site uses cookies for statistics, with an "OK" button that hides it and remembers the choice in `localStorage`. For EU visitors, counters should start only after consent; tell the user this if their audience is in the EU. dropsite's own visit statistics use no cookies and need no banner.
+- **Privacy policy page** (`privacy.html`), linked from every form and the footer: who processes the data (the business name, tax number, contacts), what data is collected and why, where it goes (Dropsite stores requests and forwards them to the owner's channels), how long it is kept, how to ask for deletion. Ask the user for the business details; never invent them.
+- **Cookie banner** only when analytics counters are on (Yandex Metrica, Google Analytics set through set_counters): a small banner at the bottom saying the site uses cookies for statistics, with an "OK" button that hides it and remembers the choice in `localStorage`. For EU visitors, counters should start only after consent; tell the user this if their audience is in the EU. Dropsite's own visit statistics use no cookies and need no banner.
 - Keep forms minimal: ask only for the data the business really needs.
 
 ## Search engines and link previews (SEO)
@@ -152,10 +152,10 @@ Do these on every public site; they cost little and help people find it.
 
 - Every page: a unique `<title>` (under 60 characters, the business name and what it offers), `<meta name="description">` (under 160 characters), one `<h1>`, `<link rel="canonical">` with the page's full address, and text that names the city and the service in plain words.
 - **Structured data**: one `<script type="application/ld+json">` per page with schema.org data that matches what the page shows. `LocalBusiness` (or a more exact type such as `Restaurant`, `BeautySalon`) with name, address, phone, opening hours and the site URL for a business; `Product` with `offers` (price, currency) for goods; `Event` with date, place and tickets for events; `FAQPage` for a questions-and-answers block. Never mark up anything that is not on the page.
-- **robots.txt** at the root: `User-agent: *`, `Allow: /` and `Sitemap: <site address>/sitemap.xml`. If the site is hidden from search engines (set_site_access), dropsite already asks them not to index it: do not fight it with robots.txt.
+- **robots.txt** at the root: `User-agent: *`, `Allow: /` and `Sitemap: <site address>/sitemap.xml`. If the site is hidden from search engines (set_site_access), Dropsite already asks them not to index it: do not fight it with robots.txt.
 - **sitemap.xml** at the root listing every page by its full address (use the address the user will share: their own domain if one is attached, otherwise the primary link). Update it when pages are added.
 - **Open Graph** for link previews in messengers: `og:title`, `og:description`, `og:url`, `og:type`, `og:image` with a 1200×630 image file of the site (full address), and `twitter:card` = `summary_large_image`.
-- After publishing, the user can add the site to Yandex Webmaster and Google Search Console; verification by an HTML file or a meta tag works on dropsite (add the file or tag to the site and publish).
+- After publishing, the user can add the site to Yandex Webmaster and Google Search Console; verification by an HTML file or a meta tag works on Dropsite (add the file or tag to the site and publish).
 
 ## Sites in several languages
 
@@ -168,7 +168,7 @@ Do these on every public site; they cost little and help people find it.
 
 ## Quizzes and calculators
 
-Lead quizzes ("pick a kitchen in 5 questions") and calculators (price, delivery, loan) work on dropsite as plain JavaScript in the page; the result arrives as an ordinary form submission.
+Lead quizzes ("pick a kitchen in 5 questions") and calculators (price, delivery, loan) work on Dropsite as plain JavaScript in the page; the result arrives as an ordinary form submission.
 
 - Build it as one `<form action="/_form/quiz" method="post">` with steps (`<fieldset>` per question, shown one at a time), real `<input type="radio">`, `<input type="checkbox">` and `<input type="range">` with labels, "Back" and "Next" buttons and a progress indicator. Without JavaScript all questions show at once and the form still sends.
 - Keep the script small and in a site file (`js/quiz.js`, loaded with `defer`); no frameworks or quiz builders from other sites.
@@ -187,7 +187,7 @@ Embedded maps, videos and chat widgets load code from other companies, slow the 
 - Embeds set cookies: mention them in the privacy policy, and with analytics on, in the cookie banner (see "Personal data, privacy policy and cookies").
 - An embed is the one place where an external script or frame is allowed, because the user asked for it; everything else still ships with the site (see "Self-contained, fast and accessible sites").
 
-After publishing a site with a form, tell the user to open the site in the dropsite web interface and connect a channel in the **Submissions** block (Telegram, e-mail or a webhook; optionally turn on **Require Altcha**); until then submissions are stored but not forwarded.
+After publishing a site with a form, tell the user to open the site in the Dropsite web interface and connect a channel in the **Submissions** block (Telegram, e-mail or a webhook; optionally turn on **Require Altcha**); until then submissions are stored but not forwarded.
 
 ## Errors
 

@@ -132,7 +132,7 @@ func (s Set) Snippet() ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// Apply returns content with any previous dropsite block removed and snippet
+// Apply returns content with any previous Dropsite block removed and snippet
 // (which may be nil) inserted before the first </head>, else before the first
 // <body, else at the end. It never inserts at the start: a script before
 // <!doctype> would switch the page to quirks mode.
@@ -154,7 +154,7 @@ func Apply(content, snippet []byte) []byte {
 	return append(res, out[at:]...)
 }
 
-// strip removes every complete dropsite block.
+// strip removes every complete Dropsite block.
 func strip(content []byte) []byte {
 	out := content
 	for {

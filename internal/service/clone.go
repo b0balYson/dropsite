@@ -17,7 +17,7 @@ const copySuffix = " (copy)"
 // CloneSite creates a new site of the actor from the current release of a
 // visible site. Only the files are copied: forms, collections, domains, the
 // slug, access settings and counters stay with the source, and the counter
-// block dropsite inserted into the source's pages is removed.
+// block Dropsite inserted into the source's pages is removed.
 func (s *Service) CloneSite(ctx context.Context, a Actor, ref, title, slug string, source domain.DeploySource) (DeployResult, error) {
 	if !source.Valid() {
 		source = domain.SourceAPI
@@ -68,7 +68,7 @@ func copyTitle(t string) string {
 	return t + copySuffix
 }
 
-// packCopy packs the files of a release into an upload with dropsite's
+// packCopy packs the files of a release into an upload with Dropsite's
 // counter block removed from every page.
 func (s *Service) packCopy(site domain.Site, d domain.Deploy) (string, error) {
 	root, err := s.openRelease(site, d)

@@ -1,6 +1,6 @@
 {
   "sheets.admin.title": "Google 表格",
-  "sheets.admin.lede": "用户可以把表单提交发送到 Google 表格，也可以用表格填充网站数据。dropsite 以一个 Google 服务账号的身份工作：用户需要把表格共享给该账号的地址。",
+  "sheets.admin.lede": "用户可以把表单提交发送到 Google 表格，也可以用表格填充网站数据。Dropsite 以一个 Google 服务账号的身份工作：用户需要把表格共享给该账号的地址。",
   "sheets.admin.scope.title": "该账号代表所有用户执行操作。",
   "sheets.admin.scope.text": "任何人只要知道该账号能打开的表格，就能在自己的网站上显示其中的行。请尽量缩小它的访问范围：",
   "sheets.admin.scope.1": "使用独立 Google Cloud 项目中的专用服务账号，不授予 IAM 角色，也不启用全网域委派；",
@@ -61,7 +61,7 @@
 
   "err.sheets_not_configured": "此服务器尚未连接 Google 表格。请管理员在“设置”中添加 Google 服务账号密钥。",
   "err.sheets_invalid_url": "这不是 Google 表格链接。请在浏览器中打开工作表并复制地址。",
-  "err.sheets_access_denied": "dropsite 无法打开此表格。请在 Google 表格中点击“共享”，将 {service_account_email} 添加为“编辑者”（用于表单提交）或“查看者”（用于网站数据），并检查链接。",
+  "err.sheets_access_denied": "Dropsite 无法打开此表格。请在 Google 表格中点击“共享”，将 {service_account_email} 添加为“编辑者”（用于表单提交）或“查看者”（用于网站数据），并检查链接。",
   "err.sheets_invalid": "Google 表格设置未保存：请检查填写的值。",
   "err.sheets_unavailable": "Google 表格未正常响应，请稍后重试。",
 

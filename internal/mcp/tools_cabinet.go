@@ -86,7 +86,7 @@ type revokedOut struct {
 	Summary    string     `json:"summary"`
 }
 
-var errNoCabinet = errors.New("this server does not offer account and site settings; use the dropsite web interface")
+var errNoCabinet = errors.New("this server does not offer account and site settings; use the Dropsite web interface")
 
 // cabinet adapts a Cabinet operation to a tool handler.
 func cabinet[In, Out any](t tools, fn func(context.Context, Cabinet, In) (Out, error)) sdk.ToolHandlerFor[In, Out] {
@@ -123,7 +123,7 @@ func (t tools) registerCabinet(s *sdk.Server, o Options) {
 
 func (t tools) registerAccountTools(s *sdk.Server) {
 	sdk.AddTool(s, &sdk.Tool{Name: "get_account", Annotations: readOnly("Get account"),
-		Description: "Show the user's dropsite account: email, role, how many sites they have out of their limit, " +
+		Description: "Show the user's Dropsite account: email, role, how many sites they have out of their limit, " +
 			"the size limits of a site and the web interface address. Use it when the user asks about their " +
 			"account, limits or quota, or before publishing something big. Tell the user the summary in plain words."},
 		cabinet(t, func(ctx context.Context, c Cabinet, _ struct{}) (Account, error) {
@@ -211,7 +211,7 @@ func (t tools) registerInsightTools(s *sdk.Server) {
 		}))
 	sdk.AddTool(s, &sdk.Tool{Name: "set_counters", Annotations: writes("Set analytics counters", false, true),
 		Description: "Add, change or remove a site's Yandex Metrica counter number or Google Analytics 4 " +
-			"measurement ID; pass only what changes. dropsite inserts the counter code into every page, so do " +
+			"measurement ID; pass only what changes. Dropsite inserts the counter code into every page, so do " +
 			"not add it to the files yourself. A published site gets a new release with the counters."},
 		cabinet(t, func(ctx context.Context, c Cabinet, in countersArgs) (Counters, error) {
 			if in.YandexMetricaID == nil && in.GoogleAnalyticsID == nil {
@@ -231,7 +231,7 @@ func (t tools) registerInsightTools(s *sdk.Server) {
 
 func (t tools) registerConnectionTools(s *sdk.Server) {
 	sdk.AddTool(s, &sdk.Tool{Name: "list_connections", Annotations: readOnly("List connections"),
-		Description: "List the apps (such as chat assistants) and API tokens (such as the dropsite CLI) connected " +
+		Description: "List the apps (such as chat assistants) and API tokens (such as the Dropsite CLI) connected " +
 			"to the user's account, marking the one this assistant uses. No secrets are shown. New connections " +
 			"are made only in the web interface (Connect AI page), never through this chat."},
 		cabinet(t, func(ctx context.Context, c Cabinet, _ struct{}) (connectionsOut, error) {

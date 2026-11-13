@@ -1,4 +1,4 @@
-// Package updates finds out whether a newer dropsite release exists and
+// Package updates finds out whether a newer Dropsite release exists and
 // hands an administrator's update request to the server helper.
 //
 // control never updates itself: it has no Docker access. It writes a small

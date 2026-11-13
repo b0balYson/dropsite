@@ -26,7 +26,7 @@
   "updates.failed.hint": "The previous version keeps running. Details are in /var/log/dropsite-update.log on the server.",
   "updates.log": "Last lines of the log",
   "updates.button": "Update to {version}",
-  "updates.confirm.title": "Update dropsite to {version}?",
+  "updates.confirm.title": "Update Dropsite to {version}?",
   "updates.confirm.backup": "The server takes a backup first.",
   "updates.confirm.restart": "The panel restarts and is unavailable for about a minute.",
   "updates.confirm.sites": "The sites keep working.",
@@ -41,5 +41,5 @@
   "err.update_unavailable": "This version is not newer than the current one. Check for updates again.",
   "err.update_in_progress": "An update is already waiting or running. Wait until it finishes.",
   "err.update_helper_missing": "The update helper is not installed on the server. Run dropsite-update on the server.",
-  "audit.action.update.request": "dropsite update requested"
+  "audit.action.update.request": "Dropsite update requested"
 }

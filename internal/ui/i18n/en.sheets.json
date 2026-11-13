@@ -1,6 +1,6 @@
 {
   "sheets.admin.title": "Google Sheets",
-  "sheets.admin.lede": "Users can send form submissions to a Google Sheet and fill site data from a sheet. dropsite works as one Google service account: users share their spreadsheets with its address.",
+  "sheets.admin.lede": "Users can send form submissions to a Google Sheet and fill site data from a sheet. Dropsite works as one Google service account: users share their spreadsheets with its address.",
   "sheets.admin.scope.title": "The account acts for every user.",
   "sheets.admin.scope.text": "Anyone who can name a spreadsheet this account can open is able to show its rows on their site. Keep its reach small:",
   "sheets.admin.scope.1": "use a dedicated service account in its own Google Cloud project, without IAM roles or domain-wide delegation;",
@@ -61,7 +61,7 @@
 
   "err.sheets_not_configured": "Google Sheets is not connected on this server. Ask the administrator to add a Google service account key in Settings.",
   "err.sheets_invalid_url": "This is not a Google Sheets link. Open the sheet in the browser and copy the address.",
-  "err.sheets_access_denied": "dropsite cannot open this spreadsheet. Press Share in Google Sheets, add {service_account_email} as Editor (for submissions) or Viewer (for site data), and check the link.",
+  "err.sheets_access_denied": "Dropsite cannot open this spreadsheet. Press Share in Google Sheets, add {service_account_email} as Editor (for submissions) or Viewer (for site data), and check the link.",
   "err.sheets_invalid": "The Google Sheets settings were not saved: check the values.",
   "err.sheets_unavailable": "Google Sheets did not answer properly. Try again later.",
 

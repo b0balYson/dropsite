@@ -20,7 +20,7 @@ The raw access log on the `logs` volume does contain IP addresses until rotation
 
 A site owner may enter a **Yandex Metrica** counter number (4 to 12 digits) and/or a **Google Analytics 4** Measurement ID (`G-` and 4 to 16 letters or digits) on the site screen. An administrator may enter global IDs in Settings; they are added to every site on top of its own IDs. Only IDs are accepted, so a setting can never inject arbitrary markup.
 
-dropsite inserts the standard code (Metrica `tag.js` with click map and link tracking, without Session Replay; GA4 `gtag.js`) between `<!-- dropsite:counters -->` markers:
+Dropsite inserts the standard code (Metrica `tag.js` with click map and link tracking, without Session Replay; GA4 `gtag.js`) between `<!-- dropsite:counters -->` markers:
 
 - before the first `</head>`; without one, before the first `<body`; otherwise at the end of the file (never before `<!doctype>`, which would switch the page to quirks mode);
 - in every `.html` and `.htm` file of the release; other files and UTF-16 files are left byte for byte;

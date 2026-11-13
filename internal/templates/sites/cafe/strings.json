@@ -33,7 +33,7 @@
     "address": "ул. Набережная, 1",
     "map_link": "Открыть на карте",
     "phone_label": "Телефон",
-    "footer": "Сайт опубликован с dropsite"
+    "footer": "Сайт опубликован с Dropsite"
   },
   "en": {
     "description": "Coffee, pastries and all-day breakfast. Menu, opening hours and address.",
@@ -69,6 +69,6 @@
     "address": "1 River Street",
     "map_link": "Open in maps",
     "phone_label": "Phone",
-    "footer": "Published with dropsite"
+    "footer": "Published with Dropsite"
   }
 }

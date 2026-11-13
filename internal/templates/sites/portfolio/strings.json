@@ -23,7 +23,7 @@
     "thanks_title": "Письмо получено",
     "thanks_text": "Спасибо, что написали. Прочитаю и отвечу на указанную почту в течение дня.",
     "thanks_back": "Смотреть работы",
-    "footer": "Сайт опубликован с dropsite"
+    "footer": "Сайт опубликован с Dropsite"
   },
   "en": {
     "description": "Interface and brand designer. Selected work and contacts.",
@@ -49,6 +49,6 @@
     "thanks_title": "Message received",
     "thanks_text": "Thank you for writing. I will read it and reply to your e-mail within a day.",
     "thanks_back": "See the work",
-    "footer": "Published with dropsite"
+    "footer": "Published with Dropsite"
   }
 }

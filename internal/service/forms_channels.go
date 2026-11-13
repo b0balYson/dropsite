@@ -154,7 +154,7 @@ func (s *Service) prepareTelegram(ctx context.Context, site domain.Site, ch *dom
 		return ChannelResult{}, err
 	}
 	code := forms.DigitCode()
-	text := fmt.Sprintf("dropsite: код подтверждения / confirmation code / 验证码 %s\n%s", code, s.siteHost(ctx, site))
+	text := fmt.Sprintf("Dropsite: код подтверждения / confirmation code / 验证码 %s\n%s", code, s.siteHost(ctx, site))
 	if err := s.senders.TelegramSend(ctx, cfg.telegramToken, chatID, text); err != nil {
 		s.log.Warn("form channel confirmation message failed", "site", site.ID, "err", forms.ErrDetail(err))
 		return ChannelResult{}, channelErr(domain.CodeChannelInvalid,
@@ -166,7 +166,7 @@ func (s *Service) prepareTelegram(ctx context.Context, site domain.Site, ch *dom
 }
 
 // confirmSubject is the subject of confirmation e-mails.
-const confirmSubject = "dropsite: код подтверждения / confirmation code / 验证码"
+const confirmSubject = "Dropsite: код подтверждения / confirmation code / 验证码"
 
 func (s *Service) prepareEmail(ctx context.Context, site domain.Site, ch *domain.FormChannel, target string) error {
 	cfg, err := s.formConfig(ctx)

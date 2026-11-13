@@ -26,7 +26,7 @@
   "updates.failed.hint": "之前的版本仍在运行。详情见服务器上的 /var/log/dropsite-update.log。",
   "updates.log": "日志最后几行",
   "updates.button": "更新到 {version}",
-  "updates.confirm.title": "将 dropsite 更新到 {version}？",
+  "updates.confirm.title": "将 Dropsite 更新到 {version}？",
   "updates.confirm.backup": "服务器会先做备份。",
   "updates.confirm.restart": "管理面板会重启，约一分钟内无法使用。",
   "updates.confirm.sites": "网站照常运行。",
@@ -41,5 +41,5 @@
   "err.update_unavailable": "该版本并不比当前版本新。请重新检查更新。",
   "err.update_in_progress": "已有更新在等待或进行中。请等待其完成。",
   "err.update_helper_missing": "服务器上未安装更新助手。请在服务器上运行 dropsite-update。",
-  "audit.action.update.request": "已请求更新 dropsite"
+  "audit.action.update.request": "已请求更新 Dropsite"
 }

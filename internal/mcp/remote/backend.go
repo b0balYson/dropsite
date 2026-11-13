@@ -71,7 +71,7 @@ func (b backend) toolError(err error) error {
 	case domain.KindRateLimited:
 		return mcp.RateLimitedError(int64(math.Ceil(e.RetryAfter.Seconds())))
 	case domain.KindUnauthorized:
-		return errors.New("the connection to dropsite is no longer authorized; reconnect it")
+		return errors.New("the connection to Dropsite is no longer authorized; reconnect it")
 	}
 	return mcp.CodedError(e.Message, e.Code, e.Params)
 }

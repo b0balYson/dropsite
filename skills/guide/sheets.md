@@ -1,18 +1,18 @@
 # Google Sheets: submissions to a sheet, site data from a sheet
 
-Many users already keep their work in Google Sheets. dropsite connects a sheet in two ways:
+Many users already keep their work in Google Sheets. Dropsite connects a sheet in two ways:
 
 - **Form submissions to a sheet**: every submission of the site's forms is added as a row (leads, orders, sign-ups).
 - **Site data from a sheet**: a public data collection (topic `data`) takes its documents from a sheet, so the user edits prices, a menu, a schedule or a catalog in the sheet and the site follows.
 
 ## Setup the user does
 
-1. Call get_sheets_setup. If `configured` is false, tell the user that the administrator of the dropsite server must add a Google service account key in the settings of the web interface; there is nothing else to do in the chat. **Never ask anyone for the key** and never accept it in the chat.
+1. Call get_sheets_setup. If `configured` is false, tell the user that the administrator of the Dropsite server must add a Google service account key in the settings of the web interface; there is nothing else to do in the chat. **Never ask anyone for the key** and never accept it in the chat.
 2. Otherwise tell the user, in plain words: open the spreadsheet in Google Sheets, press **Share**, add the address from `service_account_email` and choose **Editor** (needed for submissions; **Viewer** is enough for site data), then copy the link of the sheet (tab) from the browser address bar and send it. The link ends with `#gid=<number>`, which picks the tab; without it the first tab is used.
 
 ## Submissions to a sheet
 
-Call add_channel with `kind: "sheets"` and the link in `target`. dropsite writes the header row as a test, so the channel is active at once, with no code. Columns: the date (UTC) and the form name first, then one column per form field; a field the sheet has no column for gets a new column on the right. The user may rename, reorder or add columns: fields are matched by the header text. Values are written as plain text, never as formulas. If access is lost, submissions wait and are retried; after 10 failures in a row the channel is paused until the user fixes the sharing and turns it on again (set_channel_enabled).
+Call add_channel with `kind: "sheets"` and the link in `target`. Dropsite writes the header row as a test, so the channel is active at once, with no code. Columns: the date (UTC) and the form name first, then one column per form field; a field the sheet has no column for gets a new column on the right. The user may rename, reorder or add columns: fields are matched by the header text. Values are written as plain text, never as formulas. If access is lost, submissions wait and are retried; after 10 failures in a row the channel is paused until the user fixes the sharing and turns it on again (set_channel_enabled).
 
 ## Site data from a sheet
 

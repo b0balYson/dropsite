@@ -171,7 +171,7 @@ check "default output hides the server steps" sh -c '! grep -qiE "==>|swap|firew
 INSTALL_LOG="$HOME/.dropsite/install-$NAME.log"
 check "install log written with mode 600" test "$(ls -l "$INSTALL_LOG" | cut -c1-10)" = -rw-------
 check "install log has the server steps" grep -q '^==> Installing base packages' "$INSTALL_LOG"
-check "install log has the stack start" grep -q '^==> dropsite is running' "$INSTALL_LOG"
+check "install log has the stack start" grep -q '^==> Dropsite is running' "$INSTALL_LOG"
 check "DNS records printed" grep -q "^  A      \\*  " "$WORK/run1.log"
 
 # ssh <name>, exactly as the user types it (plus the temporary known_hosts).

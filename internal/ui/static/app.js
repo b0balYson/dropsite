@@ -1,4 +1,4 @@
-// Progressive enhancements for the dropsite interface: archive upload with
+// Progressive enhancements for the Dropsite interface: archive upload with
 // progress, copy-to-clipboard buttons and the navigation drawer. Every page
 // works without it.
 (function () {

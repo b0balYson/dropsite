@@ -1,6 +1,6 @@
 # Quizzes and calculators
 
-Lead quizzes ("pick a kitchen in 5 questions") and calculators (price, delivery, loan) work on dropsite as plain JavaScript in the page; the result arrives as an ordinary form submission.
+Lead quizzes ("pick a kitchen in 5 questions") and calculators (price, delivery, loan) work on Dropsite as plain JavaScript in the page; the result arrives as an ordinary form submission.
 
 - Build it as one `<form action="/_form/quiz" method="post">` with steps (`<fieldset>` per question, shown one at a time), real `<input type="radio">`, `<input type="checkbox">` and `<input type="range">` with labels, "Back" and "Next" buttons and a progress indicator. Without JavaScript all questions show at once and the form still sends.
 - Keep the script small and in a site file (`js/quiz.js`, loaded with `defer`); no frameworks or quiz builders from other sites.

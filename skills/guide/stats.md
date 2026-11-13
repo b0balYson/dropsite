@@ -8,5 +8,5 @@
 ## Counters (Yandex Metrica, Google Analytics)
 
 - get_counters shows the site's counters; set_counters sets or clears a Yandex Metrica counter number and/or a Google Analytics 4 Measurement ID (`G-XXXXXXX`). Ask the user for the number or ID from their analytics account; never invent one.
-- dropsite inserts the official tracking code into every page of the next version itself. Do not paste counter code into the HTML by hand.
+- Dropsite inserts the official tracking code into every page of the next version itself. Do not paste counter code into the HTML by hand.
 - Changing counters publishes a new version of the site automatically.

@@ -10,7 +10,7 @@ A workspace is shared by a team (a company, an agency, two founders). Every memb
 
 ## Rules
 
-- Only people who already have an account on this dropsite server can be added. You cannot invite new people or create accounts: if add_workspace_member answers `workspace_user_not_found`, tell the user to ask the dropsite administrator to create the account first.
+- Only people who already have an account on this Dropsite server can be added. You cannot invite new people or create accounts: if add_workspace_member answers `workspace_user_not_found`, tell the user to ask the Dropsite administrator to create the account first.
 - Moving a site changes who can edit it. Before move_site, say which site (name and link) goes where and who will be able to change it, wait for an explicit "yes", then pass the site's slug or ID in `confirm`. Links, versions, forms, data and settings stay the same; visitors notice nothing. Only the person who created the site can move it (`workspace_move_forbidden` otherwise).
 - Removing a member (remove_workspace_member) takes away access to every site of the workspace, even sites that person created. Ask first and pass the same e-mail in `confirm`. The user's own e-mail means leaving the workspace. The last member cannot leave while the workspace has sites (`workspace_last_member`): move the sites to personal or delete them first; an empty workspace disappears with its last member.
 - Limits: a site in a workspace counts against the site limit and size limit of the person who created it, not of the person publishing.

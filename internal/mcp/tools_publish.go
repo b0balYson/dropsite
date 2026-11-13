@@ -28,7 +28,7 @@ type publishSettingsArgs struct {
 	Optimize bool   `json:"optimize" jsonschema:"true to optimize new versions (default), false to publish files exactly as uploaded"`
 }
 
-var errNoPublish = errors.New("this server cannot change publish settings; use the web interface of dropsite")
+var errNoPublish = errors.New("this server cannot change publish settings; use the web interface of Dropsite")
 
 // optimizeExplained is shared by both publish settings tools.
 const optimizeExplained = "Optimization never changes the site's files: at each publication the server adds " +

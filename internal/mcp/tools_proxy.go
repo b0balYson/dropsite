@@ -40,7 +40,7 @@ var ErrProxyConfirm = errors.New("nothing deleted: ask the user to confirm, then
 
 var errProxyName = errors.New("name is required: a-z, 0-9 and hyphens, e.g. openai")
 
-var errNoProxy = errors.New("this server cannot manage API keys; use the web interface of dropsite")
+var errNoProxy = errors.New("this server cannot manage API keys; use the web interface of Dropsite")
 
 func (t tools) registerProxyTools(s *sdk.Server) {
 	sdk.AddTool(s, &sdk.Tool{Name: "list_proxy_endpoints", Annotations: readOnly("List API key proxies"),
@@ -51,7 +51,7 @@ func (t tools) registerProxyTools(s *sdk.Server) {
 	sdk.AddTool(s, &sdk.Tool{Name: "set_proxy_endpoint", Annotations: writes("Set up API key proxy", false, true),
 		Description: "Create or replace a secret proxy endpoint when a page must call a third-party API with a " +
 			"secret key (\"add an AI chat to the site\": OpenAI or another model API, a CRM, a Telegram bot, maps): " +
-			"the page calls /_dropsite/proxy/<name>/<path> and dropsite adds the key on the server. Pass the whole " +
+			"the page calls /_dropsite/proxy/<name>/<path> and Dropsite adds the key on the server. Pass the whole " +
 			"configuration each time. There is no key parameter: the user pastes the key in the web interface at " +
 			"secret_url; never ask for it in the chat. Changing upstream_url, allowed_hosts, auth or auth_name " +
 			"removes a stored key, so the user has to paste it again. Follow next_step. Not for contact forms " +

@@ -54,7 +54,7 @@ const NotFoundSheet = "not found: no such site, collection or sheet link among t
 // SheetsSetupNextStep tells the model what to say about the setup.
 func SheetsSetupNextStep(s SheetsSetup) string {
 	if !s.Configured {
-		return "Google Sheets is not connected on this dropsite server. Tell the user that the administrator of " +
+		return "Google Sheets is not connected on this Dropsite server. Tell the user that the administrator of " +
 			"the server must add a Google service account key in the settings of the web interface; there is " +
 			"nothing to do in the chat. Never ask anyone for the key."
 	}

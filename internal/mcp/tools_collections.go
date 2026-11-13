@@ -16,7 +16,7 @@ const NotFoundCollection = "not found: no such site or collection among this use
 // maxDocumentPage mirrors the server's page limit of list_documents.
 const maxDocumentPage = 500
 
-var errNoCollections = errors.New("this server cannot manage site data; use the web interface of dropsite")
+var errNoCollections = errors.New("this server cannot manage site data; use the web interface of Dropsite")
 
 // ErrCollectionConfirm is returned by delete_collection when confirm does
 // not repeat the collection name.

@@ -24,12 +24,12 @@ curl -fsSL https://raw.githubusercontent.com/b0balYson/dropsite/main/scripts/ins
 
 Answer four questions: the server IP, how you sign in (root password or a key file), the domain and your e-mail. A fifth, short yes/no question asks whether to also open the admin interface from the internet at `https://admin.<domain>`; the default is **No** (press Enter). Opening it is more convenient but a potential threat: anyone can find the sign-in page ([security.md](security.md#admin-interface-from-the-internet)). With yes, the final block also shows that address; the SSH tunnel is configured either way. You can change the choice later in Settings. The short name of the server comes from the domain (`sites.example.com` gives `sites`); the installer asks for it only when another server in `~/.ssh/config` already uses that name. When ssh asks for the password, type the root password: it stays invisible while you type. The password is used **once** to add a dedicated key and is never saved anywhere. Installing takes 10-20 minutes.
 
-The output stays short: a check mark for each step (connected to the server, installed dropsite, the domain works, HTTPS is on), the two DNS records to create, and at the end the command to run, the address to open, the login and the generated password:
+The output stays short: a check mark for each step (connected to the server, installed Dropsite, the domain works, HTTPS is on), the two DNS records to create, and at the end the command to run, the address to open, the login and the generated password:
 
 ```text
-Installing dropsite. It takes 10-20 minutes, keep this window open.
+Installing Dropsite. It takes 10-20 minutes, keep this window open.
   ✓ Connected to the server
-  ✓ Installed dropsite
+  ✓ Installed Dropsite
   …
 Done!
 
@@ -46,7 +46,7 @@ What the installer does:
 
 1. Creates a key just for this server, `~/.ssh/dropsite_<name>`, and adds it to the server. From then on only this key is used.
 2. Checks the server system. Other systems are refused with a clear message.
-3. On the server: installs Docker from Docker's official repository, adds swap on servers with less than 2 GB of memory, opens only ports 22, 80 and 443 in the firewall (ufw), downloads dropsite to `/opt/dropsite` and switches it to the newest release, writes the settings with a **generated administrator password**, downloads the prebuilt images of that release (nothing is compiled on the server), starts everything and checks that it answers. It also sets up a daily backup (the last 7 copies in `/var/backups/dropsite`; the form secrets key is copied once to `/root/dropsite-secrets.key`) and the commands below.
+3. On the server: installs Docker from Docker's official repository, adds swap on servers with less than 2 GB of memory, opens only ports 22, 80 and 443 in the firewall (ufw), downloads Dropsite to `/opt/dropsite` and switches it to the newest release, writes the settings with a **generated administrator password**, downloads the prebuilt images of that release (nothing is compiled on the server), starts everything and checks that it answers. It also sets up a daily backup (the last 7 copies in `/var/backups/dropsite`; the form secrets key is copied once to `/root/dropsite-secrets.key`) and the commands below.
 4. On your computer: adds a short entry `<name>` to `~/.ssh/config`, so `ssh <name>` connects to the server and opens a tunnel to the admin interface. The local port is the first free one starting from 8082 (another server may already use 8082).
 5. Shows the **DNS records** to create where you bought the domain: `A` for `@` and for `*` with the server IPv4 address (`--verbose` also lists `AAAA` when the server has IPv6; the **Getting started** page shows them too). Then it waits (up to 30 minutes, checking every 10 seconds) until the domain points to the server and HTTPS works.
 
@@ -204,7 +204,7 @@ Replace the server URL, connect code and site path. Use `./bin/dropsite.exe` as 
 
 ## Updating
 
-**The notice.** About twice a day (and shortly after a start) `control` asks the GitHub API for the newest stable dropsite release. When it is newer than the running version, administrators see a calm notice in the sidebar: "Version X.Y.Z is available · What's new →", linking to the release page with its notes. Other users see nothing. Development builds (`dev+<commit>`) are never compared.
+**The notice.** About twice a day (and shortly after a start) `control` asks the GitHub API for the newest stable Dropsite release. When it is newer than the running version, administrators see a calm notice in the sidebar: "Version X.Y.Z is available · What's new →", linking to the release page with its notes. Other users see nothing. Development builds (`dev+<commit>`) are never compared.
 
 **Settings → Updates** shows the running version, the latest release, when it was last checked (with **Check now**, limited to 5 checks per 10 minutes), the what's-new link and the **Update to X.Y.Z** button. The button asks for confirmation: the server takes a backup first, the panel restarts for about a minute, the sites keep working, and `dropsite-rollback` on the server undoes the update. While the update runs the section shows its progress; when the panel is restarting the page says "Updating… the page reloads by itself" and reloads once the panel answers. Afterwards it shows "Updated to X.Y.Z", or the error with the last lines of the log (the previous version keeps running then).
 

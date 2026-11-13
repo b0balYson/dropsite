@@ -1,4 +1,4 @@
-# dropsite: self-hosted publishing of static sites.
+# Dropsite: self-hosted publishing of static sites.
 #
 # Install: clone the repository, check out the release you run (git checkout
 # vX.Y.Z), cd deploy, copy .env.example to .env, fill in the four required

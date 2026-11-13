@@ -18,7 +18,7 @@ func TestLoginWithCode(t *testing.T) {
 	r = e.run("login", "--server", e.srv.URL, "--code", goodCode)
 	expectCode(t, r, 0)
 	expectContains(t, "stdout", r.stdout, "Logged in", userEmail)
-	if e.srv.tokenName != "dropsite CLI on test-host" {
+	if e.srv.tokenName != "Dropsite CLI on test-host" {
 		t.Fatalf("token name %q", e.srv.tokenName)
 	}
 	b, _ := os.ReadFile(e.configFile())

@@ -2,7 +2,7 @@
 
 ## Copy of a site
 
-`POST /api/v1/sites/{ref}/clone`, the MCP tool `clone_site`, `dropsite clone <site>` or the "Make a copy" button on the site page create a new site of the caller from the release being served. Only files are copied. Forms and delivery channels, site data (collections), own domains, the slug, password, noindex, expiry and analytics counters stay with the original; the counter block dropsite inserted into its pages is removed, and the copy gets its own counters like any new release. The copy counts against the caller's site and deploy limits.
+`POST /api/v1/sites/{ref}/clone`, the MCP tool `clone_site`, `dropsite clone <site>` or the "Make a copy" button on the site page create a new site of the caller from the release being served. Only files are copied. Forms and delivery channels, site data (collections), own domains, the slug, password, noindex, expiry and analytics counters stay with the original; the counter block Dropsite inserted into its pages is removed, and the copy gets its own counters like any new release. The copy counts against the caller's site and deploy limits.
 
 ## Templates
 

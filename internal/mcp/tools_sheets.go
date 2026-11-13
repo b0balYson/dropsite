@@ -34,7 +34,7 @@ type sheetUnlinked struct {
 var ErrSheetConfirm = errors.New("nothing linked: tell the user that the rows of the sheet will replace the " +
 	"current documents of the collection, ask to confirm, then call again with confirm set to the collection name")
 
-var errNoSheets = errors.New("this server cannot connect Google Sheets; use the web interface of dropsite")
+var errNoSheets = errors.New("this server cannot connect Google Sheets; use the web interface of Dropsite")
 
 func (t tools) registerSheets(s *sdk.Server, o Options) {
 	if !o.Collections {

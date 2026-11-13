@@ -1,6 +1,6 @@
 # Google Sheets
 
-dropsite connects Google Sheets in two ways:
+Dropsite connects Google Sheets in two ways:
 
 - **Form submissions to a sheet**: a form delivery channel of kind `sheets` adds one row per submission.
 - **Site data from a sheet**: a public data collection takes its documents from a sheet; the sheet is the source of truth.
@@ -12,9 +12,9 @@ Both work through one Google **service account** of the installation. Users shar
 1. In [Google Cloud Console](https://console.cloud.google.com/) create a project (or pick one) and enable the **Google Sheets API**.
 2. In *IAM & Admin → Service accounts* create a service account. It needs no roles.
 3. Open it, *Keys → Add key → Create new key → JSON*, and download the file.
-4. In dropsite open *Settings → Google Sheets*, paste the whole file and save.
+4. In Dropsite open *Settings → Google Sheets*, paste the whole file and save.
 
-dropsite checks the key by asking Google for an access token, stores it encrypted with `state/secrets.key` (like the form secrets) and shows only the service account address afterwards. The key is never returned by the web interface, the API or the MCP tools, and it cannot be set through the API or the chat. Removing the key turns every Google Sheets feature off; channels and links stay and report that Google Sheets is not configured.
+Dropsite checks the key by asking Google for an access token, stores it encrypted with `state/secrets.key` (like the form secrets) and shows only the service account address afterwards. The key is never returned by the web interface, the API or the MCP tools, and it cannot be set through the API or the chat. Removing the key turns every Google Sheets feature off; channels and links stay and report that Google Sheets is not configured.
 
 ### Checklist: what the service account may reach
 
@@ -34,16 +34,16 @@ Google limits the Sheets API requests per minute of the project (see *APIs & Ser
 
 Open the spreadsheet, press **Share** and add the service account address shown in the web interface (or by `get_sheets_setup` in the chat):
 
-- **Editor** for form submissions (dropsite writes rows);
+- **Editor** for form submissions (Dropsite writes rows);
 - **Viewer** is enough for site data.
 
-Then copy the link of the sheet (tab) from the browser. Links look like `https://docs.google.com/spreadsheets/d/<id>/edit#gid=<number>`; `gid` picks the tab, without it the first tab is used. dropsite finds the tab by `gid`, so renaming a tab does not break anything.
+Then copy the link of the sheet (tab) from the browser. Links look like `https://docs.google.com/spreadsheets/d/<id>/edit#gid=<number>`; `gid` picks the tab, without it the first tab is used. Dropsite finds the tab by `gid`, so renaming a tab does not break anything.
 
 Anyone who knows the link of a spreadsheet shared with the service account can connect it on this installation. Spreadsheet links are long random identifiers, but do not share confidential spreadsheets with the service account of a shared installation.
 
 ## Form submissions to a sheet
 
-Add a channel of kind **Google Sheet** on the submissions screen of the site (API: `POST /sites/{ref}/forms/channels` with `{"kind": "sheets", "target": "<link>"}`; chat: `add_channel`). dropsite writes the header row as a test: if that works the channel is active at once, without a confirmation code. Read-only access is reported immediately.
+Add a channel of kind **Google Sheet** on the submissions screen of the site (API: `POST /sites/{ref}/forms/channels` with `{"kind": "sheets", "target": "<link>"}`; chat: `add_channel`). Dropsite writes the header row as a test: if that works the channel is active at once, without a confirmation code. Read-only access is reported immediately.
 
 - The first columns are the date (UTC, `YYYY-MM-DD HH:MM:SS`) and the form name (`Дата`/`Форма` or `Date`/`Form`, by the owner's language; both are recognized).
 - Every field goes to the column whose header has the same text. A field without a column gets a new column on the right.
@@ -74,7 +74,7 @@ Exporting a collection to a sheet is not available.
 
 ## Security
 
-- dropsite calls only `https://oauth2.googleapis.com` and `https://sheets.googleapis.com`: other hosts, other ports and redirects are refused. Connections go only to public addresses, checked on the connected socket (not to the host itself or private networks); no environment proxy is used.
+- Dropsite calls only `https://oauth2.googleapis.com` and `https://sheets.googleapis.com`: other hosts, other ports and redirects are refused. Connections go only to public addresses, checked on the connected socket (not to the host itself or private networks); no environment proxy is used.
 - The `token_uri` of the key file is ignored: the signed token request always goes to Google.
 - Every call is limited to 20 seconds and 10 MB of response; a whole synchronization to 60 seconds.
 - Google's own error texts go to the server log only; users see short messages.

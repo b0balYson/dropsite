@@ -33,7 +33,7 @@ func readProject(dir string) (project, bool, error) {
 	}
 	var p project
 	if err := json.Unmarshal(b, &p); err != nil || p.SiteID == "" || p.Server == "" {
-		return project{}, false, withHint(fmt.Errorf("%s is not a valid %s project file", path, brand.Name),
+		return project{}, false, withHint(fmt.Errorf("%s is not a valid %s project file", path, brand.DisplayName),
 			`Expected {"server": "...", "site_id": "..."}. Fix or delete it, or pass --site.`)
 	}
 	return p, true, nil
