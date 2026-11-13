@@ -9,7 +9,7 @@
 #   ADMIN_HOST          host of the admin interface from the internet,
 #                       admin.<BASE_DOMAIN> (computed in compose like API_HOST);
 #                       control serves it only while an administrator keeps
-#                       public access on
+#                       public access on (unset: admin.invalid, never served)
 #   CADDY_GLOBAL_EXTRA  extra global options (local dev: local_certs and
 #                       skip_install_trust); empty in production
 #   CADDY_SERVERS_EXTRA extra options of the servers block: trusted_proxies
@@ -134,8 +134,10 @@ http://127.0.0.1:8090 {
 # on demand in both modes: in ondemand mode the first visit obtains a
 # certificate if permitted; in wildcard mode the *.<BASE_DOMAIN> certificate
 # already covers the name, so nothing is issued. No access log: invitation
-# links carry their secret in the path.
-{$ADMIN_HOST} {
+# links carry their secret in the path. Without ADMIN_HOST (a compose file
+# older than this Caddyfile) the block names a reserved .invalid host that
+# never gets a certificate.
+{$ADMIN_HOST:admin.invalid} {
 	tls {
 		on_demand
 	}

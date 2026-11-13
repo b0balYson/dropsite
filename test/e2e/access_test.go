@@ -211,6 +211,7 @@ func TestCaddyfileValidates(t *testing.T) {
 		out, err := exec.CommandContext(t.Context(), "docker", "run", "--rm",
 			"-e", "TLS_MODE="+mode, "-e", "TLS_DNS_PROVIDER=internal",
 			"-e", "BASE_DOMAIN=example.com", "-e", "ACME_EMAIL=a@example.com", "-e", "API_HOST=api.example.com",
+			"-e", "ADMIN_HOST=admin.example.com",
 			"-v", cf+":/etc/caddy/Caddyfile:ro", "caddy:2.11.9",
 			"caddy", "validate", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile").CombinedOutput()
 		if err != nil || !strings.Contains(string(out), "Valid configuration") {
