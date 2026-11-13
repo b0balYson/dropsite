@@ -48,6 +48,7 @@ func cmdLogin(ctx context.Context, a *app, args []string) error {
 	fmt.Fprintf(a.stdout, "Logged in to %s as %s\n", cfg.Server, me.User.Email)
 	fmt.Fprintf(a.stderr, "Saved credentials to %s\n", path)
 	a.warnEnvOverrides()
+	a.versionHint(me.ServerVersion)
 	return nil
 }
 
@@ -74,6 +75,7 @@ func (a *app) loginWithCode(ctx context.Context, server, code string) error {
 	fmt.Fprintf(a.stdout, "Logged in to %s as %s\n", norm, res.User.Email)
 	fmt.Fprintf(a.stderr, "Saved credentials to %s\n", path)
 	a.warnEnvOverrides()
+	a.probeServerVersion(ctx, a.newClient(norm, res.Value))
 	return nil
 }
 

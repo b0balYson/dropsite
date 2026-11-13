@@ -131,6 +131,7 @@ func (a *app) publishDir(ctx context.Context, c *client.Client, o deployOpts) (*
 	if err != nil {
 		return nil, err
 	}
+	a.versionHint(me.ServerVersion)
 	p := startPack(ctx, o.dir, packLimits(me.Limits), skip)
 	if err := p.ready(); err != nil {
 		return nil, err

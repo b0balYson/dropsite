@@ -39,6 +39,8 @@ type fakeServer struct {
 	patchErr   *apiErr        // returned instead of accepting a PATCH
 	codeUsed   bool
 	tokenName  string
+	// serverVersion is reported as server_version by /me ("" omits it).
+	serverVersion string
 }
 
 type fakeSite struct {
@@ -254,13 +256,17 @@ func (f *fakeServer) withSite(h func(http.ResponseWriter, *http.Request, *fakeSi
 
 func (f *fakeServer) me(w http.ResponseWriter, _ *http.Request) {
 	f.mu.Lock()
-	n := len(f.sites)
+	n, version := len(f.sites), f.serverVersion
 	f.mu.Unlock()
-	reply(w, 200, map[string]any{
+	out := map[string]any{
 		"user":       map[string]any{"id": "u1", "email": userEmail, "role": "user", "status": "active"},
 		"limits":     map[string]any{"max_site_bytes": 1 << 20, "max_file_bytes": 1 << 19, "max_files": 100},
 		"site_count": n,
-	})
+	}
+	if version != "" {
+		out["server_version"] = version
+	}
+	reply(w, 200, out)
 }
 
 func (f *fakeServer) listSites(w http.ResponseWriter, _ *http.Request) {

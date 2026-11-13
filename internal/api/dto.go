@@ -41,6 +41,8 @@ type meDTO struct {
 	MaxDomainsPerSite int    `json:"max_domains_per_site"`
 	MaxInlineBytes    int64  `json:"max_inline_bytes"`
 	UIURL             string `json:"ui_url"`
+	// ServerVersion lets clients notice a version gap (brand.Version).
+	ServerVersion string `json:"server_version"`
 	// RootSite is the site on the root domain, for administrators only;
 	// null otherwise or when there is none.
 	RootSite *siteDTO `json:"root_site"`

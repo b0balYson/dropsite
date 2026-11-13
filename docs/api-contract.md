@@ -72,7 +72,7 @@ IDs of users, tokens and audit entries are JSON strings (`"id": "2"`); `transfer
 | Method and path | Request | Response |
 | --- | --- | --- |
 | `POST /connect/exchange` | `{code, name?}`, no token | `201 {token: Token, value, user: User}`; `value` is shown once |
-| `GET /me` | | `{user: User, limits: Limits, site_count, max_domains_per_site, max_inline_bytes, ui_url, root_site: Site\|null}`; `root_site` only for administrators |
+| `GET /me` | | `{user: User, limits: Limits, site_count, max_domains_per_site, max_inline_bytes, ui_url, server_version, root_site: Site\|null}`; `root_site` only for administrators; `server_version` is the release (`1.2.3`) or `dev+<commit>` for a source build |
 | `GET /sites` | `?limit&offset&workspace` (`personal` or a workspace ID) | `List<SiteItem>` (own sites and sites of own workspaces) |
 | `POST /sites` | `{title, slug?, workspace_id?}` | `201 Site` |
 | `POST /sites/{ref}/move` | `{workspace_id: string\|null}` | `Site` (creator or administrator; `409 workspace_move_forbidden` otherwise) |

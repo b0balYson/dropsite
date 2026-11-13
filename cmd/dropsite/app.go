@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/b0balYson/dropsite/internal/brand"
 	"github.com/b0balYson/dropsite/internal/client"
@@ -37,6 +38,8 @@ type app struct {
 	homeDir    func() (string, error)
 	goos       string
 	executable func() (string, error)
+	// hintOnce limits the CLI/server version hint to one line per process.
+	hintOnce sync.Once
 }
 
 func newApp() *app {

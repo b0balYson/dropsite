@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/b0balYson/dropsite/internal/brand"
 	"github.com/b0balYson/dropsite/internal/domain"
 )
 
@@ -79,6 +80,9 @@ func TestMe(t *testing.T) {
 	}
 	if !strings.Contains(rec.Body.String(), `"created_at":"2026-11-12T10:00:00Z"`) {
 		t.Fatalf("time format: %s", rec.Body.String())
+	}
+	if me.ServerVersion != brand.Version {
+		t.Fatalf("server_version %q, want %q", me.ServerVersion, brand.Version)
 	}
 }
 

@@ -33,6 +33,8 @@ type Me struct {
 	MaxDomainsPerSite int    `json:"max_domains_per_site"`
 	MaxInlineBytes    int64  `json:"max_inline_bytes"`
 	UIURL             string `json:"ui_url"`
+	// ServerVersion is empty for servers older than this field.
+	ServerVersion string `json:"server_version"`
 	// RootSite is set for administrators when a site is on the root domain.
 	RootSite *Site `json:"root_site"`
 }
