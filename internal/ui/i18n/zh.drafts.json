@@ -1,0 +1,16 @@
+{
+  "draft.title": "草稿",
+  "draft.lede": "访客暂时看不到的新版本。保存于 {date}。",
+  "draft.open": "打开预览",
+  "draft.publish": "发布",
+  "draft.discard": "删除草稿",
+  "draft.discard.confirm": "删除草稿？网站将保持现状。",
+  "draft.data_note": "预览使用网站的真实数据：数据集合、表单提交和 API 密钥都是线上使用的那一份。",
+  "draft.no_preview": "此网站没有预览地址：其名称已被一个更早的地址占用。",
+  "draft.published": "草稿已上线。",
+  "draft.discarded": "草稿已删除。",
+  "draft.upload": "保存为草稿：在您发布之前，访客仍看到当前版本",
+  "draft.saved": "草稿已保存。请在预览中检查，准备好后再发布。",
+  "draft.badge": "草稿",
+  "err.no_draft": "此网站没有草稿。"
+}

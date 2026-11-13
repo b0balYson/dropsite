@@ -12,8 +12,35 @@ import (
 	"time"
 )
 
-// Supported languages; the first is the fallback.
-var languages = []string{"ru", "en"}
+// Supported languages; the first is the fallback. "zh" is Simplified
+// Chinese.
+var languages = []string{"ru", "en", "zh"}
+
+// langTags maps a language to the BCP 47 tag used in lang attributes.
+var langTags = map[string]string{"ru": "ru", "en": "en", "zh": "zh-CN"}
+
+// langOption is one button of the language switch.
+type langOption struct {
+	Code, Tag, Label string
+}
+
+// langOptions lists the switch buttons in the order of languages. Each
+// label is written in its own language.
+var langOptions = []langOption{
+	{Code: "ru", Tag: langTags["ru"], Label: "RU"},
+	{Code: "en", Tag: langTags["en"], Label: "EN"},
+	{Code: "zh", Tag: langTags["zh"], Label: "中文"},
+}
+
+// templateLang picks the site template language for an interface language:
+// site templates exist in Russian and English, so other languages get
+// English.
+func templateLang(l string) string {
+	if l == "ru" {
+		return "ru"
+	}
+	return "en"
+}
 
 func supportedLang(l string) bool {
 	for _, v := range languages {
@@ -139,6 +166,14 @@ func (l *locale) T(key string, args ...any) string {
 	return strings.NewReplacer(pairs...).Replace(msg)
 }
 
+// Tag returns the BCP 47 language tag for the html lang attribute.
+func (l *locale) Tag() string {
+	if t, ok := langTags[l.Lang]; ok {
+		return t
+	}
+	return l.Lang
+}
+
 // Has reports whether the catalog defines key.
 func (l *locale) Has(key string) bool {
 	_, ok := l.msgs[key]
@@ -184,6 +219,9 @@ func (l *locale) Date(t time.Time) string {
 		return "—"
 	}
 	t = t.UTC()
+	if l.Lang == "zh" {
+		return fmt.Sprintf("%d年%d月%d日 %02d:%02d UTC", t.Year(), int(t.Month()), t.Day(), t.Hour(), t.Minute())
+	}
 	month := l.T("month." + strconv.Itoa(int(t.Month())))
 	return fmt.Sprintf("%d %s %d, %02d:%02d UTC", t.Day(), month, t.Year(), t.Hour(), t.Minute())
 }

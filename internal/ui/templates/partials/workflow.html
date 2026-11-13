@@ -27,7 +27,7 @@
       <label class="field__label" for="tpl-lang">{{.L.T "workflow.templates.lang"}}</label>
       <select class="input" id="tpl-lang" name="lang">
         <option value="ru"{{if eq .L.Lang "ru"}} selected{{end}}>Русский</option>
-        <option value="en"{{if eq .L.Lang "en"}} selected{{end}}>English</option>
+        <option value="en"{{if ne .L.Lang "ru"}} selected{{end}}>English</option>
       </select>
     </div>
     <div class="form-grid__full">

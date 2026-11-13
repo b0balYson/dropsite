@@ -1,0 +1,13 @@
+{
+  "datatpl.field": "从模板开始",
+  "datatpl.none": "不使用模板",
+  "datatpl.hint": "模板会设定字段（Schema）和写入权限，之后都可以在设置中修改。页面可用的现成代码会显示在数据集合页面上。",
+  "datatpl.samples": "添加可编辑的示例文档",
+  "datatpl.menu": "带分类和价格的菜单",
+  "datatpl.catalog": "商品目录",
+  "datatpl.services": "服务价目表",
+  "datatpl.events": "活动和日程",
+  "datatpl.team": "团队成员",
+  "datatpl.faq": "常见问题",
+  "datatpl.reviews": "评价（需审核）"
+}

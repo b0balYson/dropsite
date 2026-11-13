@@ -21,25 +21,47 @@ import (
 	"github.com/b0balYson/dropsite/internal/service"
 )
 
-func TestCatalogsHaveSameKeys(t *testing.T) {
+var placeholderRe = regexp.MustCompile(`\{[a-z_]+\}`)
+
+// placeholders returns the sorted {name} placeholders of a message.
+func placeholders(msg string) string {
+	found := placeholderRe.FindAllString(msg, -1)
+	sort.Strings(found)
+	return strings.Join(found, " ")
+}
+
+// TestEveryLanguageHasEveryKey keeps the catalogs in step: the Russian
+// catalog is the reference, so a key added to it without a translation into
+// every other language fails here, as does a key only some other language
+// has. Translations must be non-empty and keep the reference placeholders.
+func TestEveryLanguageHasEveryKey(t *testing.T) {
 	cats, err := loadCatalogs()
 	if err != nil {
 		t.Fatal(err)
 	}
-	ru, en := cats["ru"].msgs, cats["en"].msgs
-	for k := range ru {
-		if _, ok := en[k]; !ok {
-			t.Errorf("en lacks %q", k)
+	ref := cats[languages[0]].msgs
+	for _, lang := range languages[1:] {
+		msgs := cats[lang].msgs
+		for k, v := range ref {
+			got, ok := msgs[k]
+			switch {
+			case !ok:
+				t.Errorf("%s lacks %q", lang, k)
+			case strings.TrimSpace(got) == "":
+				t.Errorf("%s: %q has an empty translation", lang, k)
+			case placeholders(got) != placeholders(v):
+				t.Errorf("%s: %q has placeholders %q, want %q", lang, k, placeholders(got), placeholders(v))
+			}
+		}
+		for k := range msgs {
+			if _, ok := ref[k]; !ok {
+				t.Errorf("%s lacks %q (defined only in %s)", languages[0], k, lang)
+			}
 		}
 	}
-	for k := range en {
-		if _, ok := ru[k]; !ok {
-			t.Errorf("ru lacks %q", k)
-		}
-	}
-	for k, v := range ru {
-		if strings.TrimSpace(v) == "" || strings.TrimSpace(en[k]) == "" {
-			t.Errorf("%q has an empty translation", k)
+	for k, v := range ref {
+		if strings.TrimSpace(v) == "" {
+			t.Errorf("%s: %q is empty", languages[0], k)
 		}
 	}
 }
@@ -180,6 +202,9 @@ func TestAcceptLanguage(t *testing.T) {
 		"fr, ru;q=0.4, en;q=0.8":     "en",
 		"ru-RU,ru;q=0.9,en-US;q=0.8": "ru",
 		"en;q=0":                     "",
+		"zh-CN,zh;q=0.9,en;q=0.8":    "zh",
+		"zh-TW":                      "zh",
+		"de,zh-Hans;q=0.5,ru;q=0.4":  "zh",
 	}
 	for in, want := range cases {
 		if got := acceptLanguage(in); got != want {
@@ -206,6 +231,22 @@ func TestFormatting(t *testing.T) {
 	d := time.Date(2026, 3, 5, 7, 8, 0, 0, time.UTC)
 	if got := ru.Date(d); got != "5 мар 2026, 07:08 UTC" {
 		t.Errorf("ru date = %q", got)
+	}
+	zh := cats.locale("zh")
+	if got := zh.Date(d); got != "2026年3月5日 07:08 UTC" {
+		t.Errorf("zh date = %q", got)
+	}
+	if got := zh.ShortDay("2026-11-12"); got != "11月12日" {
+		t.Errorf("zh short day = %q", got)
+	}
+	if got := zh.Size(1536); got != "1.5 KB" {
+		t.Errorf("zh size = %q", got)
+	}
+	if got := zh.Num(1234567); got != "1,234,567" {
+		t.Errorf("zh num = %q", got)
+	}
+	if got := zh.Tag(); got != "zh-CN" {
+		t.Errorf("zh tag = %q", got)
 	}
 	if got := en.DatePtr(nil); got != "—" {
 		t.Errorf("nil date = %q", got)
@@ -277,6 +318,15 @@ func TestLanguageSwitch(t *testing.T) {
 	anon := newHarnessSharing(t, h)
 	wantContains(t, anon.get("/login", "Accept-Language", "en-GB,en;q=0.9").body, "Sign in")
 	wantContains(t, anon.get("/login").body, "Вход")
+	zhLogin := anon.get("/login", "Accept-Language", "zh-CN,zh;q=0.9")
+	wantContains(t, zhLogin.body, `<html lang="zh-CN">`, "登录", ">中文</button>")
+
+	// Chinese is a full switch target and is stored like the others.
+	p = h.submit("/", "/lang", url.Values{"lang": {"zh"}, "next": {"/"}})
+	wantStatus(t, p, http.StatusSeeOther)
+	zh := h.get("/")
+	wantContains(t, zh.body, `<html lang="zh-CN">`, "我的网站", `value="zh" lang="zh-CN" aria-pressed="true"`)
+	h.submit("/", "/lang", url.Values{"lang": {"en"}, "next": {"/"}})
 
 	// Unsupported values are ignored; foreign next targets are not followed.
 	bad := h.submit("/", "/lang", url.Values{"lang": {"de"}, "next": {"https://evil.example/"}})

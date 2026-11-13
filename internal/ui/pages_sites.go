@@ -51,7 +51,7 @@ func (s *server) renderSites(w http.ResponseWriter, r *http.Request, rc *reqCtx,
 	data := sitesData{
 		Sites: sites, Soon: s.expiringSoon(sites), Count: count, Limit: lim.MaxSitesPerUser, AtLimit: count >= lim.MaxSitesPerUser,
 		Domain: s.svc.Config().BaseDomain, Form: form,
-		Templates: s.svc.ListTemplates(rc.loc.Lang),
+		Templates: s.svc.ListTemplates(templateLang(rc.loc.Lang)),
 		Filter:    sitesFilter{Value: filter, Workspaces: workspaces},
 	}
 	s.page(w, r, rc, status, "sites", "sites", "sites.title", data)

@@ -1,5 +1,5 @@
 {{define "authorize_page"}}<!doctype html>
-<html lang="{{.L.Lang}}">
+<html lang="{{.L.Tag}}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,11 +13,10 @@
 <header class="masthead">
   <div class="masthead__inner">
     <span class="wordmark"><span class="wordmark__mark" aria-hidden="true"></span>{{.Product}}</span>
-    {{if .D.LangRU}}
+    {{with .D.Langs}}
     <div class="masthead__aside">
-      <nav class="lang" aria-label="{{.L.T "nav.language"}}">
-        <a class="lang__btn" href="{{.D.LangRU}}" lang="ru" {{if eq .L.Lang "ru"}}aria-current="true"{{end}}>RU</a>
-        <a class="lang__btn" href="{{.D.LangEN}}" lang="en" {{if eq .L.Lang "en"}}aria-current="true"{{end}}>EN</a>
+      <nav class="lang" aria-label="{{$.L.T "nav.language"}}">
+        {{range .}}<a class="lang__btn" href="{{.Href}}" lang="{{.Tag}}" {{if eq $.L.Lang .Code}}aria-current="true"{{end}}>{{.Label}}</a>{{end}}
       </nav>
     </div>
     {{end}}

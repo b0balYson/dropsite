@@ -28,6 +28,7 @@ var funcs = template.FuncMap{
 	"bundle": func(root, v any) map[string]any { return map[string]any{"R": root, "V": v} },
 	"dict":   dict,
 	"list":   func(v ...string) []string { return v },
+	"langs":  func() []langOption { return langOptions },
 }
 
 // dict builds a map from alternating string keys and values.

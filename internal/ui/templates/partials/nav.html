@@ -5,8 +5,7 @@
   {{template "csrf" .}}
   <input type="hidden" name="next" value="{{.Path}}">
   <span class="sr-only">{{.L.T "nav.language"}}</span>
-  <button class="lang__btn" type="submit" name="lang" value="ru" lang="ru" aria-pressed="{{if eq .L.Lang "ru"}}true{{else}}false{{end}}">RU</button>
-  <button class="lang__btn" type="submit" name="lang" value="en" lang="en" aria-pressed="{{if eq .L.Lang "en"}}true{{else}}false{{end}}">EN</button>
+  {{range langs}}<button class="lang__btn" type="submit" name="lang" value="{{.Code}}" lang="{{.Tag}}" aria-pressed="{{if eq $.L.Lang .Code}}true{{else}}false{{end}}">{{.Label}}</button>{{end}}
 </form>
 {{end}}
 

@@ -127,6 +127,9 @@ func (l *locale) ShortDay(d string) string {
 	if err != nil {
 		return d
 	}
+	if l.Lang == "zh" {
+		return strconv.Itoa(int(t.Month())) + "月" + strconv.Itoa(t.Day()) + "日"
+	}
 	return strconv.Itoa(t.Day()) + " " + l.T("month."+strconv.Itoa(int(t.Month())))
 }
 

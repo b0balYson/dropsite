@@ -57,8 +57,13 @@ type authorizeData struct {
 	Loopback     bool
 	Error        string
 	Fatal        string
-	LangRU       string
-	LangEN       string
+	Langs        []langLink
+}
+
+// langLink is one language switch link that keeps the request.
+type langLink struct {
+	langOption
+	Href string
 }
 
 // langLinks keeps the authorization request when switching the language.
@@ -66,11 +71,13 @@ func langLinks(r *http.Request, d *authorizeData) {
 	if r.Method != http.MethodGet {
 		return
 	}
-	for lang, dst := range map[string]*string{"ru": &d.LangRU, "en": &d.LangEN} {
+	links := make([]langLink, 0, len(langOptions))
+	for _, o := range langOptions {
 		q := r.URL.Query()
-		q.Set("ui_lang", lang)
-		*dst = r.URL.Path + "?" + q.Encode()
+		q.Set("ui_lang", o.Code)
+		links = append(links, langLink{langOption: o, Href: r.URL.Path + "?" + q.Encode()})
 	}
+	d.Langs = links
 }
 
 func (a *authorizer) begin(w http.ResponseWriter, r *http.Request) *reqCtx {
