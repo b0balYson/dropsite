@@ -18,7 +18,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Docs-only changes (READMEs, CHANGELOG, docs/ except the generated
+  # docs/mcp-tools.md, LICENSE, README images) skip lint, tests and the
+  # builds; release-check still runs. Skipped jobs keep the run green, which
+  # the release workflow relies on.
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: What changed
+        id: diff
+        env:
+          BEFORE: ${{ github.event.before }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          base=${BASE:-$BEFORE}
+          code=true
+          if [ -n "$base" ] && [ "$base" != 0000000000000000000000000000000000000000 ] &&
+            git cat-file -e "$base^{commit}" 2>/dev/null; then
+            git diff --name-only "$base" "$GITHUB_SHA" >changed.txt
+            code=false
+            [ -s changed.txt ] || code=true
+            while IFS= read -r f; do
+              case "$f" in
+              docs/mcp-tools.md) code=true ;;
+              README*.md | CHANGELOG.md | LICENSE | docs/* | .github/assets/*) ;;
+              *) code=true ;;
+              esac
+            done <changed.txt
+            cat changed.txt
+          fi
+          echo "code=$code"
+          echo "code=$code" >>"$GITHUB_OUTPUT"
+
   lint:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -51,6 +90,8 @@ jobs:
         run: sh scripts/release-notes.sh >> "$GITHUB_STEP_SUMMARY"
 
   test:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -65,6 +106,8 @@ jobs:
         run: make install-test
 
   build:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
