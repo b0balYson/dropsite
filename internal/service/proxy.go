@@ -60,7 +60,7 @@ var errProxyNotUI = domain.E(domain.KindInvalid, domain.CodeProxySecretUIOnly,
 // ProxyPageURL is the web interface screen with the site's endpoints; with
 // a name it points at that endpoint's key form.
 func (s *Service) ProxyPageURL(siteID, name string) string {
-	u := strings.TrimSuffix(s.cfg.UIURL, "/") + "/sites/" + siteID + "/proxy"
+	u := s.cabinetBase() + "/sites/" + siteID + "/proxy"
 	if name != "" {
 		u += "#proxy-" + name
 	}

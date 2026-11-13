@@ -36,7 +36,7 @@ type Account struct {
 	KeepReleases        int    `json:"keep_releases" jsonschema:"how many releases per site are kept for rollback"`
 	MaxDomainsPerSite   int    `json:"max_domains_per_site" jsonschema:"how many own domains one site may have"`
 	DeployFilesMaxBytes int64  `json:"deploy_files_max_bytes" jsonschema:"largest total size of one deploy_files call"`
-	CabinetURL          string `json:"cabinet_url" jsonschema:"address of the dropsite web interface"`
+	CabinetURL          string `json:"cabinet_url" jsonschema:"address of the dropsite web interface: https://admin.<domain> while the administrator keeps it open to the internet; otherwise an address reached through the SSH tunnel or a private network (for example http://localhost:8082), so tell the user to open the tunnel first"`
 	RootSite            *Site  `json:"root_site,omitempty" jsonschema:"administrators only: the site on the root domain, if any"`
 	Summary             string `json:"summary" jsonschema:"short summary to show the user"`
 }

@@ -31,7 +31,7 @@ func (b backend) GetAccount(ctx context.Context) (mcp.Account, error) {
 		MaxSiteBytes: lim.MaxSiteBytes, MaxSiteSize: mcp.HumanBytes(lim.MaxSiteBytes),
 		MaxFileBytes: lim.MaxFileBytes, MaxFileSize: mcp.HumanBytes(lim.MaxFileBytes), MaxFiles: lim.MaxFiles,
 		KeepReleases: lim.KeepReleases, MaxDomainsPerSite: cfg.MaxDomainsPerSite,
-		DeployFilesMaxBytes: service.MaxInlineBytes, CabinetURL: cfg.UIURL,
+		DeployFilesMaxBytes: service.MaxInlineBytes, CabinetURL: b.svc.CabinetURL(ctx),
 	}
 	if u.IsAdmin() {
 		v, ok, err := b.svc.RootSite(ctx, b.actor)

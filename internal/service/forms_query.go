@@ -227,5 +227,5 @@ func boundedCSV(subs []domain.FormSubmission, maxBytes int) (string, int, error)
 // FormsPageURL is the web interface screen with the site's submissions,
 // channels and the full CSV export.
 func (s *Service) FormsPageURL(siteID string) string {
-	return strings.TrimSuffix(s.cfg.UIURL, "/") + "/sites/" + siteID + "/forms"
+	return s.cabinetBase() + "/sites/" + siteID + "/forms"
 }

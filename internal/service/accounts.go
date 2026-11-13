@@ -138,7 +138,7 @@ func (s *Service) issueInvite(ctx context.Context, a Actor, userID int64) (Invit
 		return InviteLink{}, err
 	}
 	s.audit(ctx, a, "user.invite", userTarget(userID), map[string]any{"email": u.Email})
-	return InviteLink{User: u, URL: s.cfg.UIURL + "/invite/" + secret, ExpiresAt: inv.ExpiresAt.Format("2006-01-02 15:04 MST"), Expires: inv.ExpiresAt}, nil
+	return InviteLink{User: u, URL: s.CabinetURL(ctx) + "/invite/" + secret, ExpiresAt: inv.ExpiresAt.Format("2006-01-02 15:04 MST"), Expires: inv.ExpiresAt}, nil
 }
 
 var errInviteInvalid = domain.E(domain.KindInvalid, domain.CodeInviteInvalid,

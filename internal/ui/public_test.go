@@ -25,6 +25,8 @@ type publicHarness struct {
 	*harness
 	host string
 	xff  string
+	// loop is a browser on the loopback listener of the same server.
+	loop *harness
 }
 
 func newPublicHarness(t *testing.T) *publicHarness {
@@ -32,7 +34,7 @@ func newPublicHarness(t *testing.T) *publicHarness {
 	h := newHarness(t)
 	pub := httptest.NewServer(NewPublic(h.env.Svc, slog.New(slog.NewTextHandler(io.Discard, nil))))
 	t.Cleanup(pub.Close)
-	p := &publicHarness{harness: newHarnessSharing(t, h), host: publicHost, xff: "203.0.113.10"}
+	p := &publicHarness{harness: newHarnessSharing(t, h), host: publicHost, xff: "203.0.113.10", loop: h}
 	p.srv = pub
 	p.c.Transport = p
 	return p

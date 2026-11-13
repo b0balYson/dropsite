@@ -18,7 +18,7 @@ func (a *api) me(w http.ResponseWriter, r *http.Request) error {
 	}
 	cfg := a.svc.Config()
 	out := meDTO{User: toUser(u), Limits: toLimits(lim), SiteCount: n,
-		MaxDomainsPerSite: cfg.MaxDomainsPerSite, MaxInlineBytes: service.MaxInlineBytes, UIURL: cfg.UIURL,
+		MaxDomainsPerSite: cfg.MaxDomainsPerSite, MaxInlineBytes: service.MaxInlineBytes, UIURL: a.svc.CabinetURL(ctx),
 		ServerVersion: brand.Version}
 	if u.IsAdmin() {
 		v, ok, err := a.svc.RootSite(ctx, actor)

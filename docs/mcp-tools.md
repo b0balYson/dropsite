@@ -36,7 +36,7 @@ Renaming a tool or a parameter breaks chats that are already connected, so these
 What a client loads when it connects (measured by `TestToolsDoc`):
 
 <!-- sizes:begin -->
-- tools/list of the remote server: 73 tools, about 164 KB of JSON, of which 26 KB are descriptions
+- tools/list of the remote server: 73 tools, about 165 KB of JSON, of which 26 KB are descriptions
 - server instructions: 3682 bytes (limit 4096)
 <!-- sizes:end -->
 

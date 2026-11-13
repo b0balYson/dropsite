@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -199,4 +200,27 @@ func (s *Service) reconcilePublicAdmin(ctx context.Context) error {
 		s.log.Warn("the admin interface is open to the internet", "url", s.PublicAdminURL())
 	}
 	return s.syncPublicAdminCert(ctx, on)
+}
+
+// cabinetLookupTimeout bounds the settings read behind cabinetBase.
+const cabinetLookupTimeout = time.Second
+
+// CabinetURL is where people open the web interface, without a trailing
+// slash: https://admin.<base domain> while public access is on, UI_URL (the
+// SSH tunnel or a private network) otherwise. Links are built from it when
+// they are shown, so turning access off never leaves public links in what
+// is generated afterwards.
+func (s *Service) CabinetURL(ctx context.Context) string {
+	if s.PublicAdminEnabled(ctx) {
+		return s.PublicAdminURL()
+	}
+	return strings.TrimSuffix(s.cfg.UIURL, "/")
+}
+
+// cabinetBase is CabinetURL for helpers without a request context; the
+// setting is normally served from the cache.
+func (s *Service) cabinetBase() string {
+	ctx, cancel := context.WithTimeout(context.Background(), cabinetLookupTimeout)
+	defer cancel()
+	return s.CabinetURL(ctx)
 }
