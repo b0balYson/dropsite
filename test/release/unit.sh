@@ -27,6 +27,10 @@ check_not() {
 }
 contains() { printf '%s\n' "$1" | grep -qF -- "$2"; }
 
+# The release workflow runs these checks on a tag push: its GITHUB_REF_* must
+# not leak into the throwaway repository, where the checks set them explicitly.
+unset GITHUB_REF_NAME GITHUB_REF_TYPE
+
 g() { git -c user.name=test -c user.email=test@example.invalid -c commit.gpgsign=false -c tag.gpgsign=false "$@"; }
 commit() { g commit -q --allow-empty -m "$1"; }
 
