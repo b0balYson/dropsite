@@ -143,6 +143,43 @@ func TestSubmitFormStoresAndQueues(t *testing.T) {
 	}
 }
 
+// Sec-Fetch-Site: cross-site is refused like a foreign Origin; posts from
+// the site itself and clients without browser headers go on to the
+// anti-robot checks and limits.
+func TestSubmitFormFetchSite(t *testing.T) {
+	e, _ := formEnv(t)
+	ctx := context.Background()
+	ann := e.user("ann@pp.test")
+	v := mkFormSite(t, e, ann)
+	host := v.Site.ID + "." + testBase
+	cases := []struct {
+		name, origin, fetchSite string
+		refused                 bool
+	}{
+		{name: "cross-site", fetchSite: "cross-site", refused: true},
+		{name: "cross-site with null origin", origin: "null", fetchSite: "Cross-Site", refused: true},
+		{name: "cross-site with own origin", origin: "https://" + host, fetchSite: "cross-site", refused: true},
+		{name: "same-origin", origin: "https://" + host, fetchSite: "same-origin"},
+		{name: "same-site without origin", fetchSite: "same-site"},
+		{name: "user typed or bookmark", fetchSite: "none"},
+		{name: "no browser headers"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			p := post(host, "a", "1")
+			p.Origin, p.FetchSite = c.origin, c.fetchSite
+			out, err := e.svc.SubmitForm(ctx, p)
+			if c.refused {
+				wantCode(t, err, domain.CodeFormOrigin)
+				return
+			}
+			if err != nil || !out.Stored {
+				t.Fatalf("submit %+v %v", out, err)
+			}
+		})
+	}
+}
+
 func TestSubmitFormRejects(t *testing.T) {
 	e, _ := formEnv(t)
 	ctx := context.Background()

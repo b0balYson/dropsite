@@ -56,7 +56,7 @@ const data = await res.json(); // {"ok": true} or {"ok": false, "error": {"code"
 
 JSON is returned to everything that is not a browser navigation (`Sec-Fetch-Mode` other than `navigate`, or no `text/html` in `Accept`). Error codes: `form_invalid`, `form_empty`, `form_too_large` (413), `form_unsupported_type` (415), `form_origin_mismatch` (403), `form_captcha_invalid`, `rate_limited` (429 with `Retry-After`), `not_found` (unknown site or bad form name).
 
-Forms must be posted from the same site: a request whose `Origin` is another site gets 403. No CORS is needed or offered. `GET /_form/...` is always 404.
+Forms must be posted from the same site: a request whose `Origin` is another site, or that a browser marks `Sec-Fetch-Site: cross-site`, gets 403. No CORS is needed or offered. These checks only stop casual cross-site posting: clients without browser headers pass them, so the protection against spam is Altcha, the honeypot, the fill time and the rate limits. `GET /_form/...` is always 404.
 
 ### Altcha (anti-robot check)
 

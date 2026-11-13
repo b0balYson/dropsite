@@ -66,7 +66,7 @@ func (a *api) submitForm(w http.ResponseWriter, r *http.Request) error {
 	}
 	_, err = a.svc.SubmitForm(r.Context(), service.FormPost{
 		Host: r.Host, Form: r.PathValue("name"), Origin: r.Header.Get("Origin"),
-		IP: infoFrom(r.Context()).ip, Data: data,
+		FetchSite: r.Header.Get("Sec-Fetch-Site"), IP: infoFrom(r.Context()).ip, Data: data,
 	})
 	if err != nil {
 		a.formError(w, r, html, err)

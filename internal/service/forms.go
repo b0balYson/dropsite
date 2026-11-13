@@ -159,8 +159,10 @@ type FormPost struct {
 	Host   string // Host header as received
 	Form   string
 	Origin string
-	IP     string
-	Data   forms.Parsed
+	// FetchSite is the Sec-Fetch-Site header the browser sent, if any.
+	FetchSite string
+	IP        string
+	Data      forms.Parsed
 }
 
 // FormPostResult tells the adapter whether the post was stored (spam is
@@ -177,6 +179,10 @@ var (
 )
 
 // sameOrigin compares an Origin header with the request host (port included).
+// A missing or "null" Origin passes (non-browser clients, sandboxed frames,
+// data: pages), so it is a hint against casual cross-site posting, never a
+// security boundary: Altcha, the honeypot, the fill time and the rate limits
+// are what protect forms.
 func sameOrigin(origin, rawHost string) bool {
 	if origin == "" || origin == "null" {
 		return true
@@ -198,7 +204,10 @@ func (s *Service) SubmitForm(ctx context.Context, p FormPost) (FormPostResult, e
 	if !ok {
 		return FormPostResult{}, domain.ErrNotFound
 	}
-	if !sameOrigin(p.Origin, p.Host) {
+	// A browser that says the post comes from another site is refused like
+	// a foreign Origin. same-site is allowed: sibling subdomains of the base
+	// domain are other sites, but their Origin is already refused above.
+	if !sameOrigin(p.Origin, p.Host) || strings.EqualFold(p.FetchSite, "cross-site") {
 		return FormPostResult{}, errFormOrigin
 	}
 	// IPv6 sources are counted per /64. The site-wide limit is only checked

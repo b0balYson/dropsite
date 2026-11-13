@@ -132,6 +132,8 @@ func TestFormPostErrors(t *testing.T) {
 	}
 	rec = f.visitor(http.MethodPost, "/_form/lead", formCT, "a=1", withHeader("Origin", "https://evil.example"))
 	wantStatus(t, rec, http.StatusForbidden)
+	rec = f.visitor(http.MethodPost, "/_form/lead", formCT, "a=1", withHeader("Sec-Fetch-Site", "cross-site"))
+	wantStatus(t, rec, http.StatusForbidden)
 	rec = f.visitor(http.MethodPost, "/_form/lead", "text/plain", "a=1")
 	wantStatus(t, rec, http.StatusUnsupportedMediaType)
 	rec = f.visitor(http.MethodPost, "/_form/lead", formCT, "_next=/x", browser())
