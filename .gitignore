@@ -17,5 +17,8 @@ coverage.out
 .idea/
 .vscode/
 
-# agent worktrees
-/.claude/worktrees/
+# local planning, agent and review material (never published)
+/.claude/
+/openspec/
+/prd.md
+/pentest/

@@ -1,6 +1,5 @@
-# Serving and TLS for published sites. Based on a configuration verified on
-# caddy:2.11.9 (openspec/changes/stage-1-core/reference); see design §15
-# before changing anything here: several details below are load-bearing.
+# Serving and TLS for published sites, verified on caddy:2.11.9. Several
+# details below are load-bearing: read their comments before changing them.
 #
 # Environment (set by docker-compose.yml):
 #   ACME_EMAIL          ACME account email
