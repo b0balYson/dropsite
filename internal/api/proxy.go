@@ -16,6 +16,41 @@ type proxyUsageDTO struct {
 	Rejected   int64      `json:"rejected"`
 	LastUsedAt *time.Time `json:"last_used_at"`
 	LastStatus *int       `json:"last_status"`
+	// Today counts the calls of the current UTC day; Paused tells the
+	// daily budget ran out.
+	Today  int  `json:"today"`
+	Paused bool `json:"paused"`
+}
+
+// proxyLimitsDTO are per-endpoint limits; in a request 0 (or absent) keeps
+// the class default.
+type proxyLimitsDTO struct {
+	PerMinute    int `json:"per_minute"`
+	DailyBudget  int `json:"daily_budget"`
+	SessionQuota int `json:"session_quota"`
+}
+
+func fromLimits(l domain.ProxyLimits) proxyLimitsDTO {
+	return proxyLimitsDTO{PerMinute: l.PerMinute, DailyBudget: l.DailyBudget, SessionQuota: l.SessionQuota}
+}
+
+func (l *proxyLimitsDTO) toDomain() domain.ProxyLimits {
+	if l == nil {
+		return domain.ProxyLimits{}
+	}
+	return domain.ProxyLimits{PerMinute: l.PerMinute, DailyBudget: l.DailyBudget, SessionQuota: l.SessionQuota}
+}
+
+// ProxyTransparentWarning is shown with every endpoint of the transparent
+// class.
+const ProxyTransparentWarning = "transparent: anyone who opens the site can call this API with the key for any " +
+	"allowed method and path; use it only on a password-protected site, otherwise choose the class ai, send or read"
+
+func proxyWarning(c domain.ProxyClass) string {
+	if c == domain.ProxyClassTransparent {
+		return ProxyTransparentWarning
+	}
+	return ""
 }
 
 // proxyEndpointDTO is an endpoint without its secret.
@@ -35,6 +70,12 @@ type proxyEndpointDTO struct {
 	Usage           proxyUsageDTO `json:"usage"`
 	CreatedAt       time.Time     `json:"created_at"`
 	UpdatedAt       time.Time     `json:"updated_at"`
+	Class           string        `json:"class"`
+	// Template is the request template of the classes ai and send.
+	Template        *domain.ProxyTemplate `json:"template"`
+	Limits          proxyLimitsDTO        `json:"limits"`
+	EffectiveLimits proxyLimitsDTO        `json:"effective_limits"`
+	Warning         *string               `json:"warning"`
 }
 
 func toProxyEndpoint(v service.ProxyEndpointView) proxyEndpointDTO {
@@ -44,8 +85,10 @@ func toProxyEndpoint(v service.ProxyEndpointView) proxyEndpointDTO {
 		Paths: nonNil(e.Paths), Auth: string(e.Auth), AuthName: optional(e.AuthName), Enabled: e.Enabled,
 		SecretSet: v.SecretSet, SecretUpdatedAt: e.SecretUpdatedAt, SecretURL: v.SecretURL, CallURL: v.CallURL,
 		Usage: proxyUsageDTO{Requests: e.Usage.Requests, Errors: e.Usage.Errors, Rejected: e.Usage.Rejected,
-			LastUsedAt: e.Usage.LastUsedAt},
+			LastUsedAt: e.Usage.LastUsedAt, Today: e.Usage.Today, Paused: e.Usage.Paused},
 		CreatedAt: e.CreatedAt, UpdatedAt: e.UpdatedAt,
+		Class: string(e.Class), Template: e.Template, Limits: fromLimits(e.Limits),
+		EffectiveLimits: fromLimits(v.Effective), Warning: optional(proxyWarning(e.Class)),
 	}
 	if e.Usage.LastStatus != 0 {
 		st := e.Usage.LastStatus
@@ -66,6 +109,11 @@ type proxyEndpointRequest struct {
 	AuthName     string          `json:"auth_name"`
 	Enabled      *bool           `json:"enabled"`
 	Secret       json.RawMessage `json:"secret"`
+	// Class is omitted to keep the class of an existing endpoint; a new
+	// endpoint without one is "ai".
+	Class    string                `json:"class"`
+	Template *domain.ProxyTemplate `json:"template"`
+	Limits   *proxyLimitsDTO       `json:"limits"`
 }
 
 func (a *api) listProxyEndpoints(w http.ResponseWriter, r *http.Request) error {
@@ -103,6 +151,7 @@ func (a *api) putProxyEndpoint(w http.ResponseWriter, r *http.Request) error {
 		domain.ProxyConfig{
 			UpstreamURL: req.UpstreamURL, AllowedHosts: req.AllowedHosts, Methods: req.Methods, Paths: req.Paths,
 			Auth: domain.ProxyAuth(req.Auth), AuthName: req.AuthName, Enabled: enabled,
+			Class: domain.ProxyClass(req.Class), Template: req.Template, Limits: req.Limits.toDomain(),
 		})
 	if err != nil {
 		return err

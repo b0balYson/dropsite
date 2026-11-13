@@ -96,7 +96,7 @@ func TestCertificatePermission(t *testing.T) {
 	id := strings.TrimSpace(string(run(t, "docker", "run", "-d", "--rm",
 		"-e", "ACME_EMAIL=a@example.com", "-e", "API_HOST=api.example.com", "-e", "ADMIN_HOST=admin.example.com",
 		"-e", "CADDY_GLOBAL_EXTRA=local_certs", "-e", "XDG_DATA_HOME=/tmp", "-e", "XDG_CONFIG_HOME=/tmp",
-		"-v", abs+":/etc/caddy/Caddyfile:ro", caddyImage,
+		"-v", abs+":/etc/caddy/Caddyfile:ro", caddyTestImage(t),
 		"caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile")))
 	t.Cleanup(func() { _ = exec.Command("docker", "rm", "-f", id).Run() })
 	run(t, "docker", "exec", id, "sh", "-c", "mkdir -p /data/by-host/docs.example.com /data/tls-hosts "+

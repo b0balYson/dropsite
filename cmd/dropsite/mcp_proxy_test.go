@@ -18,7 +18,7 @@ func TestStdioProxyTools(t *testing.T) {
 	}
 
 	args := map[string]any{"site": "bot", "name": "openai", "upstream_url": "https://api.openai.com/v1",
-		"auth": "bearer", "methods": []string{"POST"}, "paths": []string{"/chat/completions"}}
+		"auth": "bearer", "methods": []string{"POST"}, "paths": []string{"/chat/completions"}, "class": "transparent"}
 	out := mustTool(t, local, "set_proxy_endpoint", args)
 	ep := out["endpoint"].(map[string]any)
 	if out["created"] != true || ep["secret_set"] != false || !strings.Contains(ep["secret_url"].(string), "/sites/"+v.Site.ID+"/proxy") ||

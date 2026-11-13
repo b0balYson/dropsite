@@ -9,6 +9,8 @@
 //	control reset-password [email]  set a new random password, print it (default ADMIN_EMAIL)
 //	control public-admin [status|on|off]  show or change access to the admin UI from the internet
 //	control connect-url [email]  print a one-time connect URL for a chat app (beta; default ADMIN_EMAIL)
+//	control defender [status|on|off|strict on|off]  blocking of AI scrapers and cloud ranges
+//	control bans [list|add <ip> [minutes]|clear <ip>]  IP bans on site addresses
 //	control version           print the build version
 package main
 
@@ -33,7 +35,7 @@ func main() {
 	}
 }
 
-var errUsage = errors.New("usage: control [serve|healthcheck|backup <path|->|restore <path|-> [--force]|reset-password [email]|public-admin [status|on|off]|connect-url [email]|version]")
+var errUsage = errors.New("usage: control [serve|healthcheck|backup <path|->|restore <path|-> [--force]|reset-password [email]|public-admin [status|on|off]|connect-url [email]|defender [status|on|off|strict on|off]|bans [list|add <ip> [minutes]|clear <ip>]|version]")
 
 func run(ctx context.Context, args []string) error {
 	cmd := "serve"
@@ -51,6 +53,10 @@ func run(ctx context.Context, args []string) error {
 		return restoreCmd(ctx, args)
 	case "reset-password":
 		return resetPasswordCmd(ctx, args, os.Stdout, os.Stderr)
+	case "defender":
+		return defenderCmd(ctx, args, os.Stdout, os.Stderr)
+	case "bans":
+		return bansCmd(ctx, args, os.Stdout, os.Stderr)
 	case "public-admin":
 		return publicAdminCmd(ctx, args, os.Stdout, os.Stderr)
 	case "connect-url":

@@ -21,9 +21,15 @@
         {{if not $e.Enabled}}<span class="badge badge--muted">{{$.L.T "proxy.off"}}</span>
         {{else if .SecretSet}}<span class="badge badge--ok">{{$.L.T "proxy.key.set"}}</span>
         {{else}}<span class="badge badge--warn">{{$.L.T "proxy.key.missing"}}</span>{{end}}
+        <span class="badge {{if eq (print $e.Class) "transparent"}}badge--warn{{else}}badge--muted{{end}}">{{$.L.T (printf "proxy.class.%s" $e.Class)}}</span>
+        {{if $e.Usage.Paused}}<span class="badge badge--error">{{$.L.T "proxy.budget.paused"}}</span>{{end}}
       </div>
       {{template "section_flash" (bundle $ (printf "proxy-%s" $e.Name))}}
+      {{if eq (print $e.Class) "transparent"}}<p class="notice notice--warn proxy__class-warn" role="note">{{$.L.T "proxy.class.transparent.warn"}}</p>{{end}}
+      {{if $e.Usage.Paused}}<p class="notice notice--error" role="status">{{$.L.T "proxy.budget.paused.text" "budget" .Effective.DailyBudget}}</p>{{end}}
       <dl class="fields proxy__facts">
+        <div class="fields__row"><dt class="fields__name">{{$.L.T "proxy.limits"}}</dt><dd class="fields__value">{{$.L.T "proxy.limits.minute" "n" .Effective.PerMinute}}{{if .Effective.DailyBudget}} · {{$.L.T "proxy.limits.today" "n" $e.Usage.Today "budget" .Effective.DailyBudget}}{{end}}{{if .Effective.SessionQuota}} · {{$.L.T "proxy.limits.session" "n" .Effective.SessionQuota}}{{end}}</dd></div>
+        {{with $e.Template}}<div class="fields__row"><dt class="fields__name">{{$.L.T "proxy.template"}}</dt><dd class="fields__value"><span class="mono">{{.Method}} {{if .Path}}{{.Path}}{{else}}/{{end}}</span> · {{$.L.T "proxy.template.fields"}} <span class="mono">{{range $k, $f := .Fields}}{{$k}}:{{$f.Type}} {{end}}</span>{{if .Response}} · {{$.L.T "proxy.template.response"}} <span class="mono">{{.Response}}</span>{{end}}</dd></div>{{end}}
         <div class="fields__row"><dt class="fields__name">{{$.L.T "proxy.call"}}</dt><dd class="fields__value mono">{{.CallURL}}</dd></div>
         <div class="fields__row"><dt class="fields__name">{{$.L.T "proxy.methods"}}</dt><dd class="fields__value mono">{{join $e.Methods ", "}}</dd></div>
         <div class="fields__row"><dt class="fields__name">{{$.L.T "proxy.paths"}}</dt><dd class="fields__value mono">{{if $e.Paths}}{{join $e.Paths ", "}}{{else}}{{$.L.T "proxy.paths.any"}}{{end}}</dd></div>
@@ -72,6 +78,13 @@
       <input class="input mono" id="p-name" name="name" required maxlength="40" pattern="[a-z0-9][a-z0-9\-]{0,39}" value="{{$f.Name}}" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="p-name-hint">
       <p class="hint" id="p-name-hint">{{.L.T "proxy.field.name.hint"}}</p>
     </div>{{end}}
+    <fieldset class="field proxy-classes">
+      <legend class="field__label">{{.L.T "proxy.class"}}</legend>
+      {{range .D.Classes}}<label class="proxy-class{{if eq (print .) "transparent"}} proxy-class--risky{{end}}">
+        <input type="radio" name="class" value="{{.}}" {{if eq (print .) $f.Class}}checked{{end}} required>
+        <span class="proxy-class__body"><strong>{{$.L.T (printf "proxy.class.%s" .)}}</strong><span class="hint">{{$.L.T (printf "proxy.class.%s.hint" .)}}</span></span>
+      </label>{{end}}
+    </fieldset>
     <div class="field">
       <label class="field__label" for="p-url">{{.L.T "proxy.field.url"}}</label>
       <input class="input mono" id="p-url" name="upstream_url" type="text" inputmode="url" required maxlength="2048" placeholder="https://api.openai.com/v1" value="{{$f.UpstreamURL}}" autocomplete="off" spellcheck="false" aria-describedby="p-url-hint">
@@ -88,8 +101,13 @@
       <input class="input mono" id="p-authname" name="auth_name" maxlength="64" value="{{$f.AuthName}}" placeholder="X-Api-Key" autocomplete="off" spellcheck="false" aria-describedby="p-authname-hint">
       <p class="hint" id="p-authname-hint">{{.L.T "proxy.field.authname.hint"}}</p>
     </div>
+    <div class="field">
+      <label class="field__label" for="p-template">{{.L.T "proxy.template"}} <span class="optional">{{.L.T "proxy.template.only"}}</span></label>
+      <textarea class="input mono" id="p-template" name="template" rows="12" spellcheck="false" placeholder="{{.D.Example}}" aria-describedby="p-template-hint">{{$f.Template}}</textarea>
+      <p class="hint" id="p-template-hint">{{.L.T "proxy.template.hint"}}</p>
+    </div>
     <fieldset class="field">
-      <legend class="field__label">{{.L.T "proxy.methods"}}</legend>
+      <legend class="field__label">{{.L.T "proxy.methods"}} <span class="optional">{{.L.T "proxy.methods.only"}}</span></legend>
       <div class="proxy-methods">
         {{range .D.Methods}}<label class="check"><input type="checkbox" name="methods" value="{{.}}" {{if index $f.Methods .}}checked{{end}}><span class="mono">{{.}}</span></label>{{end}}
       </div>
@@ -104,6 +122,24 @@
       <textarea class="input mono" id="p-hosts" name="allowed_hosts" rows="2" spellcheck="false" aria-describedby="p-hosts-hint">{{$f.AllowedHosts}}</textarea>
       <p class="hint" id="p-hosts-hint">{{.L.T "proxy.field.hosts.hint"}}</p>
     </div>
+    <details class="howto proxy-advanced"{{if or $f.PerMinute $f.DailyBudget $f.SessionQuota}} open{{end}}>
+      <summary>{{.L.T "proxy.advanced"}}</summary>
+      <p class="hint">{{.L.T "proxy.advanced.hint"}}</p>
+      <div class="proxy-limits">
+        <div class="field">
+          <label class="field__label" for="p-minute">{{.L.T "proxy.field.per_minute"}}</label>
+          <input class="input" id="p-minute" name="per_minute" type="number" min="0" max="600" inputmode="numeric" value="{{$f.PerMinute}}">
+        </div>
+        <div class="field">
+          <label class="field__label" for="p-budget">{{.L.T "proxy.field.daily_budget"}}</label>
+          <input class="input" id="p-budget" name="daily_budget" type="number" min="0" max="1000000" inputmode="numeric" value="{{$f.DailyBudget}}">
+        </div>
+        <div class="field">
+          <label class="field__label" for="p-quota">{{.L.T "proxy.field.session_quota"}}</label>
+          <input class="input" id="p-quota" name="session_quota" type="number" min="0" max="1000" inputmode="numeric" value="{{$f.SessionQuota}}">
+        </div>
+      </div>
+    </details>
     <label class="check"><input type="checkbox" name="enabled" value="1" {{if $f.Enabled}}checked{{end}}><span>{{.L.T "proxy.field.enabled"}}</span></label>
     <p class="hint">{{.L.T "proxy.form.keyhint"}}</p>
     <div class="channel__actions">
@@ -117,12 +153,18 @@
   <details class="howto">
     <summary id="proxy-howto-h">{{.L.T "proxy.howto"}}</summary>
     <p class="small">{{.L.T "proxy.howto.text"}}</p>
-    <pre class="code code--tall" id="proxy-snippet"><code>const res = await fetch('/_dropsite/proxy/openai/chat/completions', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: question }] }),
-});
-const data = await res.json();</code></pre>
+    <pre class="code code--tall" id="proxy-snippet"><code>&lt;script src="/_dropsite/session.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+async function ask(question) {
+  const res = await dropsite.fetch('/_dropsite/proxy/openai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question }),
+  });
+  const { result } = await res.json();
+  return result;
+}
+&lt;/script&gt;</code></pre>
     <button class="btn btn--small" type="button" data-copy="#proxy-snippet" data-copied="{{.L.T "copy.done"}}">{{.L.T "copy.button"}}</button>
   </details>
 </section>

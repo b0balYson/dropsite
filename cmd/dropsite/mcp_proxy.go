@@ -13,17 +13,23 @@ var _ mcp.ProxyBackend = localBackend{}
 
 func proxyError(err error) error { return toolErrorFor(err, mcp.NotFoundProxy) }
 
+func fromClientLimits(l client.ProxyLimits) mcp.ProxyLimits {
+	return mcp.ProxyLimits{PerMinute: l.PerMinute, DailyBudget: l.DailyBudget, SessionQuota: l.SessionQuota}
+}
+
 func fromProxyEndpoint(e client.ProxyEndpoint) mcp.ProxyEndpoint {
 	out := mcp.ProxyEndpoint{
 		Name: e.Name, UpstreamURL: e.UpstreamURL, AllowedHosts: e.AllowedHosts, Methods: e.Methods, Paths: e.Paths,
 		Auth: e.Auth, AuthName: deref(e.AuthName), Enabled: e.Enabled, SecretSet: e.SecretSet,
 		SecretUpdatedAt: stampTime(e.SecretUpdatedAt), SecretURL: e.SecretURL, CallURL: e.CallURL,
 		Usage: mcp.ProxyUsage{Requests: e.Usage.Requests, Errors: e.Usage.Errors, Rejected: e.Usage.Rejected,
-			LastUsedAt: stampTime(e.Usage.LastUsedAt)},
+			LastUsedAt: stampTime(e.Usage.LastUsedAt), Today: e.Usage.Today, Paused: e.Usage.Paused},
+		Class: e.Class, Limits: fromClientLimits(e.Limits), EffectiveLimits: fromClientLimits(e.EffectiveLimits),
 	}
 	if e.Usage.LastStatus != nil {
 		out.Usage.LastStatus = *e.Usage.LastStatus
 	}
+	out.Template, _ = mcp.TemplateFromJSON(e.Template)
 	return out
 }
 
@@ -40,9 +46,15 @@ func (b localBackend) ListProxyEndpoints(ctx context.Context, ref string) ([]mcp
 }
 
 func (b localBackend) SetProxyEndpoint(ctx context.Context, ref string, in mcp.ProxyEndpointInput) (mcp.ProxyEndpoint, bool, error) {
+	tmpl, err := mcp.TemplateJSON(in.Template)
+	if err != nil {
+		return mcp.ProxyEndpoint{}, false, err
+	}
 	e, created, err := b.c.PutProxyEndpoint(ctx, ref, in.Name, client.ProxyEndpointConfig{
 		UpstreamURL: in.UpstreamURL, AllowedHosts: in.AllowedHosts, Methods: in.Methods, Paths: in.Paths,
-		Auth: in.Auth, AuthName: in.AuthName, Enabled: in.Enabled,
+		Auth: in.Auth, AuthName: in.AuthName, Enabled: in.Enabled, Class: in.Class, Template: tmpl,
+		Limits: &client.ProxyLimits{PerMinute: in.Limits.PerMinute, DailyBudget: in.Limits.DailyBudget,
+			SessionQuota: in.Limits.SessionQuota},
 	})
 	if err != nil {
 		return mcp.ProxyEndpoint{}, false, proxyError(err)

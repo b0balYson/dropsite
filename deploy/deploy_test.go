@@ -6,20 +6,25 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
 
 const (
-	caddyImage = "caddy:2.11.9"
+	// caddyImage is the release image of Caddy in every TLS mode.
+	caddyImage = "ghcr.io/b0balyson/dropsite-caddy:latest"
+	// localCaddy is built from deploy/caddy for the Caddyfile checks: the
+	// Caddyfile needs its plugins.
+	localCaddy = "dropsite-caddy:test"
 	// Release images; DROPSITE_VERSION defaults to latest.
-	controlImage  = "ghcr.io/b0balyson/dropsite-control:latest"
-	wildcardImage = "ghcr.io/b0balyson/dropsite-caddy:latest"
+	controlImage = "ghcr.io/b0balyson/dropsite-control:latest"
 )
 
 func requireDocker(t *testing.T) {
@@ -130,11 +135,11 @@ func TestComposeConfig(t *testing.T) {
 	})
 }
 
-// Verify the resolved configuration: control (and Caddy in wildcard mode)
+// Verify the resolved configuration: control and Caddy
 // run the published release image, keep a build section for source builds,
 // and are only pulled when missing, so "up" never replaces a pulled image
 // with a build unless asked to.
-func checkImages(t *testing.T, out []byte, wildcard bool) {
+func checkImages(t *testing.T, out []byte, _ bool) {
 	t.Helper()
 	var cf composeFile
 	if err := json.Unmarshal(out, &cf); err != nil {
@@ -145,15 +150,39 @@ func checkImages(t *testing.T, out []byte, wildcard bool) {
 		t.Errorf("control: image=%q pull_policy=%q, want %q and missing", control.Image, control.PullPolicy, controlImage)
 	}
 	checkBuildContext(t, control.Build, "..", "deploy/Dockerfile")
+	// Caddy runs the dropsite-caddy release image in every TLS mode: the
+	// Caddyfile needs caddy-defender and caddy-ratelimit.
 	caddy := cf.Services["caddy"]
-	if wildcard {
-		if caddy.Image != wildcardImage || caddy.PullPolicy != "missing" {
-			t.Errorf("wildcard Caddy: image=%q pull_policy=%q, want %q and missing", caddy.Image, caddy.PullPolicy, wildcardImage)
-		}
-		checkBuildContext(t, caddy.Build, "caddy", "Dockerfile")
-	} else if caddy.Image != caddyImage || caddy.Build != nil {
-		t.Errorf("ondemand Caddy must use the stock image, got image=%q build=%+v", caddy.Image, caddy.Build)
+	if caddy.Image != caddyImage || caddy.PullPolicy != "missing" {
+		t.Errorf("Caddy: image=%q pull_policy=%q, want %q and missing", caddy.Image, caddy.PullPolicy, caddyImage)
 	}
+	checkBuildContext(t, caddy.Build, "caddy", "Dockerfile")
+}
+
+var (
+	caddyBuildOnce sync.Once
+	caddyBuildErr  error
+)
+
+// caddyTestImage returns the local dropsite-caddy image, building
+// deploy/caddy once when it is missing (several minutes the first time).
+func caddyTestImage(t *testing.T) string {
+	t.Helper()
+	caddyBuildOnce.Do(func() {
+		if exec.Command("docker", "image", "inspect", localCaddy).Run() == nil {
+			return
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
+		defer cancel()
+		out, err := exec.CommandContext(ctx, "docker", "build", "-t", localCaddy, "caddy").CombinedOutput()
+		if err != nil {
+			caddyBuildErr = fmt.Errorf("docker build %s: %w\n%s", localCaddy, err, out)
+		}
+	})
+	if caddyBuildErr != nil {
+		t.Fatal(caddyBuildErr)
+	}
+	return localCaddy
 }
 
 func checkBuildContext(t *testing.T, build *composeBuild, contextDir, dockerfile string) {
@@ -253,7 +282,7 @@ func TestCaddyfileValidates(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Wildcard mode is checked with the "internal" DNS provider, which needs no
-	// plugin, so the stock image can adapt it.
+	// DNS plugin.
 	for mode, extra := range map[string][]string{
 		"ondemand": nil,
 		"wildcard": {"-e", "TLS_MODE=wildcard", "-e", "TLS_DNS_PROVIDER=internal"},
@@ -262,7 +291,7 @@ func TestCaddyfileValidates(t *testing.T) {
 			args := append([]string{"run", "--rm", "-e", "BASE_DOMAIN=example.com", "-e", "ACME_EMAIL=a@example.com",
 				"-e", "API_HOST=api.example.com", "-e", "ADMIN_HOST=admin.example.com",
 				"-v", abs + ":/etc/caddy/Caddyfile:ro"}, extra...)
-			args = append(args, caddyImage)
+			args = append(args, caddyTestImage(t))
 			run(t, "docker", append(args, "caddy", "validate", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile")...)
 			out := run(t, "docker", append(args, "caddy", "adapt", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile")...)
 			checkLogging(t, out, mode == "wildcard")

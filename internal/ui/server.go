@@ -180,6 +180,8 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /admin/settings/forms", s.admin(s.saveFormSettings))
 	mux.HandleFunc("POST /admin/settings/sheets", s.admin(s.saveSheetsKey))
 	mux.HandleFunc("POST /admin/settings/public-admin", s.admin(s.savePublicAdmin))
+	mux.HandleFunc("POST /admin/settings/guard", s.admin(s.saveGuard))
+	mux.HandleFunc("POST /admin/settings/bans/clear", s.admin(s.clearBan))
 	mux.HandleFunc("POST /admin/settings/update", s.admin(s.requestUpdate))
 	mux.HandleFunc("POST /admin/settings/update/check", s.admin(s.checkUpdates))
 	mux.HandleFunc("GET /admin/settings/update/status", s.admin(s.updateStatus))

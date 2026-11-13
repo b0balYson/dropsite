@@ -62,6 +62,12 @@ func (w *statusWriter) Write(b []byte) (int, error) {
 
 func (w *statusWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
 
+// Flush passes streamed responses (MCP server-sent events) on at once, also
+// to handlers that check for http.Flusher instead of using a ResponseController.
+func (w *statusWriter) Flush() {
+	_ = http.NewResponseController(w.ResponseWriter).Flush()
+}
+
 // requestReadTimeout bounds reading the whole request of every endpoint except
 // archive uploads, which may legitimately stream tens of megabytes over a slow
 // link and rely on the server-wide ReadTimeout instead. A variable for tests.

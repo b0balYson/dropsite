@@ -38,6 +38,8 @@ type Repository interface {
 	FormRepository
 	CollectionRepository
 	ProxyRepository
+	ProxyBudgetRepository
+	BanRepository
 	PublishRepository
 	ReportRepository
 	ScheduleRepository

@@ -1,5 +1,7 @@
-# Serving and TLS for published sites, verified on caddy:2.11.9. Several
-# details below are load-bearing: read their comments before changing them.
+# Serving and TLS for published sites, verified on Caddy 2.11.9. It needs the
+# dropsite-caddy image (deploy/caddy/Dockerfile: caddy-defender and
+# caddy-ratelimit), not the stock one. Several details below are
+# load-bearing: read their comments before changing them.
 #
 # Environment (set by docker-compose.yml):
 #   ACME_EMAIL          ACME account email
@@ -132,6 +134,18 @@ http://127.0.0.1:8090 {
 {$API_HOST} {
 	import security_headers
 	import api_log
+	# Its own, generous limit (deploys, MCP sessions of AI assistants): about
+	# 100 requests per second per client, IPv6 per /64. Signed-in traffic is
+	# not exempt: Caddy cannot verify a token, and a header any client can
+	# send must not lift the limit. control keeps its per-token limits.
+	rate_limit {
+		zone api {
+			key {client_ip}
+			events 1000
+			window 10s
+			ipv6_prefix 64
+		}
+	}
 	reverse_proxy control:8080 {
 		import to_control
 	}
@@ -251,6 +265,76 @@ http:// {
 		# asset Cache-Control instead of no-cache.
 		route {
 			# STAGE2-FLAGS
+			# Abuse protection (docs/security.md) comes before everything, the
+			# platform paths included. Switches and bans are marker files that
+			# control writes; Caddy only checks them, nothing is reloaded.
+			#
+			# 1. Banned clients: control bans networks that keep hitting the
+			# limit below (and bots it detects) with /data/bans/<address>.
+			# {client_ip} is the canonical address, the marker's name. The
+			# header lets control tell this 429 from its own in the access log.
+			@banned file {
+				root /data/bans
+				try_files /{client_ip}
+			}
+			header @banned X-Dropsite-Block ban
+			header @banned Retry-After 900
+			header @banned Cache-Control no-store
+			respond @banned "429 Too Many Requests" 429
+
+			# 2. Global rate limit per client (IPv6 per /64): 200 requests
+			# within any 4 seconds, about 50 per second sustained with bursts
+			# for pages with many assets. Over it: 429 with Retry-After,
+			# marked in handle_errors below; control bans repeat offenders.
+			rate_limit {
+				zone sites {
+					key {client_ip}
+					events 200
+					window 4s
+					ipv6_prefix 64
+				}
+			}
+
+			# 3. caddy-defender, on unless /data/flags/defender-off exists. AI
+			# scraper ranges are refused on the whole site; big clouds only on
+			# the secret proxy (VPN users live in clouds and must still see
+			# pages and send forms), or on the whole site in strict mode
+			# (/data/flags/defender-strict). The API and admin hosts have no
+			# such block: ChatGPT and Claude connectors come from these clouds.
+			# ACME is answered by Caddy before any route.
+			@defenderOn {
+				not file {
+					root /data/flags
+					try_files /defender-off
+				}
+			}
+			@cloudProxy {
+				path /_dropsite/proxy/*
+				not file {
+					root /data/flags
+					try_files /defender-off
+				}
+			}
+			@cloudStrict {
+				file {
+					root /data/flags
+					try_files /defender-strict
+				}
+				not file {
+					root /data/flags
+					try_files /defender-off
+				}
+			}
+			defender @defenderOn block {
+				ranges openai deepseek githubcopilot mistral
+			}
+			defender @cloudProxy block {
+				ranges aws gcloud azurepubliccloud oci
+			}
+			defender @cloudStrict block {
+				ranges aws gcloud azurepubliccloud oci
+			}
+
 			# The login page comes first: it must be reachable without access.
 			# Its own X-Robots-Tag is dropped and set here, so the header is
 			# never doubled with the @preview/@noindex ones.
@@ -384,6 +468,11 @@ http:// {
 
 	handle_errors {
 		import security_headers
+		# A handler error with 429 comes only from rate_limit (control's own
+		# 429 answers are proxied, not errors): mark it for the ban detector.
+		@limited expression {err.status_code} == 429
+		header @limited X-Dropsite-Block rate
+		header @limited Cache-Control no-store
 
 		handle @site {
 			# root must be its own directive before the file matcher below.

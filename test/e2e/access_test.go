@@ -204,15 +204,18 @@ func visitorLogin(t *testing.T, s *stack, host, password string) string {
 }
 
 // TestCaddyfileValidates runs "caddy validate" on deploy/Caddyfile in both
-// TLS modes with the pinned image.
+// TLS modes with the dropsite-caddy image of the stack (built when missing).
 func TestCaddyfileValidates(t *testing.T) {
 	cf := filepath.Join(repoRoot(), "deploy", "Caddyfile")
+	if out, err := compose(t.Context(), "build", "caddy").CombinedOutput(); err != nil {
+		t.Fatalf("build caddy: %v\n%s", err, out)
+	}
 	for _, mode := range []string{"ondemand", "wildcard"} {
 		out, err := exec.CommandContext(t.Context(), "docker", "run", "--rm",
 			"-e", "TLS_MODE="+mode, "-e", "TLS_DNS_PROVIDER=internal",
 			"-e", "BASE_DOMAIN=example.com", "-e", "ACME_EMAIL=a@example.com", "-e", "API_HOST=api.example.com",
 			"-e", "ADMIN_HOST=admin.example.com",
-			"-v", cf+":/etc/caddy/Caddyfile:ro", "caddy:2.11.9",
+			"-v", cf+":/etc/caddy/Caddyfile:ro", "ghcr.io/b0balyson/dropsite-caddy:dev",
 			"caddy", "validate", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile").CombinedOutput()
 		if err != nil || !strings.Contains(string(out), "Valid configuration") {
 			t.Fatalf("%s: %v\n%s", mode, err, out)

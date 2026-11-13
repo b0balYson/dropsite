@@ -2512,7 +2512,7 @@
       "put": {
         "operationId": "putProxyEndpoint",
         "summary": "Create an endpoint or replace its configuration",
-        "description": "Pages of the site call https://<site>/_dropsite/proxy/<name>/<path>; the request goes to upstream_url + /<path> with the stored key added. The key is pasted only in the web interface (secret_url): a body with a `secret` field is refused with `proxy_secret_ui_only`. Changing upstream_url, allowed_hosts, auth or auth_name removes a stored key; methods, paths and enabled keep it. Omitted optional fields get their defaults.",
+        "description": "Pages of the site call https://<site>/_dropsite/proxy/<name>/<path>; the request goes to upstream_url + /<path> with the stored key added. The key is pasted only in the web interface (secret_url): a body with a `secret` field is refused with `proxy_secret_ui_only`. Changing upstream_url, allowed_hosts, auth or auth_name removes a stored key; methods, paths and enabled keep it. Omitted optional fields get their defaults. The class sets the policy: ai and send forward only their template and need the visitor session of /_dropsite/session.js (send also a fresh proof of work per call), read allows GET and HEAD, transparent forwards any allowed call. A new endpoint without a class is ai.",
         "requestBody": {
           "required": true,
           "content": {
@@ -5477,7 +5477,12 @@
           "call_url",
           "usage",
           "created_at",
-          "updated_at"
+          "updated_at",
+          "class",
+          "template",
+          "limits",
+          "effective_limits",
+          "warning"
         ],
         "properties": {
           "name": {
@@ -5556,6 +5561,23 @@
           "updated_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "class": {
+            "type": "string",
+            "enum": ["ai", "send", "read", "transparent"]
+          },
+          "template": {
+            "oneOf": [{ "$ref": "#/components/schemas/ProxyTemplate" }, { "type": "null" }]
+          },
+          "limits": {
+            "$ref": "#/components/schemas/ProxyLimits"
+          },
+          "effective_limits": {
+            "$ref": "#/components/schemas/ProxyLimits"
+          },
+          "warning": {
+            "type": ["string", "null"],
+            "description": "Set for the transparent class: anyone who opens the site can use the key"
           }
         }
       },
@@ -5594,6 +5616,14 @@
               "null"
             ],
             "description": "HTTP status of the last call"
+          },
+          "today": {
+            "type": "integer",
+            "description": "Calls of the current UTC day counted against the daily budget"
+          },
+          "paused": {
+            "type": "boolean",
+            "description": "The daily budget ran out; calls are refused until midnight UTC"
           }
         }
       },
@@ -5663,7 +5693,53 @@
           "enabled": {
             "type": "boolean",
             "default": true
+          },
+          "class": {
+            "type": "string",
+            "enum": ["ai", "send", "read", "transparent"],
+            "description": "Endpoint class with built-in policies. Omitted: an existing endpoint keeps its class, a new one is ai (which needs a template). transparent forwards any allowed call and is meant only for password-protected sites"
+          },
+          "template": {
+            "$ref": "#/components/schemas/ProxyTemplate"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/ProxyLimits"
           }
+        }
+      },
+      "ProxyLimits": {
+        "type": "object",
+        "description": "Per-endpoint limits; 0 keeps the class default (read: 60/min, 10000/day; ai: 20/min, 1000/day, 50 per session; send: 5/min, 100/day, 50 per session; transparent: 60/min, no daily budget). Days are UTC",
+        "properties": {
+          "per_minute": { "type": "integer", "minimum": 0, "maximum": 600, "description": "Calls per minute and client network (IPv6 per /64)" },
+          "daily_budget": { "type": "integer", "minimum": 0, "maximum": 1000000, "description": "Calls per UTC day; when used up the endpoint answers 429 proxy_budget until midnight UTC" },
+          "session_quota": { "type": "integer", "minimum": 0, "maximum": 1000, "description": "Calls per visitor session (ai and send)" }
+        }
+      },
+      "ProxyTemplate": {
+        "type": "object",
+        "description": "Declarative request of the classes ai and send: the visitor POSTs a JSON object with the declared fields to /_dropsite/proxy/<name>; the server sends body (placeholders {{field}} replaced) to upstream_url + path. A string that is exactly one placeholder becomes the typed value; placeholders inside longer strings become text. No expressions",
+        "required": ["body", "fields"],
+        "properties": {
+          "method": { "type": "string", "enum": ["POST", "PUT", "PATCH"], "default": "POST" },
+          "path": { "type": "string", "description": "Path after upstream_url, e.g. /chat/completions" },
+          "body": { "description": "The fixed JSON body (model, system prompt, max_tokens, recipient...) with {{field}} placeholders; at most 16 KB with the rest of the template" },
+          "fields": {
+            "type": "object",
+            "description": "Fields a visitor may send, by name (a-z, 0-9, _)",
+            "additionalProperties": {
+              "type": "object",
+              "required": ["type"],
+              "properties": {
+                "type": { "type": "string", "enum": ["string", "number", "integer", "boolean", "messages"], "description": "messages: a list of {role: user|assistant, content}" },
+                "max_length": { "type": "integer", "description": "Characters of a string or of each message; default 1000 (messages 4000), at most 20000" },
+                "max_items": { "type": "integer", "description": "Messages in a list; default 20, at most 100" },
+                "required": { "type": "boolean" }
+              }
+            }
+          },
+          "response": { "type": "string", "description": "Dotted path of the value to return, e.g. choices.0.message.content; the page then gets {\"result\": value}" },
+          "stream": { "type": "boolean", "description": "Forward a server-sent event stream, each event reduced to the response value" }
         }
       },
       "FormChannel": {

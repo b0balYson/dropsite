@@ -11,12 +11,8 @@
 
 services:
   caddy:
-    # Caddy with DNS plugins instead of the stock image: the prebuilt image of
-    # the release, or a build of deploy/caddy with --build.
-    image: ghcr.io/b0balyson/dropsite-caddy:${DROPSITE_VERSION:-latest}
-    pull_policy: missing
-    build:
-      context: caddy
+    # The image (dropsite-caddy, with the DNS plugins) is the same in every
+    # mode and is set in docker-compose.yml.
     environment:
       # Selects the tls_wildcard snippet of the Caddyfile.
       TLS_MODE: wildcard

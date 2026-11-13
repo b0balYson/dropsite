@@ -10,7 +10,7 @@ import (
 )
 
 func openAIConfig() domain.ProxyConfig {
-	return domain.ProxyConfig{UpstreamURL: "https://api.openai.com/v1/", Auth: domain.ProxyAuthBearer,
+	return domain.ProxyConfig{Class: domain.ProxyClassTransparent, UpstreamURL: "https://api.openai.com/v1/", Auth: domain.ProxyAuthBearer,
 		Methods: []string{"post"}, Paths: []string{"/chat/completions/"}, Enabled: true}
 }
 
@@ -24,12 +24,12 @@ func TestNormalizeProxyConfig(t *testing.T) {
 		strings.Join(good.Methods, ",") != "POST" || strings.Join(good.Paths, ",") != "/chat/completions" {
 		t.Fatalf("normalized: %+v", good)
 	}
-	tg, err := e.svc.normalizeProxyConfig(domain.ProxyConfig{UpstreamURL: "https://api.telegram.org/bot{secret}",
+	tg, err := e.svc.normalizeProxyConfig(domain.ProxyConfig{Class: domain.ProxyClassTransparent, UpstreamURL: "https://api.telegram.org/bot{secret}",
 		Auth: domain.ProxyAuthPath})
 	if err != nil || tg.UpstreamURL != "https://api.telegram.org/bot{secret}" || strings.Join(tg.Methods, ",") != "GET,POST" {
 		t.Fatalf("telegram: %+v %v", tg, err)
 	}
-	hdr, err := e.svc.normalizeProxyConfig(domain.ProxyConfig{UpstreamURL: "https://crm.example.com/api",
+	hdr, err := e.svc.normalizeProxyConfig(domain.ProxyConfig{Class: domain.ProxyClassTransparent, UpstreamURL: "https://crm.example.com/api",
 		Auth: domain.ProxyAuthHeader, AuthName: "X-Api-Key", AllowedHosts: []string{"CDN.example.com.", "crm.example.com"}})
 	if err != nil || strings.Join(hdr.AllowedHosts, ",") != "crm.example.com,cdn.example.com" {
 		t.Fatalf("header: %+v %v", hdr, err)

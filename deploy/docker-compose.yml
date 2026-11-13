@@ -38,7 +38,15 @@ services:
     logging: *logging
 
   caddy:
-    image: caddy:2.11.9
+    # Caddy with caddy-defender, caddy-ratelimit and DNS plugins, which the
+    # Caddyfile needs in every TLS mode: the prebuilt image of the release, or
+    # a build of deploy/caddy with --build (a few minutes). It is the stock
+    # caddy:2.11.9 image plus a rebuilt binary, so it shares its layers with
+    # caddy-init above.
+    image: ghcr.io/b0balyson/dropsite-caddy:${DROPSITE_VERSION:-latest}
+    pull_policy: missing
+    build:
+      context: caddy
     # Serving must not depend on control: no dependency on its health.
     depends_on:
       caddy-init:
@@ -63,7 +71,7 @@ services:
       # (docs/security.md). Empty without a CDN.
       CADDY_SERVERS_EXTRA: ${CADDY_SERVERS_EXTRA:-}
       # Same value as control, so both always agree on the mode. wildcard
-      # needs compose.wildcard.yml (Caddy image with a DNS plugin, token).
+      # needs compose.wildcard.yml (DNS provider and its token).
       TLS_MODE: ${TLS_MODE:-ondemand}
       # /data is the read-only sites volume, so certificates go elsewhere.
       XDG_DATA_HOME: /caddy/data

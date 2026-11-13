@@ -126,10 +126,11 @@ func (w *rateWriter) WriteHeader(code int) {
 
 func (w *rateWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
 
+// Flush reaches the connection through every wrapper below (they expose
+// Unwrap, not necessarily Flush), so streamed MCP responses such as the
+// subscriptions/listen acknowledgement leave at once.
 func (w *rateWriter) Flush() {
-	if f, ok := w.ResponseWriter.(http.Flusher); ok {
-		f.Flush()
-	}
+	_ = http.NewResponseController(w.ResponseWriter).Flush()
 }
 
 var errNoActor = errors.New("this request is not authenticated; reconnect Dropsite")

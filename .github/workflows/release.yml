@@ -93,7 +93,7 @@ jobs:
           - image: caddy
             context: deploy/caddy
             file: deploy/caddy/Dockerfile
-            description: Caddy with DNS provider plugins for Dropsite wildcard TLS
+            description: Caddy for Dropsite with scraper blocking, rate limits and DNS plugins
     env:
       VERSION: ${{ needs.verify.outputs.version }}
     steps:

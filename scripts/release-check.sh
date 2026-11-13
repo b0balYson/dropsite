@@ -47,8 +47,8 @@ fi
 # 2. Compose names the release images through DROPSITE_VERSION.
 grep -q 'image: ghcr.io/b0balyson/dropsite-control:${DROPSITE_VERSION:-latest}$' deploy/docker-compose.yml ||
 	problem 'deploy/docker-compose.yml: control must use image ghcr.io/b0balyson/dropsite-control:${DROPSITE_VERSION:-latest}'
-grep -q 'image: ghcr.io/b0balyson/dropsite-caddy:${DROPSITE_VERSION:-latest}$' deploy/compose.wildcard.yml ||
-	problem 'deploy/compose.wildcard.yml: caddy must use image ghcr.io/b0balyson/dropsite-caddy:${DROPSITE_VERSION:-latest}'
+grep -q 'image: ghcr.io/b0balyson/dropsite-caddy:${DROPSITE_VERSION:-latest}$' deploy/docker-compose.yml ||
+	problem 'deploy/docker-compose.yml: caddy must use image ghcr.io/b0balyson/dropsite-caddy:${DROPSITE_VERSION:-latest}'
 
 # 3. Source builds without ldflags report the dev marker.
 grep -qx 'var Version = "dev"' internal/brand/brand.go ||

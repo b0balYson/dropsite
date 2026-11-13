@@ -55,7 +55,7 @@ func TestProxyEndpointsAPI(t *testing.T) {
 	_, other := h.user("bob@pp.test")
 	site := h.createSite(owner, "Bot", "")
 	base := "/api/v1/sites/" + site.ID + "/proxy/endpoints"
-	cfg := map[string]any{"upstream_url": "https://api.example.com/v1", "auth": "bearer", "methods": []string{"POST"}}
+	cfg := map[string]any{"upstream_url": "https://api.example.com/v1", "auth": "bearer", "methods": []string{"POST"}, "class": "transparent"}
 
 	withSecret := map[string]any{"upstream_url": "https://api.example.com/v1", "auth": "bearer", "secret": "sk-1"}
 	rec := h.do(http.MethodPut, base+"/ai", owner, withSecret)

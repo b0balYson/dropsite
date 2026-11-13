@@ -46,7 +46,30 @@ var errProxyTaken = domain.E(domain.KindConflict, domain.CodeProxyInvalid,
 	"an endpoint with this name already exists; try again")
 
 const proxyCols = `id, site_id, name, upstream_url, allowed_hosts, methods, paths, auth_kind, auth_name, enabled,
-	secret_enc, secret_updated_at, requests, errors, rejected, last_used_at, last_status, created_at, updated_at`
+	secret_enc, secret_updated_at, requests, errors, rejected, last_used_at, last_status, created_at, updated_at,
+	class, template, rate_per_minute, daily_budget, session_quota`
+
+func encodeTemplate(t *domain.ProxyTemplate) (string, error) {
+	if t == nil {
+		return "", nil
+	}
+	b, err := json.Marshal(t)
+	if err != nil {
+		return "", fmt.Errorf("encode proxy template: %w", err)
+	}
+	return string(b), nil
+}
+
+func decodeTemplate(s string) (*domain.ProxyTemplate, error) {
+	if s == "" {
+		return nil, nil
+	}
+	var t domain.ProxyTemplate
+	if err := json.Unmarshal([]byte(s), &t); err != nil {
+		return nil, fmt.Errorf("decode proxy template: %w", err)
+	}
+	return &t, nil
+}
 
 func encodeList(v []string) (string, error) {
 	if v == nil {
@@ -75,13 +98,19 @@ func scanProxy(r rowScanner) (domain.ProxyEndpoint, error) {
 		secretAt, lastUsed      sql.NullInt64
 		createdAt, updatedAt    int64
 		requests, errs, refused int64
+		class, tmpl             string
 	)
 	if err := r.Scan(&e.ID, &e.SiteID, &e.Name, &e.UpstreamURL, &hosts, &methods, &paths, &auth, &e.AuthName,
 		&e.Enabled, &e.SecretEnc, &secretAt, &requests, &errs, &refused, &lastUsed, &e.Usage.LastStatus,
-		&createdAt, &updatedAt); err != nil {
+		&createdAt, &updatedAt, &class, &tmpl, &e.Limits.PerMinute, &e.Limits.DailyBudget,
+		&e.Limits.SessionQuota); err != nil {
 		return domain.ProxyEndpoint{}, err
 	}
 	var err error
+	e.Class = domain.ProxyClass(class)
+	if e.Template, err = decodeTemplate(tmpl); err != nil {
+		return domain.ProxyEndpoint{}, err
+	}
 	if e.AllowedHosts, err = decodeList(hosts); err != nil {
 		return domain.ProxyEndpoint{}, err
 	}
@@ -139,11 +168,14 @@ func (db *DB) GetProxyEndpoint(ctx context.Context, siteID, name string) (domain
 	return e, nil
 }
 
-type proxyLists struct{ hosts, methods, paths string }
+type proxyLists struct{ hosts, methods, paths, template string }
 
 func encodeProxyLists(c domain.ProxyConfig) (proxyLists, error) {
 	var l proxyLists
 	var err error
+	if l.template, err = encodeTemplate(c.Template); err != nil {
+		return l, err
+	}
 	if l.hosts, err = encodeList(c.AllowedHosts); err != nil {
 		return l, err
 	}
@@ -166,10 +198,12 @@ func (db *DB) CreateProxyEndpoint(ctx context.Context, e domain.ProxyEndpoint) (
 			return err
 		}
 		res, err := tx.ExecContext(ctx, `INSERT INTO proxy_endpoints (site_id, name, upstream_url, allowed_hosts, methods,
-			paths, auth_kind, auth_name, enabled, secret_enc, secret_updated_at, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			paths, auth_kind, auth_name, enabled, secret_enc, secret_updated_at, created_at, updated_at,
+			class, template, rate_per_minute, daily_budget, session_quota)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			e.SiteID, e.Name, e.UpstreamURL, l.hosts, l.methods, l.paths, string(e.Auth), e.AuthName, e.Enabled,
-			e.SecretEnc, nullMS(e.SecretUpdatedAt), toMS(e.CreatedAt), toMS(e.UpdatedAt))
+			e.SecretEnc, nullMS(e.SecretUpdatedAt), toMS(e.CreatedAt), toMS(e.UpdatedAt),
+			proxyClassOrDefault(e.Class), l.template, e.Limits.PerMinute, e.Limits.DailyBudget, e.Limits.SessionQuota)
 		if err != nil {
 			return mapUnique(err, errProxyTaken, "create proxy endpoint")
 		}
@@ -189,11 +223,22 @@ func (db *DB) UpdateProxyEndpoint(ctx context.Context, e domain.ProxyEndpoint) e
 		return err
 	}
 	res, err := db.w.ExecContext(ctx, `UPDATE proxy_endpoints SET upstream_url = ?, allowed_hosts = ?, methods = ?,
-		paths = ?, auth_kind = ?, auth_name = ?, enabled = ?, secret_enc = ?, secret_updated_at = ?, updated_at = ?
+		paths = ?, auth_kind = ?, auth_name = ?, enabled = ?, secret_enc = ?, secret_updated_at = ?, updated_at = ?,
+		class = ?, template = ?, rate_per_minute = ?, daily_budget = ?, session_quota = ?
 		WHERE id = ? AND site_id = ?`,
 		e.UpstreamURL, l.hosts, l.methods, l.paths, string(e.Auth), e.AuthName, e.Enabled, e.SecretEnc,
-		nullMS(e.SecretUpdatedAt), toMS(e.UpdatedAt), e.ID, e.SiteID)
+		nullMS(e.SecretUpdatedAt), toMS(e.UpdatedAt), proxyClassOrDefault(e.Class), l.template,
+		e.Limits.PerMinute, e.Limits.DailyBudget, e.Limits.SessionQuota, e.ID, e.SiteID)
 	return expectAffected(res, err, "update proxy endpoint")
+}
+
+// proxyClassOrDefault stores an unset class as transparent, the behaviour
+// of endpoints from before classes existed.
+func proxyClassOrDefault(c domain.ProxyClass) string {
+	if c == "" {
+		return string(domain.ProxyClassTransparent)
+	}
+	return string(c)
 }
 
 // DeleteProxyEndpoint implements ProxyRepository.
