@@ -10,6 +10,14 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+### Added
+
+- Abuse protection: API key endpoints get classes (`ai` and `send` send only a server-side request template and need an invisible visitor session from `/_dropsite/session.js`, `read` allows GET only, `transparent` keeps the old behaviour with a warning) and a daily budget that pauses the endpoint and notifies the owner once a day; Caddy blocks AI scrapers on sites and cloud ranges on the proxy (Settings → Abuse protection, `control defender`), limits each client to about 50 requests per second, and control bans networks that keep hitting the limit or call on a schedule (Settings, `control bans`).
+
+### Changed
+
+- **Upgrade note:** Caddy now runs the `ghcr.io/b0balyson/dropsite-caddy` image in every TLS mode, not only in wildcard mode; `dropsite-update` switches to it automatically, a manual update needs `docker compose pull && docker compose up -d`. Existing API key endpoints become `transparent`, and a new endpoint created through the API or MCP without a class is `ai` and needs a template.
+
 ## [0.5.2] - 2026-11-13
 
 ### Fixed

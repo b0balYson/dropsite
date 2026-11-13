@@ -11,7 +11,7 @@ func TestProxyTopic(t *testing.T) {
 		t.Fatal("no proxy topic")
 	}
 	for _, want := range []string{"/_dropsite/proxy/", "secret_url", "Never ask for the key in the chat", "OpenAI",
-		"CRM", "Telegram", "password-protected", "set_proxy_endpoint"} {
+		"CRM", "Telegram", "password-protected", "set_proxy_endpoint", "session.js", "dropsite.fetch", "transparent", "{{question}}"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("proxy topic lacks %q", want)
 		}

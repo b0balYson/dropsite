@@ -103,7 +103,7 @@ Certificates are issued on first visit; see [tls.md](tls.md) for limits.
 
 ## Release checkout
 
-Every release is a Git tag `vX.Y.Z` with prebuilt images for linux/amd64 and linux/arm64 on ghcr.io (`ghcr.io/b0balyson/dropsite-control`, and `ghcr.io/b0balyson/dropsite-caddy` for wildcard TLS). Check out the tag of the release you run, so the compose file and the Caddyfile belong to the same release as the images:
+Every release is a Git tag `vX.Y.Z` with prebuilt images for linux/amd64 and linux/arm64 on ghcr.io (`ghcr.io/b0balyson/dropsite-control`, and `ghcr.io/b0balyson/dropsite-caddy`, Caddy with the plugins every TLS mode needs). Check out the tag of the release you run, so the compose file and the Caddyfile belong to the same release as the images:
 
 ```bash
 git clone https://github.com/b0balYson/dropsite.git

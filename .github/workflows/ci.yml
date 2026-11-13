@@ -98,6 +98,10 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+      # The Caddyfile checks in deploy/ need the plugins of dropsite-caddy;
+      # built here so the test does not spend its timeout on xcaddy.
+      - name: Caddy image for the Caddyfile checks
+        run: docker build -q -t dropsite-caddy:test deploy/caddy
       - name: Unit and integration tests
         run: go test -race -count=1 -coverprofile=coverage.out ./...
       - name: Coverage summary
@@ -130,7 +134,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: false
           build-args: VERSION=${{ steps.version.outputs.version }}
-      - name: Caddy image with DNS plugins (amd64, arm64)
+      - name: Caddy image with defender, rate limit and DNS plugins (amd64, arm64)
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: deploy/caddy

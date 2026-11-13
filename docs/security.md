@@ -83,6 +83,41 @@ List the provider's current ranges, then `docker compose up -d caddy`. Caddy the
 
 Limits are kept in the memory of `control`: a restart (every update) resets them, and several `control` replicas would not share them. This fits the single-node model; a shared store would be needed before running more than one instance.
 
+## Abuse protection
+
+Caddy runs the `dropsite-caddy` image in every TLS mode (Caddy 2.11.9 with [caddy-defender](https://github.com/JasonLovesDoggo/caddy-defender) v0.10.2 and [caddy-ratelimit](https://github.com/mholt/caddy-ratelimit), pinned in `deploy/caddy/Dockerfile`). Everything below applies to site addresses only, in this order, before the platform paths and the access check of protected sites. The API/MCP host and the admin host are never blocked by range: ChatGPT and Claude connectors call from the same clouds. ACME challenges are answered by Caddy before any route, so certificates are unaffected. Nothing here reloads Caddy: the switches are marker files that `control` writes into the sites volume and Caddy checks with `file` matchers.
+
+| What | Where | Answer |
+| --- | --- | --- |
+| Ban marker `/data/bans/<client address>` | whole site | `429`, `Retry-After: 900`, `X-Dropsite-Block: ban` |
+| More than 200 requests in 4 seconds per client (IPv6 per /64), about 50/s sustained | whole site | `429` with `Retry-After`, `X-Dropsite-Block: rate` |
+| AI scraper ranges `openai`, `deepseek`, `githubcopilot`, `mistral` | whole site | `403` |
+| Cloud ranges `aws`, `gcloud`, `azurepubliccloud`, `oci` | `/_dropsite/proxy/*` only; whole site in strict mode | `403` |
+
+- Static files and forms stay open to clouds by default: people with a VPN in a cloud must still read sites and send forms.
+- The scraper and cloud blocking is on by default. An administrator turns it off, or turns on the **strict mode** (clouds blocked on whole sites), in **Settings → Abuse protection** or with `docker compose exec -T control /control defender off|on|strict on|strict off|status`. The setting is stored in the database; `control` writes `/data/flags/defender-off` and `/data/flags/defender-strict` to match, also at every start.
+- The API host has its own limit of 1000 requests in 10 seconds per client (IPv6 per /64). Signed-in traffic is not exempt: Caddy cannot check a token, and an exemption by header would be open to anyone; the limit is far above what deploys and MCP sessions need.
+- The IP ranges are compiled into the pinned plugin version; they are refreshed with a new version of `dropsite-caddy`.
+
+### Bans
+
+`control` reads the sites access log every 2 seconds (from its end at start, independently of statistics). A **violation** is a minute in which a client got at least one `429` of the global limit (Caddy marks those with `X-Dropsite-Block: rate`; refusals of `control` itself are not counted). Three violations within 10 minutes ban the client's network: 15 minutes, a repeat within a day 1 hour, then 24 hours. The bot detector (below) leads to the same ladder.
+
+- A ban is a row in the database (the source of truth) plus marker files `/data/bans/<address>` for Caddy, which compares the exact client address.
+- IPv6 is banned per /64: the secret proxy, forms and visitor sessions refuse the whole network in `control` at once, and Caddy gets a marker for every address of the network that appears in the access log (up to 64), within about two seconds of its first request. This avoids a custom Caddy module for prefix matching at the cost of that short delay for static files.
+- Expired bans lose their markers automatically; stray markers are removed at start and every few seconds.
+- Administrators see active bans in **Settings → Abuse protection** with an **Unban** button, or use `docker compose exec -T control /control bans list`, `bans add <ip> [minutes]` and `bans clear <ip or network>`. Bans and unbans are written to the audit log (`guard.ban`, `guard.unban`). Bans are not available through MCP or the API.
+
+### Bot detector
+
+For calls of `ai` and `send` proxy endpoints and for form submissions (never for static files or `read` endpoints), `control` keeps the last 20 request times per pair of client network and endpoint (or form) in memory, at most 10 000 pairs (least recently used dropped). A network is flagged when
+
+- at least 10 requests arrive with a mean interval between 1 second and 30 minutes and a coefficient of variation of the intervals below 0.1 (a script with `sleep`, even with a few percent of jitter; people are far more irregular),
+- or activity without a pause of more than 5 minutes lasts over 45 minutes with at least 30 requests and a coefficient of variation below 0.5,
+- or more than 30 visitor sessions are issued to the network within an hour.
+
+The response is staged: the first flag makes session challenges 10 times harder and caps a session at 10 calls (forms start two steps higher on their escalation ladder); a second flag within an hour makes them 100 times harder with 5 calls per session; a third bans the network. The level is forgotten after an hour without flags, and a restart of `control` resets the detector (bans stay). The thresholds are named constants in `internal/guard`.
+
 ## Password-protected sites and caches
 
 Every answer of a site protected by a visitor password carries `Cache-Control: private, no-store`: HTML, assets, 404 pages, `/_dropsite/data` and `/_dropsite/proxy`. A CDN or shared cache in front of Caddy therefore never stores them and cannot serve them to visitors who did not sign in. Open sites keep `no-cache` for HTML and `public, max-age=3600` for assets.

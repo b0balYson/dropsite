@@ -37,7 +37,7 @@ What a client loads when it connects (measured by `TestToolsDoc`):
 
 <!-- sizes:begin -->
 - tools/list of the remote server: 74 tools, about 176 KB of JSON, of which 27 KB are descriptions
-- server instructions: 4013 bytes (limit 4096)
+- server instructions: 4059 bytes (limit 4096)
 <!-- sizes:end -->
 
 Most of `tools/list` is output schemas generated from the result types. Descriptions stay short: the details live in the guide (`get_guide`), which the model reads on demand.

@@ -52,7 +52,7 @@ What changes:
 ### Requirements
 
 - DNS of `BASE_DOMAIN` is hosted by a supported provider. Built in: **Cloudflare**.
-- Caddy 2.11.9 with the DNS plugin: each release publishes it as `ghcr.io/b0balyson/dropsite-caddy:X.Y.Z`, built from [`deploy/caddy/Dockerfile`](../deploy/caddy/Dockerfile). With `--build` Compose builds it from the checkout instead.
+- Caddy 2.11.9 with the DNS plugin (the same `dropsite-caddy` image runs in every mode): each release publishes it as `ghcr.io/b0balyson/dropsite-caddy:X.Y.Z`, built from [`deploy/caddy/Dockerfile`](../deploy/caddy/Dockerfile). With `--build` Compose builds it from the checkout instead.
 - `compose.wildcard.yml` next to `docker-compose.yml`.
 
 ### Switching to wildcard
@@ -72,7 +72,7 @@ What changes:
    docker compose -f docker-compose.yml -f compose.wildcard.yml up -d --wait
    ```
 
-   Run this from `dropsite/deploy`. The override replaces stock Caddy with the `dropsite-caddy` image of the release, which contains the DNS plugin (add `--build` to `up` to build it from the checkout).
+   Run this from `dropsite/deploy`. The override switches Caddy to the wildcard snippet and passes it the DNS token; the `dropsite-caddy` image of the release already contains the DNS plugin (add `--build` to `up` to build it from the checkout).
 
 5. **Check.** In `docker compose logs caddy` look for `certificate obtained successfully` with `"identifier":"*.<BASE_DOMAIN>"` and `"identifier":"<BASE_DOMAIN>"` (the first issuance takes up to a minute while the TXT record propagates). Then:
 
@@ -90,7 +90,7 @@ Keep using `-f docker-compose.yml -f compose.wildcard.yml` with every `docker co
 
 - `CF_API_TOKEN is required in wildcard mode`: the token is missing from `.env`; compose refuses to start.
 - `API token '...' appears invalid`: Caddy does not start; the value is truncated or quoted.
-- `module not registered: dns.providers.cloudflare`: Caddy runs from the stock image; the override was not applied.
+- `module not registered: dns.providers.cloudflare` (or `defender`, `rate_limit`): Caddy runs from the stock image instead of `dropsite-caddy`; pull or build the images of the release again.
 - Sites under the base domain fail the TLS handshake and the log shows DNS or ACME errors: the token lacks `Zone.DNS:Edit` on the right zone, or the zone is not on Cloudflare. Fix the token or roll back (below).
 
 ### Rolling back to ondemand
