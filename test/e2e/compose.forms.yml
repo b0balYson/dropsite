@@ -28,3 +28,11 @@ services:
   control:
     environment:
       FORM_WEBHOOK_ALLOW_CIDRS: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+
+  # Abuse protection checks (abuse_test.go): the test client reaches Caddy
+  # from a private address and may name the client address in a header, so
+  # requests can come "from" AI crawler, cloud and banned addresses. Without
+  # the header the peer address is used as before.
+  caddy:
+    environment:
+      CADDY_SERVERS_EXTRA: "trusted_proxies static private_ranges\nclient_ip_headers X-Test-Client-Ip"

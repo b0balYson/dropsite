@@ -82,7 +82,8 @@ func (a *api) issueSession(w http.ResponseWriter, r *http.Request) error {
 	var req sessionRequest
 	r.Body = http.MaxBytesReader(w, r.Body, maxSessionBody)
 	if err := decodeJSON(w, r, &req); err != nil {
-		a.proxyError(w, r, domain.E(domain.KindInvalid, domain.CodeProxySession, "send {\"payload\": \"<solution>\"}"))
+		a.proxyError(w, r, domain.E(domain.KindInvalid, domain.CodeProxySession, "send {\"payload\": \"<solution>\"}").
+			WithCause(err))
 		return nil
 	}
 	g, err := a.svc.IssueSession(r.Context(), r.Host, infoFrom(r.Context()).ip, req.Payload)

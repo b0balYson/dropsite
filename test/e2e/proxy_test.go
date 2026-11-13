@@ -31,7 +31,7 @@ func TestSecretProxyRouting(t *testing.T) {
 	host := id + "." + baseDomain
 	s.expectBody(host, "/", 200, "Proxy")
 
-	cfg := map[string]any{"upstream_url": "https://api.openai.com/v1", "auth": "bearer", "methods": []string{"POST"}}
+	cfg := map[string]any{"upstream_url": "https://api.openai.com/v1", "auth": "bearer", "methods": []string{"POST"}, "class": "transparent"}
 	st, body = ann.json(http.MethodPut, "/sites/"+id+"/proxy/endpoints/ai", cfg)
 	must(t, st, http.StatusCreated, body, "create endpoint")
 	if body["secret_set"] != false || !strings.Contains(str(body, "secret_url"), "/proxy#proxy-ai") {
