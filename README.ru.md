@@ -1,4 +1,4 @@
-<h1>
+<h1 align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset=".github/assets/logo-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset=".github/assets/logo.svg">
