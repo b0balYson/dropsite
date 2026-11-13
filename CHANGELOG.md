@@ -10,6 +10,8 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-13
+
 ### Added
 
 - Administrators see when a new release is out (a calm notice with a "what's new" link) and can update from Settings → Updates: the server backs up first and the sites keep working; assistants learn about it read-only through `check_updates` and `get_account`, and `UPDATE_CHECK=0` turns the check off.
@@ -102,7 +104,8 @@ First public release.
 - The installer does not keep the first administrator password on the server.
 - Threat model and operator guidance in [docs/security.md](docs/security.md).
 
-[Unreleased]: https://github.com/b0balYson/dropsite/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/b0balYson/dropsite/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/b0balYson/dropsite/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/b0balYson/dropsite/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/b0balYson/dropsite/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/b0balYson/dropsite/compare/v0.1.0...v0.2.0
