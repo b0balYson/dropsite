@@ -1285,6 +1285,8 @@ input.input, select.input { height: 2.75rem; }
 }
 .connect-block > * + * { margin-top: var(--s-5); }
 .connect-block__form { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-3); }
+.connect-block__form--link { margin-top: var(--s-4); }
+.connect-link .code { white-space: pre-wrap; overflow-wrap: anywhere; }
 .btn--hero { min-height: calc(var(--control-h) * 1.35); padding-inline: var(--s-7); font-size: var(--t-md); }
 .connect-code {
   display: grid;
@@ -1379,6 +1381,8 @@ input.input, select.input { height: 2.75rem; }
 .code-input { letter-spacing: 0.08em; text-transform: uppercase; }
 .consent__actions { display: flex; flex-wrap: wrap; gap: var(--s-3); }
 .consent__actions .btn { flex: 1 1 8rem; }
+/* Approve on the public admin host instead of typing a code. */
+.consent__alt { padding-top: var(--s-4); border-top: var(--rule-thin) solid var(--c-hair); }
 a.lang__btn { text-decoration: none; display: inline-flex; align-items: center; }
 a.lang__btn[aria-current="true"] { background: var(--c-ink); color: var(--c-paper); }
 /* ---- external domains ---------------------------------------------------- */

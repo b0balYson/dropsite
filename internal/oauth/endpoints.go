@@ -9,19 +9,46 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/oauthex"
 
 	"github.com/b0balYson/dropsite/internal/brand"
+	"github.com/b0balYson/dropsite/internal/domain"
 	"github.com/b0balYson/dropsite/internal/service"
 )
 
 const maxBodyBytes = 64 << 10
 
+// LinkResourcePattern is the connect URL path (/mcp/c/<code>) as a route
+// pattern; its protected resource metadata lives under ResourceMeta (RFC 9728
+// path insertion).
+const LinkResourcePattern = "/mcp/c/{code}"
+
 func (s *Server) resourceMetadata() http.Handler {
-	return auth.ProtectedResourceMetadataHandler(&oauthex.ProtectedResourceMetadata{
-		Resource:               s.svc.MCPResource(),
+	return auth.ProtectedResourceMetadataHandler(s.metadataFor(s.svc.MCPResource()))
+}
+
+func (s *Server) metadataFor(resource string) *oauthex.ProtectedResourceMetadata {
+	return &oauthex.ProtectedResourceMetadata{
+		Resource:               resource,
 		AuthorizationServers:   []string{s.Issuer()},
 		ScopesSupported:        []string{service.OAuthScope},
 		BearerMethodsSupported: []string{"header"},
 		ResourceName:           brand.DisplayName,
-	})
+	}
+}
+
+// linkResourceMetadata is the metadata of a connect URL: the resource is the
+// connect URL itself, so a client sends it back as the resource indicator of
+// its authorization request (RFC 8707) and the consent page finds the code.
+// The answer is the same for every well-formed code, used or not, so it
+// tells nothing about codes; anything else is 404.
+func (s *Server) linkResourceMetadata(w http.ResponseWriter, r *http.Request) {
+	seg := r.PathValue("code")
+	if domain.ConnectCodeFromLinkPath(seg) == "" {
+		http.NotFound(w, r)
+		return
+	}
+	// The address exactly as the client used it: clients check that the
+	// metadata names the URL they were given.
+	w.Header().Set("Cache-Control", "no-store")
+	auth.ProtectedResourceMetadataHandler(s.metadataFor(s.svc.MCPResource()+domain.ConnectLinkSegment+seg)).ServeHTTP(w, r)
 }
 
 // serverMetadata is RFC 8414 metadata.

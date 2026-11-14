@@ -12,6 +12,8 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ### Added
 
+- A connect URL `https://api.<domain>/mcp/c/<code>` for chat clients. Pasted as the MCP server address, it lets ChatGPT, claude.ai and Claude Code connect with a single Allow on the consent page, without typing a code. It works once, within an hour, and stays a valid MCP address afterwards. Get it on the Connect AI page, with `ssh <server> dropsite-connect`, or at the end of a fresh installation.
+- While the admin interface is open from the internet, the consent page can be approved there by the signed-in user instead of with a code.
 - Upload link for large sites: `begin_upload` returns `upload_url` (one hour, one upload session only) so an assistant with a terminal sends the site folder with one `tar | curl` command and a chat without one gives the user a drag-and-drop page; files no longer have to fit into tool calls, and assistants are told never to use tunnels or other hosting.
 
 ## [0.6.0] - 2026-11-13

@@ -443,7 +443,11 @@ func TestValidateAuthorizeAndSeal(t *testing.T) {
 	if err != nil || back.Request.ClientID != c.ID || back.State != "s" {
 		t.Fatalf("open: %+v %v", back, err)
 	}
-	for _, bad := range []string{"", "x", sealed + "x", "e30." + r.s.sign("e30"), "!!." + r.s.sign("!!")} {
+	// Another server's key, a flipped byte, truncation and junk are refused.
+	other := newRig(t, Options{}).s.Seal(p)
+	flipped := []byte(sealed)
+	flipped[len(flipped)/2] ^= 1
+	for _, bad := range []string{"", "x", sealed + "x", sealed[:10], other, string(flipped), "!!.e30"} {
 		if _, err := r.s.Open(bad); !errors.Is(err, ErrExpiredForm) {
 			t.Errorf("open %q: %v", bad, err)
 		}
@@ -451,6 +455,13 @@ func TestValidateAuthorizeAndSeal(t *testing.T) {
 	r.s.nowFn = func() time.Time { return time.Now().Add(sealTTL + time.Minute) }
 	if _, err := r.s.Open(sealed); !errors.Is(err, ErrExpiredForm) {
 		t.Fatal("expired seal accepted")
+	}
+	// A connect URL code travels only encrypted.
+	p.LinkCode = "ABCDEFGHJKMNP"
+	if s := r.s.Seal(p); strings.Contains(s, "ABCDEFGHJKMNP") {
+		t.Fatal("seal shows the link code")
+	} else if back, err := r.s.Open(s); err != nil || back.LinkCode != "ABCDEFGHJKMNP" {
+		t.Fatalf("link code lost: %+v %v", back, err)
 	}
 	if !strings.Contains(r.s.SuccessURL(p, "abc"), "code=abc") {
 		t.Fatal("success url")

@@ -8,9 +8,9 @@ package oauth
 
 import (
 	"context"
-	"crypto/hmac"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
-	"crypto/sha256"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
@@ -22,7 +22,6 @@ import (
 	"net/netip"
 	"net/url"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/b0balYson/dropsite/internal/domain"
@@ -121,6 +120,7 @@ func (s *Server) Routes() []Route {
 	return []Route{
 		{ResourceMeta, prm},
 		{ResourceMeta + "/mcp", prm},
+		{ResourceMeta + LinkResourcePattern, http.HandlerFunc(s.linkResourceMetadata)},
 		{ServerMeta, cors(http.HandlerFunc(s.serverMetadata))},
 		{RegisterPath, cors(http.HandlerFunc(s.register))},
 		{TokenPath, cors(http.HandlerFunc(s.token))},
@@ -170,6 +170,10 @@ type Pending struct {
 	Request service.AuthorizeRequest
 	State   string
 	Client  Client
+	// LinkCode is the connect code of a connect URL the client sent as the
+	// resource (https://api.<domain>/mcp/c/<code>); "" otherwise. It only
+	// travels inside the encrypted seal.
+	LinkCode string `json:",omitempty"`
 }
 
 // ValidateAuthorize checks an authorization request (query parameters) sent
@@ -219,7 +223,7 @@ func (s *Server) ValidateAuthorize(ctx context.Context, q url.Values, ip string)
 			ClientID: c.ID, ClientName: c.Name, RedirectURI: redirect, Challenge: challenge,
 			Resource: s.svc.MCPResource(), Scope: service.OAuthScope,
 		},
-		State: state, Client: c,
+		State: state, Client: c, LinkCode: s.svc.LinkCode(q.Get("resource")),
 	}, nil
 }
 
@@ -228,30 +232,42 @@ type sealed struct {
 	Exp int64   `json:"e"`
 }
 
-// Seal signs a pending request for a hidden form field, so the POST cannot
-// change what the user saw.
+// Seal encrypts and authenticates a pending request for a hidden form field
+// or a link, so the POST cannot change what the user saw and the page does
+// not show what the request carries (the code of a connect URL).
 func (s *Server) Seal(p Pending) string {
 	b, _ := json.Marshal(sealed{P: p, Exp: s.nowFn().Add(sealTTL).Unix()})
-	payload := base64.RawURLEncoding.EncodeToString(b)
-	return payload + "." + s.sign(payload)
+	aead := s.aead()
+	nonce := make([]byte, aead.NonceSize())
+	if _, err := rand.Read(nonce); err != nil {
+		panic("crypto/rand failed: " + err.Error())
+	}
+	return base64.RawURLEncoding.EncodeToString(aead.Seal(nonce, nonce, b, nil))
 }
 
-func (s *Server) sign(payload string) string {
-	m := hmac.New(sha256.New, s.key)
-	m.Write([]byte(payload))
-	return base64.RawURLEncoding.EncodeToString(m.Sum(nil))
+func (s *Server) aead() cipher.AEAD {
+	block, err := aes.NewCipher(s.key)
+	if err != nil {
+		panic("oauth: seal key: " + err.Error())
+	}
+	aead, err := cipher.NewGCM(block)
+	if err != nil {
+		panic("oauth: seal cipher: " + err.Error())
+	}
+	return aead
 }
 
 // ErrExpiredForm means the consent form is forged or too old.
 var ErrExpiredForm = errors.New("the authorization form expired; start the connection again from the application")
 
-// Open verifies a sealed request.
+// Open verifies and decrypts a sealed request.
 func (s *Server) Open(v string) (Pending, error) {
-	payload, sig, ok := strings.Cut(v, ".")
-	if !ok || !hmac.Equal([]byte(sig), []byte(s.sign(payload))) {
+	raw, err := base64.RawURLEncoding.DecodeString(v)
+	aead := s.aead()
+	if err != nil || len(raw) < aead.NonceSize() {
 		return Pending{}, ErrExpiredForm
 	}
-	b, err := base64.RawURLEncoding.DecodeString(payload)
+	b, err := aead.Open(nil, raw[:aead.NonceSize()], raw[aead.NonceSize():], nil)
 	if err != nil {
 		return Pending{}, ErrExpiredForm
 	}
@@ -342,7 +358,7 @@ func (s *Server) writeError(w http.ResponseWriter, r *http.Request, err error) {
 		w.Header().Set("Retry-After", fmt.Sprint(max(int64(de.RetryAfter.Seconds()+0.999), 1)))
 		writeJSON(w, http.StatusTooManyRequests, errorBody{Error: "slow_down", Description: "too many requests"})
 	case domain.KindInternal:
-		s.o.Logger.Error("oauth internal error", "path", r.URL.Path, "err", err)
+		s.o.Logger.Error("oauth internal error", "path", domain.RedactConnectLinks(r.URL.Path), "err", err)
 		writeJSON(w, http.StatusInternalServerError, errorBody{Error: "server_error"})
 	default:
 		writeJSON(w, http.StatusBadRequest, errorBody{Error: "invalid_request", Description: de.Message})

@@ -22,6 +22,13 @@ import (
 // Path is where the endpoint is mounted on the API host.
 const Path = "/mcp"
 
+// LinkPattern mounts the same endpoint at every connect URL
+// (/mcp/c/<code>): a chat client given that address talks MCP there, and its
+// 401 points to the metadata of that exact address.
+const LinkPattern = "/mcp/c/{code}"
+
+const resourceMetaPath = "/.well-known/oauth-protected-resource"
+
 // maxBodyBytes allows 16 MB of file content in base64 plus JSON framing.
 const maxBodyBytes = 32 << 20
 
@@ -79,16 +86,26 @@ func New(svc *service.Service, o Options) http.Handler {
 			Extra: map[string]any{actorKey: actor},
 		}, nil
 	}
-	protect := auth.RequireBearerToken(verify, &auth.RequireBearerTokenOptions{
-		ResourceMetadataURL:    svc.APIURL() + "/.well-known/oauth-protected-resource" + Path,
-		Scopes:                 []string{service.OAuthScope},
-		AllowMissingExpiration: true,
-	})
-	inner := protect(stream)
+	protect := func(metadataURL string) http.Handler {
+		return auth.RequireBearerToken(verify, &auth.RequireBearerTokenOptions{
+			ResourceMetadataURL:    metadataURL,
+			Scopes:                 []string{service.OAuthScope},
+			AllowMissingExpiration: true,
+		})(stream)
+	}
+	inner := protect(svc.APIURL() + resourceMetaPath + Path)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := inner
+		if seg := r.PathValue("code"); seg != "" {
+			if domain.ConnectCodeFromLinkPath(seg) == "" {
+				http.NotFound(w, r)
+				return
+			}
+			h = protect(svc.APIURL() + resourceMetaPath + Path + domain.ConnectLinkSegment + seg)
+		}
 		hit := &rateHit{}
 		r = r.WithContext(context.WithValue(r.Context(), rateKey{}, hit))
-		inner.ServeHTTP(&rateWriter{ResponseWriter: w, hit: hit}, r)
+		h.ServeHTTP(&rateWriter{ResponseWriter: w, hit: hit}, r)
 	})
 }
 

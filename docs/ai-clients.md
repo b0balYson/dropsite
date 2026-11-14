@@ -60,6 +60,31 @@ The guide lives in `skills/guide/*.md` and is embedded into both binaries. Its s
 
 **Connect** on the page issues a one-time code such as `ABCD-EFGH-JKMNP`: 13 symbols (65 bits) from an alphabet without look-alike characters, case, spaces and dashes are ignored. A code is valid for 10 minutes, works once and is stored only as a hash. It can be exchanged either for an API token (CLI) or for an OAuth grant (chat clients); on its own it opens nothing. Ten wrong codes from one IP within 15 minutes block further attempts until the window passes. Issuing and using codes is recorded in the audit log, without the code.
 
+### Connect URL
+
+Instead of typing a code, a chat client can be given a **connect URL**: the MCP address with a one-time code in its path, `https://api.<BASE_DOMAIN>/mcp/c/<CODE>`. It comes from:
+
+- the Connect AI page: **Connect URL** next to the code, with a copy button;
+- the server: `ssh <server> dropsite-connect [email]` (the administrator by default), or `docker compose exec -T control /control connect-url [email]` in `deploy/`;
+- the installer, once, at the end of a fresh installation (on the screen only, never in the install log).
+
+Paste it into ChatGPT, claude.ai, Claude Desktop or Claude Code in place of the plain address (`claude mcp add --transport http dropsite https://api.<BASE_DOMAIN>/mcp/c/<CODE>`). The consent page then shows only the application, the domain it returns to and the permissions, and the user presses **Allow**: there is no code field.
+
+How it works:
+
+- `/mcp/c/<code>` is the MCP endpoint. Its `401` points to path-aware metadata (RFC 9728) `/.well-known/oauth-protected-resource/mcp/c/<code>`, whose `resource` is the connect URL itself and whose authorization server is the usual issuer `https://<API_HOST>` (RFC 8414 discovery is unchanged). A client following the MCP authorization specification sends that resource back on the authorization request (RFC 8707), and the consent page takes the code from it.
+- Opening the consent page checks the code without using it; **Allow** uses it. A wrong, used or expired code in the URL shows the usual code field with a message that does not say which, and counts towards the same 10-per-15-minutes limit as typed codes. Metadata and the MCP endpoint answer the same for every well-formed code, so they reveal nothing about codes.
+- After the first successful grant the URL stays a valid MCP address: tokens issued for it keep working, refresh with `resource=<connect URL>` works, and `/mcp` accepts them too (every connect URL is an alias of the MCP resource). It cannot grant again: a second client sees the code field.
+- The code is a normal connect code (13 symbols, stored as a hash, single use) that lives **1 hour** instead of 10 minutes. Issuing it is audited as `connect.url_create`, using it as `connect.code_use` with purpose `oauth_link`, both without the code. On the consent page it travels only inside the encrypted form state.
+- Logs: control never logs request paths of the API host and redacts connect URLs from error lines; the Caddy access log of the API host replaces the code with `REDACTED` in the URI (including the percent-encoded `resource` parameter) and in the `Location` of the HTTP→HTTPS redirect.
+- A client that strips the path or ignores the protected resource metadata sends `resource=https://<API_HOST>/mcp` (or nothing): the consent page asks for a code as before.
+
+Whoever has the URL can connect to the account within the hour, as with a code: do not forward it.
+
+### Approving on the public admin host
+
+While the admin interface is open from the internet (`https://admin.<BASE_DOMAIN>`, see [security.md](security.md)), the consent page also offers **Confirm in the web interface**. It opens the same request on the admin host; after the usual sign-in (password and Altcha) the user sees the same consent with "signed in as …" and presses **Allow**, without a code. Only a browser session can approve this way (never an API token or an assistant). The request travels as an encrypted, 15-minute form state and carries no connect code.
+
 ## One command on a computer
 
 The page shows a command for macOS/Linux and one for Windows with the server and the code filled in:
@@ -184,6 +209,7 @@ The endpoint follows the MCP authorization specification (2025-11-25) and the re
 | Path | Purpose |
 | --- | --- |
 | `GET /.well-known/oauth-protected-resource` and `/.well-known/oauth-protected-resource/mcp` | RFC 9728 metadata: `resource = https://<API_HOST>/mcp`, `authorization_servers = [https://<API_HOST>]`, scope `sites` |
+| `GET /.well-known/oauth-protected-resource/mcp/c/<code>` | the same for a connect URL: `resource = https://<API_HOST>/mcp/c/<code>` |
 | `GET /.well-known/oauth-authorization-server` | RFC 8414 metadata: `code_challenge_methods_supported: ["S256"]`, `token_endpoint_auth_methods_supported: ["none"]`, `client_id_metadata_document_supported: false`, `authorization_response_iss_parameter_supported: true` |
 | `GET/POST /oauth/authorize` | consent page with the connect code |
 | `POST /oauth/token` | `authorization_code` (PKCE S256 required) and `refresh_token` |
@@ -193,8 +219,8 @@ The endpoint follows the MCP authorization specification (2025-11-25) and the re
 - `401` from `/mcp` carries `WWW-Authenticate: Bearer resource_metadata="…/.well-known/oauth-protected-resource/mcp", scope="sites"`.
 - Clients register dynamically (RFC 7591). Client ID metadata documents (CIMD) are switched off: publishers keep them behind bot protection that refuses data-centre addresses (claude.ai answers Dropsite servers with a challenge page), so every client, Claude Code included, falls back to dynamic registration and the server fetches nothing on a client's behalf. The fetcher stays in the code behind an option, with its guards: https on port 443 only, public addresses only (checked after DNS resolution and pinned for the connection), no redirects, 5 seconds, 64 KB, a cache, and 10 fetches per IP per 10 minutes. Dynamic registration accepts https or loopback redirect URIs whose host is a DNS name or an IP literal, and is limited to 10 per hour per IP (IPv6 addresses count per /64 network, as do all per-IP limits) and 1000 clients in total. A registration that never led to a connection is removed after 24 hours, one whose connections were all revoked after 30 days; at the 1000-client cap the oldest registration without an active connection (and older than 15 minutes) is evicted to make room. Client names from registrations and metadata documents are stripped of control and bidirectional-override characters and cut to 100 characters. A loopback redirect URI (`http://localhost/…`, `http://127.0.0.1/…`, `http://[::1]/…`) matches the request with any port, as RFC 8252 requires for command-line clients that listen on a port chosen at run time; scheme, host, path and query must still be equal.
 - Failed connect codes count against a shared per-IP limit (10 per 15 minutes); the audit log gets at most one `connect.code_failed` row per IP (or IPv6 /64) per 15 minutes.
-- Redirect URIs are compared exactly; an unknown client or redirect URI shows an error page instead of redirecting. Authorization responses include `iss`.
-- `resource` must be the MCP resource (the API origin is accepted as a synonym); tokens carry it as their audience and `/mcp` rejects any other.
+- Redirect URIs are compared exactly (a loopback URI with any port, see above); an unknown client or redirect URI shows an error page instead of redirecting. Authorization responses include `iss`.
+- `resource` must be the MCP resource (the API origin and every connect URL `https://<API_HOST>/mcp/c/<code>` are accepted as synonyms); tokens carry it as their audience and `/mcp` rejects any other.
 - Access tokens live 1 hour, refresh tokens 30 days. Each refresh returns a new pair; presenting a used refresh token (or a used authorization code) revokes the whole connection; redeeming a code and issuing its tokens is one transaction, so even a replay racing the first exchange revokes them. Only hashes are stored.
 - OAuth tokens work only on `/mcp`, never on `/api/v1`.
 - Blocking a user stops their OAuth tokens immediately.

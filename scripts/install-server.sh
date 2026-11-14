@@ -159,6 +159,11 @@ This is a potential threat: use a strong, unique password and turn it off in Set
 	M_final_login='   Login: %s   Password: %s   (save the password)'
 	M_final_login_old='   Login: %s   Password: the one from the first installation (forgot it? ssh %s dropsite-admin-password)'
 	M_final_next='Next, open "Getting started": it walks you through the rest.'
+	M_final_connect='   Connect a chat app: paste %s as the MCP server address (works once, within an hour)'
+	M_connect_url='Connect ChatGPT or Claude right away: paste this address into the chat app as the MCP server
+and press Allow; no code needed. It works once, within an hour; later issue a new one with
+ssh %s dropsite-connect.
+  %s'
 }
 
 msgs_ru() {
@@ -259,6 +264,11 @@ msgs_ru() {
 	M_final_login='   Логин: %s   Пароль: %s   (сохраните пароль)'
 	M_final_login_old='   Логин: %s   Пароль: прежний (забыли? ssh %s dropsite-admin-password)'
 	M_final_next='Дальше откройте «Начало работы» — там всё по шагам.'
+	M_final_connect='   Подключить чат: вставьте %s как адрес сервера MCP (сработает один раз, в течение часа)'
+	M_connect_url='Подключить ChatGPT или Claude сразу: вставьте этот адрес в чат как адрес сервера MCP
+и нажмите «Разрешить», код не нужен. Сработает один раз, в течение часа; новый выпустит
+ssh %s dropsite-connect.
+  %s'
 }
 
 msgs_zh() {
@@ -359,6 +369,10 @@ DNS 更改需要几分钟到一小时生效。使用 Cloudflare 时请选择 "DN
 	M_final_login='   登录名：%s   密码：%s   （请保存密码）'
 	M_final_login_old='   登录名：%s   密码：首次安装时的密码（忘记了？ssh %s dropsite-admin-password）'
 	M_final_next='接下来打开“入门指南”页面，按步骤完成剩余设置。'
+	M_final_connect='   连接聊天应用：把 %s 作为 MCP 服务器地址粘贴（一小时内可用一次）'
+	M_connect_url='立即连接 ChatGPT 或 Claude：把这个地址作为 MCP 服务器地址粘贴到聊天应用中，
+然后点击“允许”，无需连接码。一小时内可用一次；之后可用 ssh %s dropsite-connect 获取新的地址。
+  %s'
 }
 
 detect_lang() {
@@ -1289,6 +1303,7 @@ final_screen() {
 	else
 		sayf "$M_final_login_old" "$ADMIN_EMAIL" "$NAME"
 	fi
+	[ -z "${CONNECT_URL:-}" ] || sayf "$M_final_connect" "$CONNECT_URL"
 	say ""
 	sayf "$M_final_next"
 }
@@ -1311,6 +1326,9 @@ final_screen_full() {
 	fi
 	say ""
 	sayf "$M_connect_ai"
+	if [ -n "${CONNECT_URL:-}" ]; then
+		sayf "$M_connect_url" "$NAME" "$CONNECT_URL"
+	fi
 	sayf "$M_sites_at" "$DOMAIN"
 	sayf "$M_update" "$NAME"
 	[ -z "$LOG_FILE" ] || sayf "$M_log_at" "$LOG_FILE"
@@ -1326,6 +1344,9 @@ load_facts() {
 	ADMIN_PASSWORD_NEW=$(result admin_password_new)
 	IPV6=$(result ipv6)
 	PUBLIC_ADMIN_URL=$(result public_admin_url)
+	# A one-time connect URL (fresh installations only): shown on the screen,
+	# never written to the log, like the password.
+	CONNECT_URL=$(result connect_url)
 	# The address the user typed is the public one; the server may only see
 	# a private address behind NAT.
 	if is_ipv4 "$HOST"; then IPV4=$HOST; else IPV4=$(result ipv4); fi
@@ -1422,6 +1443,7 @@ main() {
 	step_done "$M_s_install_done"
 	load_facts
 	scrub_log "$ADMIN_PASSWORD"
+	scrub_log "$CONNECT_URL"
 	rc=0
 	dns_step || rc=$?
 	final_screen

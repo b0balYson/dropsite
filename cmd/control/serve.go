@@ -77,25 +77,29 @@ func build(ctx context.Context, cfg *config.Config, log *slog.Logger) (*app, err
 		_ = db.Close()
 		return nil, err
 	}
+	reqIP := func(r *http.Request) string { return api.RequestIP(r.Context()) }
+	// One authorization server for both hosts: the public admin host opens
+	// the requests the consent page of the API host sealed.
+	az := oauth.New(svc, oauth.Options{ClientIP: reqIP, Logger: log})
 	return &app{
 		cfg: cfg, log: log, db: db, svc: svc,
-		public: publicHandler(svc, log),
+		public: publicHandler(svc, log, az),
 		intern: internalHandler(svc, log),
 		admin:  ui.New(svc, log),
 
-		publicAdmin: ui.NewPublic(svc, log),
+		publicAdmin: ui.NewPublic(svc, log, az),
 	}, nil
 }
 
 // publicHandler serves the API host: API v1, the remote MCP endpoint and
 // the OAuth authorization server with its consent page.
-func publicHandler(svc *service.Service, log *slog.Logger) http.Handler {
+func publicHandler(svc *service.Service, log *slog.Logger, az *oauth.Server) http.Handler {
 	reqIP := func(r *http.Request) string { return api.RequestIP(r.Context()) }
-	az := oauth.New(svc, oauth.Options{ClientIP: reqIP, Logger: log})
-	mounts := []api.Mount{{
-		Pattern: remote.Path,
-		Handler: remote.New(svc, remote.Options{ClientIP: reqIP, OnAuth: api.SetRequestUser, Logger: log}),
-	}}
+	mcpHandler := remote.New(svc, remote.Options{ClientIP: reqIP, OnAuth: api.SetRequestUser, Logger: log})
+	mounts := []api.Mount{
+		{Pattern: remote.Path, Handler: mcpHandler},
+		{Pattern: remote.LinkPattern, Handler: mcpHandler},
+	}
 	for _, rt := range az.Routes() {
 		mounts = append(mounts, api.Mount{Pattern: rt.Pattern, Handler: rt.Handler})
 	}

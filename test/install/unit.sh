@@ -226,6 +226,7 @@ check "taken --name without a terminal exits 2" test "$rc" = 2
 # fresh HOME; MODE ok or fail. Output in $WORK/sim-LANG-MODE.out, exit code
 # in .rc, HOME in sim-LANG-MODE.home.
 SIM_PW=SimPass0123456789abcdefgh
+SIM_CODE=SIMC0DE0123AB
 sim() {
 	l=$1 mode=$2
 	shift 2
@@ -258,6 +259,7 @@ sim() {
 				printf 'DROPSITE_RESULT domain=r3100.com\nDROPSITE_RESULT api_host=api.r3100.com\n'
 				printf 'DROPSITE_RESULT admin_email=me@example.com\nDROPSITE_RESULT ipv4=186.243.218.235\nDROPSITE_RESULT ipv6=\n'
 				printf 'DROPSITE_RESULT admin_password=%s\nDROPSITE_RESULT admin_password_new=1\n' "$SIM_PW"
+				printf 'DROPSITE_RESULT connect_url=https://api.r3100.com/mcp/c/%s\n' "$SIM_CODE"
 				case "$*" in
 				*"DROPSITE_PUBLIC_ADMIN='1'"*) printf 'DROPSITE_RESULT public_admin_url=https://admin.r3100.com\n' ;;
 				*) printf 'DROPSITE_RESULT public_admin_url=\n' ;;
@@ -295,6 +297,8 @@ if command -v ssh-keygen >/dev/null 2>&1; then
 	check "log: has the server output" grep -q '^==> Adding swap' "$lg"
 	check "log: has the technical lines" grep -q 'admin interface on local port' "$lg"
 	check "log: never the admin password" sh -c '! grep -q "$1" "$2"' _ "$SIM_PW" "$lg"
+	check "run: connect URL shown once" test "$(grep -c "mcp/c/$SIM_CODE" "$WORK/sim-en-ok.out")" = 1
+	check "log: never the connect URL code" sh -c '! grep -q "$1" "$2"' _ "$SIM_CODE" "$lg"
 	check "log: no private key" sh -c '! grep -q "PRIVATE KEY" "$1"' _ "$lg"
 	check "run: no public admin choice passed by default" sh -c '! grep -q DROPSITE_PUBLIC_ADMIN "$1"' _ "$WORK/sim-en-ok.kssh"
 	check "run: no public address by default" hasnt en-ok 'admin\.r3100\.com'
@@ -316,6 +320,8 @@ if command -v ssh-keygen >/dev/null 2>&1; then
 	check "verbose: summary shown" has en-verbose "We are going to install:"
 	check "verbose: full final block" has en-verbose "ssh r3100 dropsite-update"
 	check "verbose: log path shown" has en-verbose "install-r3100.log"
+	check "verbose: connect URL with its command" has en-verbose "ssh r3100 dropsite-connect"
+	check "verbose: log never has the connect URL code" sh -c '! grep -q "$1" "$2"' _ "$SIM_CODE" "$(simlog en-verbose)"
 
 	sim en fail
 	check "failure: exits 1" test "$(cat "$WORK/sim-en-fail.rc")" = 1
@@ -330,8 +336,10 @@ if command -v ssh-keygen >/dev/null 2>&1; then
 	check "ru: exits 0" test "$(cat "$WORK/sim-ru-ok.rc")" = 0
 	check "ru: steps in Russian" has ru-ok "✓ Установил Dropsite"
 	check "ru: final block in Russian" has ru-ok "1. Выполните: ssh r3100"
+	check "ru: connect URL in Russian" has ru-ok "Подключить чат (бета)"
 	sim zh ok
 	check "zh: final block in Chinese" has zh-ok "1. 运行：ssh r3100"
+	check "zh: connect URL in Chinese" has zh-ok "连接聊天应用（测试版）"
 	if [ -n "${SHOW_SIM:-}" ]; then
 		for f in en-ok ru-ok en-fail; do
 			printf '\n----- %s -----\n' "$f"

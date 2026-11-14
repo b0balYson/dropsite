@@ -46,23 +46,38 @@
       <div><dt>{{.L.T "oauth.rights"}}</dt><dd>{{.L.T "oauth.rights.sites"}}</dd></div>
     </dl>
     {{if .D.Loopback}}<p class="notice notice--warn">{{.L.T "oauth.loopback"}}</p>{{end}}
-    <p class="hint">{{.L.T "oauth.only_you"}}</p>
+    <p class="hint">{{if or .D.Link .D.SessionEmail}}{{.L.T "oauth.only_you.link"}}{{else}}{{.L.T "oauth.only_you"}}{{end}}</p>
   </div>
-  <form class="auth__form stack" method="post" action="/oauth/authorize?ui_lang={{.L.Lang}}">
-    <h2 class="section-title">{{.L.T "oauth.code.title"}}</h2>
+  <form class="auth__form stack" method="post" action="{{.D.Action}}?ui_lang={{.L.Lang}}">
     {{template "csrf" .}}
     <input type="hidden" name="request" value="{{.D.Sealed}}">
+    {{if .D.SessionEmail}}
+    <h2 class="section-title">{{.L.T "oauth.session.title"}}</h2>
+    {{with .D.Error}}<p class="notice notice--error" role="alert">{{.}}</p>{{end}}
+    <p>{{.L.T "oauth.session.as" "email" .D.SessionEmail}}</p>
+    {{else if .D.Link}}
+    <h2 class="section-title">{{.L.T "oauth.link.title"}}</h2>
+    <p>{{.L.T "oauth.link.text"}}</p>
+    {{else}}
+    <h2 class="section-title">{{.L.T "oauth.code.title"}}</h2>
     {{with .D.Error}}<p class="notice notice--error" role="alert">{{.}}</p>{{end}}
     <p>{{.L.T "oauth.code.where"}}</p>
     <div class="field">
       <label class="field__label" for="code">{{.L.T "oauth.code.label"}}</label>
       <input class="input mono code-input" id="code" name="code" required autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="40" placeholder="XXXX-XXXX-XXXXX" autofocus>
     </div>
+    {{end}}
     <div class="consent__actions">
-      <button class="btn btn--primary" type="submit" name="action" value="allow">{{.L.T "oauth.allow"}}</button>
+      <button class="btn btn--primary" type="submit" name="action" value="allow"{{if or .D.Link .D.SessionEmail}} autofocus{{end}}>{{.L.T "oauth.allow"}}</button>
       <button class="btn btn--ghost" type="submit" name="action" value="deny" formnovalidate>{{.L.T "oauth.deny"}}</button>
     </div>
-    <p class="hint">{{.L.T "oauth.password_note"}}</p>
+    {{if not .D.SessionEmail}}<p class="hint">{{.L.T "oauth.password_note"}}</p>{{end}}
+    {{with .D.AdminURL}}
+    <div class="consent__alt stack">
+      <p class="hint">{{$.L.T "oauth.admin.text"}}</p>
+      <p><a class="btn btn--ghost" href="{{.}}">{{$.L.T "oauth.admin.link"}}</a></p>
+    </div>
+    {{end}}
   </form>
   {{end}}
 </section>
