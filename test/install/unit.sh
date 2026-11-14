@@ -336,10 +336,10 @@ if command -v ssh-keygen >/dev/null 2>&1; then
 	check "ru: exits 0" test "$(cat "$WORK/sim-ru-ok.rc")" = 0
 	check "ru: steps in Russian" has ru-ok "✓ Установил Dropsite"
 	check "ru: final block in Russian" has ru-ok "1. Выполните: ssh r3100"
-	check "ru: connect URL in Russian" has ru-ok "Подключить чат (бета)"
+	check "ru: connect URL in Russian" has ru-ok "Подключить чат: вставьте"
 	sim zh ok
 	check "zh: final block in Chinese" has zh-ok "1. 运行：ssh r3100"
-	check "zh: connect URL in Chinese" has zh-ok "连接聊天应用（测试版）"
+	check "zh: connect URL in Chinese" has zh-ok "连接聊天应用："
 	if [ -n "${SHOW_SIM:-}" ]; then
 		for f in en-ok ru-ok en-fail; do
 			printf '\n----- %s -----\n' "$f"
