@@ -10,6 +10,8 @@ pushed; see [docs/releasing.md](docs/releasing.md).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-14
+
 ### Added
 
 - A connect URL `https://api.<domain>/mcp/c/<code>` for chat clients. Pasted as the MCP server address, it lets ChatGPT, claude.ai and Claude Code connect with a single Allow on the consent page, without typing a code. It works once, within an hour, and stays a valid MCP address afterwards. Get it on the Connect AI page, with `ssh <server> dropsite-connect`, or at the end of a fresh installation.
@@ -139,7 +141,8 @@ First public release.
 - The installer does not keep the first administrator password on the server.
 - Threat model and operator guidance in [docs/security.md](docs/security.md).
 
-[Unreleased]: https://github.com/b0balYson/dropsite/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/b0balYson/dropsite/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/b0balYson/dropsite/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/b0balYson/dropsite/compare/v0.5.1...v0.6.0
 [0.5.2]: https://github.com/b0balYson/dropsite/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/b0balYson/dropsite/compare/v0.5.0...v0.5.1
